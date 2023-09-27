@@ -8,6 +8,9 @@
 # --- COMMIT END ---
 #----------------------------------------------------------------------------#
 #
+# When in doubt consult https://www.conventionalcommits.org/en/v1.0.0/
+#
+#
 # SUMMARY
 # - don't capitalize the first letter
 # - don't end the summary line with a period
