@@ -30,3 +30,13 @@
 *.exe
 *.out
 *.app
+build/
+
+# Temporary files
+*~
+tmp/
+
+# GNU Global files
+GPATH
+GRTAGS
+GTAGS

@@ -1,0 +1,39 @@
+<type>: concise but complete summary
+
+# An awesome description describing WHY this work over HOW/WHAT it does.
+
+# Any references to tickets, articles...
+# Close #12
+
+# --- COMMIT END ---
+#----------------------------------------------------------------------------#
+#
+# SUMMARY
+# - don't capitalize the first letter
+# - don't end the summary line with a period
+# - describe your changes in imperative mood, e.g. "make xyzzy do frotz"
+# - wrap summary and description to 78 characters. #-symbol above is a marker
+#   for that
+# - separate summary from body with a blank line
+#
+# <type> can be:
+#
+# build: changes that affect the build system or external dependencies
+# ci: changes to CI configuration files and scripts
+# docs: documentation only changes
+# feat: a new feature
+# fix: a bug fix
+# perf: a code change that improves performance
+# refactor: a code change that neither fixes a bug nor adds a feature
+# revert: commits that revert a previous commit
+# style: changes that do not affect the meaning of the code (white-space,
+#        formatting, missing semi-colons...)
+# test: adding missing tests or correcting existing tests
+#
+#
+# MESSAGE FOOTER
+# All breaking changes have to be mentioned as a breaking change block in the
+# footer, which should start with the word `BREAKING CHANGE:` with a space or
+# two newlines. The rest of the commit message is then the description of the
+# change, justification and migration notes.
+#
