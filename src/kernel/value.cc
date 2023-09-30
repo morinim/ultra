@@ -18,19 +18,6 @@
 namespace ultra
 {
 
-namespace
-{
-
-struct compare_val
-{
-  bool operator()(D_DOUBLE a, D_DOUBLE b) { return almost_equal(a, b); }
-  bool operator()(D_NULLARY, D_NULLARY) { return true; }
-  template<class T> bool operator()(T a, T b) { return a == b; }
-  template<class A, class B> bool operator()(A, B) { return false; }
-};
-
-}
-
 ///
 /// \return `true` if values are equal
 ///
@@ -43,7 +30,23 @@ struct compare_val
 ///
 bool operator==(const value_t &lhs, const value_t &rhs)
 {
-  return std::visit(compare_val(), lhs, rhs);
+  if (lhs.index() != rhs.index())
+    return false;
+
+  switch (lhs.index())
+  {
+  case d_double:
+    return almost_equal(std::get<D_DOUBLE>(lhs), std::get<D_DOUBLE>(rhs));
+  case d_int:
+    return std::get<D_INT>(lhs) == std::get<D_INT>(rhs);
+  case d_string:
+    return std::get<D_STRING>(lhs) == std::get<D_STRING>(rhs);
+  case d_nullary:
+  case d_void:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool operator!=(const value_t &lhs, const value_t &rhs)
