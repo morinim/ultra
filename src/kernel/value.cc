@@ -67,10 +67,15 @@ bool has_value(const value_t &v)
 ///
 std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
-  // A more general implementation at
-  // https://stackoverflow.com/a/47169101/3235496
+  switch (v.index())
+  {
+  case d_double:  o << std::get<D_DOUBLE>(v);  break;
+  case d_int:     o << std::get<D_INT>(v);     break;
+  case d_nullary: o << "[]()";                 break;
+  case d_string:  o << std::get<D_STRING>(v);  break;
+  case d_void:    o << "[]";                   break;
+  }
 
-  std::visit([&](auto &&arg) { o << arg; }, v);
   return o;
 }
 
