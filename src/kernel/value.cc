@@ -49,11 +49,6 @@ bool operator==(const value_t &lhs, const value_t &rhs)
   }
 }
 
-bool operator!=(const value_t &lhs, const value_t &rhs)
-{
-  return !(lhs == rhs);
-}
-
 ///
 /// \param[in] v value to be checked
 /// \return      `true` if `v` isn't empty

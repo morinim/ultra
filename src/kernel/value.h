@@ -42,7 +42,6 @@ using D_STRING  =           std::string;
 using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_NULLARY, D_STRING>;
 
 [[nodiscard]] bool operator==(const value_t &, const value_t &);
-[[nodiscard]] bool operator!=(const value_t &, const value_t &);
 [[nodiscard]] bool has_value(const value_t &);
 
 std::ostream &operator<<(std::ostream &, const value_t &);
