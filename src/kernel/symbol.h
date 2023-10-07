@@ -16,10 +16,12 @@
 #include <limits>
 #include <string>
 
+#include "kernel/value.h"
 #include "utility/assert.h"
 
 namespace ultra
 {
+
 ///
 /// Together functions and terminals are referred to as symbols.
 ///
@@ -40,6 +42,8 @@ public:
   /// - strong typing GP is enforced;
   /// - ranges of GA variables are managed.
   using category_t = unsigned;
+  static constexpr category_t default_category =
+    std::numeric_limits<category_t>::max();
   static constexpr category_t undefined_category =
     std::numeric_limits<category_t>::max();
 
@@ -49,55 +53,24 @@ public:
   /// Symbol rendering format.
   enum format {c_format, cpp_format, python_format, sup_format};
 
+  explicit symbol(const std::string &, category_t = default_category);
+  virtual ~symbol() = default;
+
   [[nodiscard]] category_t category() const;
   [[nodiscard]] opcode_t opcode() const;
   [[nodiscard]] std::string name() const;
 
   void category(category_t);
 
+  [[nodiscard]] virtual std::string to_string(const value_t &,
+                                              format = c_format) const = 0;
   [[nodiscard]] virtual bool is_valid() const;
-
-protected:
-  explicit symbol(const std::string &, category_t = 0);
-  virtual ~symbol() = default;
 
 private:
   std::string name_;
   category_t category_;
   opcode_t opcode_;
 };
-
-///
-/// The type (a.k.a. category) of the symbol.
-///
-/// \return the category
-///
-/// In strongly typed GP every terminal and every function argument / return
-/// value has a type (a.k.a. category).
-/// For GAs / DE category is used to define a valid interval for numeric
-/// arguments.
-///
-inline symbol::category_t symbol::category() const
-{
-  return category_;
-}
-
-///
-/// An opcode is a unique, numerical session ID for a symbol.
-///
-/// \return the opcode
-///
-/// The opcode is a fast way to uniquely identify a symbol and is primarily
-/// used for hashing.
-///
-/// \remark
-/// A symbol can be identified also by its name (a `std::string`). The name
-/// is often a better option since it doesn't change among executions.
-///
-inline symbol::opcode_t symbol::opcode() const
-{
-  return opcode_;
-}
 
 }  // namespace ultra
 

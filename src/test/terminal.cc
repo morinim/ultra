@@ -25,15 +25,20 @@ TEST_CASE("Double")
 {
   using namespace ultra;
 
-  terminal v("DOUBLE", 1.0);
-
+  const std::string name("DOUBLE");
+  terminal v(name, 1.0);
+  CHECK(v.is_valid());
   CHECK(v.value().index() == d_double);
   CHECK(almost_equal(std::get<D_DOUBLE>(v.value()), 1.0));
+  CHECK(v.name() == "DOUBLE");
+  CHECK(v.category() == symbol::default_category);
   CHECK(!v.nullary());
 
-  terminal v1("DOUBLE", 1.000000000000000000001);
-
-  CHECK(v == v1);
+  SUBCASE("Double comparison")
+  {
+    terminal v1("DOUBLE", 1.000000000000000000001);
+    CHECK(v == v1);
+  }
 }
 
 }  // TEST_SUITE("TERMINAL")

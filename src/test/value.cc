@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include "kernel/value.h"
+#include "kernel/nullary.h"
 #include "utility/misc.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -36,7 +37,7 @@ TEST_CASE("Base")
     CHECK(self_eq);
 
     out << v1;
-    CHECK(out.str() == "[]");
+    CHECK(out.str() == "{}");
   }
 
   SUBCASE("String value")
@@ -53,14 +54,27 @@ TEST_CASE("Base")
 
   SUBCASE("Nullary value")
   {
-    v1 = [] { std::cout << "Hello world\n"; };
+    class greetings : public nullary
+    {
+    public:
+      using nullary::nullary;
+
+      value_t eval() const override
+      {
+        std::cout << "Hello world\n";
+        return {};
+      }
+    };
+
+    greetings hw("greetings");
+    v1 = &hw;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_nullary);
     const bool nullary_eq(v1 == v1);
     CHECK(nullary_eq);
 
     out << v1;
-    CHECK(out.str() == "[]()");
+    CHECK(out.str() == hw.to_string());
   }
 
   SUBCASE("Integer value")

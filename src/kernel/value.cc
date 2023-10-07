@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include "kernel/value.h"
+#include "kernel/nullary.h"
 #include "utility/misc.h"
 
 namespace ultra
@@ -39,9 +40,10 @@ bool operator==(const value_t &lhs, const value_t &rhs)
     return almost_equal(std::get<D_DOUBLE>(lhs), std::get<D_DOUBLE>(rhs));
   case d_int:
     return std::get<D_INT>(lhs) == std::get<D_INT>(rhs);
+  case d_nullary:
+    return std::get<D_NULLARY *>(lhs) == std::get<D_NULLARY *>(rhs);
   case d_string:
     return std::get<D_STRING>(lhs) == std::get<D_STRING>(rhs);
-  case d_nullary:
   case d_void:
     return true;
   default:
@@ -69,11 +71,11 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
   switch (v.index())
   {
-  case d_double:  o << std::get<D_DOUBLE>(v);  break;
-  case d_int:     o << std::get<D_INT>(v);     break;
-  case d_nullary: o << "[]()";                 break;
-  case d_string:  o << std::get<D_STRING>(v);  break;
-  case d_void:    o << "[]";                   break;
+  case d_double:  o << std::get<D_DOUBLE>(v);                 break;
+  case d_int:     o << std::get<D_INT>(v);                    break;
+  case d_nullary: o << std::get<D_NULLARY *>(v)->to_string(); break;
+  case d_string:  o << std::get<D_STRING>(v);                 break;
+  case d_void:    o << "{}";                                  break;
   }
 
   return o;

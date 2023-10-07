@@ -14,52 +14,23 @@
 #define      ULTRA_TERMINAL_H
 
 #include "kernel/symbol.h"
-#include "kernel/value.h"
 
 namespace ultra
 {
 ///
-/// A terminal might be a variable (input to the program), a constant value
-/// or a function taking no arguments (e.g. `move-north()`).
+/// A terminal might be a variable (input to the program), a numeric value or a
+/// function taking no arguments (e.g. `move-north()`).
 ///
 class terminal : public symbol
 {
 public:
-  template<class V> terminal(const std::string &, V, category_t = 0);
+  using symbol::symbol;
 
-  const value_t &value() const;
+  virtual value_t eval() const = 0;
 
-  [[nodiscard]] bool nullary() const;
-
-  [[nodiscard]] bool operator==(const terminal &) const;
-
-  [[nodiscard]] virtual std::string display(format = c_format) const;
-  [[nodiscard]] virtual terminal random() const;
-
-protected:
-  value_t data_;
+  [[nodiscard]] virtual std::string to_string(
+    const value_t &, format = c_format) const override;
 };
-
-[[nodiscard]] bool operator!=(const terminal &, const terminal &);
-
-///
-/// \param[in] name name of the terminal
-/// \param[in] v    value of the terminal
-/// \param[in] c    category of the terminal
-///
-template<class V> terminal::terminal(const std::string &name, V v,
-                                     category_t c)
-  : symbol(name, c), data_(v)
-{
-}
-
-///
-/// \return `true` for a nullary terminal
-///
-inline bool terminal::nullary() const
-{
-  return std::holds_alternative<D_NULLARY>(data_);
-}
 
 }  // namespace ultra
 

@@ -45,14 +45,45 @@ std::string symbol::name() const
 ///
 /// \param[in] c the new category
 ///
-/// \remark Should be called only for symbols with undefined category.
+/// \remark
+/// Must be called only for symbols with undefined category.
 ///
-inline void symbol::category(category_t c)
+void symbol::category(category_t c)
 {
   Expects(category_ == undefined_category);
   Expects(c != category_);
 
   category_ = c;
+}
+
+///
+/// \return the type (a.k.a. category) of the symbol
+///
+/// In strongly typed GP every terminal and every function argument / return
+/// value has a type (a.k.a. category).
+/// For GAs / DE category is used to define a valid interval for numeric
+/// arguments.
+///
+symbol::category_t symbol::category() const
+{
+  return category_;
+}
+
+///
+/// An opcode is a unique, numerical session ID for a symbol.
+///
+/// \return the opcode
+///
+/// The opcode is a fast way to uniquely identify a symbol and is primarily
+/// used for hashing.
+///
+/// \remark
+/// A symbol can be identified also by its name (a `std::string`). The name
+/// is often a better option since it doesn't change among executions.
+///
+symbol::opcode_t symbol::opcode() const
+{
+  return opcode_;
 }
 
 ///
