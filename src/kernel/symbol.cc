@@ -41,22 +41,6 @@ std::string symbol::name() const
 }
 
 ///
-/// Changes the category of a symbol.
-///
-/// \param[in] c the new category
-///
-/// \remark
-/// Must be called only for symbols with undefined category.
-///
-void symbol::category(category_t c)
-{
-  Expects(category_ == undefined_category);
-  Expects(c != category_);
-
-  category_ = c;
-}
-
-///
 /// \return the type (a.k.a. category) of the symbol
 ///
 /// In strongly typed GP every terminal and every function argument / return

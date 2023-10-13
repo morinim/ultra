@@ -29,8 +29,12 @@ class nullary : public terminal
 public:
   using terminal::terminal;
 
-  [[nodiscard]] std::string to_string(
-    const value_t & = {}, format = c_format) const override
+  [[nodiscard]] bool is_arithmetic() const override { return false; }
+
+  virtual value_t eval() const = 0;
+
+  [[nodiscard]] std::string to_string(const value_t & = {},
+                                      format = c_format) const override
   { return name() + "()"; }
 };
 

@@ -1,8 +1,8 @@
 /**
  *  \file
- *  \remark This file is part of VITA.
+ *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2011-2022 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,18 +10,11 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(VITA_INT_PRIMITIVE_H)
-#define      VITA_INT_PRIMITIVE_H
+#if !defined(ULTRA_INT_PRIMITIVE_H)
+#define      ULTRA_INT_PRIMITIVE_H
 
-#include <climits>
-#include <limits>
-#include <string>
-
-#include "kernel/gp/function.h"
-#include "kernel/gp/mep/interpreter.h"
 #include "kernel/random.h"
-#include "kernel/gp/terminal.h"
-#include "kernel/gp/src/primitive/comp_penalty.h"
+#include "kernel/terminal.h"
 
 /// Integer overflow is undefined behaviour. This means that implementations
 /// have a great deal of latitude in how they deal with signed integer
@@ -31,52 +24,33 @@
 /// overflows will never happen and generate object code accordingly. For
 /// these reasons, it is important to ensure that operations on signed
 /// integers do no result in signed overflow.
-namespace vita::integer
+namespace ultra::integer
 {
 
-using base_t = D_INT;
-
 ///
-/// Just a simple shortcut.
+/// A random integer number in a specified range.
 ///
-/// \param[in] v the value that must be casted to base type (`base_t`)
-///
-inline base_t cast(const value_t &v)
-{
-  return std::get<base_t>(v);
-}
-
-///
-/// Integer ephemeral random constant.
-///
-/// \see dbl::number
-///
-class number : public terminal
+class number : public arithmetic_terminal
 {
 public:
-  explicit number(const cvect &c, int m = -128, int u = 127)
-    : terminal("INT", c[0]), min(m), upp(u)
+  explicit number(D_INT m = -128, D_INT s = 128,
+                  category_t c = symbol::default_category)
+    : arithmetic_terminal("INT", c), min_(m), sup_(s)
   {
-    Expects(c.size() == 1);
-    Expects(m < u);
+    Expects(m < s);
   }
 
-  bool parametric() const final { return true; }
+  [[nodiscard]] value_t min() const final { return min_; }
+  [[nodiscard]] value_t sup() const final { return sup_; }
 
-  terminal_param_t init() const final { return random::between(min, upp); }
-
-  std::string display(terminal_param_t v, format) const final
-  { return std::to_string(v); }
-
-  value_t eval(symbol_params &p) const final
-  {
-    return static_cast<base_t>(p.fetch_param());
-  }
+  [[nodiscard]] value_t random() const final
+  { return random::between(min_, sup_); }
 
 private:
-  const int min, upp;
+  const D_INT min_, sup_;
 };
 
+/*
 /// \see https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
 class add : public function
 {
@@ -235,7 +209,7 @@ public:
 
     return static_cast<base_t>(tmp);
 
-    /*
+#ifdef DUMMY
     // On systems where the above relationship does not hold, the following
     // compliant solution may be used to ensure signed overflow does not
     // occur.
@@ -267,7 +241,7 @@ public:
       }
 
     return v0 * v1;
-    */
+#endif
   }
 };
 
@@ -312,7 +286,8 @@ public:
     return v0 - v1;
   }
 };
+*/
 
-}  // namespace vita::integer
+}  // namespace ultra::integer
 
 #endif  // include guard

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,10 +16,23 @@
 #include <string>
 
 #include "kernel/random.h"
+#include "kernel/gp/function.h"
 #include "kernel/terminal.h"
+#include "utility/misc.h"
 
 namespace ultra::real
 {
+
+///
+/// A simple shortcut for extracting a `D_DOUBLE` from a `value_t`
+///
+/// \param[in] v the value_t containing the real value
+/// \return      the value of `v`
+///
+inline D_DOUBLE base(const value_t &v)
+{
+  return std::get<D_DOUBLE>(v);
+}
 
 // We assume that errors during floating-point operations aren't terminal
 // errors. So we dont't try to prevent domain errors (e.g. square root of a
@@ -35,58 +48,49 @@ static_assert(std::numeric_limits<D_DOUBLE>::is_iec559,
               "Ultra requires IEC 559/IEEE 754 floating-point types");
 
 ///
-/// Ephemeral random constant.
+/// A random floating point number in a specified range.
 ///
-/// It is assumed that the creation of floating-point constants is
-/// necessary to do symbolic regression in evolutionary computation.
-/// Genetic programming solves the problem of constant creation by using a
-/// special terminal named "ephemeral random constant" (Koza 1992). For
-/// each ephemeral random constant used in the initial population, a random
-/// number of a special data type in a specified range is generated. Then
-/// these random constants are moved around from genome to genome by the
-/// crossover operator.
-///
-class real : public terminal
+class number : public arithmetic_terminal
 {
 public:
-  explicit real(category_t c = symbol::default_category)
-    : terminal("REAL", D_DOUBLE(), c)
+  explicit number(D_DOUBLE m = -1000.0, D_DOUBLE s = 1000.0,
+                  category_t c = symbol::default_category)
+    : arithmetic_terminal("REAL", c), min_(m), sup_(s)
   {
+    Expects(m < s);
   }
 
-  [[nodiscard]] value_t random() const
-  { return random::between(-1000.0, 1000.0); }
+  [[nodiscard]] value_t min() const final { return min_; }
+  [[nodiscard]] value_t sup() const final { return sup_; }
+
+  [[nodiscard]] value_t random() const final
+  { return random::between(min_, sup_); }
+
+private:
+  const D_DOUBLE min_, sup_;
 };
 
 ///
-/// Ephemeral random integer constant.
-///
 /// This is like real::real but restricted to integer numbers.
 ///
-class integer : public terminal
+class integer : public arithmetic_terminal
 {
 public:
-  explicit integer(category_t c = symbol::default_category)
-    : terminal("REAL ", c[0]), min(m), upp(u)
+  explicit integer(D_INT m = -128, D_INT s = 128,
+                   category_t c = symbol::default_category)
+    : arithmetic_terminal("IREAL", c), min_(m), sup_(s)
   {
-    Expects(c.size() == 1);
-    Expects(m < u);
+    Expects(m < s);
   }
 
-  bool parametric() const final { return true; }
+  [[nodiscard]] value_t min() const final {return static_cast<D_DOUBLE>(min_);}
+  [[nodiscard]] value_t sup() const final {return static_cast<D_DOUBLE>(sup_);}
 
-  terminal_param_t init() const final { return random::between(min, upp); }
-
-  std::string display(terminal_param_t v, format) const final
-  { return std::to_string(static_cast<int>(v)); }
-
-  value_t eval(symbol_params &p) const final
-  {
-    return static_cast<base_t>(p.fetch_param());
-  }
+  [[nodiscard]] value_t random() const final
+  { return static_cast<D_DOUBLE>(random::between(min_, sup_)); }
 
 private:
-  const int min, upp;
+  const D_INT min_, sup_;
 };
 
 ///
@@ -95,24 +99,23 @@ private:
 class abs : public function
 {
 public:
-  explicit abs(const cvect &c = {0}) : function("FABS", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit abs(category_t c = symbol::default_category)
+    : function("FABS", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::abs(%%1%%)";
-    case mql_format:     return  "MathAbs(%%1%%)";
     case python_format:  return      "abs(%%1%%)";
     default:             return     "fabs(%%1%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a(args[0]);
-    return has_value(a) ? std::fabs(base(a)) : a;
+    const auto x(pars[0]);
+    return has_value(x) ? std::fabs(base(x)) : x;
   }
 };
 
@@ -122,24 +125,23 @@ public:
 class add : public function
 {
 public:
-  explicit add(const cvect &c = {0}) : function("FADD", c[0], {c[0], c[0]}) {}
+  explicit add(category_t c = symbol::default_category)
+    : function("FADD", c, {c, c}) {}
 
-  bool associative() const final { return true; }
-
-  std::string display(format) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
     return "(%%1%%+%%2%%)";
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(base(a0) + base(a1));
+    const auto ret(base(p0) + base(p1));
     if (!std::isfinite(ret))  return {};
 
     return ret;
@@ -158,29 +160,34 @@ public:
 class aq : public function
 {
 public:
-  explicit aq(const cvect &c = {0}) : function("AQ", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit aq(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("AQ", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "(%%1%%/std::sqrt(1.0+std::pow(%%2%%,2.0)))";
-    case mql_format:     return       "(%%1%%/MathSqrt(1+MathPow(%%2%%,2)))";
     default:             return           "(%%1%%/sqrt(1.0+pow(%%2%%,2.0)))";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const auto x(base(a0)), y(base(a1));
-    const base_t ret(x / std::sqrt(1.0 + y * y));
+    const auto x(base(p0)), y(base(p1));
+    const auto ret(x / std::sqrt(1.0 + y * y));
     if (!std::isfinite(ret))  return {};
 
     return ret;
@@ -193,25 +200,24 @@ public:
 class cos : public function
 {
 public:
-  explicit cos(const cvect &c = {0}) : function("FCOS", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit cos(category_t c = symbol::default_category)
+    : function("FCOS", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::cos(%%1%%)";
-    case mql_format:     return  "MathCos(%%1%%)";
     default:             return      "cos(%%1%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a(args[0]);
-    if (!has_value(a))  return a;
+    const auto p(pars[0]);
+    if (!has_value(p))  return p;
 
-    return std::cos(base(a));
+    return std::cos(base(p));
   }
 };
 
@@ -221,23 +227,29 @@ public:
 class div : public function
 {
 public:
-  explicit div(const cvect &c = {0}) : function("FDIV", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit div(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("FDIV", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
     return "(%%1%%/%%2%%)";
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(base(a0) / base(a1));
+    const auto ret(base(p0) / base(p1));
     if (!std::isfinite(ret))  return {};
 
     return ret;
@@ -250,10 +262,17 @@ public:
 class gt : public function
 {
 public:
-  explicit gt(const cvect &c = {0, 0}) : function(">", c[1], {c[0], c[0]})
-  { Expects(c.size() == 2); }
+  explicit gt(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function(">", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(r != pt[0]);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
@@ -262,18 +281,18 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    return std::isgreater(base(a0), base(a1));
-    // If one or both arguments of isgreater are NaN, the function returns
+    return std::isgreater(base(p0), base(p1));
+    // If one or both arguments of `isgreater` are `NaN`, the function returns
     // `false`, but no FE_INVALID exception is raised (note that the
-    // expression `v0 < v1` may raise an exception in this case).
+    // expression `v0 > v1` may raise an exception in this case).
   }
 };
 
@@ -283,81 +302,37 @@ public:
 class idiv : public function
 {
 public:
-  explicit idiv(const cvect &c = {0}) : function("FIDIV", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit idiv(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("FIDIV", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::floor(%%1%%/%%2%%)";
-    case mql_format:     return  "MathFloor(%%1%%/%%2%%)";
     case python_format:  return          "(%%1%%//%%2%%)";
     default:             return      "floor(%%1%%/%%2%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(std::floor(base(a0) / base(a1)));
+    const auto ret(std::floor(base(p0) / base(p1)));
     if (!std::isfinite(ret))  return {};
 
     return ret;
-  }
-};
-
-///
-/// "If between" operator.
-///
-/// \warning Requires five input arguments.
-///
-class ifb : public function
-{
-public:
-  explicit ifb(const cvect &c = {0, 0})
-    : function("FIFB", c[1], {c[0], c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
-
-  std::string display(format f) const final
-  {
-    switch (f)
-    {
-    case python_format:
-      return "(%%4%% if %%2%% <= %%1%% <= %%3%% else %%5%%)";
-    default:
-      return "(fmin(%%2%%,%%3%%) <= %%1%% && %%1%% <= fmax(%%2%%,%%3%%) ?"
-             "%%4%% : %%5%%)";
-    }
-  }
-
-  value_t eval(symbol_params &args) const final
-  {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
-
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
-
-    const auto a2(args[2]);
-    if (!has_value(a2))  return a2;
-
-    const auto v0(base(a0));
-    const auto v1(base(a1));
-    const auto v2(base(a2));
-
-    const auto min(std::fmin(v1, v2));
-    const auto max(std::fmax(v1, v2));
-
-    if (std::isless(v0, min) || std::isgreater(v0, max))
-      return args[4];
-    else
-      return args[3];
   }
 };
 
@@ -367,19 +342,26 @@ public:
 class ife : public function
 {
 public:
-  explicit ife(const cvect &c = {0, 0})
-    : function("FIFE", c[1], {c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
+  explicit ife(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category,
+                                            symbol::default_category,
+                                            symbol::default_category})
+    : function("FIFE", r, pt)
+  {
+    Expects(pt.size() == 4);
+    Expects(r == pt[2]);
+    Expects(pt[0] == pt[1]);
+    Expects(pt[2] == pt[3]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:
       return "(abs(%%1%%-%%2%%)<2*std::numeric_limits<T>::epsilon() ?"
              "%%3%% : %%4%%)";
-    case mql_format:
-      return "(NormalizeDouble(%%1%%-%%2%%,8)==0 ? %%3%% : %%4%%)";
     case python_format:
       return "(%%3%% if isclose(%%1%%, %%2%%) else %%4%%)";
     default:
@@ -387,23 +369,18 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    if (issmall(base(a0) - base(a1)))
-      return args[2];
+    if (issmall(base(p0) - base(p1)))
+      return pars[2];
     else
-      return args[3];
-  }
-
-  double penalty_nvi(core_interpreter *ci) const final
-  {
-    return comparison_function_penalty(ci);
+      return pars[3];
   }
 };
 
@@ -413,11 +390,20 @@ public:
 class ifl : public function
 {
 public:
-  explicit ifl(const cvect &c  = {0, 0})
-    : function("FIFL", c[1], {c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
+  explicit ifl(return_type r = symbol::default_category,
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
+    : function("FIFL", r, pt)
+  {
+    Expects(pt.size() == 4);
+    Expects(r == pt[2]);
+    Expects(pt[0] == pt[1]);
+    Expects(pt[2] == pt[3]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
@@ -426,25 +412,21 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const auto v0(base(a0)), v1(base(a1));
+    const auto v0(base(p0)), v1(base(p1));
     if (std::isless(v0, v1))
-      return args[2];
+      return pars[2];
     else
-      return args[3];
+      return pars[3];
   }
 
-  double penalty_nvi(core_interpreter *ci) const final
-  {
-    return comparison_function_penalty(ci);
-  }
 };
 
 ///
@@ -453,19 +435,24 @@ public:
 class ifz : public function
 {
 public:
-  explicit ifz(const cvect &c = {0})
-    : function("FIFZ", c[0], {c[0], c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit ifz(return_type r = symbol::default_category,
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
+    : function("FIFZ", r, pt)
+  {
+    Expects(pt.size() == 3);
+    Expects(r == pt[1]);
+    Expects(pt[1] == pt[2]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:
       return "(abs(%%1%%)<2*std::numeric_limits<T>::epsilon() ?"
              "%%3%% : %%4%%)";
-    case mql_format:
-      return "(NormalizeDouble(%%1%%,8)==0 ? %%3%% : %%4%%)";
     case python_format:
       return "(%%3%% if abs(%%1%%) < 1e-10 else %%4%%)";
     default:
@@ -473,15 +460,12 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    if (issmall(base(a0)))
-      return args[1];
-    else
-      return args[2];
+    return issmall(base(p0)) ? pars[1] : pars[2];
   }
 };
 
@@ -491,26 +475,29 @@ public:
 class length : public function
 {
 public:
-  explicit length(const cvect &c = {0, 0}) : function("FLENGTH", c[1], {c[0]})
-  { Expects(c.size() == 2); }
+  explicit length(return_type r, const param_data_types &pt)
+    : function("FLENGTH", r, pt)
+  {
+    Expects(pt.size() == 1);
+    Expects(r != pt[0]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::string(%%1%%).length()";
-    case mql_format:     return            "StringLen(%%1%%)";
     case python_format:  return                  "len(%%1%%)";
     default:             return               "strlen(%%1%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a(args[0]);
-    if (!has_value(a))  return a;
+    const auto p(pars[0]);
+    if (!has_value(p))  return p;
 
-    return static_cast<base_t>(std::get<D_STRING>(a).length());
+    return static_cast<D_DOUBLE>(std::get<D_STRING>(p).length());
   }
 };
 
@@ -520,30 +507,29 @@ public:
 class ln : public function
 {
 public:
-  explicit ln(const cvect &c = {0}) : function("FLN", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit ln(category_t c = symbol::default_category)
+    : function("FLN", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:  return "std::log(%%1%%)";
-    case mql_format:  return  "MathLog(%%1%%)";
     default:          return      "log(%%1%%)";
     }
   }
 
   ///
-  /// \param[in] args input parameters (lazy eval)
+  /// \param[in] pars input parameters (lazy eval)
   /// \return         the natural logarithm of its argument or an empty value
   ///                 in case of invalid argument / infinite result
   ///
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto ret(std::log(base(a0)));
+    const auto ret(std::log(base(p0)));
     if (!std::isfinite(ret))  return {};
 
     return ret;
@@ -556,10 +542,17 @@ public:
 class lt : public function
 {
 public:
-  explicit lt(const cvect &c = {0, 0}) : function("<", c[1], {c[0], c[0]})
-  { Expects(c.size() == 2); }
+  explicit lt(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("<", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(r != pt[0]);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
@@ -568,15 +561,15 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    return std::isless(base(a0), base(a1));
+    return std::isless(base(p0), base(p1));
     // If one or both arguments of `isless` are NaN, the function returns
     // false, but no FE_INVALID exception is raised (note that the
     // expression `v0 < v1` may raise an exception in this case).
@@ -589,10 +582,10 @@ public:
 class max : public function
 {
 public:
-  explicit max(const cvect &c = {0}) : function("FMAX", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit max(category_t c = symbol::default_category)
+    : function("FMAX", c, {c, c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
@@ -601,15 +594,15 @@ public:
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(std::fmax(base(a0), base(a1)));
+    const auto ret(std::fmax(base(p0), base(p1)));
     if (!std::isfinite(ret))  return {};
 
     return ret;
@@ -622,35 +615,41 @@ public:
 class mod : public function
 {
 public:
-  explicit mod(const cvect &c = {0}) : function("FMOD", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit mod(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("FMOD", r, {pt[0], pt[1]})
+  {
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::fmod(%%1%%,%%2%%)";
-    case mql_format:     return   "MathMod(%%1%%,%%2%%)";
     case python_format:  return        "(%%1%% % %%2%%)";
     default:             return      "fmod(%%1%%,%%2%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(std::fmod(base(a0), base(a1)));
+    const auto ret(std::fmod(base(p0), base(p1)));
     if (!std::isfinite(ret))  return {};
 
     return ret;
   }
 };
 
+/*
 ///
 /// Product of real numbers.
 ///
@@ -806,7 +805,7 @@ public:
     return std::exp(x) / (1.0 + std::exp(x));
   }
 };
-
+*/
 }  // namespace ultra::real
 
 #endif  // include guard

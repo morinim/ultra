@@ -12,7 +12,8 @@
 
 #include <sstream>
 
-#include "kernel/terminal.h"
+#include "kernel/gp/primitive/integer.h"
+#include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -21,24 +22,65 @@
 TEST_SUITE("TERMINAL")
 {
 
-TEST_CASE("Double")
+TEST_CASE("Real")
 {
   using namespace ultra;
 
-  const std::string name("DOUBLE");
-  terminal v(name, 1.0);
-  CHECK(v.is_valid());
-  CHECK(v.value().index() == d_double);
-  CHECK(almost_equal(std::get<D_DOUBLE>(v.value()), 1.0));
-  CHECK(v.name() == "DOUBLE");
-  CHECK(v.category() == symbol::default_category);
-  CHECK(!v.nullary());
+  const D_DOUBLE m(0.0), s(1.0);
+  real::number r(m, s);
+  CHECK(r.is_valid());
+  CHECK(r.category() == symbol::default_category);
+  CHECK(almost_equal(std::get<D_DOUBLE>(r.min()), m));
+  CHECK(almost_equal(std::get<D_DOUBLE>(r.sup()), s));
 
-  SUBCASE("Double comparison")
-  {
-    terminal v1("DOUBLE", 1.000000000000000000001);
-    CHECK(v == v1);
-  }
+  std::vector<D_DOUBLE> v(1000);
+  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.random()); });
+
+  CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
+
+  const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
+  CHECK((s - m) * .4 <= mean);
+  CHECK(mean <= (s - m) * .6);
 }
 
-}  // TEST_SUITE("TERMINAL")
+TEST_CASE("IReal")
+{
+  using namespace ultra;
+
+  const int m(0), s(10);
+  real::integer r(m, s);
+  CHECK(r.is_valid());
+  CHECK(r.category() == symbol::default_category);
+  CHECK(static_cast<int>(std::get<D_DOUBLE>(r.min())) == m);
+  CHECK(static_cast<int>(std::get<D_DOUBLE>(r.sup())) == s);
+
+  std::vector<D_DOUBLE> v(1000);
+  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.random()); });
+
+  CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
+
+  const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
+  CHECK((s - m) * .4 <= mean);
+  CHECK(mean <= (s - m) * .6);
+}
+
+TEST_CASE("INTEGER")
+{
+  using namespace ultra;
+
+  const D_INT m(0), s(256);
+  integer::number r(m, s);
+  CHECK(r.is_valid());
+  CHECK(r.category() == symbol::default_category);
+
+  std::vector<D_INT> v(1000);
+  std::ranges::generate(v, [&r] { return std::get<D_INT>(r.random()); });
+
+  CHECK(std::ranges::all_of(v, [m, s](auto x) { return  m <= x && x < s; }));
+
+  const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
+  CHECK((s - m) * .4 <= mean);
+  CHECK(mean <= (s - m) * .6);
+}
+
+}  // TEST_SUITE("REAL")

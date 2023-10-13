@@ -42,8 +42,7 @@ public:
   /// - strong typing GP is enforced;
   /// - ranges of GA variables are managed.
   using category_t = unsigned;
-  static constexpr category_t default_category =
-    std::numeric_limits<category_t>::max();
+  static constexpr category_t default_category = 0;
   static constexpr category_t undefined_category =
     std::numeric_limits<category_t>::max();
 
@@ -60,10 +59,6 @@ public:
   [[nodiscard]] opcode_t opcode() const;
   [[nodiscard]] std::string name() const;
 
-  void category(category_t);
-
-  [[nodiscard]] virtual std::string to_string(const value_t &,
-                                              format = c_format) const = 0;
   [[nodiscard]] virtual bool is_valid() const;
 
 private:
