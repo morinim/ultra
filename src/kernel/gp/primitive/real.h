@@ -114,8 +114,10 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto x(pars[0]);
-    return has_value(x) ? std::fabs(base(x)) : x;
+    const auto p(pars[0]);
+    if (!has_value(p))  return p;
+
+    return std::fabs(base(p));
   }
 };
 
@@ -142,7 +144,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) + base(p1));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -188,7 +190,7 @@ public:
 
     const auto x(base(p0)), y(base(p1));
     const auto ret(x / std::sqrt(1.0 + y * y));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -217,7 +219,11 @@ public:
     const auto p(pars[0]);
     if (!has_value(p))  return p;
 
-    return std::cos(base(p));
+    const auto b(base(p));
+    if (std::isinf(b))
+      return {};
+
+    return std::cos(b);
   }
 };
 
@@ -250,7 +256,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) / base(p1));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -330,7 +336,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::floor(base(p0) / base(p1)));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -530,7 +536,7 @@ public:
     if (!has_value(p0))  return p0;
 
     const auto ret(std::log(base(p0)));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -603,7 +609,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::fmax(base(p0), base(p1)));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -618,7 +624,7 @@ public:
   explicit mod(return_type r = symbol::default_category,
                const param_data_types pt = {symbol::default_category,
                                             symbol::default_category})
-    : function("FMOD", r, {pt[0], pt[1]})
+    : function("FMOD", r, pt)
   {
     Expects(pt.size() == 2);
     Expects(pt[0] == pt[1]);
@@ -643,37 +649,42 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::fmod(base(p0), base(p1)));
-    if (!std::isfinite(ret))  return {};
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
 };
 
-/*
 ///
 /// Product of real numbers.
 ///
 class mul : public function
 {
 public:
-  explicit mul(const cvect &c = {0}) : function("FMUL", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit mul(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("FMUL", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
     return "(%%1%%*%%2%%)";
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(base(a0) * base(a1));
-    if (!std::isfinite(ret))  return {};
+    const auto ret(base(p0) * base(p1));
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
@@ -685,25 +696,28 @@ public:
 class sin : public function
 {
 public:
-  explicit sin(const cvect &c = {0}) : function("FSIN", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit sin(category_t c = symbol::default_category)
+    : function("FSIN", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::sin(%%1%%)";
-    case mql_format:     return  "MathSin(%%1%%)";
     default:             return      "sin(%%1%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a(args[0]);
-    if (!has_value(a))  return a;
+    const auto p(pars[0]);
+    if (!has_value(p))  return p;
 
-    return std::sin(base(a));
+    const auto b(base(p));
+    if (std::isinf(b))
+      return {};
+
+    return std::sin(b);
   }
 };
 
@@ -713,29 +727,27 @@ public:
 class sqrt : public function
 {
 public:
-  explicit sqrt(const cvect &c = {0}) : function("FSQRT", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit sqrt(category_t c = symbol::default_category)
+    : function("FSQRT", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "std::sqrt(%%1%%)";
-    case mql_format:     return  "MathSqrt(%%1%%)";
     default:             return      "sqrt(%%1%%)";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a(args[0]);
-    if (!has_value(a))  return a;
+    const auto p(pars[0]);
+    if (!has_value(p))  return p;
 
-    const auto v(base(a));
-    if (std::isless(v, 0.0))
-      return {};
+    const auto ret(std::sqrt(base(p)));
+    if (std::isnan(ret))  return {};
 
-    return std::sqrt(v);
+    return ret;
   }
 };
 
@@ -745,29 +757,28 @@ public:
 class sub : public function
 {
 public:
-  explicit sub(const cvect &c = {0}) : function("FSUB", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit sub(category_t c = symbol::default_category)
+    : function("FSUB", c, {c, c}) {}
 
-  std::string display(format) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
     return "(%%1%%-%%2%%)";
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
-    const auto a1(args[1]);
-    if (!has_value(a1))  return a1;
+    const auto p1(pars[1]);
+    if (!has_value(p1))  return p1;
 
-    const base_t ret(base(a0) - base(a1));
-    if (!std::isfinite(ret))  return {};
+    const auto ret(base(p0) - base(p1));
+    if (std::isnan(ret))  return {};
 
     return ret;
   }
 };
-
 
 ///
 /// Sigmoid function.
@@ -775,37 +786,40 @@ public:
 class sigmoid : public function
 {
 public:
-  explicit sigmoid(const cvect &c = {0}) : function("FSIGMOID", c[0], {c[0]})
-  { Expects(c.size() == 1); }
+  explicit sigmoid(category_t c = symbol::default_category)
+    : function("FSIGMOID", c, {c}) {}
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
     case cpp_format:     return "1.0 / (1.0 + std::exp(-%%1%%))";
-    case mql_format:     return  "1.0 / (1.0 + MathExp(-%%1%%))";
     case python_format:  return   "1. / (1. + math.exp(-%%1%%))";
     default:             return          "1 / (1 + exp(-%%1%%))";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto a0(args[0]);
-    if (!has_value(a0))  return a0;
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
 
     // The sigmoid function can be expressed in one of two equivalent ways:
     //     sigmoid(x) = 1 / (1 + exp(-x)) = exp(x) / (exp(x) + 1)
     // Each version can be used in order to avoid numerical overflow in extreme
     // cases (`x --> +inf` and `x --> -inf` respectively).
-    const auto x(base(a0));
-    if (x >= 0.0)
-      return 1.0 / (1.0 + std::exp(-x));
+    const auto x(base(p0));
 
-    return std::exp(x) / (1.0 + std::exp(x));
+    const auto ret(x >= 0.0 ? 1.0 / (1.0 + std::exp(-x))
+                            : std::exp(x) / (1.0 + std::exp(x)));
+
+    if (std::isnan(ret))
+      return {};
+
+    return ret;
   }
 };
-*/
+
 }  // namespace ultra::real
 
 #endif  // include guard
