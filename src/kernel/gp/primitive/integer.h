@@ -33,8 +33,8 @@ namespace ultra::integer
 namespace detail
 {
 
-[[nodiscard]] inline bool same_value_index(const function *f,
-                                           const function::params &pars)
+[[nodiscard]] inline bool int_value_index(const function *f,
+                                          const function::params &pars)
 {
   for (std::size_t i(0); i < f->arity(); ++i)
     if (pars[i].index() != d_int)
@@ -43,7 +43,7 @@ namespace detail
   return true;
 }
 
-}
+}  // namespace detail
 
 ///
 /// A simple shortcut for extracting a `D_INT` from a `value_t`
@@ -93,7 +93,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -126,7 +126,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -167,7 +167,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -203,7 +203,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -239,7 +239,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     return base(pars[0]) == 0 ? pars[1] : pars[2];
   }
@@ -265,7 +265,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -296,7 +296,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     if constexpr (sizeof(std::intmax_t) >= 2 * sizeof(D_INT))
     {
@@ -368,7 +368,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
@@ -396,7 +396,7 @@ public:
 
   [[nodiscard]] value_t eval(const params &pars) const final
   {
-    Expects(detail::same_value_index(this, pars));
+    Expects(detail::int_value_index(this, pars));
 
     const auto v0(base(pars[0]));
     const auto v1(base(pars[1]));
