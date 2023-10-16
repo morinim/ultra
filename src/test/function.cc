@@ -13,6 +13,7 @@
 #include <numbers>
 
 #include "kernel/gp/function.h"
+#include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
 
@@ -306,6 +307,116 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({inf}))) == doctest::Approx(1.0));
     CHECK(base(f.eval(debug_params({-inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
+  }
+}
+
+TEST_CASE("INTEGER")
+{
+  using namespace ultra;
+  using ultra::integer::base;
+
+  const value_t empty;
+
+  SUBCASE("Add")
+  {
+    integer::add f;
+
+    CHECK(base(f.eval(debug_params({-1, 1}))) == 0);
+    CHECK(base(f.eval(debug_params({1, 1}))) == 2);
+    CHECK(base(f.eval(debug_params({0, 10}))) == 10);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(), 1})))
+          == std::numeric_limits<D_INT>::max());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), -1})))
+          == std::numeric_limits<D_INT>::min());
+  }
+
+  SUBCASE("Div")
+  {
+    integer::div f;
+
+    CHECK(base(f.eval(debug_params({0, 1}))) == 0);
+    CHECK(base(f.eval(debug_params({1, 0}))) == 1);
+    CHECK(base(f.eval(debug_params({10, 2}))) == 5);
+    CHECK(base(f.eval(debug_params({10, -2}))) == -5);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), -1})))
+          == std::numeric_limits<D_INT>::min());
+  }
+
+  SUBCASE("IfE")
+  {
+    integer::ife f;
+
+    CHECK(base(f.eval(debug_params({0, 1, 2, 3}))) == 3);
+    CHECK(base(f.eval(debug_params({-1, -1, 0, 1}))) == 0);
+  }
+
+  SUBCASE("IfL")
+  {
+    integer::ifl f;
+
+    CHECK(base(f.eval(debug_params({0, 1, 2, 3}))) == 2);
+    CHECK(base(f.eval(debug_params({0, 0, 1, 2}))) == 2);
+    CHECK(base(f.eval(debug_params({1, 0, 2, 3}))) == 3);
+  }
+
+  SUBCASE("IfZ")
+  {
+    integer::ifz f;
+
+    CHECK(base(f.eval(debug_params({0, 1, 2}))) == 1);
+    CHECK(base(f.eval(debug_params({1, 0, 2}))) == 2);
+    CHECK(base(f.eval(debug_params({-1, 0, 2}))) == 2);
+  }
+
+  SUBCASE("Mod")
+  {
+    integer::mod f;
+
+    CHECK(base(f.eval(debug_params({0, 1}))) == 0);
+    CHECK(base(f.eval(debug_params({5, 2}))) == 1);
+    CHECK(base(f.eval(debug_params({1, 0}))) == 0);
+    CHECK(base(f.eval(debug_params({-2, 2}))) == 0);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), -1})))
+          == -1);
+  }
+
+  SUBCASE("Mul")
+  {
+    integer::mul f;
+
+    CHECK(base(f.eval(debug_params({0, 1}))) == 0);
+    CHECK(base(f.eval(debug_params({-2, 2}))) == -4);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(),
+                                    std::numeric_limits<D_INT>::max()})))
+          == std::numeric_limits<D_INT>::max());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), 2})))
+          == std::numeric_limits<D_INT>::min());
+  }
+
+  SUBCASE("Shl")
+  {
+    integer::shl f;
+
+    CHECK(base(f.eval(debug_params({0, 10}))) == 0);
+    CHECK(base(f.eval(debug_params({2, 1}))) == 4);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(),
+                                    std::numeric_limits<D_INT>::max()})))
+          == std::numeric_limits<D_INT>::max());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), 2})))
+          == std::numeric_limits<D_INT>::min());
+  }
+
+  SUBCASE("Sub")
+  {
+    integer::sub f;
+
+    CHECK(base(f.eval(debug_params({-1, 1}))) == -2);
+    CHECK(base(f.eval(debug_params({1, 1}))) == 0);
+    CHECK(base(f.eval(debug_params({0, 10}))) == -10);
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), 1})))
+          == std::numeric_limits<D_INT>::min());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(), -1})))
+          == std::numeric_limits<D_INT>::max());
   }
 }
 

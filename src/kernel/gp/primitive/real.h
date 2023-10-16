@@ -29,7 +29,7 @@ namespace ultra::real
 /// \param[in] v the value_t containing the real value
 /// \return      the value of `v`
 ///
-inline D_DOUBLE base(const value_t &v)
+[[nodiscard]] inline D_DOUBLE base(const value_t &v)
 {
   return std::get<D_DOUBLE>(v);
 }
@@ -239,7 +239,6 @@ public:
     : function("FDIV", r, pt)
   {
     Expects(pt.size() == 2);
-    Expects(pt[0] == pt[1]);
   }
 
   [[nodiscard]] std::string to_string(format) const final
@@ -458,11 +457,11 @@ public:
     {
     case cpp_format:
       return "(abs(%%1%%)<2*std::numeric_limits<T>::epsilon() ?"
-             "%%3%% : %%4%%)";
+             "%%2%% : %%3%%)";
     case python_format:
-      return "(%%3%% if abs(%%1%%) < 1e-10 else %%4%%)";
+      return "(%%2%% if abs(%%1%%) < 1e-10 else %%3%%)";
     default:
-      return "(fabs(%%1%%)<2*DBL_EPSILON ? %%3%% : %%4%%)";
+      return "(fabs(%%1%%)<2*DBL_EPSILON ? %%2%% : %%3%%)";
     }
   }
 

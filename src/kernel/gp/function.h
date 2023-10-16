@@ -52,7 +52,7 @@ public:
   [[nodiscard]] bool is_valid() const override;
 
 private:
-  param_data_types params_;
+  const param_data_types params_;
 };
 
 ///

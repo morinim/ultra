@@ -13,8 +13,11 @@
 #if !defined(ULTRA_INT_PRIMITIVE_H)
 #define      ULTRA_INT_PRIMITIVE_H
 
+#include <climits>
+
 #include "kernel/random.h"
 #include "kernel/terminal.h"
+#include "kernel/gp/function.h"
 
 /// Integer overflow is undefined behaviour. This means that implementations
 /// have a great deal of latitude in how they deal with signed integer
@@ -26,6 +29,17 @@
 /// integers do no result in signed overflow.
 namespace ultra::integer
 {
+
+///
+/// A simple shortcut for extracting a `D_INT` from a `value_t`
+///
+/// \param[in] v the value_t containing the integer value
+/// \return      the value of `v`
+///
+[[nodiscard]] inline D_INT base(const value_t &v)
+{
+  return std::get<D_INT>(v);
+}
 
 ///
 /// A random integer number in a specified range.
@@ -50,27 +64,30 @@ private:
   const D_INT min_, sup_;
 };
 
-/*
 /// \see https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
 class add : public function
 {
 public:
-  explicit add(const cvect &c) : function("ADD", c[0], {c[0], c[0]})
+  explicit add(category_t c = symbol::default_category)
+    : function("ADD", c, {c, c}) {}
+
+  [[nodiscard]] std::string to_string(format) const final
   {
-    Expects(c.size() == 1);
+    return "({0}+{1})";
   }
 
-  bool associative() const final { return true; }
-
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
 
-    if (v0 > 0 && v1 > 0 && (v0 > std::numeric_limits<base_t>::max() - v1))
-      return std::numeric_limits<base_t>::max();
-    if (v0 < 0 && v1 < 0 && (v0 < std::numeric_limits<base_t>::min() - v1))
-      return std::numeric_limits<base_t>::min();
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    if (v0 > 0 && v1 > 0 && (v0 > std::numeric_limits<D_INT>::max() - v1))
+      return std::numeric_limits<D_INT>::max();
+    if (v0 < 0 && v1 < 0 && (v0 < std::numeric_limits<D_INT>::min() - v1))
+      return std::numeric_limits<D_INT>::min();
 
     return v0 + v1;
   }
@@ -80,15 +97,28 @@ public:
 class div : public function
 {
 public:
-  explicit div(const cvect &c) : function("DIV", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
-
-  value_t eval(symbol_params &args) const final
+  explicit div(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("DIV", r, pt)
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
+    Expects(pt.size() == 2);
+  }
 
-    if (v1 == 0 || (v0 == std::numeric_limits<base_t>::min() && (v1 == -1)))
+  [[nodiscard]] std::string to_string(format) const final
+  {
+    return "({0}/{1})";
+  }
+
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    if (v1 == 0 || (v0 == std::numeric_limits<D_INT>::min() && (v1 == -1)))
       return v0;
 
     return v0 / v1;
@@ -98,70 +128,115 @@ public:
 class ife : public function
 {
 public:
-  explicit ife(const cvect &c)
-    : function("IFE", c[1], {c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
-
-  value_t eval(symbol_params &args) const final
+  explicit ife(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category,
+                                            symbol::default_category,
+                                            symbol::default_category})
+    : function("IFE", r, pt)
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
-
-    if (v0 == v1)
-      return args[2];
-
-    return args[3];
+    Expects(pt.size() == 4);
+    Expects(r == pt[2]);
+    Expects(pt[0] == pt[1]);
+    Expects(pt[2] == pt[3]);
   }
 
-  double penalty_nvi(core_interpreter *ci) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
-    return comparison_function_penalty(ci);
+    switch (f)
+    {
+    case python_format:
+      return "({2} if {1}=={1} else {3})";
+    default:
+      return "({0}=={1} ? {2} : {3})";
+    }
+  }
+
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+    Expects(pars[2].index() == d_int);
+    Expects(pars[3].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    return v0 == v1 ? pars[2] : pars[3];
   }
 };
 
 class ifl : public function
 {
 public:
-  explicit ifl(const cvect &c)
-    : function("IFL", c[1], {c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
-
-  value_t eval(symbol_params &args) const final
+  explicit ifl(return_type r = symbol::default_category,
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
+    : function("IFL", r, pt)
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
-
-    if (v0 < v1)
-      return args[2];
-
-    return args[3];
+    Expects(pt.size() == 4);
+    Expects(r == pt[2]);
+    Expects(pt[0] == pt[1]);
+    Expects(pt[2] == pt[3]);
   }
 
-  double penalty_nvi(core_interpreter *ci) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
-    return comparison_function_penalty(ci);
+    switch (f)
+    {
+    case python_format:  return "({2} if {0}<{1} else {3})";
+    default:             return     "({0}<{1} ? {2} : {3})";
+    }
+  }
+
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+    Expects(pars[2].index() == d_int);
+    Expects(pars[3].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    return v0 < v1 ? pars[2] : pars[3];
   }
 };
 
 class ifz : public function
 {
 public:
-  explicit ifz(const cvect &c) : function("IFZ", c[0], {c[0], c[0], c[0]})
-  { Expects(c.size() == 1); }
-
-  value_t eval(symbol_params &args) const final
+  explicit ifz(return_type r = symbol::default_category,
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
+    : function("IFZ", r, pt)
   {
-    const auto v0(integer::cast(args[0]));
-
-    if (v0 == 0)
-      return args[1];
-
-    return args[2];
+    Expects(pt.size() == 3);
+    Expects(r == pt[1]);
+    Expects(pt[1] == pt[2]);
   }
 
-  double penalty_nvi(core_interpreter *ci) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
-    return comparison_function_penalty(ci);
+    switch (f)
+    {
+    case python_format:
+      return "({1} if {0} == 0 else {2})";
+    default:
+      return "({0} == 0 ? {1} : {2}";
+    }
+  }
+
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+    Expects(pars[2].index() == d_int);
+
+    return base(pars[0]) == 0 ? pars[1] : pars[2];
   }
 };
 
@@ -169,15 +244,29 @@ public:
 class mod : public function
 {
 public:
-  explicit mod(const cvect &c) : function("MOD", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
-
-  value_t eval(symbol_params &args) const final
+  explicit mod(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("MOD", r, pt)
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
+    Expects(pt.size() == 2);
+    Expects(pt[0] == pt[1]);
+  }
 
-    if (v1 == 0 || (v0 == std::numeric_limits<base_t>::min() && (v1 == -1)))
+  [[nodiscard]] std::string to_string(format) const final
+  {
+    return "({0} % {1})";
+  }
+
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    if (v1 == 0 || (v0 == std::numeric_limits<D_INT>::min() && (v1 == -1)))
       return v1;
 
     return v0 % v1;
@@ -188,60 +277,77 @@ public:
 class mul : public function
 {
 public:
-  explicit mul(const cvect &c) : function("MUL", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
-
-  bool associative() const final { return true; }
-
-  value_t eval(symbol_params &args) const final
+  explicit mul(return_type r = symbol::default_category,
+               const param_data_types pt = {symbol::default_category,
+                                            symbol::default_category})
+    : function("MUL", r, pt)
   {
-    static_assert(sizeof(std::intmax_t) >= 2 * sizeof(base_t),
-                  "Unable to detect overflow after multiplication");
+    Expects(pt.size() == 2);
+  }
 
-    const std::intmax_t v0(integer::cast(args[0]));
-    const std::intmax_t v1(integer::cast(args[1]));
+  [[nodiscard]] std::string to_string(format) const final
+  {
+    return "({0}*{1})";
+  }
 
-    const auto tmp(v0 * v1);
-    if (tmp > std::numeric_limits<base_t>::max())
-      return std::numeric_limits<base_t>::max();
-    if (tmp < std::numeric_limits<base_t>::min())
-      return std::numeric_limits<base_t>::min();
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
 
-    return static_cast<base_t>(tmp);
+    if constexpr (sizeof(std::intmax_t) >= 2 * sizeof(D_INT))
+    {
+      static_assert(sizeof(std::intmax_t) >= 2 * sizeof(D_INT),
+                    "Unable to detect overflow after multiplication");
 
-#ifdef DUMMY
-    // On systems where the above relationship does not hold, the following
-    // compliant solution may be used to ensure signed overflow does not
-    // occur.
-    if (v0 > 0)
-      if (v1 > 0)
-      {
-        assert(v0 > 0 && v1 > 0);
-        if (v0 > std::numeric_limits<base_t>::max() / v1)
-        return std::numeric_limits<base_t>::max();
-      }
-      else  // v0 is positive, v1 is non-positive
-      {
-        assert(v0 > 0 && v1 <= 0);
-        if (v1 < std::numeric_limits<base_t>::min() / v0)
-          return std::numeric_limits<base_t>::min();
-      }
-    else  // v0 is non-positive
-      if (v1 > 0)
-      {
-        assert(v0 <= 0 && v1 > 0);
-        if (v0 < std::numeric_limits<base_t>::min() / v1)
-          return std::numeric_limits<base_t>::min();
-      }
-      else  // v0 is non-positive, v1 is non-positive
-      {
-        assert(v0 <= 0 && v1 <= 0);
-        if (v0 != 0 && v1 < std::numeric_limits<base_t>::max() / v0)
-          return std::numeric_limits<base_t>::max();
-      }
+      const std::intmax_t v0(base(pars[0]));
+      const std::intmax_t v1(base(pars[1]));
 
-    return v0 * v1;
-#endif
+      const auto tmp(v0 * v1);
+      if (tmp > std::numeric_limits<D_INT>::max())
+        return std::numeric_limits<D_INT>::max();
+      if (tmp < std::numeric_limits<D_INT>::min())
+        return std::numeric_limits<D_INT>::min();
+
+      return static_cast<D_INT>(tmp);
+    }
+    else
+    {
+      const auto v0(base(pars[0]));
+      const auto v1(base(pars[1]));
+
+      // On systems where the above relationship does not hold, the following
+      // compliant solution may be used to ensure signed overflow does not
+      // occur.
+      if (v0 > 0)
+        if (v1 > 0)
+        {
+          assert(v0 > 0 && v1 > 0);
+          if (v0 > std::numeric_limits<D_INT>::max() / v1)
+            return std::numeric_limits<D_INT>::max();
+        }
+        else
+        {
+          assert(v0 > 0 && v1 <= 0);
+          if (v1 < std::numeric_limits<D_INT>::min() / v0)
+            return std::numeric_limits<D_INT>::min();
+        }
+      else  // v0 is non-positive
+        if (v1 > 0)
+        {
+          assert(v0 <= 0 && v1 > 0);
+          if (v0 < std::numeric_limits<D_INT>::min() / v1)
+            return std::numeric_limits<D_INT>::min();
+        }
+        else
+        {
+          assert(v0 <= 0 && v1 <= 0);
+          if (v0 != 0 && v1 < std::numeric_limits<D_INT>::max() / v0)
+            return std::numeric_limits<D_INT>::max();
+        }
+
+      return v0 * v1;
+    }
   }
 };
 
@@ -249,17 +355,25 @@ public:
 class shl : public function
 {
 public:
-  explicit shl(const cvect &c) : function("SHL", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit shl(category_t c = symbol::default_category)
+    : function("SHL", c, {c, c}) {}
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
+    return "({0} << {1}";
+  }
 
-    if (v0 < 0 || v1 < 0 ||
-        v1 >= static_cast<base_t>(sizeof(base_t) * CHAR_BIT) ||
-        v0 > std::numeric_limits<base_t>::max() >> v1)
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    if (v0 < 0 || v1 < 0
+        || v1 >= static_cast<D_INT>(sizeof(D_INT) * CHAR_BIT)
+        || v0 > std::numeric_limits<D_INT>::max() >> v1)
       return v0;
 
     return v0 << v1;
@@ -270,23 +384,30 @@ public:
 class sub : public function
 {
 public:
-  explicit sub(const cvect &c) : function("SUB", c[0], {c[0], c[0]})
-  { Expects(c.size() == 1); }
+  explicit sub(category_t c = symbol::default_category)
+    : function("SUB", c, {c, c}) {}
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] std::string to_string(format) const final
   {
-    const auto v0(integer::cast(args[0]));
-    const auto v1(integer::cast(args[1]));
+    return "(%%1%%-%%2%%)";
+  }
 
-    if (v0 < 0 && v1 > 0 && (v0 < std::numeric_limits<base_t>::min() + v1))
-      return std::numeric_limits<base_t>::min();
-    if (v0 > 0 && v1 < 0 && (v0 > std::numeric_limits<base_t>::max() + v1))
-      return std::numeric_limits<base_t>::max();
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    Expects(pars[0].index() == d_int);
+    Expects(pars[1].index() == d_int);
+
+    const auto v0(base(pars[0]));
+    const auto v1(base(pars[1]));
+
+    if (v0 < 0 && v1 > 0 && (v0 < std::numeric_limits<D_INT>::min() + v1))
+      return std::numeric_limits<D_INT>::min();
+    if (v0 > 0 && v1 < 0 && (v0 > std::numeric_limits<D_INT>::max() + v1))
+      return std::numeric_limits<D_INT>::max();
 
     return v0 - v1;
   }
 };
-*/
 
 }  // namespace ultra::integer
 
