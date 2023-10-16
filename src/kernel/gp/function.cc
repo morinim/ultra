@@ -69,9 +69,9 @@ symbol::category_t function::arg_category(std::size_t i) const
 ///
 std::string function::to_string(format) const
 {
-  std::string args("%%1%%");
+  std::string args("{0}");
   for (std::size_t i(1); i < arity(); ++i)
-    args += ",%%" + std::to_string(i + 1) + "%%";
+    args += ",{" + std::to_string(i) + "}";
 
   return name() + "(" + args + ")";
 }

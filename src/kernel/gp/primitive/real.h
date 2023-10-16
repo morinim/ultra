@@ -106,9 +106,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::abs(%%1%%)";
-    case python_format:  return      "abs(%%1%%)";
-    default:             return     "fabs(%%1%%)";
+    case cpp_format:     return "std::abs({0})";
+    case python_format:  return      "abs({0})";
+    default:             return     "fabs({0})";
     }
   }
 
@@ -132,7 +132,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "(%%1%%+%%2%%)";
+    return "({0}+{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
@@ -175,8 +175,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "(%%1%%/std::sqrt(1.0+std::pow(%%2%%,2.0)))";
-    default:             return           "(%%1%%/sqrt(1.0+pow(%%2%%,2.0)))";
+    case cpp_format:     return "({0}/std::sqrt(1.0+std::pow({1},2.0)))";
+    default:             return           "({0}/sqrt(1.0+pow({1},2.0)))";
     }
   }
 
@@ -209,8 +209,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::cos(%%1%%)";
-    default:             return      "cos(%%1%%)";
+    case cpp_format:     return "std::cos({0})";
+    default:             return      "cos({0})";
     }
   }
 
@@ -243,7 +243,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "(%%1%%/%%2%%)";
+    return "({0}/{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
@@ -281,8 +281,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:  return "std::isgreater(%%1%%,%%2%%)";
-    default:          return "(%%1%%>%%2%%)";
+    case cpp_format:  return "std::isgreater({0},{1})";
+    default:          return "({0}>{1})";
     }
   }
 
@@ -320,9 +320,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::floor(%%1%%/%%2%%)";
-    case python_format:  return          "(%%1%%//%%2%%)";
-    default:             return      "floor(%%1%%/%%2%%)";
+    case cpp_format:     return "std::floor({0}/{1})";
+    case python_format:  return          "({0}//{1})";
+    default:             return      "floor({0}/{1})";
     }
   }
 
@@ -365,12 +365,12 @@ public:
     switch (f)
     {
     case cpp_format:
-      return "(abs(%%1%%-%%2%%)<2*std::numeric_limits<T>::epsilon() ?"
-             "%%3%% : %%4%%)";
+      return "(std::fabs({0}-{1})<2*std::numeric_limits<double>::epsilon() ? "
+             "{2} : {3})";
     case python_format:
-      return "(%%3%% if isclose(%%1%%, %%2%%) else %%4%%)";
+      return "({2} if isclose({0}, {1}) else {3})";
     default:
-      return "(fabs(%%1%%-%%2%%) < 2*DBL_EPSILON ? %%3%% : %%4%%)";
+      return "(fabs({0}-{1}) < 2*DBL_EPSILON ? {2} : {3})";
     }
   }
 
@@ -412,8 +412,8 @@ public:
   {
     switch (f)
     {
-    case python_format:  return "(%%3%% if %%1%%<%%2%% else %%4%%)";
-    default:             return     "(%%1%%<%%2%% ? %%3%% : %%4%%)";
+    case python_format:  return "({2} if {0}<{1} else {3})";
+    default:             return     "({0}<{1} ? {2} : {3})";
     }
   }
 
@@ -456,12 +456,12 @@ public:
     switch (f)
     {
     case cpp_format:
-      return "(abs(%%1%%)<2*std::numeric_limits<T>::epsilon() ?"
-             "%%2%% : %%3%%)";
+      return "(std::fabs({0})<2*std::numeric_limits<double>::epsilon() ? "
+             "{1} : {2})";
     case python_format:
-      return "(%%2%% if abs(%%1%%) < 1e-10 else %%3%%)";
+      return "({1} if abs({0}) < 1e-10 else {2})";
     default:
-      return "(fabs(%%1%%)<2*DBL_EPSILON ? %%2%% : %%3%%)";
+      return "(fabs({0})<2*DBL_EPSILON ? {1} : {2})";
     }
   }
 
@@ -491,9 +491,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::string(%%1%%).length()";
-    case python_format:  return                  "len(%%1%%)";
-    default:             return               "strlen(%%1%%)";
+    case cpp_format:     return "std::string({0}).length()";
+    case python_format:  return                  "len({0})";
+    default:             return               "strlen({0})";
     }
   }
 
@@ -519,8 +519,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:  return "std::log(%%1%%)";
-    default:          return      "log(%%1%%)";
+    case cpp_format:  return "std::log({0})";
+    default:          return      "log({0})";
     }
   }
 
@@ -561,8 +561,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:  return "std::isless(%%1%%,%%2%%)";
-    default:          return            "(%%1%%<%%2%%)";
+    case cpp_format:  return "std::isless({0},{1})";
+    default:          return            "({0}<{1})";
     }
   }
 
@@ -594,8 +594,9 @@ public:
   {
     switch (f)
     {
-    case python_format:  return  "max(%%1%%,%%2%%)";
-    default:             return "fmax(%%1%%,%%2%%)";
+    case cpp_format:     return "std::fmax({0},{1})";
+    case python_format:  return       "max({0},{1})";
+    default:             return      "fmax({0},{1})";
     }
   }
 
@@ -633,9 +634,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::fmod(%%1%%,%%2%%)";
-    case python_format:  return        "(%%1%% % %%2%%)";
-    default:             return      "fmod(%%1%%,%%2%%)";
+    case cpp_format:     return "std::fmod({0},{1})";
+    case python_format:  return        "({0} % {1})";
+    default:             return      "fmod({0},{1})";
     }
   }
 
@@ -671,7 +672,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "(%%1%%*%%2%%)";
+    return "({0}*{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
@@ -702,8 +703,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::sin(%%1%%)";
-    default:             return      "sin(%%1%%)";
+    case cpp_format:     return "std::sin({0})";
+    default:             return      "sin({0})";
     }
   }
 
@@ -733,8 +734,8 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "std::sqrt(%%1%%)";
-    default:             return      "sqrt(%%1%%)";
+    case cpp_format:     return "std::sqrt({0})";
+    default:             return      "sqrt({0})";
     }
   }
 
@@ -761,7 +762,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "(%%1%%-%%2%%)";
+    return "({0}-{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
@@ -792,9 +793,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:     return "1.0 / (1.0 + std::exp(-%%1%%))";
-    case python_format:  return   "1. / (1. + math.exp(-%%1%%))";
-    default:             return          "1 / (1 + exp(-%%1%%))";
+    case cpp_format:     return "1.0 / (1.0 + std::exp(-{0}))";
+    case python_format:  return   "1. / (1. + math.exp(-{0}))";
+    default:             return          "1 / (1 + exp(-{0}))";
     }
   }
 
