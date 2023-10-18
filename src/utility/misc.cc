@@ -36,9 +36,10 @@ bool is_number(std::string s)
   s = trim(s);
 
   char *end;
-  strtod(s.c_str(), &end);  // if no conversion can be performed, `end` is set
-                            // to `s.c_str()`
-  return end != s.c_str() && *end == '\0';
+  const double val(strtod(s.c_str(), &end));  // if no conversion can be
+                                              // performed, `end` is set to
+                                              // `s.c_str()`
+  return end != s.c_str() && *end == '\0' && val != HUGE_VAL;;
 }
 
 ///

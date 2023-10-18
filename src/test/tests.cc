@@ -11,5 +11,6 @@
  */
 
 #include "test/function.cc"
+#include "test/misc.cc"
 #include "test/terminal.cc"
 #include "test/value.cc"

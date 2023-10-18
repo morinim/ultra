@@ -23,21 +23,27 @@
 
 namespace ultra
 {
-bool is_number(std::string);
-bool iequals(const std::string &, const std::string &);
-std::string replace(std::string, const std::string &, const std::string &);
-std::string replace_all(std::string, const std::string &, const std::string &);
-std::string trim(const std::string &);
+[[nodiscard]] bool is_number(std::string);
+[[nodiscard]] bool iequals(const std::string &, const std::string &);
+[[nodiscard]] std::string replace(std::string, const std::string &,
+                                  const std::string &);
+[[nodiscard]] std::string replace_all(std::string, const std::string &,
+                                      const std::string &);
+[[nodiscard]] std::string trim(const std::string &);
 
+///
+/// Check if a value is almost equal to zero.
+///
+/// \tparam T type we want to check
 ///
 /// \param[in] v value to check
 /// \return      `true` if `v` is less than `epsilon`-tolerance
 ///
 /// \note
-/// `epsilon` is the smallest T-value that can be added to `1.0` without
+/// `epsilon` is the smallest `T`-value that can be added to `1.0` without
 /// getting `1.0` back (this is a much larger value than `DBL_MIN`).
 ///
-template<class T> bool issmall(T v)
+template<class T> [[nodiscard]] bool issmall(T v)
 {
   static constexpr auto e(std::numeric_limits<T>::epsilon());
 
@@ -48,7 +54,7 @@ template<class T> bool issmall(T v)
 /// \param[in] v value to check
 /// \return      `true` if `v` is nonnegative
 ///
-template<class T> bool isnonnegative(T v)
+template<class T> [[nodiscard]] bool isnonnegative(T v)
 {
   return v >= static_cast<T>(0);
 }
@@ -61,13 +67,13 @@ template<class T> bool isnonnegative(T v)
 /// \param[in] s a string
 /// \return      the content of string `s` converted in an object of type `T`
 ///
-template<class T> T lexical_cast(const std::string &s)
+template<class T> [[nodiscard]] T lexical_cast(const std::string &s)
 { return std::stoi(s); }
-template<> inline double lexical_cast(const std::string &s)
+template<> [[nodiscard]] inline double lexical_cast(const std::string &s)
 { return std::stod(s); }
-template<> inline std::string lexical_cast(const std::string &s)
+template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
 { return s; }
-template<class T> T lexical_cast(const value_t &);
+template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 
 ///
 /// A RAII class to restore the state of a stream to its original state.
@@ -108,81 +114,15 @@ private:
 #define SAVE_FLAGS(s) ios_flag_saver save ## __LINE__(s)
 
 ///
-/// A single-pass output iterator that writes successive objects of type `T`
-/// into the `std::basic_ostream` object for which it was constructed, using
-/// `operator<<`. Optional delimiter string is written to the output stream
-/// after the SECOND write operation.
-///
-/// Same interface as an std::ostream_iterator.
-///
-/// \remark Lifted from Jerry Coffin's `prefix_ostream_iterator`.
-///
-template <class T, class C = char, class traits = std::char_traits<C>>
-class infix_iterator
-{
-public:
-  // Type alias
-  using iterator_category = std::output_iterator_tag;
-  using value_type        = void;
-  using difference_type   = void;
-  using pointer           = void;
-  using reference         = void;
-  using char_type         = C;
-  using traits_type       = traits;
-  using ostream_type      = std::basic_ostream<C, traits>;
-
-  explicit infix_iterator(ostream_type &s, const C *d = nullptr)
-    : os_(&s), delimiter_(d), first_elem_(true)
-  {}
-
-  infix_iterator &operator=(const T &item)
-  {
-    // Here's the only real change from ostream_iterator:
-    // normally, the '*os << item;' would come before the 'if'.
-    if (!first_elem_ && delimiter_)
-      *os_ << delimiter_;
-
-    *os_ << item;
-    first_elem_ = false;
-    return *this;
-  }
-
-  infix_iterator &operator*() { return *this; }
-  infix_iterator &operator++() { return *this; }
-  infix_iterator &operator++(int) { return *this; }
-
-private:
-  std::basic_ostream<C, traits> *os_;
-  const C *delimiter_;
-  bool first_elem_;
-};  // class infix_iterator
-
-///
-/// \param[in] val a value to be rounded
-/// \return        `val` rounded to a fixed, ultra-specific, number of decimals
-///
-template<class T>
-T round_to(T val)
-{
-  constexpr T float_epsilon(0.0001);
-
-  val /= float_epsilon;
-  val = std::round(val);
-  val *= float_epsilon;
-
-  return val;
-}
-
-///
 /// \param[in] v1 a floating point number
 /// \param[in] v2 a floating point number
 /// \param[in] e  max relative error. If we want 99.999% accuracy then we
-///               should pass a `e` of 0.00001
+///               should pass `0.00001`
 /// \return       `true` if the difference between `v1` and `v2` is *small*
 ///               compared to their magnitude
 ///
 /// \note Code from Bruce Dawson:
-/// <www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm>
+/// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 ///
 template<class T>
 [[nodiscard]]
@@ -193,7 +133,6 @@ bool almost_equal(T v1, T v2, T e = 0.00001)
   // Check if the numbers are really close -- needed when comparing numbers
   // near zero.
   if (issmall(diff))
-    //if (diff <= 10.0 * std::numeric_limits<T>::min())
     return true;
 
   v1 = std::abs(v1);
@@ -234,7 +173,7 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 template<class T>
 bool load_float_from_stream(std::istream &in, T *i)
 {
-  static_assert(std::is_floating_point<T>::value,
+  static_assert(std::is_floating_point_v<T>,
                 "load_float_from_stream requires a floating point type");
 
   SAVE_FLAGS(in);
@@ -243,6 +182,8 @@ bool load_float_from_stream(std::istream &in, T *i)
                >> std::setprecision(std::numeric_limits<T>::digits10 + 1)
                >> *i);
 }
+
+template<typename T> concept IsEnum = std::is_enum_v<T>;
 
 ///
 /// Encapsulate the logic to convert a scoped enumeration element to its
@@ -253,10 +194,9 @@ bool load_float_from_stream(std::istream &in, T *i)
 /// \param[in] v element of an enum class
 /// \return      the integer value of `v`
 ///
-template<class E>
-constexpr std::underlying_type_t<E> as_integer(E v)
+template<IsEnum E>
+[[nodiscard]] constexpr std::underlying_type_t<E> as_integer(E v)
 {
-  static_assert(std::is_enum_v<E>);
   return static_cast<std::underlying_type_t<E>>(v);
 }
 
@@ -269,9 +209,7 @@ constexpr std::underlying_type_t<E> as_integer(E v)
 /// \param[in]      v element of an enum class
 /// \return           the modified output stream
 ///
-template<class E>
-std::enable_if_t<std::is_enum_v<E>, std::ostream> &
-operator<<(std::ostream &s, E v)
+template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 {
   return s << as_integer(v);
 }
