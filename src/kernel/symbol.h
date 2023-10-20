@@ -55,6 +55,8 @@ public:
   explicit symbol(const std::string &, category_t = default_category);
   virtual ~symbol() = default;
 
+  void category(category_t);
+
   [[nodiscard]] category_t category() const;
   [[nodiscard]] opcode_t opcode() const;
   [[nodiscard]] std::string name() const;
