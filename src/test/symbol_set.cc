@@ -12,8 +12,7 @@
 
 #include <numbers>
 
-#include "kernel/gp/function.h"
-#include "kernel/gp/primitive/integer.h"
+#include "kernel/symbol_set.h"
 #include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
 
@@ -25,7 +24,19 @@ TEST_SUITE("SYMBOL SET")
 
 TEST_CASE("Base")
 {
+  using namespace ultra;
 
+  symbol_set ss;
+
+  ss.insert<real::sin>();
+  ss.insert<real::cos>();
+  ss.insert<real::add>();
+  ss.insert<real::sub>();
+  ss.insert<real::div>();
+  ss.insert<real::mul>();
+  ss.insert<real::number>();
+
+  CHECK(ss.categories() == 1);
 }
 
 }  // TEST_SUITE("FUNCTION")

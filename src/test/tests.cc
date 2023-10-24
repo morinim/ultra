@@ -10,6 +10,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#include "test/distribution.cc"
 #include "test/function.cc"
 #include "test/misc.cc"
 #include "test/symbol_set.cc"
