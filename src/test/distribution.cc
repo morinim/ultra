@@ -13,6 +13,7 @@
 #include <numbers>
 
 #include "kernel/distribution.h"
+#include "kernel/random.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -24,52 +25,56 @@ TEST_CASE("Base")
 {
   using namespace ultra;
 
-  SUBCASE("Floating point")
-  {
-    distribution<double> d;
+  distribution<double> d;
 
-    CHECK(d.size() == 0);
-    CHECK(d.entropy() == doctest::Approx(0.0));
+  CHECK(d.size() == 0);
 
-    d.add(2.0);
-    d.add(4.0);
-    d.add(4.0);
-    d.add(4.0);
-    d.add(5.0);
-    d.add(5.0);
-    d.add(7.0);
-    d.add(9.0);
+  d.add(2.0);
+  d.add(4.0);
+  d.add(4.0);
+  d.add(4.0);
+  d.add(5.0);
+  d.add(5.0);
+  d.add(7.0);
+  d.add(9.0);
+  CHECK(d.size() == 8);
 
-    CHECK(d.size() == 8);
-    CHECK(d.min() == doctest::Approx(2.0));
-    CHECK(d.max() == doctest::Approx(9.0));
-    CHECK(d.mean() == doctest::Approx(5.0));
-    CHECK(d.variance() == doctest::Approx(4.0));
-    CHECK(d.standard_deviation() == doctest::Approx(2.0));
-  }
+  d.add(std::numeric_limits<double>::quiet_NaN());
+  CHECK(d.size() == 8);
 
-  SUBCASE("Integer")
-  {
-    distribution<int> d;
+  CHECK(d.min() == doctest::Approx(2.0));
+  CHECK(d.max() == doctest::Approx(9.0));
+  CHECK(d.mean() == doctest::Approx(5.0));
+  CHECK(d.variance() == doctest::Approx(4.0));
+  CHECK(d.standard_deviation() == doctest::Approx(2.0));
+}
 
-    CHECK(d.size() == 0);
+TEST_CASE("Serialization")
+{
+  using namespace ultra;
+  distribution<double> d;
 
-    d.add(2);
-    d.add(4);
-    d.add(4);
-    d.add(4);
-    d.add(5);
-    d.add(5);
-    d.add(7);
-    d.add(9);
+  for (unsigned i(0); i < 10000; ++i)
+    d.add(random::between(0.0, 10.0));
 
-    CHECK(d.size() == 8);
-    CHECK(d.min() == 2);
-    CHECK(d.max() == 9);
-    CHECK(d.mean() == 5);
-    CHECK(d.variance() == 4);
-    CHECK(d.standard_deviation() == 2);
-  }
+  const auto rif_min(d.min());
+  const auto rif_max(d.max());
+  const auto rif_mean(d.mean());
+  const auto rif_variance(d.variance());
+
+  CHECK(4.5 <= rif_mean);
+  CHECK(rif_mean <= 5.5);
+
+  std::stringstream s;
+  CHECK(d.save(s));
+
+  distribution<double> d1;
+  CHECK(d1.load(s));
+
+  CHECK(rif_min == doctest::Approx(d.min()));
+  CHECK(rif_max == doctest::Approx(d.max()));
+  CHECK(rif_mean == doctest::Approx(d.mean()));
+  CHECK(rif_variance == doctest::Approx(d.variance()));
 }
 
 }  // TEST_SUITE("FUNCTION")

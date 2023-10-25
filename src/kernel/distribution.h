@@ -23,11 +23,25 @@
 
 namespace ultra
 {
+template<class T>
+concept ArithmeticType =
+  (std::is_floating_point_v<T>
+   || std::is_floating_point_v<typename T::value_type>)
+  && requires(T x, T y)
+{
+  {x + y};
+  {x - y};
+  {x * y};
+  {x / y};
+  {x < y};
+  {x / 0.1};
+};
+
 ///
 /// Simplifies the calculation of statistics regarding a sequence (mean,
 /// variance, standard deviation, entropy, min and max).
 ///
-template<class T>
+template<ArithmeticType T>
 class distribution
 {
 public:
@@ -35,14 +49,12 @@ public:
 
   void clear();
 
-  template<class U> void add(U);
+  void add(T);
 
-  [[nodiscard]] std::uintmax_t size() const;
-  [[nodiscard]] double entropy() const;
+  [[nodiscard]] std::size_t size() const;
   [[nodiscard]] T max() const;
   [[nodiscard]] T mean() const;
   [[nodiscard]] T min() const;
-  [[nodiscard]] const std::map<T, std::uintmax_t> &seen() const;
   [[nodiscard]] T standard_deviation() const;
   [[nodiscard]] T variance() const;
 
@@ -56,15 +68,12 @@ private:
   // Private methods.
   void update_variance(T);
 
-  // Private data members.
-  std::map<T, std::uintmax_t> seen_ {};
-
   T m2_ {};
   T max_ {};
   T mean_ {};
   T min_ {};
 
-  std::uintmax_t size_ {0};
+  std::size_t size_ {0};
 };
 
 #include "kernel/distribution.tcc"

@@ -20,7 +20,7 @@
 ///
 /// Resets gathered statics.
 ///
-template<class T>
+template<ArithmeticType T>
 void distribution<T>::clear()
 {
   *this = distribution();
@@ -29,8 +29,8 @@ void distribution<T>::clear()
 ///
 /// \return number of elements of the distribution
 ///
-template<class T>
-std::uintmax_t distribution<T>::size() const
+template<ArithmeticType T>
+std::size_t distribution<T>::size() const
 {
   return size_;
 }
@@ -38,7 +38,7 @@ std::uintmax_t distribution<T>::size() const
 ///
 /// \return the maximum value of the distribution
 ///
-template<class T>
+template<ArithmeticType T>
 T distribution<T>::max() const
 {
   Expects(size());
@@ -48,7 +48,7 @@ T distribution<T>::max() const
 ///
 /// \return the minimum value of the distribution
 ///
-template<class T>
+template<ArithmeticType T>
 T distribution<T>::min() const
 {
   Expects(size());
@@ -58,7 +58,7 @@ T distribution<T>::min() const
 ///
 /// \return the mean value of the distribution
 ///
-template<class T>
+template<ArithmeticType T>
 T distribution<T>::mean() const
 {
   Expects(size());
@@ -68,7 +68,7 @@ T distribution<T>::mean() const
 ///
 /// \return the variance of the distribution
 ///
-template<class T>
+template<ArithmeticType T>
 T distribution<T>::variance() const
 {
   Expects(size());
@@ -83,71 +83,23 @@ T distribution<T>::variance() const
 /// \remark
 /// Function ignores NAN values.
 ///
-template<class T>
-template<class U>
-void distribution<T>::add(U val)
+template<ArithmeticType T>
+void distribution<T>::add(T val)
 {
   using std::isnan;
-
-  if constexpr (std::is_floating_point_v<U>)
-    if (isnan(val))
-      return;
-
-  const auto v1(static_cast<T>(val));
-
-  if constexpr (std::is_floating_point_v<T>)
-    if (isnan(v1))
-      return;
+  if (isnan(val))
+    return;
 
   if (!size())
-    min_ = max_ = mean_ = v1;
-  else if (v1 < min())
-    min_ = v1;
-  else if (v1 > max())
-    max_ = v1;
+    min_ = max_ = mean_ = val;
+  else if (val < min())
+    min_ = val;
+  else if (val > max())
+    max_ = val;
 
   ++size_;
 
-  if constexpr (std::is_floating_point_v<T> && std::is_floating_point_v<T>)
-  {
-    decltype(v1) epsilon(0.0001);
-    auto v2(v1 / epsilon);
-    v2 = std::round(v2);
-    v2 *= epsilon;
-
-    ++seen_[v2];
-  }
-  else
-    ++seen_[v1];
-
-  update_variance(v1);
-}
-
-template<class T>
-const std::map<T, std::uintmax_t> &distribution<T>::seen() const
-{
-  return seen_;
-}
-
-///
-/// \return the entropy of the distribution
-///
-/// \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
-///
-template<class T>
-double distribution<T>::entropy() const
-{
-  const double c(1.0 / std::log(2.0));
-
-  double h(0.0);
-  for (const auto &f : seen())  // f.first: fitness, f.second: sightings
-  {
-    const auto p(static_cast<double>(f.second) / static_cast<double>(size()));
-
-    h -= p * std::log(p) * c;
-  }
-
-  return h;
+  update_variance(val);
 }
 
 ///
@@ -162,7 +114,7 @@ double distribution<T>::entropy() const
 /// * https://en.wikipedia.org/wiki/Online_algorithm
 /// * https://en.wikipedia.org/wiki/Moving_average#Cumulative_average
 ///
-template<class T>
+template<ArithmeticType T>
 void distribution<T>::update_variance(T val)
 {
   Expects(size());
@@ -182,7 +134,7 @@ void distribution<T>::update_variance(T val)
 ///
 /// \return the standard deviation of the distribution
 ///
-template<class T>
+template<ArithmeticType T>
 T distribution<T>::standard_deviation() const
 {
   // This way, for "regular" types we'll use std::sqrt ("taken in" by the
@@ -199,7 +151,7 @@ T distribution<T>::standard_deviation() const
 /// \param[out] out output stream
 /// \return         true on success
 ///
-template<class T>
+template<ArithmeticType T>
 bool distribution<T>::save(std::ostream &out) const
 {
   SAVE_FLAGS(out);
@@ -211,10 +163,6 @@ bool distribution<T>::save(std::ostream &out) const
       << min() << '\n'
       << max() << '\n'
       << m2_ << '\n';
-
-  out << seen().size() << '\n';
-  for (const auto &elem : seen())
-    out << elem.first << ' ' << elem.second << '\n';
 
   return out.good();
 }
@@ -228,7 +176,7 @@ bool distribution<T>::save(std::ostream &out) const
 /// \note
 /// If the load operation isn't successful the current object isn't modified.
 ///
-template<class T>
+template<ArithmeticType T>
 bool distribution<T>::load(std::istream &in)
 {
   SAVE_FLAGS(in);
@@ -256,27 +204,11 @@ bool distribution<T>::load(std::istream &in)
   if (!(in >> m2__))
     return false;
 
-  typename decltype(seen_)::size_type n;
-  if (!(in >> n))
-    return false;
-
-  decltype(seen_) s;
-  for (decltype(n) i(0); i < n; ++i)
-  {
-    typename decltype(seen_)::key_type key;
-    typename decltype(seen_)::mapped_type val;
-    if (!(in >> key >> val))
-      return false;
-
-    s[key] = val;
-  }
-
   size_ = c;
   mean_ = m;
   min_ = mn;
   max_ = mx;
   m2_ = m2__;
-  seen_ = s;
 
   return true;
 }
@@ -284,7 +216,7 @@ bool distribution<T>::load(std::istream &in)
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<class T>
+template<ArithmeticType T>
 bool distribution<T>::is_valid() const
 {
   // This way, for "regular" types we'll use std::infinite / std::isnan
