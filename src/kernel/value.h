@@ -37,7 +37,8 @@ using D_STRING  =    std::string;
 /// A variant containing the data types used by the interpreter for internal
 /// calculations / output value and for storing examples.
 ///
-using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_NULLARY *, D_STRING>;
+using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, const D_NULLARY *,
+                             D_STRING>;
 
 [[nodiscard]] bool operator==(const value_t &, const value_t &);
 [[nodiscard]] bool has_value(const value_t &);

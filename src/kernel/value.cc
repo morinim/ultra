@@ -24,8 +24,7 @@ namespace ultra
 ///
 /// Notes:
 /// - values of different type are considered different (`1 != 1.0`);
-/// - nullary objects are considered equal (real comparison is handled
-///   elsewhere. See `ultra::function`);
+/// - nullary objects are considered equal if they point to the same address;
 /// - real values are compared using an approximation;
 /// - everything else is compared using the specific `==` operator.
 ///
@@ -41,7 +40,7 @@ bool operator==(const value_t &lhs, const value_t &rhs)
   case d_int:
     return std::get<D_INT>(lhs) == std::get<D_INT>(rhs);
   case d_nullary:
-    return std::get<D_NULLARY *>(lhs) == std::get<D_NULLARY *>(rhs);
+    return std::get<const D_NULLARY *>(lhs) == std::get<const D_NULLARY *>(rhs);
   case d_string:
     return std::get<D_STRING>(lhs) == std::get<D_STRING>(rhs);
   case d_void:
@@ -71,11 +70,11 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
   switch (v.index())
   {
-  case d_double:  o << std::get<D_DOUBLE>(v);                 break;
-  case d_int:     o << std::get<D_INT>(v);                    break;
-  case d_nullary: o << std::get<D_NULLARY *>(v)->to_string(); break;
-  case d_string:  o << std::get<D_STRING>(v);                 break;
-  case d_void:    o << "{}";                                  break;
+  case d_double:  o << std::get<D_DOUBLE>(v);                       break;
+  case d_int:     o << std::get<D_INT>(v);                          break;
+  case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string(); break;
+  case d_string:  o << std::get<D_STRING>(v);                       break;
+  case d_void:    o << "{}";                                        break;
   }
 
   return o;

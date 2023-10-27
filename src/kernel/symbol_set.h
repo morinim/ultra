@@ -34,6 +34,8 @@ struct w_symbol
 
   explicit w_symbol(const symbol *, weight_t = base_weight);
 
+  [[nodiscard]] bool operator==(const w_symbol &) const;
+
   const symbol *sym;
 
   /// Used by the symbol_set::roulette method to control the probability of
@@ -41,7 +43,8 @@ struct w_symbol
   weight_t weight;
 };
 
-[[nodiscard]] bool operator==(const w_symbol &, const w_symbol);
+[[nodiscard]] bool is_terminal(const w_symbol &);
+[[nodiscard]] bool is_function(const w_symbol &);
 
 class sum_container
 {
@@ -119,8 +122,17 @@ public:
   template<class S, class ...Args> symbol *insert(Args &&...);
 
   [[nodiscard]] symbol::category_t categories() const;
+  [[nodiscard]] std::size_t terminals(
+    symbol::category_t = symbol::default_category) const;
 
-  [[nodiscard]] const symbol &roulette(symbol::category_t) const;
+  [[nodiscard]] const symbol &roulette(
+    symbol::category_t = symbol::default_category) const;
+
+  [[nodiscard]] const symbol *decode(symbol::opcode_t) const;
+  [[nodiscard]] const symbol *decode(const std::string &) const;
+
+  [[nodiscard] ]bool enough_terminals() const;
+  [[nodiscard]] bool is_valid() const;
 
 /*
   const symbol &roulette_free(category_t) const;
@@ -129,15 +141,7 @@ public:
 
   const symbol &arg(std::size_t) const;
 
-  symbol *decode(opcode_t) const;
-  symbol *decode(const std::string &) const;
-
-  std::size_t terminals(category_t) const;
-
   weight_t weight(const symbol &) const;
-
-  bool enough_terminals() const;
-  bool is_valid() const;
 
   friend std::ostream &operator<<(std::ostream &, const symbol_set &);
 */

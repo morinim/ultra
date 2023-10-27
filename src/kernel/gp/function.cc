@@ -60,6 +60,16 @@ symbol::category_t function::arg_category(std::size_t i) const
   return params_[i];
 }
 
+bool is_function(const symbol *s)
+{
+  return dynamic_cast<const function *>(s) != nullptr;
+}
+
+bool is_function(const symbol &s)
+{
+  return is_function(&s);
+}
+
 ///
 /// \return the name of the function
 ///

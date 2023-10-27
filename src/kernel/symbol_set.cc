@@ -10,6 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <algorithm>
 #include <set>
 
 #include "kernel/symbol_set.h"
@@ -28,9 +29,19 @@ w_symbol::w_symbol(const symbol *s, weight_t w) : sym(s), weight(w)
   Expects(s);
 }
 
-bool operator==(const w_symbol &lhs, const w_symbol &rhs)
+bool w_symbol::operator==(const w_symbol &rhs) const
 {
-  return lhs.sym == rhs.sym && lhs.weight == rhs.weight;
+  return sym == rhs.sym && weight == rhs.weight;
+}
+
+bool is_terminal(const w_symbol &ws)
+{
+  return is_terminal(ws.sym);
+}
+
+bool is_function(const w_symbol &ws)
+{
+  return is_function(ws.sym);
 }
 
 // ****************************** sum_container  ******************************
@@ -157,10 +168,78 @@ void collection::insert(const w_symbol &ws)
 {
   all.insert(ws);
 
-  if (dynamic_cast<const terminal *>(ws.sym))
+  if (is_terminal(ws.sym))
     terminals.insert(ws);
   else  // function
     functions.insert(ws);
+}
+
+///
+/// \return `true` if the object passes the internal consistency check
+///
+bool collection::is_valid() const
+{
+  if (!all.is_valid() || !functions.is_valid() || !terminals.is_valid())
+  {
+    ultraERROR << "(inside " << name_ << ")";
+    return false;
+  }
+
+  if (std::ranges::any_of(functions, detail::is_function))
+    return false;
+
+  if (std::ranges::any_of(terminals, detail::is_terminal))
+    return false;
+
+  for (const auto &s : all)
+  {
+    if (is_terminal(s.sym))
+    {
+      if (std::ranges::find(terminals, s) == terminals.end())
+      {
+        ultraERROR << name_ << ": terminal " << s.sym->name()
+                   << " badly stored";
+        return false;
+      }
+    }
+    else  // function
+    {
+      if (std::ranges::find(functions, s) == functions.end())
+      {
+        ultraERROR << name_ << ": function " << s.sym->name()
+                   << " badly stored";
+        return false;
+      }
+    }
+  }
+
+  const auto ssize(all.size());
+
+  if (ssize < functions.size())
+  {
+    ultraERROR << name_ << ": wrong function set size (more than symbol set)";
+    return false;
+  }
+
+  if (ssize < terminals.size())
+  {
+    ultraERROR << name_ << ": wrong terminal set size (more than symbol set)";
+    return false;
+  }
+
+  // The condition:
+  //
+  //     if (ssize && !terminals.size())
+  //     {
+  //       ultraERROR << name_ << ": no terminal in the symbol set";
+  //       return false;
+  //     }
+  //
+  // must be satisfied when symbol_set is completely populated.
+  // Since we don't want to enforce a particular insertion order (i.e.
+  // terminals before functions), we cannot perform the check here.
+
+  return ssize == functions.size() + terminals.size();
 }
 
 }  // namespace detail
@@ -222,6 +301,43 @@ symbol::category_t symbol_set::categories() const
 }
 
 ///
+/// \param[in] c a category
+/// \return      number of terminals in category `c`
+///
+std::size_t symbol_set::terminals(symbol::category_t c) const
+{
+  return c < categories() ? views_[c].terminals.size() : 0;
+}
+
+///
+/// We want at least one terminal for every used category.
+///
+/// \return `true` if there are enough terminals for secure individual
+///         generation
+///
+bool symbol_set::enough_terminals() const
+{
+  if (views_.empty())
+    return true;
+
+  std::set<symbol::category_t> need;
+
+  for (const auto &s : symbols_)
+    if (const auto *f(dynamic_cast<const function *>(s.get())); f)
+    {
+      const auto arity(f->arity());
+      for (std::size_t i(0); i < arity; ++i)
+        need.insert(f->arg_category(i));
+    }
+
+  for (const auto &i : need)
+    if (i >= categories() || !views_[i].terminals.size())
+      return false;
+
+  return true;
+}
+
+///
 /// Extracts a random symbol from the symbol set without bias between terminals
 /// and functions .
 ///
@@ -249,6 +365,55 @@ const symbol &symbol_set::roulette(symbol::category_t c) const
     return views_[c].functions.roulette();
 
   return views_[c].terminals.roulette();
+}
+
+///
+/// \param[in] opcode numerical code used as primary key for a symbol
+/// \return           a pointer to the ultra::symbol identified by `opcode`
+///                   (`nullptr` if not found).
+///
+const symbol *symbol_set::decode(symbol::opcode_t opcode) const
+{
+  for (const auto &s : symbols_)
+    if (s->opcode() == opcode)
+      return s.get();
+
+  return nullptr;
+}
+
+///
+/// \param[in] dex the name of a symbol
+/// \return        a pointer to the symbol identified by `dex` (0 if not found)
+///
+/// \attention
+/// Please note that opcodes are automatically generated and fully identify
+/// a symbol (they're primary keys). Conversely the name of a symbol is chosen
+/// by the user, so, if you don't pay attention, different symbols may have the
+/// same name.
+///
+const symbol *symbol_set::decode(const std::string &dex) const
+{
+  Expects(!dex.empty());
+
+  for (const auto &s : symbols_)
+    if (s->name() == dex)
+      return s.get();
+
+  return nullptr;
+}
+
+///
+/// \return `true` if the object passes the internal consistency check
+///
+bool symbol_set::is_valid() const
+{
+  if (!enough_terminals())
+  {
+    ultraERROR << "Symbol set doesn't contain enough symbols";
+    return false;
+  }
+
+  return true;
 }
 
 /*
@@ -294,78 +459,6 @@ const symbol &symbol_set::roulette_free(category_t c) const
 {
   Expects(c < categories());
   return views_[c].all.roulette();
-}
-
-///
-/// \param[in] opcode numerical code used as primary key for a symbol
-/// \return           a pointer to the ultra::symbol identified by `opcode`
-///                   (`nullptr` if not found).
-///
-symbol *symbol_set::decode(opcode_t opcode) const
-{
-  for (const auto &s : symbols_)
-    if (s->opcode() == opcode)
-      return s.get();
-
-  return nullptr;
-}
-
-///
-/// \param[in] dex the name of a symbol
-/// \return        a pointer to the symbol identified by `dex` (0 if not found)
-///
-/// \attention
-/// Please note that opcodes are automatically generated and fully identify
-/// a symbol (they're primary keys). Conversely the name of a symbol is chosen
-/// by the user, so, if you don't pay attention, different symbols may have the
-/// same name.
-///
-symbol *symbol_set::decode(const std::string &dex) const
-{
-  Expects(!dex.empty());
-
-  for (const auto &s : symbols_)
-    if (s->name() == dex)
-      return s.get();
-
-  return nullptr;
-}
-
-///
-/// \param[in] c a category
-/// \return      number of terminals in category `c`
-///
-std::size_t symbol_set::terminals(category_t c) const
-{
-  Expects(c < categories());
-  return views_[c].terminals.size();
-}
-
-///
-/// We want at least one terminal for every used category.
-///
-/// \return `true` if there are enough terminals for secure individual
-///         generation
-///
-bool symbol_set::enough_terminals() const
-{
-  if (views_.empty())
-    return true;
-
-  std::set<category_t> need;
-
-  for (const auto &s : symbols_)
-  {
-    const auto arity(s->arity());
-    for (auto i(decltype(arity){0}); i < arity; ++i)
-      need.insert(function::cast(s.get())->arg_category(i));
-  }
-
-  for (const auto &i : need)
-    if (i >= categories() || !views_[i].terminals.size())
-      return false;
-
-  return true;
 }
 
 ///
@@ -415,90 +508,6 @@ std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
 
   return o;
 }
-
-///
-/// \return `true` if the object passes the internal consistency check
-///
-bool symbol_set::is_valid() const
-{
-  if (!enough_terminals())
-  {
-    ultraERROR << "Symbol set doesn't contain enough symbols";
-    return false;
-  }
-
-  return true;
-}
-
-///
-/// \return `true` if the object passes the internal consistency check
-///
-bool symbol_set::collection::is_valid() const
-{
-  if (!all.is_valid() || !functions.is_valid() || !terminals.is_valid())
-  {
-    ultraERROR << "(inside " << name_ << ")";
-    return false;
-  }
-
-  if (std::any_of(functions.begin(), functions.end(),
-                  [](const auto &s) { return s.sym->terminal(); }))
-    return false;
-
-  if (std::any_of(terminals.begin(), terminals.end(),
-                  [](const auto &s) { return !s.sym->terminal(); }))
-    return false;
-
-  for (const auto &s : all)
-  {
-    if (s.sym->terminal())
-    {
-      if (std::find(terminals.begin(), terminals.end(), s) == terminals.end())
-      {
-        ultraERROR << name_ << ": terminal " << s.sym->name()
-                   << " badly stored";
-        return false;
-      }
-    }
-    else  // function
-    {
-      if (std::find(functions.begin(), functions.end(), s) == functions.end())
-      {
-        ultraERROR << name_ << ": function " << s.sym->name()
-                   << " badly stored";
-        return false;
-      }
-    }
-  }
-
-  const auto ssize(all.size());
-
-  // The following condition should be met at the end of the symbol_set
-  // specification.
-  // Since we don't want to enforce a particular insertion order (i.e.
-  // terminals before functions), we cannot perform the check here.
-  //
-  //     if (ssize && !terminals.size())
-  //     {
-  //       ultraERROR << name_ << ": no terminal in the symbol set";
-  //       return false;
-  //     }
-
-  if (ssize < functions.size())
-  {
-    ultraERROR << name_ << ": wrong terminal set size (more than symbol set)";
-    return false;
-  }
-
-  if (ssize < terminals.size())
-  {
-    ultraERROR << name_ << ": wrong terminal set size (more than symbol set)";
-    return false;
-  }
-
-  return ssize == functions.size() + terminals.size();
-}
-
 
 */
 }  // namespace ultra

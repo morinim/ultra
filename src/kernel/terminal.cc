@@ -17,11 +17,21 @@
 
 namespace ultra
 {
+bool is_terminal(const symbol *s)
+{
+  return dynamic_cast<const terminal *>(s) != nullptr;
+}
+
+bool is_terminal(const symbol &s)
+{
+  return is_terminal(&s);
+}
+
 ///
 /// \param[in] v a value
 /// \return      a string representing the terminal
 ///
-std::string terminal::to_string(const value_t &v, format) const
+std::string arithmetic_terminal::to_string(const value_t &v, format) const
 {
   std::stringstream ss;
   ss << v;

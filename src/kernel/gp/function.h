@@ -55,6 +55,9 @@ private:
   const param_data_types params_;
 };
 
+[[nodiscard]] bool is_function(const symbol &);
+[[nodiscard]] bool is_function(const symbol *);
+
 ///
 /// An interface for parameter passing to functions.
 ///

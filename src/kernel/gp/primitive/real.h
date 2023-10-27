@@ -63,7 +63,7 @@ public:
   [[nodiscard]] value_t min() const final { return min_; }
   [[nodiscard]] value_t sup() const final { return sup_; }
 
-  [[nodiscard]] value_t random() const final
+  [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }
 
 private:
@@ -86,7 +86,7 @@ public:
   [[nodiscard]] value_t min() const final {return static_cast<D_DOUBLE>(min_);}
   [[nodiscard]] value_t sup() const final {return static_cast<D_DOUBLE>(sup_);}
 
-  [[nodiscard]] value_t random() const final
+  [[nodiscard]] value_t instance() const final
   { return static_cast<D_DOUBLE>(random::between(min_, sup_)); }
 
 private:
@@ -163,8 +163,8 @@ class aq : public function
 {
 public:
   explicit aq(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("AQ", r, pt)
   {
     Expects(pt.size() == 2);
@@ -234,8 +234,8 @@ class div : public function
 {
 public:
   explicit div(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("FDIV", r, pt)
   {
     Expects(pt.size() == 2);
@@ -268,8 +268,8 @@ class gt : public function
 {
 public:
   explicit gt(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function(">", r, pt)
   {
     Expects(pt.size() == 2);
@@ -308,8 +308,8 @@ class idiv : public function
 {
 public:
   explicit idiv(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("FIDIV", r, pt)
   {
     Expects(pt.size() == 2);
@@ -348,10 +348,10 @@ class ife : public function
 {
 public:
   explicit ife(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category,
-                                            symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
     : function("FIFE", r, pt)
   {
     Expects(pt.size() == 4);
@@ -548,8 +548,8 @@ class lt : public function
 {
 public:
   explicit lt(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("<", r, pt)
   {
     Expects(pt.size() == 2);
@@ -622,8 +622,8 @@ class mod : public function
 {
 public:
   explicit mod(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("FMOD", r, pt)
   {
     Expects(pt.size() == 2);
@@ -662,8 +662,8 @@ class mul : public function
 {
 public:
   explicit mul(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("FMUL", r, pt)
   {
     Expects(pt.size() == 2);

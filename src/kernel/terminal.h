@@ -26,12 +26,14 @@ class terminal : public symbol
 public:
   using symbol::symbol;
 
-  /// Arithmetic types have additional functionalities / member functions.
-  [[nodiscard]] virtual bool is_arithmetic() const = 0;
+  [[nodiscard]] virtual value_t instance() const = 0;
 
-  [[nodiscard]] virtual std::string to_string(const value_t &,
-                                              format = c_format) const;
+  /// Arithmetic types have additional functionalities / member functions.
+  [[nodiscard]] virtual bool is_arithmetic() const { return false; }
 };
+
+[[nodiscard]] bool is_terminal(const symbol &);
+[[nodiscard]] bool is_terminal(const symbol *);
 
 ///
 /// Arithmetic terminals are numbers (integer, floating point...).
@@ -41,12 +43,12 @@ class arithmetic_terminal : public terminal
 public:
   using terminal::terminal;
 
+  [[nodiscard]] virtual std::string to_string(const value_t &,
+                                              format = c_format) const;
+
   [[nodiscard]] virtual bool is_arithmetic() const final { return true; }
   [[nodiscard]] virtual value_t min() const = 0;
   [[nodiscard]] virtual value_t sup() const = 0;
-
-  /// Arithmetic types can be generated randomly.
-  [[nodiscard]] virtual value_t random() const = 0;
 };
 
 }  // namespace ultra

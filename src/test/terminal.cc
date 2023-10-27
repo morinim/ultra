@@ -14,6 +14,7 @@
 
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
+#include "kernel/gp/primitive/string.h"
 #include "utility/misc.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -34,7 +35,7 @@ TEST_CASE("Real")
   CHECK(almost_equal(std::get<D_DOUBLE>(r.sup()), s));
 
   std::vector<D_DOUBLE> v(1000);
-  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.random()); });
+  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });
 
   CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
 
@@ -55,7 +56,7 @@ TEST_CASE("IReal")
   CHECK(static_cast<int>(std::get<D_DOUBLE>(r.sup())) == s);
 
   std::vector<D_DOUBLE> v(1000);
-  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.random()); });
+  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });
 
   CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
 
@@ -74,9 +75,9 @@ TEST_CASE("INTEGER")
   CHECK(r.category() == symbol::default_category);
 
   std::vector<D_INT> v(1000);
-  std::ranges::generate(v, [&r] { return std::get<D_INT>(r.random()); });
+  std::ranges::generate(v, [&r] { return std::get<D_INT>(r.instance()); });
 
-  CHECK(std::ranges::all_of(v, [m, s](auto x) { return  m <= x && x < s; }));
+  CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
 
   const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
   CHECK((s - m) * .4 <= mean);

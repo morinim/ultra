@@ -72,7 +72,7 @@ public:
   [[nodiscard]] value_t min() const final { return min_; }
   [[nodiscard]] value_t sup() const final { return sup_; }
 
-  [[nodiscard]] value_t random() const final
+  [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }
 
 private:
@@ -112,8 +112,8 @@ class div : public function
 {
 public:
   explicit div(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("DIV", r, pt)
   {
     Expects(pt.size() == 2);
@@ -142,10 +142,10 @@ class ife : public function
 {
 public:
   explicit ife(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category,
-                                            symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category,
+                                             symbol::default_category})
     : function("IFE", r, pt)
   {
     Expects(pt.size() == 4);
@@ -250,8 +250,8 @@ class mod : public function
 {
 public:
   explicit mod(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("MOD", r, pt)
   {
     Expects(pt.size() == 2);
@@ -282,8 +282,8 @@ class mul : public function
 {
 public:
   explicit mul(return_type r = symbol::default_category,
-               const param_data_types pt = {symbol::default_category,
-                                            symbol::default_category})
+               const param_data_types &pt = {symbol::default_category,
+                                             symbol::default_category})
     : function("MUL", r, pt)
   {
     Expects(pt.size() == 2);

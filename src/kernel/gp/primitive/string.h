@@ -1,8 +1,8 @@
 /**
  *  \file
- *  \remark This file is part of VITA.
+ *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2011-2022 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,20 +10,39 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(VITA_STRING_PRIMITIVE_H)
-#define      VITA_STRING_PRIMITIVE_H
+#if !defined(ULTRA_STRING_PRIMITIVE_H)
+#define      ULTRA_STRING_PRIMITIVE_H
 
-#include <algorithm>
 #include <cstdlib>
 #include <string>
 
+#include "kernel/terminal.h"
 #include "kernel/gp/function.h"
-#include "kernel/gp/mep/interpreter.h"
-#include "kernel/gp/terminal.h"
-#include "kernel/random.h"
 
-namespace vita::str
+namespace ultra::str
 {
+
+class str : public terminal
+{
+public:
+  explicit str(const std::string &s, category_t c = symbol::default_category)
+    : terminal(s, c)
+  {
+    Expects(!s.empty());
+  }
+
+  [[nodiscard]] value_t instance() const final
+  {
+    return name();
+  }
+
+  /*[[nodiscard]] std::string to_string(format = c_format) const final
+  {
+    std::stringstream ss;
+    ss << std::quoted(name());
+    return ss.str();
+    }*/
+};
 
 ///
 /// String comparison for equality.
@@ -31,37 +50,35 @@ namespace vita::str
 class ife : public function
 {
 public:
-  explicit ife(const cvect &c)
-    : function("SIFE", c[1], {c[0], c[0], c[1], c[1]})
-  { Expects(c.size() == 2); }
+  explicit ife(return_type r, const param_data_types &pt)
+    : function("SIFE", r, pt)
+  {
+    Expects(pt.size() == 2);
+    Expects(r != pt[0]);
+    Expects(pt[0] == pt[1]);
+  }
 
-  std::string display(format f) const final
+  [[nodiscard]] std::string to_string(format f) const final
   {
     switch (f)
     {
-    case c_format:
-    case cpp_format:
-    case mql_format:     return "(%%1%% == %%2%% ? %%3%% : %%4%%)";
-    case python_format:  return "(%%3%% if %%1%% == %%2%% else %%4%%)";
-    default:             return function::display();
+    case python_format:  return "({2} if {0} == {1} else {3})";
+    default:             return "{0}=={1}";
     }
   }
 
-  value_t eval(symbol_params &args) const final
+  [[nodiscard]] value_t eval(const params &pars) const final
   {
-    const auto v0(args[0]);
+    const auto v0(pars[0]);
     if (!has_value(v0))  return v0;
 
-    const auto v1(args[1]);
+    const auto v1(pars[1]);
     if (!has_value(v1))  return v1;
 
-    if (v0 == v1)
-      return args[2];
-
-    return args[3];
+    return v0 == v1 ? pars[2] : pars[3];
   }
 };
 
-}  // namespace vita::str
+}  // namespace ultra::str
 
 #endif  // include guard
