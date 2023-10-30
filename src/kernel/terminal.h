@@ -46,10 +46,12 @@ public:
   [[nodiscard]] virtual std::string to_string(const value_t &,
                                               format = c_format) const;
 
-  [[nodiscard]] virtual bool is_arithmetic() const final { return true; }
   [[nodiscard]] virtual value_t min() const = 0;
   [[nodiscard]] virtual value_t sup() const = 0;
 };
+
+[[nodiscard]] bool is_arithmetic(const symbol &);
+[[nodiscard]] bool is_arithmetic(const symbol *);
 
 }  // namespace ultra
 

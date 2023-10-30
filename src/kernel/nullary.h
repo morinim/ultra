@@ -35,8 +35,6 @@ public:
   [[nodiscard]] virtual value_t eval() const = 0;
   [[nodiscard]] value_t instance() const final { return this; }
 
-  [[nodiscard]] bool is_arithmetic() const override { return false; }
-
   [[nodiscard]] std::string to_string(format = c_format) const
   { return name() + "()"; }
 };
