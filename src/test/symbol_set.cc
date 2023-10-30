@@ -54,6 +54,12 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.terminals() == 1);
     CHECK(ss.enough_terminals());
     CHECK(ss.is_valid());
+
+    // Reset
+    ss.clear();
+    CHECK(ss.categories() == 0);
+    CHECK(ss.enough_terminals());
+    CHECK(ss.is_valid());
   }
 
   SUBCASE("Multi-category symbol set")
@@ -65,7 +71,7 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.terminals() == 1);
     CHECK(!ss.enough_terminals());
 
-    ss.insert<str::str>("apple", 1);
+    ss.insert<str::literal>("apple", 1);
     CHECK(ss.categories() == 2);
     CHECK(ss.terminals(0) == 1);
     CHECK(ss.terminals(1) == 1);
@@ -73,7 +79,7 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.is_valid());
 
     CHECK(ss.decode("apple"));
-    CHECK(static_cast<const str::str *>(ss.decode("apple"))->instance()
+    CHECK(static_cast<const str::literal *>(ss.decode("apple"))->instance()
           == "apple");
     CHECK(ss.decode("FADD"));
     CHECK(ss.decode("SIFE"));

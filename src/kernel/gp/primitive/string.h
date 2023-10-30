@@ -22,10 +22,11 @@
 namespace ultra::str
 {
 
-class str : public terminal
+class literal : public terminal
 {
 public:
-  explicit str(const std::string &s, category_t c = symbol::default_category)
+  explicit literal(const std::string &s,
+                   category_t c = symbol::default_category)
     : terminal(s, c)
   {
     Expects(!s.empty());

@@ -97,6 +97,20 @@ private:
   const D_INT min_, sup_;
 };
 
+class literal : public terminal
+{
+public:
+  explicit literal(D_DOUBLE v, category_t c = symbol::default_category)
+    : terminal(std::to_string(v), c), val_(v)
+  {
+  }
+
+  [[nodiscard]] value_t instance() const final { return val_; }
+
+private:
+  const D_DOUBLE val_;
+};
+
 ///
 /// The absolute value of a real number.
 ///
