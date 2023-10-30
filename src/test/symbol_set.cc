@@ -87,4 +87,134 @@ TEST_CASE("Constructor / Insertion")
   }
 }
 
+TEST_CASE("Distribution")
+{
+  using namespace ultra;
+
+  symbol_set ss;
+
+  // Initial setup
+  const std::vector<const symbol *> symbols[2] =
+  {
+    {
+      ss.insert<real::number, 400>(),
+      ss.insert<real::add, 300>(),
+      ss.insert<real::sub, 200>(),
+      ss.insert<str::ife, 200>(0, function::param_data_types{1, 1}),
+      ss.insert<real::mul, 100>()
+    },
+    {
+      ss.insert<str::literal, 300>("apple", 1),
+      ss.insert<str::literal, 100>("orange", 1)
+    }
+  };
+
+  const std::map<const symbol *, symbol_set::weight_t> wanted =
+  {
+    {symbols[0][0], 400},
+    {symbols[0][1], 300},
+    {symbols[0][2], 200},
+    {symbols[0][3], 200},
+    {symbols[0][4], 100},
+    {symbols[1][0], 300},
+    {symbols[1][1], 100}
+  };
+
+  const auto ratio = [&symbols](const auto &container, const symbol *sym)
+  {
+    const auto val(container.at(sym));
+
+    const symbol *ref(is_terminal(sym) ? symbols[sym->category()][0]
+                                       : symbols[sym->category()].back());
+    assert(ref->category() == sym->category());
+    assert(is_terminal(ref) == is_terminal(sym));
+
+    const auto ref_val(container.at(ref));
+    assert(ref_val > 0);
+
+    return static_cast<double>(val) / static_cast<double>(ref_val);
+  };
+
+  for (symbol::category_t c(0); c < ss.categories(); ++c)
+    for (const auto *s : symbols[c])
+      CHECK(ss.weight(*s) == wanted.at(s));
+
+
+  constexpr unsigned n(500000);
+  constexpr double eps(0.02);
+  std::map<const symbol *, unsigned> hist;
+
+  SUBCASE("roulette_function")
+  {
+    for (unsigned i(0); i < n; ++i)
+      ++hist[&ss.roulette_function()];
+
+    for (const auto *s : symbols[0])
+      if (!is_terminal(s))
+      {
+        CHECK(hist[s] > 0);
+        CHECK(ratio(hist, s)
+              == doctest::Approx(ratio(wanted, s)).epsilon(eps));
+      }
+  }
+
+  SUBCASE("roulette_terminal")
+  {
+    for (unsigned i(0); i < n; ++i)
+      ++hist[&ss.roulette_terminal(random::boolean())];
+
+    for (symbol::category_t c(0); c < ss.categories(); ++c)
+      for (const auto *s : symbols[c])
+        if (is_terminal(s))
+        {
+          CHECK(hist[s] > 0);
+          CHECK(ratio(hist, s)
+                == doctest::Approx(ratio(wanted, s)).epsilon(eps));
+        }
+  }
+
+  SUBCASE("roulette")
+  {
+    for (unsigned i(0); i < n; ++i)
+      ++hist[&ss.roulette()];
+
+    const auto sum_f(std::accumulate(hist.begin(), hist.end(), 0,
+                                     [](auto sum, auto e)
+                                     {
+                                       return is_terminal(e.first) ?
+                                              sum : sum + e.second;
+                                     }));
+    const auto sum_t(std::accumulate(hist.begin(), hist.end(), 0,
+                                     [](auto sum, auto e)
+                                     {
+                                       return is_terminal(e.first) ?
+                                              sum + e.second : sum;
+                                     }));
+    CHECK(std::max(sum_f, sum_t) - std::min(sum_f, sum_t) < n / 100);
+
+    for (const auto *s : symbols[0])
+    {
+      CHECK(hist[s] > 0);
+
+      if (is_terminal(s))
+        CHECK(doctest::Approx(ratio(hist, s)).epsilon(eps)
+              == ratio(wanted, s) * sum_f / sum_t);
+    }
+  }
+
+  SUBCASE("roulette_free")
+  {
+    for (unsigned i(0); i < n; ++i)
+      ++hist[&ss.roulette_free(random::boolean())];
+
+    for (symbol::category_t c(0); c < ss.categories(); ++c)
+      for (const auto *s : symbols[c])
+      {
+        CHECK(hist[s] > 0);
+        CHECK(ratio(hist, s)
+              == doctest::Approx(ratio(wanted, s)).epsilon(eps));
+      }
+  }
+}
+
 }  // TEST_SUITE("FUNCTION")

@@ -113,13 +113,15 @@ class symbol_set
 {
 public:
   using weight_t = detail::w_symbol::weight_t;
+  static constexpr weight_t default_weight = detail::w_symbol::base_weight;
 
   symbol_set() = default;
 
   void clear();
 
-  symbol *insert(std::unique_ptr<symbol>, double = 1.0);
-  template<class S, class ...Args> symbol *insert(Args &&...);
+  symbol *insert(std::unique_ptr<symbol>, weight_t = default_weight);
+  template<class, weight_t = default_weight, class ...Args>
+  symbol *insert(Args &&...);
 
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] std::size_t terminals(
@@ -127,21 +129,24 @@ public:
 
   [[nodiscard]] const symbol &roulette(
     symbol::category_t = symbol::default_category) const;
+  [[nodiscard]] const function &roulette_function(
+    symbol::category_t = symbol::default_category) const;
+  [[nodiscard]] const terminal &roulette_terminal(
+    symbol::category_t = symbol::default_category) const;
+  [[nodiscard]] const symbol &roulette_free(
+    symbol::category_t = symbol::default_category) const;
 
   [[nodiscard]] const symbol *decode(symbol::opcode_t) const;
   [[nodiscard]] const symbol *decode(const std::string &) const;
+
+  [[nodiscard]] weight_t weight(const symbol &) const;
 
   [[nodiscard] ]bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
 /*
-  const symbol &roulette_free(category_t) const;
-  const function &roulette_function(category_t) const;
-  const terminal &roulette_terminal(category_t) const;
 
   const symbol &arg(std::size_t) const;
-
-  weight_t weight(const symbol &) const;
 
   friend std::ostream &operator<<(std::ostream &, const symbol_set &);
 */
@@ -160,6 +165,7 @@ private:
 /// Adds a symbol to the symbol set.
 ///
 /// \tparam    S    symbol to be added
+/// \tparam    W    weight associated to `S`
 /// \param[in] args arguments used to build `S`
 /// \return         a raw pointer to the symbol just added (or `nullptr` in
 ///                 case of error)
@@ -171,11 +177,10 @@ private:
 /// Only partially replaces the `insert(std::unique_ptr)` method (e.g. building
 /// from factory).
 ///
-/// \remark Assumes a standard frequency (`1.0`) for symbol `S`.
-///
-template<class S, class ...Args> symbol *symbol_set::insert(Args &&... args)
+template<class S, symbol_set::weight_t W, class ...Args>
+symbol *symbol_set::insert(Args &&... args)
 {
-  return insert(std::make_unique<S>(std::forward<Args>(args)...));
+  return insert(std::make_unique<S>(std::forward<Args>(args)...), W);
 }
 
 std::ostream &operator<<(std::ostream &, const symbol_set &);

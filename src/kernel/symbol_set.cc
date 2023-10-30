@@ -256,18 +256,18 @@ void symbol_set::clear()
 /// Adds a new symbol to the set.
 ///
 /// \param[in] new_sym symbol to be added
-/// \param[in] wr      the weight of `s` (`1.0` means standard frequency, `2.0`
-///                    double probability of selection)
+/// \param[in] w       the weight of `new_sym` (`default_weight` means
+///                    standard frequency, `2 * default_weight` doubles
+///                    the selection probability)
 /// \return            a raw pointer to the symbol just added (or `nullptr` in
 ///                    case of error)
 ///
 /// A symbol with undefined category will be changed to the first free
 /// category.
 ///
-symbol *symbol_set::insert(std::unique_ptr<symbol> new_sym, double wr)
+symbol *symbol_set::insert(std::unique_ptr<symbol> new_sym, weight_t w)
 {
   Expects(new_sym);
-  Expects(wr >= 0.0);
 
   symbols_.push_back(std::move(new_sym));
 
@@ -285,7 +285,6 @@ symbol *symbol_set::insert(std::unique_ptr<symbol> new_sym, double wr)
     views_.emplace_back("Collection " + std::to_string(i));
   assert(category < views_.size());
 
-  const auto w(static_cast<weight_t>(wr * detail::w_symbol::base_weight));
   const detail::w_symbol ws(s, w);
   views_[category].insert(ws);
 
@@ -368,6 +367,63 @@ const symbol &symbol_set::roulette(symbol::category_t c) const
 }
 
 ///
+/// \param[in] c a category
+/// \return      a random function of category `c`
+///
+const function &symbol_set::roulette_function(symbol::category_t c) const
+{
+  Expects(c < categories());
+  Expects(views_[c].functions.size());
+
+  return static_cast<const function &>(views_[c].functions.roulette());
+}
+
+///
+/// \param[in] c a category
+/// \return      a random terminal of category `c`
+///
+const terminal &symbol_set::roulette_terminal(symbol::category_t c) const
+{
+  Expects(c < categories());
+  Expects(views_[c].terminals.size());
+
+  return static_cast<const terminal &>(views_[c].terminals.roulette());
+}
+
+///
+/// Extracts a random symbol from the symbol set.
+///
+/// \param[in] c a category
+/// \return      a random symbol of category `c`
+///
+/// \attention
+/// Given \f$S_t = \sum_{i \in terminals} {w_i}\f$ and
+/// \f$S_f = \sum_{i \in functions} {w_i}\f$ we have:
+/// - \f$P(terminal_i|terminal) = \frac {w_i} {S_t}\f$
+/// - \f$P(function_i|function) = \frac {w_i} {S_f}\f$
+/// - \f$P(terminal) = \frac {S_t} {S_t + S_f}\f$
+/// - \f$P(function) = \frac {S_f} {S_t + S_f}\f$
+///
+const symbol &symbol_set::roulette_free(symbol::category_t c) const
+{
+  Expects(c < categories());
+  return views_[c].all.roulette();
+}
+
+///
+/// \param[in] s a symbol
+/// \return      the weight of `s`
+///
+symbol_set::weight_t symbol_set::weight(const symbol &s) const
+{
+  for (const auto &ws : views_[s.category()].all)
+    if (ws.sym == &s)
+      return ws.weight;
+
+  return 0;
+}
+
+///
 /// \param[in] opcode numerical code used as primary key for a symbol
 /// \return           a pointer to the ultra::symbol identified by `opcode`
 ///                   (`nullptr` if not found).
@@ -417,63 +473,6 @@ bool symbol_set::is_valid() const
 }
 
 /*
-///
-/// \param[in] c a category
-/// \return      a random function of category `c`
-///
-const function &symbol_set::roulette_function(category_t c) const
-{
-  Expects(c < categories());
-  Expects(views_[c].functions.size());
-
-  return static_cast<const function &>(views_[c].functions.roulette());
-}
-
-///
-/// \param[in] c a category
-/// \return      a random terminal of category `c`
-///
-const terminal &symbol_set::roulette_terminal(category_t c) const
-{
-  Expects(c < categories());
-  Expects(views_[c].terminals.size());
-
-  return static_cast<const terminal &>(views_[c].terminals.roulette());
-}
-
-///
-/// Extracts a random symbol from the symbol set.
-///
-/// \param[in] c a category
-/// \return      a random symbol of category `c`
-///
-/// \attention
-/// Given \f$S_t = \sum_{i \in terminals} {w_i}\f$ and
-/// \f$S_f = \sum_{i \in functions} {w_i}\f$ we have:
-/// - \f$P(terminal_i|terminal) = \frac {w_i} {S_t}\f$
-/// - \f$P(function_i|function) = \frac {w_i} {S_f}\f$
-/// - \f$P(terminal) = \frac {S_t} {S_t + S_f}\f$
-/// - \f$P(function) = \frac {S_f} {S_t + S_f}\f$
-///
-const symbol &symbol_set::roulette_free(category_t c) const
-{
-  Expects(c < categories());
-  return views_[c].all.roulette();
-}
-
-///
-/// \param[in] s a symbol
-/// \return      the weight of `s`
-///
-symbol_set::weight_t symbol_set::weight(const symbol &s) const
-{
-  for (const auto &ws : views_[s.category()].all)
-    if (ws.sym == &s)
-      return ws.weight;
-
-  return 0;
-}
-
 ///
 /// Prints the symbol set to an output stream.
 ///
