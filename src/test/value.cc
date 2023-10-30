@@ -70,6 +70,7 @@ TEST_CASE("Base")
     v1 = &hw;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_nullary);
+    CHECK(get_if_nullary(v1));
     const bool nullary_eq(v1 == v1);
     CHECK(nullary_eq);
 

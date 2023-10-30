@@ -15,6 +15,7 @@
 
 #include <string>
 
+#include "kernel/nullary.h"
 #include "kernel/random.h"
 #include "kernel/gp/function.h"
 #include "kernel/terminal.h"
@@ -31,7 +32,10 @@ namespace ultra::real
 ///
 [[nodiscard]] inline D_DOUBLE base(const value_t &v)
 {
-  return std::get<D_DOUBLE>(v);
+  if (const auto *p(get_if_nullary(v)); p)
+    return std::get<D_DOUBLE>(p->eval());
+  else
+    return std::get<D_DOUBLE>(v);
 }
 
 // We assume that errors during floating-point operations aren't terminal

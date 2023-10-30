@@ -15,6 +15,7 @@
 
 #include <climits>
 
+#include "kernel/nullary.h"
 #include "kernel/random.h"
 #include "kernel/terminal.h"
 #include "kernel/gp/function.h"
@@ -53,7 +54,10 @@ namespace detail
 ///
 [[nodiscard]] inline D_INT base(const value_t &v)
 {
-  return std::get<D_INT>(v);
+  if (const auto *p(get_if_nullary(v)); p)
+    return std::get<D_INT>(p->eval());
+  else
+    return std::get<D_INT>(v);
 }
 
 ///

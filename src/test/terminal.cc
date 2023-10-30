@@ -84,4 +84,30 @@ TEST_CASE("INTEGER")
   CHECK(mean <= (s - m) * .6);
 }
 
+TEST_CASE("Nullary")
+{
+  using namespace ultra;
+
+  class variable : public nullary
+  {
+  public:
+    using nullary::nullary;
+
+    [[nodiscard]] value_t eval() const override { return val; }
+
+    int val {};
+  };
+
+  variable v("var");
+  CHECK(v.is_valid());
+  CHECK(v.category() == symbol::default_category);
+
+  for (int i(0); i < 100; ++i)
+  {
+    v.val = i;
+
+    CHECK(std::get<D_INT>(v.eval()) == i);
+  }
+}
+
 }  // TEST_SUITE("REAL")

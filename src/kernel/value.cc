@@ -60,6 +60,17 @@ bool has_value(const value_t &v)
 }
 
 ///
+/// \param[in] v container object
+/// \return      a pointer to the nullary object contained in `v` if present,
+///              otherwise `nullptr`
+///
+const D_NULLARY *get_if_nullary(const value_t &v)
+{
+  return std::holds_alternative<const D_NULLARY *>(v) ?
+         std::get<const D_NULLARY *>(v) : nullptr;
+}
+
+///
 /// Streams a value_t object.
 ///
 /// \param[out] o output stream
