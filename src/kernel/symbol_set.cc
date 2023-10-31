@@ -36,12 +36,12 @@ bool w_symbol::operator==(const w_symbol &rhs) const
 
 bool is_terminal(const w_symbol &ws)
 {
-  return is_terminal(ws.sym);
+  return is<terminal>(ws.sym);
 }
 
 bool is_function(const w_symbol &ws)
 {
-  return is_function(ws.sym);
+  return is<function>(ws.sym);
 }
 
 // ****************************** sum_container  ******************************
@@ -168,7 +168,7 @@ void collection::insert(const w_symbol &ws)
 {
   all.insert(ws);
 
-  if (is_terminal(ws.sym))
+  if (is_terminal(ws))
     terminals.insert(ws);
   else  // function
     functions.insert(ws);
@@ -193,7 +193,7 @@ bool collection::is_valid() const
 
   for (const auto &s : all)
   {
-    if (is_terminal(s.sym))
+    if (is_terminal(s))
     {
       if (std::ranges::find(terminals, s) == terminals.end())
       {

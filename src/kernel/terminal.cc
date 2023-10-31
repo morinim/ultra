@@ -17,25 +17,6 @@
 
 namespace ultra
 {
-bool is_terminal(const symbol *s)
-{
-  return dynamic_cast<const terminal *>(s);
-}
-
-bool is_terminal(const symbol &s)
-{
-  return is_terminal(&s);
-}
-
-bool is_arithmetic(const symbol *s)
-{
-  return dynamic_cast<const arithmetic_terminal *>(s);
-}
-
-bool is_arithmetic(const symbol &s)
-{
-  return is_arithmetic(&s);;
-}
 
 ///
 /// \param[in] v a value

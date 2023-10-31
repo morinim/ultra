@@ -60,16 +60,6 @@ symbol::category_t function::arg_category(std::size_t i) const
   return params_[i];
 }
 
-bool is_function(const symbol *s)
-{
-  return get_if<function>(s);
-}
-
-bool is_function(const symbol &s)
-{
-  return is_function(&s);
-}
-
 ///
 /// \return the name of the function
 ///

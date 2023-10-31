@@ -91,6 +91,28 @@ requires std::derived_from<T, symbol>
   return get_if<T>(&s);
 }
 
+///
+/// \return a pointer to the `const T *` value stored in the symbol pointed to
+///         by `s`. Otherwise, returns a null pointer value.
+///
+template<class T>
+requires std::derived_from<T, symbol>
+[[nodiscard]] constexpr bool is(const symbol *s)
+{
+  return get_if<T>(s);
+}
+
+///
+/// \return a pointer to the `const T *` value stored in the symbol pointed to
+///         by `s`. Otherwise, returns a null pointer value.
+///
+template<class T>
+requires std::derived_from<T, symbol>
+[[nodiscard]] constexpr bool is(const symbol &s)
+{
+  return is<T>(&s);
+}
+
 }  // namespace ultra
 
 #endif  // include guard

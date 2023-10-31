@@ -124,10 +124,10 @@ TEST_CASE("Distribution")
   {
     const auto val(container.at(sym));
 
-    const symbol *ref(is_terminal(sym) ? symbols[sym->category()][0]
-                                       : symbols[sym->category()].back());
+    const symbol *ref(is<terminal>(sym) ? symbols[sym->category()][0]
+                                        : symbols[sym->category()].back());
     assert(ref->category() == sym->category());
-    assert(is_terminal(ref) == is_terminal(sym));
+    assert(is<terminal>(ref) == is<terminal>(sym));
 
     const auto ref_val(container.at(ref));
     assert(ref_val > 0);
@@ -150,7 +150,7 @@ TEST_CASE("Distribution")
       ++hist[&ss.roulette_function()];
 
     for (const auto *s : symbols[0])
-      if (!is_terminal(s))
+      if (!is<terminal>(s))
       {
         CHECK(hist[s] > 0);
         CHECK(ratio(hist, s)
@@ -165,7 +165,7 @@ TEST_CASE("Distribution")
 
     for (symbol::category_t c(0); c < ss.categories(); ++c)
       for (const auto *s : symbols[c])
-        if (is_terminal(s))
+        if (is<terminal>(s))
         {
           CHECK(hist[s] > 0);
           CHECK(ratio(hist, s)
@@ -181,13 +181,13 @@ TEST_CASE("Distribution")
     const auto sum_f(std::accumulate(hist.begin(), hist.end(), 0,
                                      [](auto sum, auto e)
                                      {
-                                       return is_terminal(e.first) ?
+                                       return is<terminal>(e.first) ?
                                               sum : sum + e.second;
                                      }));
     const auto sum_t(std::accumulate(hist.begin(), hist.end(), 0,
                                      [](auto sum, auto e)
                                      {
-                                       return is_terminal(e.first) ?
+                                       return is<terminal>(e.first) ?
                                               sum + e.second : sum;
                                      }));
     CHECK(std::max(sum_f, sum_t) - std::min(sum_f, sum_t) < n / 100);
@@ -196,7 +196,7 @@ TEST_CASE("Distribution")
     {
       CHECK(hist[s] > 0);
 
-      if (is_terminal(s))
+      if (is<terminal>(s))
         CHECK(doctest::Approx(ratio(hist, s)).epsilon(eps)
               == ratio(wanted, s) * sum_f / sum_t);
     }

@@ -32,9 +32,6 @@ public:
   [[nodiscard]] virtual bool is_arithmetic() const { return false; }
 };
 
-[[nodiscard]] bool is_terminal(const symbol &);
-[[nodiscard]] bool is_terminal(const symbol *);
-
 ///
 /// Arithmetic terminals are numbers (integer, floating point...).
 ///
