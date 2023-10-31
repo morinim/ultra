@@ -79,8 +79,9 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.is_valid());
 
     CHECK(ss.decode("apple"));
-    CHECK(static_cast<const str::literal *>(ss.decode("apple"))->instance()
-          == "apple");
+    const auto *s(get_if<str::literal>(ss.decode("apple")));
+    CHECK(s);
+    CHECK(std::get<std::string>(s->instance()) == "apple");
     CHECK(ss.decode("FADD"));
     CHECK(ss.decode("SIFE"));
     CHECK(ss.decode("REAL"));

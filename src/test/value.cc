@@ -33,8 +33,6 @@ TEST_CASE("Base")
   {
     CHECK(!has_value(v1));
     CHECK(v1.index() == d_void);
-    const bool self_eq(v1 == v1);
-    CHECK(self_eq);
 
     out << v1;
     CHECK(out.str() == "{}");
@@ -45,8 +43,6 @@ TEST_CASE("Base")
     v1 = std::string("dummy");
     CHECK(has_value(v1));
     CHECK(v1.index() == d_string);
-    const bool string_eq(v1 == v1);
-    CHECK(string_eq);
 
     out << v1;
     CHECK(out.str() == std::get<D_STRING>(v1));
@@ -71,8 +67,6 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_nullary);
     CHECK(get_if_nullary(v1));
-    const bool nullary_eq(v1 == v1);
-    CHECK(nullary_eq);
 
     out << v1;
     CHECK(out.str() == hw.to_string());
@@ -83,8 +77,6 @@ TEST_CASE("Base")
     v1 = 1;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_int);
-    const bool int_eq(v1 == v1);
-    CHECK(int_eq);
 
     out << v1;
     CHECK(out.str() == std::to_string(std::get<D_INT>(v1)));
@@ -95,8 +87,6 @@ TEST_CASE("Base")
     v1 = 1.0;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_double);
-    const bool double_eq(v1 == v1);
-    CHECK(double_eq);
 
     out << v1;
     CHECK(almost_equal(std::stod(out.str()), std::get<D_DOUBLE>(v1)));
@@ -104,8 +94,6 @@ TEST_CASE("Base")
     value_t v2(1.00000000000001);
     CHECK(has_value(v2));
     CHECK(v2.index() == d_double);
-    const bool almost_eq(v1 == v2);
-    CHECK(almost_eq);
   }
 
   SUBCASE("Different types comparison")

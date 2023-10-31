@@ -20,37 +20,6 @@ namespace ultra
 {
 
 ///
-/// \return `true` if values are equal
-///
-/// Notes:
-/// - values of different type are considered different (`1 != 1.0`);
-/// - nullary objects are considered equal if they point to the same address;
-/// - real values are compared using an approximation;
-/// - everything else is compared using the specific `==` operator.
-///
-bool operator==(const value_t &lhs, const value_t &rhs)
-{
-  if (lhs.index() != rhs.index())
-    return false;
-
-  switch (lhs.index())
-  {
-  case d_double:
-    return almost_equal(std::get<D_DOUBLE>(lhs), std::get<D_DOUBLE>(rhs));
-  case d_int:
-    return std::get<D_INT>(lhs) == std::get<D_INT>(rhs);
-  case d_nullary:
-    return std::get<const D_NULLARY *>(lhs) == std::get<const D_NULLARY *>(rhs);
-  case d_string:
-    return std::get<D_STRING>(lhs) == std::get<D_STRING>(rhs);
-  case d_void:
-    return true;
-  default:
-    return false;
-  }
-}
-
-///
 /// \param[in] v value to be checked
 /// \return      `true` if `v` isn't empty
 ///
@@ -81,11 +50,12 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
   switch (v.index())
   {
-  case d_double:  o << std::get<D_DOUBLE>(v);                       break;
-  case d_int:     o << std::get<D_INT>(v);                          break;
-  case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string(); break;
-  case d_string:  o << std::get<D_STRING>(v);                       break;
-  case d_void:    o << "{}";                                        break;
+  case d_address: o << '[' << as_integer(std::get<D_ADDRESS>(v)) << ']'; break;
+  case d_double:  o << std::get<D_DOUBLE>(v);                            break;
+  case d_int:     o << std::get<D_INT>(v);                               break;
+  case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string();      break;
+  case d_string:  o << std::get<D_STRING>(v);                            break;
+  case d_void:    o << "{}";                                             break;
   }
 
   return o;
