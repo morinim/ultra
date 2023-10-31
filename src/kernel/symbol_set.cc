@@ -471,8 +471,6 @@ bool symbol_set::is_valid() const
 
   return true;
 }
-
-/*
 ///
 /// Prints the symbol set to an output stream.
 ///
@@ -480,7 +478,8 @@ bool symbol_set::is_valid() const
 /// \param[in] ss symbol set to be printed
 /// \return       output stream including `ss`
 ///
-/// \note Useful for debugging purpose.
+/// \note
+/// Useful for debugging purpose.
 ///
 std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
 {
@@ -488,19 +487,15 @@ std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
   {
     o << s->name();
 
-    auto arity(s->arity());
-    if (arity)
+    if (const auto *f = get_if<function>(s.get()))
     {
-      o << '(';
-      for (decltype(arity) j(0); j < arity; ++j)
-        o << function::cast(s.get())->arg_category(j)
-          << (j + 1 == arity ? "" : ", ");
+      o << '(' << f->arg_category(0);
+      for (std::size_t j(1); j < f->arity(); ++j)
+        o << ", " << f->arg_category(j);
       o << ')';
     }
 
     o << " -> " << s->category() << " (opcode " << s->opcode()
-      << ", parametric "
-      << (s->terminal() && terminal::cast(s.get())->parametric())
       << ", weight "
       << ss.weight(*s) << ")\n";
   }
@@ -508,5 +503,4 @@ std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
   return o;
 }
 
-*/
 }  // namespace ultra

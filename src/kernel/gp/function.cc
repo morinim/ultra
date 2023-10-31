@@ -62,7 +62,7 @@ symbol::category_t function::arg_category(std::size_t i) const
 
 bool is_function(const symbol *s)
 {
-  return dynamic_cast<const function *>(s) != nullptr;
+  return get_if<function>(s);
 }
 
 bool is_function(const symbol &s)

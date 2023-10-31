@@ -69,6 +69,28 @@ private:
   opcode_t opcode_;
 };
 
+///
+/// \return a pointer to the `const T *` value stored in the symbol pointed to
+///         by `s`. Otherwise, returns a null pointer value.
+///
+template<class T>
+requires std::derived_from<T, symbol>
+[[nodiscard]] const T *get_if(const symbol *s)
+{
+  return dynamic_cast<const T *>(s);
+}
+
+///
+/// \return a pointer to the `const T *` value stored in the symbol referenced
+///         by `s`. Otherwise, returns a null pointer value.
+///
+template<class T>
+requires std::derived_from<T, symbol>
+[[nodiscard]] const T *get_if(const symbol &s)
+{
+  return get_if<T>(&s);
+}
+
 }  // namespace ultra
 
 #endif  // include guard

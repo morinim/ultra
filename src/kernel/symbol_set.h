@@ -144,12 +144,8 @@ public:
   [[nodiscard] ]bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
-/*
-
-  const symbol &arg(std::size_t) const;
-
   friend std::ostream &operator<<(std::ostream &, const symbol_set &);
-*/
+
 private:
   // This is the real, raw repository of symbols (it owns/stores the symbols).
   std::vector<std::unique_ptr<symbol>> symbols_ {};
