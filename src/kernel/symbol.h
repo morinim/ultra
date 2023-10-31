@@ -75,7 +75,7 @@ private:
 ///
 template<class T>
 requires std::derived_from<T, symbol>
-[[nodiscard]] const T *get_if(const symbol *s)
+[[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol *s)
 {
   return dynamic_cast<const T *>(s);
 }
@@ -86,7 +86,7 @@ requires std::derived_from<T, symbol>
 ///
 template<class T>
 requires std::derived_from<T, symbol>
-[[nodiscard]] const T *get_if(const symbol &s)
+[[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol &s)
 {
   return get_if<T>(&s);
 }
