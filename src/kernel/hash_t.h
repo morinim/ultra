@@ -32,8 +32,7 @@ struct hash_t
   void clear() { data[0] = data[1] = 0; }
 
   /// Standard equality operator for hash signature.
-  [[nodiscard]] bool operator==(hash_t h) const
-  { return data[0] == h.data[0] && data[1] == h.data[1]; }
+  [[nodiscard]] bool operator==(const hash_t &) const = default;
 
   /// Used to combine multiple hashes.
   ///
