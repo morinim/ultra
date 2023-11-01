@@ -43,7 +43,6 @@ using D_ADDRESS =  param_address;
 using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, const D_NULLARY *,
                              D_STRING, D_ADDRESS>;
 
-//[[nodiscard]] bool operator==(const value_t &, const value_t &);
 [[nodiscard]] bool has_value(const value_t &);
 [[nodiscard]] const D_NULLARY *get_if_nullary(const value_t &);
 
