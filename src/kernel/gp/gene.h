@@ -30,14 +30,14 @@ struct gene
   gene() = default;
   gene(const function *, const arg_pack &);
 
+  [[nodiscard]] bool operator==(const gene &) const = default;
+
   [[nodiscard]] bool is_valid() const;
 
   // Public data members.
   const function *func;
   arg_pack        args;
 };
-
-[[nodiscard]] bool operator==(const gene &, const gene &);
 
 }  // namespace ultra
 

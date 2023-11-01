@@ -28,7 +28,7 @@ TEST_CASE("Base")
 
   real::add add_inst, *add = &add_inst;
 
-  gene empty;
+  gene empty(nullptr, {});
   CHECK(empty.is_valid());
   bool self_eq(empty == empty);
   CHECK(self_eq);

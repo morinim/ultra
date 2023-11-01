@@ -35,16 +35,6 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
   Expects(a.size() == f->arity());
 }
 
-///
-/// \param[in] g1 first term of comparison
-/// \param[in] g2 second term of comparison
-/// \return       `true` if `g1 == g2`
-///
-bool operator==(const gene &g1, const gene &g2)
-{
-  return g1.func == g2.func && g1.args == g2.args;
-}
-
 bool gene::is_valid() const
 {
   if (!func)
