@@ -32,22 +32,14 @@ struct locus
   index_t index;
   std::size_t category;
 
-  static constexpr locus npos()
+  [[nodiscard]] static constexpr locus npos()
   {
-    return {std::numeric_limits<std::size_t>::max(),
+    return {std::numeric_limits<index_t>::max(),
             std::numeric_limits<std::size_t>::max()};
   }
-};
 
-///
-/// \param[in] l1 first locus
-/// \param[in] l2 second locus
-/// \return       `true` if `l1` is equal to `l2`
-///
-[[nodiscard]] inline bool operator==(const locus &l1, const locus &l2)
-{
-  return l1.index == l2.index && l1.category == l2.category;
-}
+  [[nodiscard]] bool operator==(const locus &) const = default;
+};
 
 ///
 /// \param[in] l1 first locus
