@@ -14,6 +14,7 @@
 #include "test/function.cc"
 #include "test/gene.cc"
 #include "test/hash_t.cc"
+#include "test/locus.cc"
 #include "test/matrix.cc"
 #include "test/misc.cc"
 #include "test/symbol_set.cc"
