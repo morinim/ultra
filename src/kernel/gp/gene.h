@@ -24,7 +24,6 @@ namespace ultra
 ///
 struct gene
 {
-public:
   // Types and constants.
   using arg_pack = std::vector<value_t>;
 
@@ -32,9 +31,6 @@ public:
   gene(const function *, const arg_pack &);
 
   [[nodiscard]] bool is_valid() const;
-
-  //locus locus_of_argument(std::size_t i) const;
-  //small_vector<locus, K> arguments() const;
 
   // Public data members.
   const function *func;

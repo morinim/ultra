@@ -53,38 +53,4 @@ bool gene::is_valid() const
   return func->arity() == args.size();
 }
 
-/*
-
-///
-/// \return the list of loci associated with the arguments of the current
-///         gene.
-///
-template<unsigned K>
-small_vector<locus, K> basic_gene<K>::arguments() const
-{
-  small_vector<locus, K> ret(sym->arity());
-
-  std::generate(ret.begin(), ret.end(),
-                [this, i = 0u]() mutable
-                {
-                  return locus_of_argument(i++);
-                });
-
-  return ret;
-}
-
-///
-/// \param[in] i ordinal of an argument
-/// \return      the locus that `i`-th argument of the current symbol refers to
-///
-template<unsigned K>
-locus basic_gene<K>::locus_of_argument(std::size_t i) const
-{
-  Expects(i < sym->arity());
-
-  return {args[i], function::cast(sym)->arg_category(i)};
-}
-
-*/
-
 }  // namespace ultra
