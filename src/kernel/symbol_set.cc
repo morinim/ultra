@@ -29,11 +29,6 @@ w_symbol::w_symbol(const symbol *s, weight_t w) : sym(s), weight(w)
   Expects(s);
 }
 
-bool w_symbol::operator==(const w_symbol &rhs) const
-{
-  return sym == rhs.sym && weight == rhs.weight;
-}
-
 bool is_terminal(const w_symbol &ws)
 {
   return is<terminal>(ws.sym);

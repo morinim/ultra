@@ -34,7 +34,7 @@ struct w_symbol
 
   explicit w_symbol(const symbol *, weight_t = base_weight);
 
-  [[nodiscard]] bool operator==(const w_symbol &) const;
+  [[nodiscard]] bool operator==(const w_symbol &) const = default;
 
   const symbol *sym;
 
