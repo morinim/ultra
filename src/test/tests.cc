@@ -13,6 +13,7 @@
 #include "test/distribution.cc"
 #include "test/function.cc"
 #include "test/gene.cc"
+#include "test/hash_t.cc"
 #include "test/misc.cc"
 #include "test/symbol_set.cc"
 #include "test/terminal.cc"
