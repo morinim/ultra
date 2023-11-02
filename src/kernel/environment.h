@@ -31,6 +31,20 @@ enum print_format_t {list_f,  // default value
 
 struct environment
 {
+  struct slp_parameters
+  {
+    /// The number of genes (maximum length of an evolved program in the
+    /// population).
+    ///
+    /// Code length have to be chosen before population is created and cannot
+    /// be changed afterwards.
+    ///
+    /// \note
+    /// A length of `0` means undefined (auto-tune).
+    std::size_t code_length {0};
+  } slp;
+
+  environment &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // environment
 
