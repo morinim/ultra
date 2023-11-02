@@ -27,7 +27,12 @@ enum print_format_t {list_f,  // default value
                      c_language_f = language_f + symbol::c_format,
                      cpp_language_f = language_f + symbol::cpp_format,
                      python_language_f = language_f + symbol::python_format};
-}
+}  // namespace out
+
+struct environment
+{
+  [[nodiscard]] bool is_valid(bool) const;
+};  // environment
 
 }  // namespace ultra
 

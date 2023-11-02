@@ -17,6 +17,7 @@
 #include "test/locus.cc"
 #include "test/matrix.cc"
 #include "test/misc.cc"
+#include "test/problem.cc"
 #include "test/symbol_set.cc"
 #include "test/terminal.cc"
 #include "test/value.cc"
