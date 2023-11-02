@@ -115,7 +115,7 @@ void sum_container::scale_weights(double ratio, F f)
 // \see
 // `test/speed_symbol_set.cc` compares various weighted random selection
 // algorithms.
-const symbol &sum_container::roulette() const
+const symbol *sum_container::roulette() const
 {
   Expects(sum());
 
@@ -128,7 +128,7 @@ const symbol &sum_container::roulette() const
   {}
 
   assert(i < elems_.size());
-  return *elems_[i].sym;
+  return elems_[i].sym;
 }
 
 /// \return `true` if the object passes the internal consistency check
@@ -350,7 +350,7 @@ bool symbol_set::enough_terminals() const
 /// function set has only 4 symbols we cannot get too complex trees because the
 /// functions have a reduced chance to appear in the chromosome.
 ///
-const symbol &symbol_set::roulette(symbol::category_t c) const
+const symbol *symbol_set::roulette(symbol::category_t c) const
 {
   Expects(c < categories());
   Expects(views_[c].terminals.size());
@@ -365,24 +365,24 @@ const symbol &symbol_set::roulette(symbol::category_t c) const
 /// \param[in] c a category
 /// \return      a random function of category `c`
 ///
-const function &symbol_set::roulette_function(symbol::category_t c) const
+const function *symbol_set::roulette_function(symbol::category_t c) const
 {
   Expects(c < categories());
   Expects(views_[c].functions.size());
 
-  return static_cast<const function &>(views_[c].functions.roulette());
+  return static_cast<const function *>(views_[c].functions.roulette());
 }
 
 ///
 /// \param[in] c a category
 /// \return      a random terminal of category `c`
 ///
-const terminal &symbol_set::roulette_terminal(symbol::category_t c) const
+const terminal *symbol_set::roulette_terminal(symbol::category_t c) const
 {
   Expects(c < categories());
   Expects(views_[c].terminals.size());
 
-  return static_cast<const terminal &>(views_[c].terminals.roulette());
+  return static_cast<const terminal *>(views_[c].terminals.roulette());
 }
 
 ///
@@ -399,7 +399,7 @@ const terminal &symbol_set::roulette_terminal(symbol::category_t c) const
 /// - \f$P(terminal) = \frac {S_t} {S_t + S_f}\f$
 /// - \f$P(function) = \frac {S_f} {S_t + S_f}\f$
 ///
-const symbol &symbol_set::roulette_free(symbol::category_t c) const
+const symbol *symbol_set::roulette_free(symbol::category_t c) const
 {
   Expects(c < categories());
   return views_[c].all.roulette();

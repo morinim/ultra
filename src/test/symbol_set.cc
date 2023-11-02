@@ -148,7 +148,7 @@ TEST_CASE("Distribution")
   SUBCASE("roulette_function")
   {
     for (unsigned i(0); i < n; ++i)
-      ++hist[&ss.roulette_function()];
+      ++hist[ss.roulette_function()];
 
     for (const auto *s : symbols[0])
       if (!is<terminal>(s))
@@ -162,7 +162,7 @@ TEST_CASE("Distribution")
   SUBCASE("roulette_terminal")
   {
     for (unsigned i(0); i < n; ++i)
-      ++hist[&ss.roulette_terminal(random::boolean())];
+      ++hist[ss.roulette_terminal(random::boolean())];
 
     for (symbol::category_t c(0); c < ss.categories(); ++c)
       for (const auto *s : symbols[c])
@@ -177,7 +177,7 @@ TEST_CASE("Distribution")
   SUBCASE("roulette")
   {
     for (unsigned i(0); i < n; ++i)
-      ++hist[&ss.roulette()];
+      ++hist[ss.roulette()];
 
     const auto sum_f(std::accumulate(hist.begin(), hist.end(), 0,
                                      [](auto sum, auto e)
@@ -206,7 +206,7 @@ TEST_CASE("Distribution")
   SUBCASE("roulette_free")
   {
     for (unsigned i(0); i < n; ++i)
-      ++hist[&ss.roulette_free(random::boolean())];
+      ++hist[ss.roulette_free(random::boolean())];
 
     for (symbol::category_t c(0); c < ss.categories(); ++c)
       for (const auto *s : symbols[c])

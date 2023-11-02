@@ -64,7 +64,7 @@ public:
   [[nodiscard]] w_symbol::weight_t sum() const;
 
   template<class F> void scale_weights(double, F);
-  [[nodiscard]] const symbol &roulette() const;
+  [[nodiscard]] const symbol *roulette() const;
 
   [[nodiscard]] bool is_valid() const;
 
@@ -127,13 +127,13 @@ public:
   [[nodiscard]] std::size_t terminals(
     symbol::category_t = symbol::default_category) const;
 
-  [[nodiscard]] const symbol &roulette(
+  [[nodiscard]] const symbol *roulette(
     symbol::category_t = symbol::default_category) const;
-  [[nodiscard]] const function &roulette_function(
+  [[nodiscard]] const function *roulette_function(
     symbol::category_t = symbol::default_category) const;
-  [[nodiscard]] const terminal &roulette_terminal(
+  [[nodiscard]] const terminal *roulette_terminal(
     symbol::category_t = symbol::default_category) const;
-  [[nodiscard]] const symbol &roulette_free(
+  [[nodiscard]] const symbol *roulette_free(
     symbol::category_t = symbol::default_category) const;
 
   [[nodiscard]] const symbol *decode(symbol::opcode_t) const;
