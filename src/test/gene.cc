@@ -42,4 +42,4 @@ TEST_CASE("Base")
   CHECK(diff);
 }
 
-}  // TEST_SUITE("REAL")
+}  // TEST_SUITE("GENE")
