@@ -29,6 +29,9 @@ using index_t = std::size_t;
 ///
 struct locus
 {
+  locus() = default;
+  constexpr locus(index_t i, size_t c) : index(i), category(c) {}
+
   index_t index;
   std::size_t category;
 
