@@ -65,7 +65,7 @@ TEST_CASE("IReal")
   CHECK(mean <= (s - m) * .6);
 }
 
-TEST_CASE("INTEGER")
+TEST_CASE("Integer")
 {
   using namespace ultra;
 
@@ -108,6 +108,18 @@ TEST_CASE("Nullary")
 
     CHECK(std::get<D_INT>(v.eval()) == i);
   }
+}
+
+TEST_CASE("Literal")
+{
+  using namespace ultra;
+
+  const D_DOUBLE val(123.0);
+
+  real::literal l(val);
+  CHECK(l.is_valid());
+  CHECK(l.category() == symbol::default_category);
+  CHECK(std::get<D_DOUBLE>(l.instance()) == doctest::Approx(val));
 }
 
 }  // TEST_SUITE("REAL")
