@@ -28,19 +28,14 @@ TEST_CASE("Base")
 
   real::add add_inst, *add = &add_inst;
 
-  gene uninitialized;
-  const bool unknown(uninitialized.is_valid() || !uninitialized.is_valid());
-  CHECK(unknown);
-
   gene g(add, {1.0, 2.0});
   CHECK(g.is_valid());
   const bool self_eq(g == g);
   CHECK(self_eq);
-
-  const bool diff(g != uninitialized);
-  CHECK(diff);
-
   CHECK(g.category() == add->category());
+
+  const bool diff(g != gene(add, {1.0, 3.0}));
+  CHECK(diff);
 }
 
 }  // TEST_SUITE("GENE")

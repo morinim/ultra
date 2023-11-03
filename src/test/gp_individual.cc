@@ -14,7 +14,6 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/real.h"
-#include "utility/log.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -33,20 +32,7 @@ struct fixture
   static constexpr ultra::D_DOUBLE x_val = 123.0;
   static constexpr ultra::D_DOUBLE y_val = 321.0;
 
-  fixture() : f_add(prob.sset.insert<ultra::real::add>()),
-              f_aq(prob.sset.insert<ultra::real::aq>()),
-              f_cos(prob.sset.insert<ultra::real::cos>()),
-              f_div(prob.sset.insert<ultra::real::div>()),
-              f_idiv(prob.sset.insert<ultra::real::idiv>()),
-              f_ife(prob.sset.insert<ultra::real::ife>()),
-              f_ifz(prob.sset.insert<ultra::real::ifz>()),
-              f_ln(prob.sset.insert<ultra::real::ln>()),
-              f_max(prob.sset.insert<ultra::real::max>()),
-              f_mul(prob.sset.insert<ultra::real::mul>()),
-              f_sigmoid(prob.sset.insert<ultra::real::sigmoid>()),
-              f_sin(prob.sset.insert<ultra::real::sin>()),
-              f_sqrt(prob.sset.insert<ultra::real::sqrt>()),
-              f_sub(prob.sset.insert<ultra::real::sub>())
+  fixture()
   {
     prob.env.init().slp.code_length = 32;
   }
@@ -63,20 +49,20 @@ struct fixture
   ultra::terminal *z {prob.sset.insert<Z>()};
 
   ultra::function *f_abs {prob.sset.insert<ultra::real::abs>()};
-  ultra::function *f_add;
-  ultra::function *f_aq;
-  ultra::function *f_cos;
-  ultra::function *f_div;
-  ultra::function *f_idiv;
-  ultra::function *f_ife;
-  ultra::function *f_ifz;
-  ultra::function*f_ln;
-  ultra::function *f_max;
-  ultra::function *f_mul;
-  ultra::function *f_sigmoid;
-  ultra::function *f_sin;
-  ultra::function *f_sqrt;
-  ultra::function *f_sub;
+  ultra::function *f_add {prob.sset.insert<ultra::real::add>()};
+  ultra::function *f_aq {prob.sset.insert<ultra::real::aq>()};
+  ultra::function *f_cos {prob.sset.insert<ultra::real::cos>()};
+  ultra::function *f_div {prob.sset.insert<ultra::real::div>()};
+  ultra::function *f_idiv {prob.sset.insert<ultra::real::idiv>()};
+  ultra::function *f_ife {prob.sset.insert<ultra::real::ife>()};
+  ultra::function *f_ifz {prob.sset.insert<ultra::real::ifz>()};
+  ultra::function *f_ln {prob.sset.insert<ultra::real::ln>()};
+  ultra::function *f_max {prob.sset.insert<ultra::real::max>()};
+  ultra::function *f_mul {prob.sset.insert<ultra::real::mul>()};
+  ultra::function *f_sigmoid {prob.sset.insert<ultra::real::sigmoid>()};
+  ultra::function *f_sin {prob.sset.insert<ultra::real::sin>()};
+  ultra::function *f_sqrt {prob.sset.insert<ultra::real::sqrt>()};
+  ultra::function *f_sub {prob.sset.insert<ultra::real::sub>()};
 };
 
 TEST_SUITE("GP INDIVIDUAL")
@@ -86,18 +72,47 @@ TEST_CASE_FIXTURE(fixture, "Random creation")
 {
   using namespace ultra;
 
-  log::reporting_level = log::lALL;
-
   // Variable length random creation.
-  for (auto l(prob.sset.categories() + 2); l < 100; ++l)
+  for (auto l(1); l < 100; ++l)
   {
     prob.env.slp.code_length = l;
-    gp::individual i(prob);
+    gp::individual ind(prob);
 
-    CHECK(i.is_valid());
-    CHECK(i.size() == l);
-    CHECK(i.age() == 0);
+    CHECK(ind.is_valid());
+    CHECK(ind.size() == l);
+    CHECK(!ind.empty());
+    CHECK(ind.age() == 0);
+
+    for (locus::index_t i(0); i < ind.size(); ++i)
+      for (symbol::category_t c(0); c < prob.sset.categories(); ++c)
+      {
+        CHECK(ind[{i, c}].category() == c);
+
+        for (const auto &a : ind[{i, c}].args)
+          if (const auto *pa(std::get_if<param_address>(&a)); pa)
+            CHECK(i + as_integer(*pa) < ind.size());
+      }
   }
+}
+
+TEST_CASE_FIXTURE(fixture, "Construct from vector")
+{
+  using namespace ultra;
+
+  gp::individual i({{f_sub, {1_addr, 2_addr}},  // [0] SUB [1], [2]
+                    {f_add, {1_addr, 3.0}},     // [1] ADD [2], 2.0
+                    {f_add, {3.0, 2.0}}});      // [2] ADD $3.0, $2.0
+
+  CHECK(i.is_valid());
+  CHECK(i.size() == 3);
+  CHECK(!i.empty());
+  CHECK(i.age() == 0);
+
+  CHECK(i[{0, 0}].category() == symbol::default_category);
+  CHECK(i[{1, 0}].category() == symbol::default_category);
+  CHECK(i[{2, 0}].category() == symbol::default_category);
+
+  CHECK(i[{0, 0}].func == f_sub);
 }
 
 }  // TEST_SUITE("GP INDIVIDUAL")

@@ -41,6 +41,10 @@ public:
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
 
+  [[nodiscard]] const gene &operator[](locus) const;
+
+  [[nodiscard]] bool operator==(const individual &) const;
+
   [[nodiscard]] bool is_valid() const;
 
 private:

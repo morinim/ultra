@@ -107,6 +107,34 @@ locus::index_t individual::size() const
 }
 
 ///
+/// \param[in] l locus of a `gene`
+/// \return      the `l`-th gene of `this` individual
+///
+const gene &individual::operator[](locus l) const
+{
+  return genome_(l);
+}
+
+///
+/// \param[in] rhs second term of comparison
+/// \return        `true` if the two individuals are equal (symbol by symbol,
+///                including introns)
+///
+/// \note
+/// Age is not checked.
+///
+bool individual::operator==(const individual &rhs) const
+{
+  const bool eq(genome_ == rhs.genome_);
+
+  //assert(!eq
+  //        || signature_.empty() != x.signature_.empty()
+  //        || signature_ == x.signature_);
+
+  return eq;
+}
+
+///
 /// \param[in] in input stream
 /// \param[in] ss active symbol set
 /// \return       `true` if the object has been loaded correctly

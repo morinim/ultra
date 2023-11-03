@@ -24,6 +24,11 @@ class nullary;
 
 enum class param_address : std::size_t;
 
+constexpr param_address operator""_addr(unsigned long long a)
+{
+  return static_cast<param_address>(a);
+}
+
 ///
 /// Numerical ID of supported data types.
 ///
