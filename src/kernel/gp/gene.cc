@@ -35,12 +35,15 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
   Expects(a.size() == f->arity());
 }
 
+symbol::category_t gene::category() const
+{
+  Expects(func);
+  return func->category();
+}
+
 bool gene::is_valid() const
 {
-  if (!func)
-    return args.empty();
-
-  return func->arity() == args.size();
+  return func && func->arity() == args.size();
 }
 
 }  // namespace ultra

@@ -30,6 +30,8 @@ struct gene
   gene() = default;
   gene(const function *, const arg_pack &);
 
+  [[nodiscard]] symbol::category_t category() const;
+
   [[nodiscard]] bool operator==(const gene &) const = default;
 
   [[nodiscard]] bool is_valid() const;
