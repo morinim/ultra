@@ -20,15 +20,13 @@ namespace ultra
 {
 
 ///
-/// Index in the genome.
-///
-using index_t = std::size_t;
-
-///
 /// A locus is uniquely identified by an index **and** a category.
 ///
 struct locus
 {
+  /// Index in the genome.
+  using index_t = std::size_t;
+
   locus() = default;
   constexpr locus(index_t i, size_t c) : index(i), category(c) {}
 
@@ -64,7 +62,7 @@ struct locus
 /// \return      a new locus obtained from `l` incrementing index component by
 ///              `i` (and not changing the category component)
 ///
-[[nodiscard]] inline locus operator+(const locus &l, index_t i)
+[[nodiscard]] inline locus operator+(const locus &l, locus::index_t i)
 {
   return {l.index + i, l.category};
 }
