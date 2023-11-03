@@ -27,21 +27,34 @@ TEST_CASE("Real")
 {
   using namespace ultra;
 
-  const D_DOUBLE m(0.0), s(1.0);
-  real::number r(m, s);
-  CHECK(r.is_valid());
-  CHECK(r.category() == symbol::default_category);
-  CHECK(almost_equal(std::get<D_DOUBLE>(r.min()), m));
-  CHECK(almost_equal(std::get<D_DOUBLE>(r.sup()), s));
+  SUBCASE("Number")
+  {
+    const D_DOUBLE m(0.0), s(1.0);
+    real::number r(m, s);
+    CHECK(r.is_valid());
+    CHECK(r.category() == symbol::default_category);
+    CHECK(almost_equal(std::get<D_DOUBLE>(r.min()), m));
+    CHECK(almost_equal(std::get<D_DOUBLE>(r.sup()), s));
 
-  std::vector<D_DOUBLE> v(1000);
-  std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });
+    std::vector<D_DOUBLE> v(1000);
+    std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });
 
-  CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
+    CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
 
-  const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
-  CHECK((s - m) * .4 <= mean);
-  CHECK(mean <= (s - m) * .6);
+    const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
+    CHECK((s - m) * .4 <= mean);
+    CHECK(mean <= (s - m) * .6);
+  }
+
+  SUBCASE("Literal")
+  {
+    const D_DOUBLE val(123.0);
+
+    real::literal l(val);
+    CHECK(l.is_valid());
+    CHECK(l.category() == symbol::default_category);
+    CHECK(std::get<D_DOUBLE>(l.instance()) == doctest::Approx(val));
+  }
 }
 
 TEST_CASE("IReal")
@@ -69,19 +82,32 @@ TEST_CASE("Integer")
 {
   using namespace ultra;
 
-  const D_INT m(0), s(256);
-  integer::number r(m, s);
-  CHECK(r.is_valid());
-  CHECK(r.category() == symbol::default_category);
+  SUBCASE("Number")
+  {
+    const D_INT m(0), s(256);
+    integer::number r(m, s);
+    CHECK(r.is_valid());
+    CHECK(r.category() == symbol::default_category);
 
-  std::vector<D_INT> v(1000);
-  std::ranges::generate(v, [&r] { return std::get<D_INT>(r.instance()); });
+    std::vector<D_INT> v(1000);
+    std::ranges::generate(v, [&r] { return std::get<D_INT>(r.instance()); });
 
-  CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
+    CHECK(std::ranges::all_of(v, [m, s](auto x) { return m <= x && x < s; }));
 
-  const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
-  CHECK((s - m) * .4 <= mean);
-  CHECK(mean <= (s - m) * .6);
+    const D_DOUBLE mean(std::accumulate(v.begin(), v.end(), 0.0) / v.size());
+    CHECK((s - m) * .4 <= mean);
+    CHECK(mean <= (s - m) * .6);
+  }
+
+  SUBCASE("Literal")
+  {
+    const D_INT val(123);
+
+    integer::literal l(val);
+    CHECK(l.is_valid());
+    CHECK(l.category() == symbol::default_category);
+    CHECK(std::get<D_INT>(l.instance()) == val);
+  }
 }
 
 TEST_CASE("Nullary")
@@ -110,16 +136,16 @@ TEST_CASE("Nullary")
   }
 }
 
-TEST_CASE("Literal")
+TEST_CASE("String")
 {
   using namespace ultra;
 
-  const D_DOUBLE val(123.0);
+  const D_STRING val("hello");
 
-  real::literal l(val);
+  str::literal l(val);
   CHECK(l.is_valid());
   CHECK(l.category() == symbol::default_category);
-  CHECK(std::get<D_DOUBLE>(l.instance()) == doctest::Approx(val));
+  CHECK(std::get<D_STRING>(l.instance()) == val);
 }
 
-}  // TEST_SUITE("REAL")
+}  // TEST_SUITE("TERMINAL")
