@@ -46,6 +46,9 @@ const D_NULLARY *get_if_nullary(const value_t &v)
 /// \param[in]  v value to be streamed
 /// \return       a reference to the output stream
 ///
+/// Mainly used for debugging. Both serialization and source code visualization
+/// require different / more information.
+///
 std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
   switch (v.index())

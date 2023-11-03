@@ -24,8 +24,9 @@ namespace ultra
 ///
 struct problem
 {
-  template<class, symbol_set::weight_t = symbol_set::default_weight,
-           class ...Args> symbol *insert(Args &&...);
+  template<is_symbol_v S, symbol_set::weight_t = symbol_set::default_weight,
+           class ...Args>
+  std::add_pointer_t<S> insert(Args &&...);
 
   [[nodiscard]] virtual bool is_valid() const;
 
@@ -41,8 +42,8 @@ struct problem
 /// \return         a raw pointer to the symbol just added (or `nullptr` in
 ///                 case of error)
 ///
-template<class S, symbol_set::weight_t W, class ...Args>
-symbol *problem::insert(Args &&... args)
+template<is_symbol_v S, symbol_set::weight_t W, class ...Args>
+std::add_pointer_t<S> problem::insert(Args &&... args)
 {
   return sset.insert<S, W>(std::forward<Args>(args)...);
 }

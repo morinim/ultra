@@ -120,8 +120,8 @@ public:
   void clear();
 
   symbol *insert(std::unique_ptr<symbol>, weight_t = default_weight);
-  template<class, weight_t = default_weight, class ...Args>
-  symbol *insert(Args &&...);
+  template<is_symbol_v S, weight_t = default_weight, class ...Args>
+  std::add_pointer_t<S> insert(Args &&...);
 
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] std::size_t terminals(
@@ -173,10 +173,11 @@ private:
 /// Only partially replaces the `insert(std::unique_ptr)` method (e.g. building
 /// from factory).
 ///
-template<class S, symbol_set::weight_t W, class ...Args>
-symbol *symbol_set::insert(Args &&... args)
+template<is_symbol_v S, symbol_set::weight_t W, class ...Args>
+std::add_pointer_t<S> symbol_set::insert(Args &&... args)
 {
-  return insert(std::make_unique<S>(std::forward<Args>(args)...), W);
+  return static_cast<std::add_pointer_t<S>>(
+    insert(std::make_unique<S>(std::forward<Args>(args)...), W));
 }
 
 std::ostream &operator<<(std::ostream &, const symbol_set &);

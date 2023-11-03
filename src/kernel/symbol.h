@@ -69,23 +69,23 @@ private:
   opcode_t opcode_;
 };
 
+template<class T> concept is_symbol_v = std::derived_from<T, symbol>;
+
 ///
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<class T>
-requires std::derived_from<T, symbol>
+template<is_symbol_v T>
 [[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol *s)
 {
-  return dynamic_cast<const T *>(s);
+  return dynamic_cast<std::add_pointer_t<const T>>(s);
 }
 
 ///
 /// \return a pointer to the `const T *` value stored in the symbol referenced
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<class T>
-requires std::derived_from<T, symbol>
+template<is_symbol_v T>
 [[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol &s)
 {
   return get_if<T>(&s);
@@ -95,8 +95,7 @@ requires std::derived_from<T, symbol>
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<class T>
-requires std::derived_from<T, symbol>
+template<is_symbol_v T>
 [[nodiscard]] constexpr bool is(const symbol *s)
 {
   return get_if<T>(s);
@@ -106,8 +105,7 @@ requires std::derived_from<T, symbol>
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<class T>
-requires std::derived_from<T, symbol>
+template<is_symbol_v T>
 [[nodiscard]] constexpr bool is(const symbol &s)
 {
   return is<T>(&s);

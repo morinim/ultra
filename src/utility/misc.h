@@ -150,7 +150,7 @@ bool almost_equal(T v1, T v2, T e = 0.00001)
 /// \param[in]  i   the floating-point value to be saved
 /// \return         a reference to the output stream
 ///
-template<class T>
+template<std::floating_point T>
 std::ostream &save_float_to_stream(std::ostream &out, T i)
 {
   static_assert(std::is_floating_point<T>::value,
@@ -170,7 +170,7 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 /// \param[out] i  the floating-point value to be loaded
 /// \return        `true` if the operation is successful
 ///
-template<class T>
+template<std::floating_point T>
 bool load_float_from_stream(std::istream &in, T *i)
 {
   static_assert(std::is_floating_point_v<T>,

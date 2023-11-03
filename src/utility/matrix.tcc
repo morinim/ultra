@@ -234,7 +234,7 @@ matrix<T> &matrix<T>::operator+=(const matrix<T> &m)
 template<class T>
 bool matrix<T>::save(std::ostream &out) const
 {
-  static_assert(std::is_integral<T>::value,
+  static_assert(std::is_integral_v<T>,
                 "matrix::save doesn't support non-integral types");
 
   out << cols() << ' ' << rows() << '\n';
@@ -258,7 +258,7 @@ bool matrix<T>::save(std::ostream &out) const
 template<class T>
 bool matrix<T>::load(std::istream &in)
 {
-  static_assert(std::is_integral<T>::value,
+  static_assert(std::is_integral_v<T>,
                 "matrix::load doesn't support non-integral types");
 
   decltype(cols_) cs;

@@ -13,6 +13,7 @@
 #include "test/distribution.cc"
 #include "test/function.cc"
 #include "test/gene.cc"
+#include "test/gp_individual.cc"
 #include "test/hash_t.cc"
 #include "test/locus.cc"
 #include "test/matrix.cc"
