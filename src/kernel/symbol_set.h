@@ -133,6 +133,9 @@ public:
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] const terminal *roulette_terminal(
     symbol::category_t = symbol::default_category) const;
+  [[nodiscard]] value_t roulette_terminal_and_param(
+    std::size_t, symbol::category_t  = symbol::default_category,
+    weight_t = default_weight) const;
   [[nodiscard]] const symbol *roulette_free(
     symbol::category_t = symbol::default_category) const;
 

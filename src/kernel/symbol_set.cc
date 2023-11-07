@@ -386,6 +386,32 @@ const terminal *symbol_set::roulette_terminal(symbol::category_t c) const
 }
 
 ///
+/// Extends roulette_terminal allowing `param_address` values.
+///
+/// \param[in] sup  superior bound for the parameter address value
+/// \param[in] c    a category
+/// \param[in] pa_w weight used for `param_addr` type
+/// \return         a random value among those allowed for category `c`
+///
+value_t symbol_set::roulette_terminal_and_param(std::size_t sup,
+                                                symbol::category_t c,
+                                                weight_t pa_w) const
+{
+  Expects(sup);
+  Expects(pa_w > 0);
+  Expects(c < categories());
+  Expects(views_[c].terminals.size());
+
+  const auto sum(views_[c].terminals.sum() + pa_w);
+
+  if (const auto r(random::between(0u, sum)); r < pa_w)
+    return param_address(r % sup);
+
+  return static_cast<const terminal *>(views_[c].terminals.roulette())
+         ->instance();
+}
+
+///
 /// Extracts a random symbol from the symbol set.
 ///
 /// \param[in] c a category
