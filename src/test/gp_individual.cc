@@ -90,18 +90,20 @@ TEST_CASE_FIXTURE(fixture, "Random creation")
 
         for (const auto &a : ind[{i, c}].args)
           if (const auto *pa(std::get_if<param_address>(&a)); pa)
-            CHECK(i + as_integer(*pa) < ind.size());
+            CHECK(as_integer(*pa) < i);
       }
   }
 }
 
-TEST_CASE_FIXTURE(fixture, "Construct from vector")
+TEST_CASE_FIXTURE(fixture, "Construction from vector")
 {
   using namespace ultra;
 
-  gp::individual i({{f_sub, {1_addr, 2_addr}},  // [0] SUB [1], [2]
-                    {f_add, {1_addr, 3.0}},     // [1] ADD [2], 2.0
-                    {f_add, {3.0, 2.0}}});      // [2] ADD $3.0, $2.0
+  gp::individual i({
+                     {f_add, {3.0, 2.0}},       // [0] ADD $3.0, $2.0
+                     {f_add, {0_addr, 1.0}},    // [1] ADD [0], $1.0
+                     {f_sub, {1_addr, 0_addr}}  // [2] SUB [1], [0]
+                   });
 
   CHECK(i.is_valid());
   CHECK(i.size() == 3);
@@ -112,7 +114,11 @@ TEST_CASE_FIXTURE(fixture, "Construct from vector")
   CHECK(i[{1, 0}].category() == symbol::default_category);
   CHECK(i[{2, 0}].category() == symbol::default_category);
 
-  CHECK(i[{0, 0}].func == f_sub);
+  CHECK(i[{0, 0}].func == f_add);
+  CHECK(i[{1, 0}].func == f_add);
+  CHECK(i[{2, 0}].func == f_sub);
+
+  CHECK(i[{2, 0}].args == gene::arg_pack{1_addr, 0_addr});
 }
 
 }  // TEST_SUITE("GP INDIVIDUAL")

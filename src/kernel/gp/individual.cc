@@ -34,19 +34,37 @@ individual::individual(const problem &p)
   Expects(size());
   Expects(categories());
 
-  const locus::index_t i_sup(size());
-  const symbol::category_t c_sup(categories());
-
-  for (locus::index_t i(0); i < i_sup; ++i)
-    for (symbol::category_t c(0); c < c_sup; ++c)
+  const auto generate_index_line(
+    [&](locus::index_t i, const auto &gen_f)
     {
-      gene &g(genome_(i, c));
+      const symbol::category_t c_sup(categories());
 
-      g.func = p.sset.roulette_function(c);
+      for (symbol::category_t c(0); c < c_sup; ++c)
+      {
+        gene &g(genome_(i, c));
 
-      std::generate_n(std::back_inserter(g.args), g.func->arity(),
-                      [&p] { return p.sset.roulette_terminal()->instance(); });
-    }
+        g.func = p.sset.roulette_function(c);
+
+        const auto arity(g.func->arity());
+        g.args.reserve(arity);
+
+        const auto gen([&]() { return gen_f(c); });
+
+        std::generate_n(std::back_inserter(g.args), arity, gen);
+      }
+    });
+
+  generate_index_line(0, [&p](symbol::category_t c)
+                         {
+                           return p.sset.roulette_terminal(c)->instance();
+                         });
+
+  const locus::index_t i_sup(size());
+  for (locus::index_t i(1); i < i_sup; ++i)
+    generate_index_line(i, [&](symbol::category_t c)
+                           {
+                             return p.sset.roulette_terminal_and_param(i, c);
+                           });
 
   Ensures(is_valid());
 }
