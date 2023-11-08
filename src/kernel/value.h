@@ -22,6 +22,7 @@ namespace ultra
 
 class nullary;
 
+/// Absolute address of a instruction / function.
 enum class param_address : std::size_t;
 
 constexpr param_address operator""_addr(unsigned long long a)
