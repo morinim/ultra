@@ -95,30 +95,41 @@ TEST_CASE("Distribution")
   symbol_set ss;
 
   // Initial setup
+  const symbol_set::weight_t number_weight(400);
+  const symbol_set::weight_t apple_weight(300), orange_weight(100);
+
+  const terminal *number, *apple, *orange;
+
   const std::vector<const symbol *> symbols[2] =
   {
     {
-      ss.insert<real::number, 400>(),
+      number = ss.insert<real::number, number_weight>(),
       ss.insert<real::add, 300>(),
       ss.insert<real::sub, 200>(),
       ss.insert<str::ife, 200>(0, function::param_data_types{1, 1}),
       ss.insert<real::mul, 100>()
     },
     {
-      ss.insert<str::literal, 300>("apple", 1),
-      ss.insert<str::literal, 100>("orange", 1)
+      apple = ss.insert<str::literal, apple_weight>("apple", 1),
+      orange = ss.insert<str::literal, orange_weight>("orange", 1)
     }
   };
 
   const std::map<const symbol *, symbol_set::weight_t> wanted =
   {
-    {symbols[0][0], 400},
+    {symbols[0][0], number_weight},
     {symbols[0][1], 300},
     {symbols[0][2], 200},
     {symbols[0][3], 200},
     {symbols[0][4], 100},
-    {symbols[1][0], 300},
-    {symbols[1][1], 100}
+    {symbols[1][0], apple_weight},
+    {symbols[1][1], orange_weight}
+  };
+
+  const symbol_set::weight_t sum_c[2] =
+  {
+    number_weight,
+    apple_weight + orange_weight
   };
 
   const auto ratio = [&symbols](const auto &container, const symbol *sym)
@@ -139,7 +150,6 @@ TEST_CASE("Distribution")
   for (symbol::category_t c(0); c < ss.categories(); ++c)
     for (const auto *s : symbols[c])
       CHECK(ss.weight(*s) == wanted.at(s));
-
 
   constexpr unsigned n(500000);
   constexpr double eps(0.02);
@@ -162,7 +172,20 @@ TEST_CASE("Distribution")
   SUBCASE("roulette_terminal")
   {
     for (unsigned i(0); i < n; ++i)
-      ++hist[ss.roulette_terminal(random::boolean())];
+    {
+      const symbol::category_t c(random::boolean());
+      if (c == 0)
+      {
+        CHECK(ss.roulette_terminal(c).index() == d_double);
+        ++hist[number];
+      }
+      else
+      {
+        const auto v(ss.roulette_terminal(c));
+        CHECK(v.index() == d_string);
+        ++hist[v == apple->instance() ? apple : orange];
+      }
+    }
 
     for (symbol::category_t c(0); c < ss.categories(); ++c)
       for (const auto *s : symbols[c])
@@ -172,6 +195,32 @@ TEST_CASE("Distribution")
           CHECK(ratio(hist, s)
                 == doctest::Approx(ratio(wanted, s)).epsilon(eps));
         }
+  }
+
+  SUBCASE("roulette_terminal_and_param")
+  {
+    const std::size_t sup(11);
+    const symbol_set::weight_t weight(100);
+
+    unsigned count_p[2] = {0, 0};
+    for (unsigned i(0); i < n; ++i)
+    {
+      const symbol::category_t c(random::boolean());
+      if (const auto v(ss.roulette_terminal_and_param(sup, c, weight));
+          v.index() == d_address)
+        ++count_p[c];
+    }
+
+    for (symbol::category_t c(0); c <= 1; ++c)
+    {
+      const auto expected(weight * n / (sum_c[c] + weight) / 2);
+      const auto actual(count_p[c]);
+
+      CHECK(98 * expected <= 100 * actual);
+      CHECK(100 * actual <= 102 *expected);
+    }
+
+
   }
 
   SUBCASE("roulette")

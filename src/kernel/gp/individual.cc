@@ -56,7 +56,7 @@ individual::individual(const problem &p)
 
   generate_index_line(0, [&p](symbol::category_t c)
                          {
-                           return p.sset.roulette_terminal(c)->instance();
+                           return p.sset.roulette_terminal(c);
                          });
 
   const locus::index_t i_sup(size());

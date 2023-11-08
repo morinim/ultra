@@ -375,14 +375,15 @@ const function *symbol_set::roulette_function(symbol::category_t c) const
 
 ///
 /// \param[in] c a category
-/// \return      a random terminal of category `c`
+/// \return      a random value of category `c`
 ///
-const terminal *symbol_set::roulette_terminal(symbol::category_t c) const
+value_t symbol_set::roulette_terminal(symbol::category_t c) const
 {
   Expects(c < categories());
   Expects(views_[c].terminals.size());
 
-  return static_cast<const terminal *>(views_[c].terminals.roulette());
+  return static_cast<const terminal *>(views_[c].terminals.roulette())
+         ->instance();
 }
 
 ///
