@@ -53,24 +53,24 @@ void randomize()
 ///
 /// Returns a random number in a modular arithmetic system.
 ///
-/// \param[in] base  a base number
-/// \param[in] width maximum distance from the `base` number
-/// \param[in] n     modulus
-/// \return          a random number in the
-///                  `[base - width/2, base + width/2] mod n` interval
+/// \param[in] base   a base number
+/// \param[in] radius maximum distance from the `base` number
+/// \param[in] n      modulus
+/// \return           a random number in the
+///                   `[base - radius, base + radius] mod n` interval
 ///
-unsigned ring(unsigned base, unsigned width, unsigned n)
+std::size_t ring(std::size_t base, std::size_t radius, std::size_t n)
 {
   Expects(base < n);
-  Expects(width);
+  Expects(radius);
   Expects(n > 1);
 
-  if (width >= n)
-    return random::between(0u, n);
+  if (radius >= n / 2)
+    return random::sup(n);
 
-  const auto min_val(base + n - width / 2);
+  const auto min_val(base + n - radius);
 
-  return (min_val + random::between(0u, width)) % n;
+  return (min_val + random::sup(2 * radius)) % n;
 }
 
 }  // namespace ultra::random

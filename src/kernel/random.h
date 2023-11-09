@@ -34,37 +34,10 @@ using engine_t = vigna::xoshiro256ss;
 
 extern thread_local engine_t engine;
 
-template<class T> [[nodiscard]] T sup(T);
-
-[[nodiscard]] unsigned ring(unsigned, unsigned, unsigned);
-
-[[nodiscard]] bool boolean(double = 0.5);
+[[nodiscard]] std::size_t ring(std::size_t, std::size_t, std::size_t);
 
 void seed(unsigned);
 void randomize();
-
-///
-/// Used for ephemeral random constant generation.
-///
-/// \param[in] d  type of distribution
-/// \param[in] p1 **minimum** for uniform distribution; **mean** for normal
-///               distribution
-/// \param[in] p2 **maximum** for uniform distribution, **standard deviation**
-///               for normal distribution
-/// \return       a random number distributed according to distribution `d`
-///
-template<class T>
-T ephemeral(distribution d, T p1, T p2)
-{
-  switch (d)
-  {
-  case distribution::uniform:
-    return between(p1, p2);
-
-  case distribution::normal:
-    return std::normal_distribution<T>(p1, p2)(engine);
-  }
-}
 
 ///
 /// A specialization for floating point values of the `random::between(T, T)`
@@ -76,13 +49,12 @@ T ephemeral(distribution d, T p1, T p2)
 ///
 /// \see
 /// For further details:
-/// - <http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2013/n3551.pdf>
-/// - <http://stackoverflow.com/q/24566574/3235496>
-/// - <http://stackoverflow.com/q/25222167/3235496>
+/// - https://www.open-std.org/JTC1/SC22/WG21/docs/papers/2013/n3551.pdf
+/// - https://stackoverflow.com/q/24566574/3235496
+/// - https://stackoverflow.com/q/25222167/3235496
 ///
-template<class T>
-std::enable_if_t<std::is_floating_point_v<T>, T>
-between(T min, T sup)
+template<std::floating_point T>
+[[nodiscard]] T between(T min, T sup)
 {
   Expects(min < sup);
 
@@ -103,9 +75,8 @@ between(T min, T sup)
 /// Instead it takes a half-open range (C++ usage and same behaviour of the
 /// real number distribution).
 ///
-template<class T>
-std::enable_if_t<std::is_integral_v<T>, T>
-between(T min, T sup)
+template<std::integral T>
+[[nodiscard]] T between(T min, T sup)
 {
   Expects(min < sup);
 
@@ -114,8 +85,8 @@ between(T min, T sup)
 }
 
 template<class T>
-std::enable_if_t<std::is_enum_v<T>, T>
-between(T min, T sup)
+requires std::is_enum_v<T>
+[[nodiscard]] T between(T min, T sup)
 {
   Expects(min < sup);
 
@@ -129,7 +100,8 @@ between(T min, T sup)
 /// \note This is a shortcut for: `between<T>(0, sup)`
 ///
 template<class T>
-T sup(T sup)
+requires std::is_arithmetic_v<T> || std::is_enum_v<T>
+[[nodiscard]] T sup(T sup)
 {
   return between(static_cast<T>(0), sup);
 }
@@ -138,8 +110,8 @@ T sup(T sup)
 /// \param[in] c a STL container
 /// \return      a random element of container `c`
 ///
-template<class C>
-const typename C::value_type &element(const C &c)
+template<std::ranges::sized_range C>
+[[nodiscard]] const typename C::value_type &element(const C &c)
 {
   Expects(c.size());
 
@@ -152,8 +124,8 @@ const typename C::value_type &element(const C &c)
 /// \param[in] c a STL container
 /// \return      a random element of container `c`
 ///
-template<class C>
-typename C::value_type &element(C &c)
+template<std::ranges::sized_range C>
+[[nodiscard]] typename C::value_type &element(C &c)
 {
   Expects(c.size());
 
@@ -166,17 +138,47 @@ typename C::value_type &element(C &c)
 /// \param[in] p a probability (`[0;1]` range)
 /// \return      `true` `p%` times
 ///
-/// \note `bool` values are produced according to the Bernoulli distribution.
+/// \note
+/// `bool` values are produced according to the Bernoulli distribution.
 ///
-inline bool boolean(double p)
+[[nodiscard]] inline bool boolean(double p = 0.5)
 {
   Expects(0.0 <= p);
   Expects(p <= 1.0);
 
   std::bernoulli_distribution d(p);
   return d(engine);
+}
 
-  //return between<double>(0, 1) < p;
+///
+/// Used for ephemeral random constant generation.
+///
+/// \param[in] d  type of distribution
+/// \param[in] p1 **minimum** for uniform distribution; **mean - stddev/2** for
+///               normal distribution
+/// \param[in] p2 **maximum** for uniform distribution, **mean + stddev/2** for
+///               normal distribution
+/// \return       a random number distributed according to distribution `d`
+///
+/// \note
+/// For normal distribution:
+/// - `p2 - p1` equals the standard deviation;
+/// - `std::midpoint(p1, p2)` equals the mean.
+///
+template<class T>
+requires std::is_arithmetic_v<T>
+[[nodiscard]] T ephemeral(distribution d, T p1, T p2)
+{
+  Expects(p1 < p2);
+
+  switch (d)
+  {
+  case distribution::uniform:
+    return between(p1, p2);
+
+  case distribution::normal:
+    return std::normal_distribution<T>(std::midpoint(p1, p2), p2 - p1)(engine);
+  }
 }
 
 }  // namespace ultra::random
