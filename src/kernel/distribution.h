@@ -23,8 +23,7 @@
 
 namespace ultra
 {
-template<class T>
-concept ArithmeticType =
+template<class T> concept ArithmeticType =
   (std::is_floating_point_v<T>
    || std::is_floating_point_v<typename T::value_type>)
   && requires(T x, T y)

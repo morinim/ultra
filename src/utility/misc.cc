@@ -118,7 +118,10 @@ std::string replace_all(std::string s,
 /// This function is useful for:
 /// * debugging purpose;
 /// * symbolic regression and classification task (the value returned by
-///   the interpeter will be used in a "numeric way").
+///   the interpreter will be used in a "numeric way").
+///
+/// \note
+/// This is not the same of `std::get<T>(v)`.
 ///
 template<>
 double lexical_cast<double>(const ultra::value_t &v)

@@ -54,7 +54,9 @@ template<class T> [[nodiscard]] bool issmall(T v)
 /// \param[in] v value to check
 /// \return      `true` if `v` is nonnegative
 ///
-template<class T> [[nodiscard]] bool isnonnegative(T v)
+template<class T>
+requires std::is_arithmetic_v<T>
+[[nodiscard]] bool isnonnegative(T v)
 {
   return v >= static_cast<T>(0);
 }
@@ -64,10 +66,10 @@ template<class T> [[nodiscard]] bool isnonnegative(T v)
 ///
 /// \tparam T type we want to cast to
 ///
-/// \param[in] s a string
-/// \return      the content of string `s` converted in an object of type `T`
+/// \return the content of the input string converted in an object of type `T`
 ///
-template<class T> [[nodiscard]] T lexical_cast(const std::string &s)
+template<class T> [[nodiscard]] T lexical_cast(const std::string &);
+template<std::integral T> [[nodiscard]] T lexical_cast(const std::string &s)
 { return std::stoi(s); }
 template<> [[nodiscard]] inline double lexical_cast(const std::string &s)
 { return std::stod(s); }
@@ -124,9 +126,8 @@ private:
 /// \note Code from Bruce Dawson:
 /// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 ///
-template<class T>
-[[nodiscard]]
-bool almost_equal(T v1, T v2, T e = 0.00001)
+template<std::floating_point T>
+[[nodiscard]] bool almost_equal(T v1, T v2, T e = 0.00001)
 {
   const T diff(std::abs(v1 - v2));
 

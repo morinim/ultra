@@ -86,7 +86,8 @@ public:
 private:
   [[nodiscard]] static std::uint64_t fmix(std::uint64_t);
   [[nodiscard]] static std::uint32_t fmix(std::uint32_t);
-  template<class T> [[nodiscard]] static T get_block(const T *, std::size_t);
+  template<std::integral T> [[nodiscard]] static T get_block(const T *,
+                                                             std::size_t);
 };
 
 ///
@@ -199,7 +200,7 @@ inline std::uint32_t murmurhash3::fmix(std::uint32_t k)
   return k;
 }
 
-template<class T>
+template<std::integral T>
 inline T murmurhash3::get_block(const T *p, std::size_t i)
 {
   // The reason we do a memcpy() instead of simply returning `p[i]` is because

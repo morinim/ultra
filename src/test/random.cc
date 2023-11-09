@@ -23,7 +23,7 @@ TEST_SUITE("RANDOM")
 
 const unsigned n(10000);
 
-template<class T, class F> void check_f(F f, T min, T sup)
+template<std::invocable F, class T> void check_f(F f, T min, T sup)
 {
   ultra::distribution<double> d;
 
