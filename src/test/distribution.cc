@@ -55,7 +55,7 @@ TEST_CASE("Serialization")
   distribution<double> d;
 
   for (unsigned i(0); i < 10000; ++i)
-    d.add(random::between(0.0, 10.0));
+    d.add(random::sup(10.0));
 
   const auto rif_min(d.min());
   const auto rif_max(d.max());

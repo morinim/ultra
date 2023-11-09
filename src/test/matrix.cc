@@ -202,7 +202,7 @@ TEST_CASE("Serialization")
   for (unsigned i(0); i < 1000; ++i)
   {
     for (auto &elem : m)
-      elem = ultra::random::between(0, 1000);
+      elem = ultra::random::sup(1000);
 
     std::stringstream ss;
     CHECK(m.save(ss));

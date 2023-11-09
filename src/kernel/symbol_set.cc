@@ -405,7 +405,7 @@ value_t symbol_set::roulette_terminal_and_param(std::size_t sup,
 
   const auto sum(views_[c].terminals.sum() + pa_w);
 
-  if (const auto r(random::between(0u, sum)); r < pa_w)
+  if (const auto r(random::sup(sum)); r < pa_w)
     return param_address(r % sup);
 
   return static_cast<const terminal *>(views_[c].terminals.roulette())
