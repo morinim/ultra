@@ -35,6 +35,17 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
   Expects(a.size() == f->arity());
 }
 
+///
+/// \param[in] i ordinal of an argument
+/// \return      the locus that `i`-th argument the current function refers to
+///
+locus gene::locus_of_argument(locus::index_t i) const
+{
+  Expects(i < func->arity());
+
+  return {i, func->arg_category(i)};
+}
+
 symbol::category_t gene::category() const
 {
   Expects(func);
