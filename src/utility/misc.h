@@ -215,6 +215,20 @@ template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
   return s << as_integer(v);
 }
 
+template <class T>
+requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>
+class revert_on_scope_exit
+{
+public:
+  explicit revert_on_scope_exit(T &src) : val_ref_(src), orig_(src) {}
+
+  ~revert_on_scope_exit() { val_ref_ = orig_; }
+
+private:
+  T &val_ref_;
+  const T orig_;
+};
+
 }  // namespace ultra
 
 #endif  // include guard
