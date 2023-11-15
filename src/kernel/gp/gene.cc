@@ -39,11 +39,13 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
 /// \param[in] i ordinal of an argument
 /// \return      the locus that `i`-th argument the current function refers to
 ///
-locus gene::locus_of_argument(locus::index_t i) const
+locus gene::locus_of_argument(std::size_t i) const
 {
   Expects(i < func->arity());
+  Expects(std::holds_alternative<D_ADDRESS>(args[i]));
 
-  return {i, func->arg_category(i)};
+  return {static_cast<locus::index_t>(std::get<D_ADDRESS>(args[i])),
+          func->arg_category(i)};
 }
 
 symbol::category_t gene::category() const

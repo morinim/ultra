@@ -32,10 +32,7 @@ namespace ultra::real
 ///
 [[nodiscard]] inline D_DOUBLE base(const value_t &v)
 {
-  if (const auto *p(get_if_nullary(v)); p)
-    return std::get<D_DOUBLE>(p->eval());
-  else
-    return std::get<D_DOUBLE>(v);
+  return std::get<D_DOUBLE>(v);
 }
 
 // We assume that errors during floating-point operations aren't terminal

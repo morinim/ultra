@@ -15,6 +15,7 @@
 #include "test/gene.cc"
 #include "test/gp_individual.cc"
 #include "test/hash_t.cc"
+#include "test/interpreter.cc"
 #include "test/locus.cc"
 #include "test/matrix.cc"
 #include "test/misc.cc"

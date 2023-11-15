@@ -13,62 +13,16 @@
 #include <sstream>
 
 #include "kernel/gp/individual.h"
-#include "kernel/gp/primitive/real.h"
+
+#include "test/fixture1.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-struct fixture
-{
-  struct Z final : public ultra::terminal
-  {
-    Z() : ultra::terminal("Z") {}
-
-    [[nodiscard]] ultra::value_t instance() const override { return val; }
-
-    double val;
-  };
-
-  static constexpr ultra::D_DOUBLE x_val = 123.0;
-  static constexpr ultra::D_DOUBLE y_val = 321.0;
-
-  fixture()
-  {
-    prob.env.init().slp.code_length = 32;
-  }
-
-  ultra::problem prob {};
-
-  ultra::real::literal *c0 {prob.sset.insert<ultra::real::literal>(0.0)};
-  ultra::real::literal *c1 {prob.sset.insert<ultra::real::literal>(1.0)};
-  ultra::real::literal *c2 {prob.sset.insert<ultra::real::literal>(2.0)};
-  ultra::real::literal *c3 {prob.sset.insert<ultra::real::literal>(3.0)};
-  ultra::real::literal *x {prob.sset.insert<ultra::real::literal>(x_val)};
-  ultra::real::literal *neg_x {prob.sset.insert<ultra::real::literal>(-x_val)};
-  ultra::real::literal *y {prob.sset.insert<ultra::real::literal>(y_val)};
-  ultra::terminal *z {prob.sset.insert<Z>()};
-
-  ultra::function *f_abs {prob.sset.insert<ultra::real::abs>()};
-  ultra::function *f_add {prob.sset.insert<ultra::real::add>()};
-  ultra::function *f_aq {prob.sset.insert<ultra::real::aq>()};
-  ultra::function *f_cos {prob.sset.insert<ultra::real::cos>()};
-  ultra::function *f_div {prob.sset.insert<ultra::real::div>()};
-  ultra::function *f_idiv {prob.sset.insert<ultra::real::idiv>()};
-  ultra::function *f_ife {prob.sset.insert<ultra::real::ife>()};
-  ultra::function *f_ifz {prob.sset.insert<ultra::real::ifz>()};
-  ultra::function *f_ln {prob.sset.insert<ultra::real::ln>()};
-  ultra::function *f_max {prob.sset.insert<ultra::real::max>()};
-  ultra::function *f_mul {prob.sset.insert<ultra::real::mul>()};
-  ultra::function *f_sigmoid {prob.sset.insert<ultra::real::sigmoid>()};
-  ultra::function *f_sin {prob.sset.insert<ultra::real::sin>()};
-  ultra::function *f_sqrt {prob.sset.insert<ultra::real::sqrt>()};
-  ultra::function *f_sub {prob.sset.insert<ultra::real::sub>()};
-};
-
 TEST_SUITE("GP INDIVIDUAL")
 {
 
-TEST_CASE_FIXTURE(fixture, "Random creation")
+TEST_CASE_FIXTURE(fixture1, "Random creation")
 {
   using namespace ultra;
 
@@ -95,7 +49,7 @@ TEST_CASE_FIXTURE(fixture, "Random creation")
   }
 }
 
-TEST_CASE_FIXTURE(fixture, "Construction from vector")
+TEST_CASE_FIXTURE(fixture1, "Construction from vector")
 {
   using namespace ultra;
 
