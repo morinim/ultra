@@ -44,6 +44,27 @@ struct environment
     std::size_t code_length {0};
   } slp;
 
+  struct population_parameters
+  {
+    /// Number of individuals in a **layer** of the population.
+    ///
+    /// \note
+    /// `0` means undefined (auto-tune).
+    std::size_t individuals {0};
+
+    /// Number of layers the population is structured on.
+    ///
+    /// \warning
+    /// When the evolution strategy is `basic_std_es`, setting `layers > 1` is
+    /// like running multiple populations autonomously (there isn't any
+    /// interaction among layers). A value greater than one is usually choosen
+    /// for `basic_alps_es` or with other strategies that allow migrants.
+    ///
+    /// \note
+    /// `0` means undefined (auto-tune).
+    std::size_t layers {0};
+  } population;
+
   environment &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // environment

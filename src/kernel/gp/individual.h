@@ -27,10 +27,10 @@ namespace ultra::gp
 /// Straight Line Program (SLP) is the encoding / data structure used to
 /// represent the individual.
 ///
-class individual : public ultra::individual
+class individual final : public ultra::individual
 {
 public:
-  individual() = default;
+  //individual() = default;
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 

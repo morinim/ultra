@@ -19,6 +19,8 @@
 #include "test/locus.cc"
 #include "test/matrix.cc"
 #include "test/misc.cc"
+#include "test/population.cc"
+#include "test/population_coord.cc"
 #include "test/problem.cc"
 #include "test/random.cc"
 #include "test/symbol_set.cc"

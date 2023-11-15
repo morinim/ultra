@@ -36,6 +36,8 @@ namespace ultra
 environment &environment::init()
 {
   slp.code_length = 100;
+  population.individuals = 100;
+  population.layers = 1;
 
   return *this;
 }
@@ -53,9 +55,22 @@ bool environment::is_valid(bool force_defined) const
   {
     if (!slp.code_length)
     {
-      ultraERROR << "Undefined `code_length` data member";
+      ultraERROR << "Undefined `slp.code_length` data member";
       return false;
     }
+
+    if (!population.individuals)
+    {
+      ultraERROR << "Undefined `population.individuals` data member";
+      return false;
+    }
+
+    if (!population.layers)
+    {
+      ultraERROR << "Undefined population.layers data member";
+      return false;
+    }
+
   }  // if (force_defined)
 
   return true;

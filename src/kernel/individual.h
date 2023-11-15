@@ -46,19 +46,23 @@ public:
   bool save(std::ostream &) const;
 
 protected:
+  ~individual() = default;
+
   void set_if_older_age(age_t);
 
   // Note that syntactically distinct (but logically equivalent) individuals
   // have the same signature. This is a very interesting  property, useful
   // for individual comparison, information retrieval, entropy calculation...
-  mutable hash_t signature_;
+  mutable hash_t signature_ {};
 
 private:
   [[nodiscard]] virtual bool load_impl(std::istream &, const symbol_set &) = 0;
   [[nodiscard]] virtual bool save_impl(std::ostream &) const = 0;
 
-  age_t age_;
+  age_t age_ {0};
 };  // class individual
+
+template<class I> concept Individual = std::derived_from<I, individual>;
 
 namespace out
 {
