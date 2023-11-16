@@ -45,7 +45,7 @@ TEST_CASE("Base")
     CHECK(v1.index() == d_string);
 
     out << v1;
-    CHECK(out.str() == std::get<D_STRING>(v1));
+    CHECK(out.str() == "\"" + std::get<D_STRING>(v1) + "\"");
   }
 
   SUBCASE("Nullary value")
