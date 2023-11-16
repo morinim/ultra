@@ -255,7 +255,7 @@ bool individual::save_impl(std::ostream &out) const
 
     for (const auto &a : g.args)
     {
-      out << a.index() << ' ';
+      out << ' ' << a.index() << ' ';
 
       switch (a.index())
       {
@@ -283,6 +283,138 @@ bool individual::save_impl(std::ostream &out) const
   }
 
   return out.good();
+}
+
+namespace
+{
+
+std::ostream &print_arg(std::ostream &s, symbol::format fmt,
+                        const individual &prg,
+                        const gene &g, std::size_t idx)
+{
+  const auto a(g.args[idx]);
+
+  switch (a.index())
+  {
+  case d_address:
+    if (prg.categories() > 1)
+      s << g.locus_of_argument(idx);
+    else
+      s << '[' << idx << ']';
+    break;
+  case d_nullary:
+    s << std::get<const D_NULLARY *>(a)->to_string(fmt);
+    break;
+  default:
+    s << a;
+    break;
+  }
+
+  return s;
+}
+
+std::ostream &language(std::ostream &s, symbol::format fmt,
+                       const individual &prg)
+{
+  std::function<std::string (const gene &)> language_;
+  language_ = [&](const gene &g)
+              {
+                std::string ret(g.func->to_string(fmt));
+
+                for (std::size_t i(0); i < g.func->arity(); ++i)
+                {
+                  const std::string from("{" + std::to_string(i) + "}");
+
+                  if (g.args[i].index() != d_address)
+                  {
+                    std::stringstream ss;
+                    print_arg(ss, fmt, prg, g, i);
+                    ret = replace_all(ret, from, ss.str());
+                  }
+                  else
+                    ret = replace_all(ret, from,
+                                      language_(prg[g.locus_of_argument(i)]));
+                }
+
+                return ret;
+              };
+
+  std::string out(language_(prg[{prg.size() - 1, symbol::default_category}]));
+  if (out.length() > 2 && out.front() == '(' && out.back() == ')')
+    out = out.substr(1, out.length() - 2);
+
+  return s << out;
+}
+
+std::ostream &dump(const individual &prg, std::ostream &s)
+{
+  SAVE_FLAGS(s);
+
+  const auto size(prg.size());
+  const auto categories(prg.categories());
+
+  const auto w1(1 + static_cast<int>(std::log10(size - 1)));
+  const auto w2(1 + static_cast<int>(std::log10(categories)));
+
+  for (locus::index_t i(0); i < size; ++i)
+    for (symbol::category_t c(0); c < categories; ++c)
+    {
+      const gene &g(prg[{i, c}]);
+
+      s << '[' << std::setfill('0') << std::setw(w1) << i;
+
+      if (categories > 1)
+        s << ',' << std::setw(w2) << c;
+
+      s  << "] " << g.func->name();
+
+      for (std::size_t j(0); j < g.args.size(); ++j)
+      {
+        s << ' ';
+        print_arg(s, symbol::c_format, prg, g, j);
+      }
+
+      s << '\n';
+    }
+
+  return s;
+}
+
+}  // namespace
+
+///
+/// \param[out] s   output stream
+/// \param[in]  prg individual to be printed
+/// \return         output stream including `prg`
+///
+/// \relates gp::individual
+///
+std::ostream &operator<<(std::ostream &s, const individual &prg)
+{
+  const auto format(out::print_format_flag(s));
+
+  switch (format)
+  {
+  case out::dump_f:
+    return dump(prg, s);
+/*
+  case out::graphviz_f:
+    graphviz(ind, s);
+    return s;
+
+  case out::in_line_f:
+    return in_line(ind, s);
+
+  case out::list_f:
+    return list(ind, s);
+
+  case out::tree_f:
+    return tree(ind, s);
+*/
+  default:
+    assert(format >= out::language_f);
+    return language(s, symbol::format(format - out::language_f), prg);
+  }
 }
 
 ///

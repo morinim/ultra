@@ -60,6 +60,8 @@ private:
   crossover_t active_crossover_type_;
 };
 
+std::ostream &operator<<(std::ostream &, const individual &);
+
 }  // namespace ultra::gp
 
 #endif  // include guard

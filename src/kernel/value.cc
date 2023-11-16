@@ -57,7 +57,7 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
   case d_double:  o << std::get<D_DOUBLE>(v);                            break;
   case d_int:     o << std::get<D_INT>(v);                               break;
   case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string();      break;
-  case d_string:  o << std::get<D_STRING>(v);                            break;
+  case d_string:  o << std::quoted(std::get<D_STRING>(v));               break;
   case d_void:    o << "{}";                                             break;
   }
 

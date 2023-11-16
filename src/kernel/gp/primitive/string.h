@@ -36,13 +36,6 @@ public:
   {
     return name();
   }
-
-  /*[[nodiscard]] std::string to_string(format = c_format) const final
-  {
-    std::stringstream ss;
-    ss << std::quoted(name());
-    return ss.str();
-    }*/
 };
 
 ///
