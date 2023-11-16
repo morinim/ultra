@@ -85,8 +85,6 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
     prob.env.slp.code_length = l;
     gp::individual ind(prob);
 
-    std::cout << ultra::out::dump << ind << std::endl;
-
     for (const auto &g : ind)
       CHECK(g.is_valid());
 
