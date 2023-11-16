@@ -69,6 +69,19 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
                                       [](auto acc, auto) { return ++acc; }));
 
     CHECK(count == pop.individuals());
+
+    const unsigned added_layers(10);
+    for (unsigned j(0); j < added_layers; ++j)
+    {
+      pop.add_layer();
+      CHECK(pop.layers() == prob.env.population.layers + j + 1);
+    }
+
+    for (unsigned j(0); j < added_layers; ++j)
+    {
+      pop.remove_layer(random::sup(pop.layers()));
+      CHECK(pop.layers() == prob.env.population.layers + added_layers - j - 1);
+    }
   }
 }
 /*

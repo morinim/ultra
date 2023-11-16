@@ -45,7 +45,10 @@ public:
   [[nodiscard]] std::size_t allowed(std::size_t) const;
   [[nodiscard]] std::size_t individuals(std::size_t) const;
   [[nodiscard]] std::size_t layers() const;
+
+  void add_layer();
   void pop_from_layer(std::size_t);
+  void remove_layer(std::size_t);
 
   [[nodiscard]] I &operator[](const coord &);
   [[nodiscard]] const I &operator[](const coord &) const;
@@ -65,9 +68,7 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 /*
-  void add_layer();
   void add_to_layer(unsigned, const T &);
-  void remove_layer(unsigned);
   void set_allowed(unsigned, unsigned);
 
   void inc_age();
@@ -85,7 +86,7 @@ private:
 
   const ultra::problem *prob_;
 
-  std::vector<layer> layers_;
+  std::vector<layer> layers_ {};
 };
 
 template<Individual I>

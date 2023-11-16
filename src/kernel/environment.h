@@ -62,7 +62,7 @@ struct environment
     ///
     /// \note
     /// `0` means undefined (auto-tune).
-    std::size_t layers {0};
+    std::size_t layers {1};
   } population;
 
   environment &init();

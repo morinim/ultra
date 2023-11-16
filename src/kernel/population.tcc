@@ -23,14 +23,18 @@
 /// \param[in] p current problem
 ///
 template<Individual I>
-population<I>::population(const ultra::problem &p) : prob_(&p), layers_(1)
+population<I>::population(const ultra::problem &p)
+  : prob_(&p), layers_{p.env.population.layers}
 {
   const auto n(p.env.population.individuals);
-  layers_[0].members.reserve(n);
-  layers_[0].allowed = n;
+  for (std::size_t l(0); l < layers(); ++l)
+  {
+    layers_[l].members.reserve(n);
+    layers_[l].allowed = n;
+    init_layer(l);
+  }
 
-  init_layer(0);
-
+  Ensures(layers() == p.env.population.layers);
   Ensures(is_valid());
 }
 
@@ -58,10 +62,8 @@ void population<I>::init_layer(std::size_t l)
 /// \return number of active layers
 ///
 /// \note
-/// * The number of active layers is a dynamic value (almost monotonically
-///   increasing with the generation number).
-/// * Maximum number of layers (`env.alps.layers`) is a constant value
-///   greater than or equal to `layers()`.
+/// The number of active layers is a dynamic value (almost monotonically
+/// increasing with the generation number).
 ///
 template<Individual I>
 std::size_t population<I>::layers() const
@@ -157,6 +159,37 @@ void population<I>::pop_from_layer(std::size_t l)
 }
 
 ///
+/// Adds a new layer to the population.
+///
+/// The new layer is inserted as the lower layer and randomly initialized.
+///
+template<Individual I>
+void population<I>::add_layer()
+{
+#if !defined(NDEBUG)
+  const auto nl(layers());
+#endif
+
+  layers_.insert(layers_.begin(), layer());
+  layers_[0].allowed = problem().env.population.individuals;
+  layers_[0].members.reserve(layers_[0].allowed);
+
+  init_layer(0);
+
+#if !defined(NDEBUG)
+  Ensures(layers() == nl + 1);
+#endif
+}
+
+template<Individual I>
+void population<I>::remove_layer(std::size_t l)
+{
+  Expects(l < layers());
+
+  layers_.erase(std::next(layers_.begin(), l));
+}
+
+///
 /// \return a `const_iterator` pointing to the first layer of the population
 ///
 /// \warning Pointer to the first LAYER *NOT* to the first PROGRAM.
@@ -183,10 +216,9 @@ typename population<I>::const_iterator population<I>::end() const
 template<Individual I>
 bool population<I>::is_valid() const
 {
-  for (const auto &l : layers_)
-    for (const auto &i : l.members)
-      if (!i.is_valid())
-        return false;
+  for (const auto &i : *this)
+    if (!i.is_valid())
+      return false;
 
   const auto n(layers());
   for (std::size_t l(0); l < n; ++l)
