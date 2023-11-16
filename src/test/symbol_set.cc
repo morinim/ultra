@@ -219,8 +219,6 @@ TEST_CASE("Distribution")
       CHECK(98 * expected <= 100 * actual);
       CHECK(100 * actual <= 102 *expected);
     }
-
-
   }
 
   SUBCASE("roulette")

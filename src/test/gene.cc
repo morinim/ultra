@@ -38,4 +38,19 @@ TEST_CASE("Base")
   CHECK(diff);
 }
 
+TEST_CASE("Locus of argument")
+{
+  using namespace ultra;
+
+  real::add add_inst, *add = &add_inst;
+
+  gene g(add, {123_addr, 456_addr});
+
+  CHECK(g.locus_of_argument(0) == locus{123, symbol::default_category});
+  CHECK(g.locus_of_argument(1) == locus{456, symbol::default_category});
+
+  CHECK(g.locus_of_argument(0) == g.locus_of_argument(g.args[0]));
+  CHECK(g.locus_of_argument(1) == g.locus_of_argument(g.args[1]));
+}
+
 }  // TEST_SUITE("GENE")

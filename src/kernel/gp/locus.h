@@ -48,12 +48,22 @@ struct locus
 /// \return       `true` if `l1` precedes `l2` in lexicographic order
 ///               (http://en.wikipedia.org/wiki/Lexicographical_order)
 ///
-/// This operator is required by the STL `std::map` container.
-///
 [[nodiscard]] inline bool operator<(const locus &l1, const locus &l2)
 {
   return l1.index < l2.index ||
          (l1.index == l2.index && l1.category < l2.category);
+}
+
+///
+/// \param[in] l1 first locus
+/// \param[in] l2 second locus
+/// \return       `true` if `l2` precedes `l1` in lexicographic order
+///               (http://en.wikipedia.org/wiki/Lexicographical_order)
+///
+[[nodiscard]] inline bool operator>(const locus &l1, const locus &l2)
+{
+  return l1.index > l2.index ||
+         (l1.index == l2.index && l1.category > l2.category);
 }
 
 ///

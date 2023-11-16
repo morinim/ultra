@@ -32,6 +32,7 @@ struct gene
   gene(const function *, const arg_pack &);
 
   [[nodiscard]] locus locus_of_argument(std::size_t) const;
+  [[nodiscard]] locus locus_of_argument(const arg_pack::value_type &) const;
 
   [[nodiscard]] symbol::category_t category() const;
 

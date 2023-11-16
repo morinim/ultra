@@ -75,6 +75,30 @@ TEST_CASE_FIXTURE(fixture1, "Construction from vector")
   CHECK(i[{2, 0}].args == gene::arg_pack{1_addr, 0_addr});
 }
 
+TEST_CASE_FIXTURE(fixture1, "Iterators")
+{
+  using namespace ultra;
+
+  // Variable length random creation.
+  for (auto l(1); l < 100; ++l)
+  {
+    prob.env.slp.code_length = l;
+    gp::individual ind(prob);
+
+    std::cout << ultra::out::dump << ind << std::endl;
+
+    for (const auto &g : ind)
+      CHECK(g.is_valid());
+
+    locus previous(locus::npos());
+    for (auto it(ind.begin()); it != ind.end(); ++it)
+    {
+      CHECK(it.locus() < previous);
+      previous = it.locus();
+    }
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;

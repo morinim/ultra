@@ -143,6 +143,38 @@ locus individual::start() const
 }
 
 ///
+/// \return an iterator to the first active locus of the individual
+///
+individual::const_iterator individual::begin() const
+{
+  return individual::const_iterator(*this);
+}
+
+///
+/// \return an iterator used as sentry value to stop a cycle
+///
+individual::const_iterator individual::end() const
+{
+  return individual::const_iterator();
+}
+
+///
+/// \return an iterator to the first active locus of the individual
+///
+individual::iterator individual::begin()
+{
+  return individual::iterator(*this);
+}
+
+///
+/// \return an iterator used as sentry value to stop a cycle
+///
+individual::iterator individual::end()
+{
+  return individual::iterator();
+}
+
+///
 /// \param[in] rhs second term of comparison
 /// \return        `true` if the two individuals are equal (symbol by symbol,
 ///                including introns)
@@ -309,7 +341,7 @@ std::ostream &print_arg(std::ostream &s, symbol::format fmt,
     if (prg.categories() > 1)
       s << g.locus_of_argument(idx);
     else
-      s << '[' << idx << ']';
+      s << '[' << g.locus_of_argument(idx).index << ']';
     break;
   case d_nullary:
     s << std::get<const D_NULLARY *>(a)->to_string(fmt);
@@ -366,11 +398,11 @@ std::ostream &in_line(std::ostream &s, const individual &prg)
                  s << ' ';
                s << g.func->name();
 
-                for (std::size_t i(0); i < g.func->arity(); ++i)
-                  if (g.args[i].index() != d_address)
-                    s << ' ' << g.args[i];
+               for (const auto &a : g.args)
+                  if (a.index() != d_address)
+                    s << ' ' << a;
                   else
-                    in_line_(g.locus_of_argument(i));
+                    in_line_(g.locus_of_argument(a));
              };
 
   in_line_(prg.start());

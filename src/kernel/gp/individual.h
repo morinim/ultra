@@ -13,6 +13,8 @@
 #if !defined(ULTRA_GP_INDIVIDUAL_H)
 #define      ULTRA_GP_INDIVIDUAL_H
 
+#include <set>
+
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 #include "kernel/gp/gene.h"
@@ -48,6 +50,20 @@ public:
 
   [[nodiscard]] bool is_valid() const;
 
+  // ---- Iterators ----
+  template<bool> class basic_iterator;
+  using const_iterator = basic_iterator<true>;
+  using iterator = basic_iterator<false>;
+  using value_type = gene;
+
+  [[nodiscard]] const_iterator begin() const;
+  [[nodiscard]] const_iterator end() const;
+
+  [[nodiscard]] iterator begin();
+  [[nodiscard]] iterator end();
+
+  template<bool> friend class basic_iterator;
+
 private:
   // ---- Private data members ----
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
@@ -62,6 +78,8 @@ private:
 };
 
 std::ostream &operator<<(std::ostream &, const individual &);
+
+#include "kernel/gp/individual_iterator.tcc"
 
 }  // namespace ultra::gp
 
