@@ -79,13 +79,12 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
 
-  // Non-empty serialization.
   for (unsigned i(0); i < 2000; ++i)
   {
     std::stringstream ss;
     gp::individual i1(prob);
 
-    for (auto j(random::sup(100)); j; --j)
+    for (auto j(random::sup(10)); j; --j)
       i1.inc_age();
 
     CHECK(i1.save(ss));
@@ -96,18 +95,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(i1 == i2);
   }
-/*
-  // Empty i_mep serialization.
-  std::stringstream ss;
-  vita::i_mep empty;
-  CHECK(empty.save(ss));
-
-  vita::i_mep empty1;
-  CHECK(empty1.load(ss, prob.sset));
-  CHECK(empty1.is_valid());
-  CHECK(empty1.empty());
-
-  CHECK(empty == empty1);*/
 }
 
 TEST_CASE_FIXTURE(fixture1, "Output")
@@ -116,7 +103,7 @@ TEST_CASE_FIXTURE(fixture1, "Output")
 
   gp::individual i(
     {
-      {f_add, {4.0, z}},          // [0] ADD 4.0 Z()
+      {f_add, {2.0, z}},          // [0] ADD 2.0 Z()
       {f_add, {3.0, 4.0}},        // [1] ADD 3.0 4.0
       {f_sub, {0_addr, 1_addr}},  // [2] SUB [0] [1]
     });
@@ -126,11 +113,15 @@ TEST_CASE_FIXTURE(fixture1, "Output")
   SUBCASE("Dump")
   {
     ss << ultra::out::dump << i;
-    std::cout << ultra::out::dump << i << std::endl;
-
-    CHECK(ss.str() == "[0] FADD 4 Z()\n"
+    CHECK(ss.str() == "[0] FADD 2 Z()\n"
                       "[1] FADD 3 4\n"
                       "[2] FSUB [0] [1]\n");
+  }
+
+  SUBCASE("Inline")
+  {
+    ss << ultra::out::in_line << i;
+    CHECK(ss.str() == "FSUB FADD 2 Z() FADD 3 4");
   }
 }
 

@@ -57,7 +57,7 @@ value_t interpreter::run(const locus &l)
 ///
 value_t interpreter::run()
 {
-  return run({prg_->size() - 1, symbol::default_category});
+  return run(prg_->start());
 }
 
 ///

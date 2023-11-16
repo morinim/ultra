@@ -41,7 +41,8 @@ public:
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
 
-  [[nodiscard]] const gene &operator[](locus) const;
+  [[nodiscard]] const gene &operator[](const locus &) const;
+  [[nodiscard]] locus start() const;
 
   [[nodiscard]] bool operator==(const individual &) const;
 

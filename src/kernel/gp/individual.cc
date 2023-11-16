@@ -128,9 +128,18 @@ locus::index_t individual::size() const
 /// \param[in] l locus of a `gene`
 /// \return      the `l`-th gene of `this` individual
 ///
-const gene &individual::operator[](locus l) const
+const gene &individual::operator[](const locus &l) const
 {
   return genome_(l);
+}
+
+///
+/// \return the first gene of the individual (the first instruction of the
+///         program)
+///
+locus individual::start() const
+{
+  return {size() - 1, symbol::default_category};
 }
 
 ///
@@ -339,14 +348,36 @@ std::ostream &language(std::ostream &s, symbol::format fmt,
                 return ret;
               };
 
-  std::string out(language_(prg[{prg.size() - 1, symbol::default_category}]));
+  std::string out(language_(prg[prg.start()]));
   if (out.length() > 2 && out.front() == '(' && out.back() == ')')
     out = out.substr(1, out.length() - 2);
 
   return s << out;
 }
 
-std::ostream &dump(const individual &prg, std::ostream &s)
+std::ostream &in_line(std::ostream &s, const individual &prg)
+{
+  std::function<void (locus)> in_line_;
+  in_line_ = [&](locus l)
+             {
+               const gene &g(prg[l]);
+
+               if (l != prg.start())
+                 s << ' ';
+               s << g.func->name();
+
+                for (std::size_t i(0); i < g.func->arity(); ++i)
+                  if (g.args[i].index() != d_address)
+                    s << ' ' << g.args[i];
+                  else
+                    in_line_(g.locus_of_argument(i));
+             };
+
+  in_line_(prg.start());
+  return s;
+}
+
+std::ostream &dump(std::ostream &s, const individual &prg)
 {
   SAVE_FLAGS(s);
 
@@ -396,14 +427,15 @@ std::ostream &operator<<(std::ostream &s, const individual &prg)
   switch (format)
   {
   case out::dump_f:
-    return dump(prg, s);
+    return dump(s, prg);
+
+  case out::in_line_f:
+    return in_line(s, prg);
+
 /*
   case out::graphviz_f:
     graphviz(ind, s);
     return s;
-
-  case out::in_line_f:
-    return in_line(ind, s);
 
   case out::list_f:
     return list(ind, s);
