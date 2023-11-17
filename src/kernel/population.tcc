@@ -80,10 +80,10 @@ std::size_t population<I>::individuals() const
   using ret_t = decltype(individuals());
 
   return std::accumulate(layers_.begin(), layers_.end(), ret_t(0),
-                         [](auto accumulator, const auto &layer)
+                         [](auto accumulator, const auto &l)
                          {
                            return accumulator
-                                  + static_cast<ret_t>(layer.members.size());
+                                  + static_cast<ret_t>(l.members.size());
                          });
 }
 

@@ -173,11 +173,10 @@ requires std::is_arithmetic_v<T>
 
   switch (d)
   {
-  case distribution::uniform:
-    return between(p1, p2);
-
   case distribution::normal:
     return std::normal_distribution<T>(std::midpoint(p1, p2), p2 - p1)(engine);
+  default:
+    return between(p1, p2);
   }
 }
 
