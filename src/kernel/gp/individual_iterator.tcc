@@ -52,10 +52,8 @@ public:
       const auto &g(operator*());
 
       for (const auto &a : g.args)
-      {
         if (a.index() == d_address)
           loci_.insert(g.locus_of_argument(a));
-      }
 
       loci_.erase(loci_.begin());
     }
@@ -93,9 +91,9 @@ public:
   }
 
 private:
+  // For different implementation see `test/speed_gp_individual_iterator.cc`.
+
   // A partial set of active loci to be explored.
-  // We have tried with `std::vector<bool>` and `std::vector<uint8_t>` based
-  // iterators without measuring significant speed differences.
   std::set<ultra::locus, std::greater<ultra::locus>> loci_;
 
   // A pointer to the individual we are iterating on.
