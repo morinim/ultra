@@ -54,9 +54,9 @@ TEST_CASE_FIXTURE(fixture1, "Construction from vector")
   using namespace ultra;
 
   gp::individual i({
-                     {f_add, {3.0, 2.0}},       // [0] ADD $3.0, $2.0
-                     {f_add, {0_addr, 1.0}},    // [1] ADD [0], $1.0
-                     {f_sub, {1_addr, 0_addr}}  // [2] SUB [1], [0]
+                     {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+                     {f_add, {0_addr, 1.0}},    // [1] ADD [0] 1.0
+                     {f_sub, {1_addr, 0_addr}}  // [2] SUB [1] [0]
                    });
 
   CHECK(i.is_valid());
@@ -95,6 +95,75 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
       previous = it.locus();
     }
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Comparison")
+{
+  using namespace ultra;
+
+  for (unsigned i(0); i < 2000; ++i)
+  {
+    gp::individual a(prob);
+    CHECK(a == a);
+    CHECK(distance(a, a) == 0);
+
+    gp::individual b(a);
+    CHECK(a.signature() == b.signature());
+    CHECK(a == b);
+    CHECK(distance(a, b) == 0);
+
+    gp::individual c(prob);
+    if (a.signature() != c.signature())
+    {
+      CHECK(a != c);
+      CHECK(distance(a, c) > 0);
+      CHECK(distance(a, c) == distance(c, a));
+    }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Signature")
+{
+  using namespace ultra;
+
+  gp::individual i({
+                     {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+                     {f_add, {0_addr, 1.0}},    // [1] ADD [0] 1.0
+                     {f_sub, {1_addr, 0_addr}}  // [2] SUB [1] [0]
+                   });
+
+  gp::individual eq1({
+                       {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+                       {f_add, {4.0, 5.0}},       // [1] ADD 4.0 5.0
+                       {f_add, {0_addr, 1.0}},    // [2] ADD [0] 1.0
+                       {f_sub, {2_addr, 0_addr}}  // [3] SUB [2] [0]
+                     });
+
+  gp::individual eq2({
+                       {f_add, {7.0, 9.0}},       // [0] ADD 7.0 9.0
+                       {f_add, {3.0, 2.0}},       // [1] ADD 3.0 2.0
+                       {f_add, {4.0, 5.0}},       // [2] ADD 4.0 5.0
+                       {f_add, {1_addr, 1.0}},    // [3] ADD [1] 1.0
+                       {f_sub, {3_addr, 1_addr}}  // [4] SUB [3] [1]
+                     });
+
+  gp::individual neq1({
+                        {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+                        {f_add, {1.0, 0_addr}},    // [1] ADD 1.0 [0]
+                        {f_sub, {1_addr, 0_addr}}  // [2] SUB [1] [0]
+                      });
+
+  gp::individual neq2({
+                        {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+                        {f_add, {0_addr, 1.0}},    // [1] ADD [0] 1.0
+                        {f_sub, {0_addr, 1_addr}}  // [2] SUB [1] [0]
+                      });
+
+  CHECK(i.signature() == eq1.signature());
+  CHECK(i.signature() == eq2.signature());
+
+  CHECK(i.signature() != neq1.signature());
+  CHECK(i.signature() != neq2.signature());
 }
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")

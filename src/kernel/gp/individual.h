@@ -43,6 +43,8 @@ public:
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
 
+  [[nodiscard]] hash_t signature() const;
+
   [[nodiscard]] const gene &operator[](const locus &) const;
   [[nodiscard]] locus start() const;
 
@@ -66,6 +68,8 @@ public:
 
 private:
   // ---- Private data members ----
+  void pack(const locus &, std::vector<std::byte> *) const;
+  [[nodiscard]] hash_t hash() const;
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
@@ -76,6 +80,8 @@ private:
   // to a random type.
   crossover_t active_crossover_type_;
 };
+
+[[nodiscard]] unsigned distance(const individual &, const individual &);
 
 std::ostream &operator<<(std::ostream &, const individual &);
 

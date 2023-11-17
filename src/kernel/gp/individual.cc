@@ -10,6 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <span>
+
 #include "kernel/gp/individual.h"
 #include "kernel/nullary.h"
 #include "kernel/random.h"
@@ -124,6 +126,124 @@ locus::index_t individual::size() const
   return static_cast<locus::index_t>(genome_.rows());
 }
 
+namespace
+{
+template <class T>
+std::span<const std::byte, sizeof(T)> bytes_view(const T &t)
+{
+  return std::span<const std::byte, sizeof(T)>{
+    reinterpret_cast<const std::byte *>(std::addressof(t)), sizeof(T)};
+}
+
+std::span<const std::byte> bytes_view(const std::string &s)
+{
+  return {reinterpret_cast<const std::byte *>(s.data()), s.length()};
+}
+}  // namespace
+
+///
+/// Maps syntactically distinct (but logically equivalent) individuals to the
+/// same byte stream.
+///
+/// \param[in]  l locus in this individual
+/// \param[out] p byte stream compacted version of the gene sequence
+///               starting at locus `l`
+///
+/// Useful for individual comparison / information retrieval.
+///
+void individual::pack(const locus &l, std::vector<std::byte> *p) const
+{
+  const auto pack_span([&p](const std::span<const std::byte> data)
+  {
+    p->insert(p->end(), data.begin(), data.end());
+  });
+
+  const auto pack_value([&](const auto &data)
+  {
+    pack_span(bytes_view(data));
+  });
+
+  const auto pack_opcode([&](const symbol::opcode_t &opcode)
+  {
+    Expects(opcode <= std::numeric_limits<symbol::opcode_t>::max());
+
+    // Although 16 bit are enough to contain opcodes and parameters, they are
+    // usually stored in unsigned variables (i.e. 32 or 64 bit) for performance
+    // reasons.
+    // Anyway before hashing opcodes/parameters we convert them to 16 bit types
+    // to avoid hashing more than necessary.
+    const auto opcode16(static_cast<std::uint16_t>(opcode));
+
+    pack_value(opcode16);
+  });
+
+  const gene &g(genome_(l));
+  pack_opcode(g.func->opcode());
+
+  for (const auto &a : g.args)
+    switch (a.index())
+    {
+    case d_address:
+      pack(g.locus_of_argument(a), p);
+      break;
+    case d_double:
+      pack_value(std::get<D_DOUBLE>(a));
+      break;
+    case d_int:
+      pack_value(std::get<D_INT>(a));
+      break;
+    case d_nullary:
+      pack_opcode(std::get<const D_NULLARY *>(a)->opcode());
+      break;
+    case d_string:
+      pack_value(std::get<D_STRING>(a));
+      break;
+    case d_void:
+      break;
+    }
+}
+
+///
+/// Converts the individual in a packed byte representation and performs the
+/// hash algorithm on it.
+///
+/// \return the signature of this individual
+///
+hash_t individual::hash() const
+{
+  Expects(size());
+
+  // From an individual to a packed byte stream...
+  thread_local std::vector<std::byte> packed;
+
+  packed.clear();
+  pack(start(), &packed);
+
+  return ultra::hash::hash128(packed.data(), packed.size());
+}
+
+///
+/// Signature maps syntactically distinct (but logically equivalent)
+/// individuals to the same value.
+///
+/// \return the signature of this individual.
+///
+/// In other words identical individuals at genotypic level have the same
+/// signature; different individuals at the genotipic level may be mapped
+/// to the same signature since real structure/computation is considered and
+/// not the simple storage.
+///
+/// This is a very interesting  property, useful for individual comparison,
+/// information retrieval, entropy calculation...
+///
+hash_t individual::signature() const
+{
+  if (signature_.empty())
+    signature_ = hash();
+
+  return signature_;
+}
+
 ///
 /// \param[in] l locus of a `gene`
 /// \return      the `l`-th gene of `this` individual
@@ -186,11 +306,39 @@ bool individual::operator==(const individual &rhs) const
 {
   const bool eq(genome_ == rhs.genome_);
 
-  //assert(!eq
-  //        || signature_.empty() != x.signature_.empty()
-  //        || signature_ == x.signature_);
+  assert(!eq
+         || signature_.empty() != rhs.signature_.empty()
+         || signature_ == rhs.signature_);
 
   return eq;
+}
+
+///
+/// \param[in] lhs first term of comparison
+/// \param[in] rhs second term of comparison
+/// \return        a numeric measurement of the difference between `lhs` and
+///                `rhs` (the number of different genes between individuals)
+///
+/// \relates gp::individual
+///
+unsigned distance(const individual &lhs, const individual &rhs)
+{
+  Expects(lhs.size() == rhs.size());
+  Expects(lhs.categories() == rhs.categories());
+
+  const locus::index_t i_sup(lhs.size());
+  const symbol::category_t c_sup(lhs.categories());
+
+  unsigned d(0);
+  for (locus::index_t i(0); i < i_sup; ++i)
+    for (symbol::category_t c(0); c < c_sup; ++c)
+    {
+      const locus l{i, c};
+      if (lhs[l] != rhs[l])
+        ++d;
+    }
+
+  return d;
 }
 
 ///
@@ -543,9 +691,8 @@ bool individual::is_valid() const
   //  return false;
   //}
   //
-  //return signature_.empty() || signature_ == hash();
 
-  return true;
+  return signature_.empty() || signature_ == hash();
 }
 
 }  // namespace ultra::gp
