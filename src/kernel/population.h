@@ -41,14 +41,16 @@ public:
 
   explicit population(const ultra::problem &);
 
-  void init_layer(std::size_t);
   [[nodiscard]] std::size_t allowed(std::size_t) const;
   [[nodiscard]] std::size_t individuals(std::size_t) const;
   [[nodiscard]] std::size_t layers() const;
 
+  void init_layer(std::size_t);
   void add_layer();
-  void pop_from_layer(std::size_t);
   void remove_layer(std::size_t);
+
+  void add_to_layer(std::size_t, const I &);
+  void pop_from_layer(std::size_t);
 
   [[nodiscard]] I &operator[](const coord &);
   [[nodiscard]] const I &operator[](const coord &) const;

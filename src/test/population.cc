@@ -63,6 +63,11 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
         pop.pop_from_layer(l);
 
       CHECK(pop.individuals(l) == before - n);
+
+      for (unsigned j(0); j < n; ++j)
+        pop.add_to_layer(l, gp::individual(prob));
+
+      CHECK(pop.individuals(l) == before);
     }
 
     std::size_t count(std::accumulate(pop.begin(), pop.end(), 0u,

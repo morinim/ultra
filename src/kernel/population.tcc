@@ -147,6 +147,21 @@ const I &population<I>::operator[](const coord &c) const
 }
 
 ///
+/// Adds individual `i` to layer `l`.
+///
+/// \param[in] l index of a layer
+/// \param[in] i an individual
+///
+template<Individual I>
+void population<I>::add_to_layer(std::size_t l, const I &i)
+{
+  Expects(l < layers());
+
+  if (individuals(l) < allowed(l))
+    layers_[l].members.push_back(i);
+}
+
+///
 /// Removes the last individual of layer `l`.
 ///
 /// \param[in] l index of a layer
