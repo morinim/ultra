@@ -33,11 +33,11 @@ TEST_CASE_FIXTURE(fixture1, "Creation")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(30, 200);
+    prob.env.population.individuals = random::between(1, 100);
 
     population<gp::individual> pop(prob);
 
-    CHECK(pop.individuals() == prob.env.population.individuals);
+    CHECK(pop.size() == prob.env.population.individuals);
     CHECK(pop.is_valid());
   }
 }
@@ -48,32 +48,31 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(30u, 200u);
-    prob.env.population.layers = random::between(1u, 10u);
+    prob.env.population.individuals = random::between(30, 150);
+    prob.env.population.layers = random::between(1, 8);
 
     population<gp::individual> pop(prob);
 
     for (std::size_t l(0); l < pop.layers(); ++l)
     {
-      const auto n(random::sup(pop.individuals(l)));
-
-      const auto before(pop.individuals(l));
-
-      for (unsigned j(0); j < n; ++j)
-        pop.pop_from_layer(l);
-
-      CHECK(pop.individuals(l) == before - n);
+      const auto before(pop.layer(l).size());
+      const auto n(random::sup(before));
 
       for (unsigned j(0); j < n; ++j)
-        pop.add_to_layer(l, gp::individual(prob));
+        pop.layer(l).pop_back();
 
-      CHECK(pop.individuals(l) == before);
+      CHECK(pop.layer(l).size() == before - n);
+
+      for (unsigned j(0); j < n; ++j)
+        pop.layer(l).push_back(gp::individual(prob));
+
+      CHECK(pop.layer(l).size() == before);
     }
 
     std::size_t count(std::accumulate(pop.begin(), pop.end(), 0u,
                                       [](auto acc, auto) { return ++acc; }));
 
-    CHECK(count == pop.individuals());
+    CHECK(count == pop.size());
 
     const unsigned added_layers(10);
     for (unsigned j(0); j < added_layers; ++j)
@@ -84,44 +83,72 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
 
     for (unsigned j(0); j < added_layers; ++j)
     {
-      pop.remove_layer(random::sup(pop.layers()));
+      pop.remove(pop.layer(random::sup(pop.layers())));
       CHECK(pop.layers() == prob.env.population.layers + added_layers - j - 1);
     }
   }
 }
-/*
+
+TEST_CASE_FIXTURE(fixture1, "Age")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals = 10;
+
+  population<gp::individual> pop(prob);
+
+  CHECK(std::ranges::all_of(pop, [](const auto &i) { return i.age() == 0; }));
+
+  pop.inc_age();
+
+  CHECK(std::ranges::all_of(pop, [](const auto &i) { return i.age() == 1; }));
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterators")
+{
+  using namespace ultra;
+
+  for (unsigned i(0); i < 10; ++i)
+  {
+    prob.env.population.individuals = random::between(30, 200);
+    prob.env.population.layers = random::between(1, 10);
+
+    population<gp::individual> pop(prob);
+
+    CHECK(std::distance(pop.begin(), pop.end()) == pop.size());
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
-  using namespace vita;
+  using namespace ultra;
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.individuals = random::between(30, 300);
+    prob.env.population.individuals = random::between(10, 50);
+    prob.env.population.layers = random::between(1, 4);
 
     std::stringstream ss;
-    population<i_mep> pop1(prob);
+    population<gp::individual> pop1(prob);
 
     CHECK(pop1.save(ss));
 
     decltype(pop1) pop2(prob);
-    CHECK(pop2.load(ss, prob));
+    CHECK(pop2.load(ss));
     CHECK(pop2.is_valid());
 
     CHECK(pop1.layers() == pop2.layers());
-    CHECK(pop1.individuals() == pop2.individuals());
-    for (unsigned l(0); l < pop1.layers(); ++l)
+    CHECK(pop1.size() == pop2.size());
+    for (std::size_t l(0); l < pop1.layers(); ++l)
     {
-      CHECK(pop1.individuals(l) == pop2.individuals(l));
+      CHECK(pop1.layer(l).size() == pop2.layer(l).size());
 
-      for (unsigned j(0); j < pop1.individuals(); ++j)
-      {
-        const population<i_mep>::coord c{l, j};
-        CHECK(pop1[c] == pop2[c]);
-      }
+      std::ranges::equal(pop1.layer(l).members, pop2.layer(l).members);
     }
   }
 }
 
+/*
 TEST_CASE_FIXTURE(fixture1, "Pickup")
 {
   prob.env.individuals = 30;

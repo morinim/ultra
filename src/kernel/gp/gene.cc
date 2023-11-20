@@ -11,6 +11,7 @@
  */
 
 #include "kernel/gp/gene.h"
+#include "utility/misc.h"
 
 namespace ultra
 {
@@ -54,16 +55,12 @@ locus gene::locus_of_argument(std::size_t i) const
 ///
 locus gene::locus_of_argument(const arg_pack::value_type &a) const
 {
-  const auto *data(args.data());
-
-  // `std::less` and `std::greater_equal` are required otherwise performing the
-  // comparison with an object that isn't part of the vector would be UB.
-  Expects(std::greater_equal{}(&a, data));
-  Expects(std::less{}(&a, data + args.size()));
   Expects(std::holds_alternative<D_ADDRESS>(a));
 
-  return {static_cast<locus::index_t>(std::get<D_ADDRESS>(a)),
-          func->arg_category(&a - data)};
+  return {
+           static_cast<locus::index_t>(std::get<D_ADDRESS>(a)),
+           func->arg_category(get_index(a, args))
+         };
 }
 
 symbol::category_t gene::category() const

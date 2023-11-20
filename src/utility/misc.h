@@ -115,6 +115,20 @@ private:
 };
 #define SAVE_FLAGS(s) ios_flag_saver save ## __LINE__(s)
 
+template<class T, std::ranges::contiguous_range C>
+requires std::same_as<std::ranges::range_value_t<C>, T>
+[[nodiscard]] std::size_t get_index(const T &val, const C &container)
+{
+  const auto *data(std::data(container));
+
+  // `std::less` and `std::greater_equal` are required otherwise performing the
+  // comparison with an object that isn't part of the container would be UB.
+  Expects(std::greater_equal{}(&val, data));
+  Expects(std::less{}(&val, data + std::size(container)));
+
+  return std::addressof(val) - data;
+}
+
 ///
 /// \param[in] v1 a floating point number
 /// \param[in] v2 a floating point number

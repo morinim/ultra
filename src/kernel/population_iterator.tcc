@@ -40,15 +40,20 @@ public:
   using const_pointer = const value_type *;
   using reference = value_type &;
   using const_reference = const value_type &;
+  using difference_type = std::ptrdiff_t;
 
   using ptr = std::conditional_t<is_const, const_pointer, pointer>;
   using ref = std::conditional_t<is_const, const_reference, reference>;
   using pop = std::conditional_t<is_const, const population, population>;
 
+  // A requirement for `std::input_iterator` is that it must be
+  // default-initializable.
+  base_iterator() = default;
+
   /// \param[in] p     a population
   /// \param[in] begin `false` for the `end()` iterator
   base_iterator(pop &p, bool begin)
-    : pop_(&p), layer_(begin ? 0 : p.layers()), index_(0)
+    : pop_(&p), layer_(begin ? 0 : p.layers())
   {
   }
 
@@ -58,17 +63,18 @@ public:
   /// Advancing past the `end()` iterator results in undefined behaviour.
   base_iterator &operator++()
   {
-    if (++index_ >= pop_->individuals(layer_))
+    if (++index_ >= pop_->layer(layer_).size())
     {
       index_ = 0;
 
       do  // skipping empty layers
         ++layer_;
-      while (layer_ < pop_->layers() && !pop_->individuals(layer_));
+      while (layer_ < pop_->layers() && pop_->layer(layer_).empty());
     }
 
-    assert((layer_ < pop_->layers() && index_ < pop_->individuals(layer_)) ||
-           (layer_ == pop_->layers() && index_ == 0));
+    assert((layer_ < pop_->layers()
+            && index_ < pop_->layer(layer_).size())
+           || (layer_ == pop_->layers() && index_ == 0));
 
     return *this;
   }
@@ -110,10 +116,10 @@ public:
   }
 
 private:
-  std::conditional_t<is_const, const population *, population *> pop_;
+  std::conditional_t<is_const, const population *, population *> pop_ {nullptr};
 
-  std::size_t layer_;
-  std::size_t index_;
+  std::size_t layer_ {0};
+  std::size_t index_ {0};
 };
 
 #endif  // include guard

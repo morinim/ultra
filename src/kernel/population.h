@@ -13,6 +13,7 @@
 #if !defined(ULTRA_POPULATION_H)
 #define      ULTRA_POPULATION_H
 
+#include <algorithm>
 #include <numeric>
 
 #include "kernel/environment.h"
@@ -37,25 +38,24 @@ class population
 {
 public:
   struct coord;
-  struct layer;
+  class layer_t;
 
   explicit population(const ultra::problem &);
 
-  [[nodiscard]] std::size_t allowed(std::size_t) const;
-  [[nodiscard]] std::size_t individuals(std::size_t) const;
   [[nodiscard]] std::size_t layers() const;
+  [[nodiscard]] const layer_t &layer(std::size_t) const;
+  [[nodiscard]] layer_t &layer(std::size_t);
 
-  void init_layer(std::size_t);
+  void init(layer_t &);
   void add_layer();
-  void remove_layer(std::size_t);
-
-  void add_to_layer(std::size_t, const I &);
-  void pop_from_layer(std::size_t);
+  void remove(layer_t &);
 
   [[nodiscard]] I &operator[](const coord &);
   [[nodiscard]] const I &operator[](const coord &) const;
 
-  [[nodiscard]] std::size_t individuals() const;
+  [[nodiscard]] std::size_t size() const;
+
+  void inc_age();
 
   [[nodiscard]] const ultra::problem &problem() const;
 
@@ -66,21 +66,15 @@ public:
 
   [[nodiscard]] const_iterator begin() const;
   [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] iterator begin();
+  [[nodiscard]] iterator end();
 
   [[nodiscard]] bool is_valid() const;
 
-/*
-  void add_to_layer(unsigned, const T &);
-  void set_allowed(unsigned, unsigned);
-
-  void inc_age();
-
-  const problem &get_problem() const;
-
   // Serialization.
-  bool load(std::istream &, const problem &);
+  bool load(std::istream &);
   bool save(std::ostream &) const;
-*/
+
 private:
   /*const environment &get_helper(environment *) const;
   const problem &get_helper(problem *) const;
@@ -88,14 +82,28 @@ private:
 
   const ultra::problem *prob_;
 
-  std::vector<layer> layers_ {};
+  std::vector<layer_t> layers_ {};
 };
 
 template<Individual I>
-struct population<I>::layer
+class population<I>::layer_t
 {
+public:
+  [[nodiscard]] std::size_t size() const;
+
+  [[nodiscard]] bool empty() const;
+  void clear();
+
+  [[nodiscard]] std::size_t allowed() const;
+  void allowed(std::size_t);
+
+  void push_back(const I &);
+  void pop_back();
+
   std::vector<I> members {};
-  std::size_t    allowed {0};
+
+private:
+  std::size_t allowed_ {0};
 };
 
 #include "kernel/population.tcc"
