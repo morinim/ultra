@@ -96,7 +96,6 @@ individual::individual(const std::vector<gene> &gv)
   Ensures(is_valid());
 }
 
-
 ///
 /// \return the total number of categories the individual is using
 ///
@@ -124,6 +123,17 @@ bool individual::empty() const
 locus::index_t individual::size() const
 {
   return static_cast<locus::index_t>(genome_.rows());
+}
+
+individual::exons_range<individual::exon_iterator> individual::exons()
+{
+  return {exon_iterator(*this), exon_iterator()};
+}
+
+individual::exons_range<individual::const_exon_iterator>
+individual::exons() const
+{
+  return {const_exon_iterator(*this), const_exon_iterator()};
 }
 
 namespace
@@ -260,38 +270,6 @@ const gene &individual::operator[](const locus &l) const
 locus individual::start() const
 {
   return {size() - 1, symbol::default_category};
-}
-
-///
-/// \return an iterator to the first active locus of the individual
-///
-individual::const_iterator individual::begin() const
-{
-  return individual::const_iterator(*this);
-}
-
-///
-/// \return an iterator used as sentry value to stop a cycle
-///
-individual::const_iterator individual::end() const
-{
-  return individual::const_iterator();
-}
-
-///
-/// \return an iterator to the first active locus of the individual
-///
-individual::iterator individual::begin()
-{
-  return individual::iterator(*this);
-}
-
-///
-/// \return an iterator used as sentry value to stop a cycle
-///
-individual::iterator individual::end()
-{
-  return individual::iterator();
 }
 
 ///

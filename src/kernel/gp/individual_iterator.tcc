@@ -21,10 +21,10 @@
 /// Iterator to scan the active genes of an individual.
 ///
 template<bool is_const>
-class individual::basic_iterator
+class individual::basic_exon_iterator
 {
 public:
-  using iterator_category = std::forward_iterator_tag;
+  using iterator_category = std::input_iterator_tag;
   using difference_type = std::ptrdiff_t;
   using value_type = gene;
   using pointer = value_type *;
@@ -39,13 +39,14 @@ public:
   /// Builds an empty iterator.
   ///
   /// Empty iterator is used as sentry (it's the value returned by end()).
-  basic_iterator() : loci_(), ind_(nullptr) {}
+  basic_exon_iterator() : loci_(), ind_(nullptr) {}
 
   /// \param[in] id an individual
-  explicit basic_iterator(ind &id) : loci_({id.start()}), ind_(&id) {}
+  explicit basic_exon_iterator(ind &id)
+    : loci_({id.start()}), ind_(std::addressof(id)) {}
 
   /// \return iterator representing the next active gene
-  basic_iterator &operator++()
+  basic_exon_iterator &operator++()
   {
     if (!loci_.empty())
     {
@@ -61,10 +62,18 @@ public:
     return *this;
   }
 
+  /// \return iterator to the current active gene
+  basic_exon_iterator operator++(int)
+  {
+    basic_exon_iterator tmp(*this);
+    operator++();
+    return tmp;
+  }
+
   /// \param[in] rhs second term of comparison
   /// \return        `true` if iterators point to the same locus or they are
   ///                both to the end
-  [[nodiscard]] bool operator==(const basic_iterator &rhs) const
+  [[nodiscard]] bool operator==(const basic_exon_iterator &rhs) const
   {
     Ensures(!ind_ || !rhs.ind_ || ind_ == rhs.ind_);
 
@@ -73,7 +82,7 @@ public:
   }
 
   /// \return reference to the current locus of the individual
-  [[nodiscard]] ref operator*() const
+  [[nodiscard]] ref &operator*() const
   {
     return ind_->genome_(locus());
   }
@@ -98,6 +107,23 @@ private:
 
   // A pointer to the individual we are iterating on.
   ind *ind_;
+};
+
+///
+/// A range for iterating over exons.
+///
+template<class Iterator>
+class individual::exons_range
+{
+public:
+  exons_range(Iterator b, Iterator e) : b_(b), e_(e) {}
+
+  [[nodiscard]] Iterator begin() const { return b_; }
+  [[nodiscard]] Iterator end() const { return e_; }
+
+private:
+  Iterator b_;
+  Iterator e_;
 };
 
 #endif  // include guard

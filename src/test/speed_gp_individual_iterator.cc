@@ -187,7 +187,8 @@ int main()
     for (unsigned i(0); i < sup; ++i)
     {
       const auto &ind(ind_db[i]);
-      for (auto it(ind.begin()); it != ind.end(); ++it)
+      const auto exons(ind.exons());
+      for (auto it(exons.begin()); it != exons.end(); ++it)
         ++count;
     }
 

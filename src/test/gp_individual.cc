@@ -85,14 +85,31 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
     prob.env.slp.code_length = l;
     gp::individual ind(prob);
 
-    for (const auto &g : ind)
-      CHECK(g.is_valid());
+    //SUBCASE("Standard iterators")
+    //{
+    //  for (const auto &g : ind)
+    //    CHECK(g.is_valid());
 
-    locus previous(locus::npos());
-    for (auto it(ind.begin()); it != ind.end(); ++it)
+    //  locus previous(locus::npos());
+    //  for (auto it(ind.begin()); it != ind.end(); ++it)
+    //  {
+    //    CHECK(it.locus() < previous);
+    //    previous = it.locus();
+    //  }
+    //}
+
+    SUBCASE("Exons")
     {
-      CHECK(it.locus() < previous);
-      previous = it.locus();
+      for (const auto &g : ind.exons())
+        CHECK(g.is_valid());
+
+      auto exons(ind.exons());
+      locus previous(locus::npos());
+      for (auto it(exons.begin()); it != exons.end(); ++it)
+      {
+        CHECK(it.locus() < previous);
+        previous = it.locus();
+      }
     }
   }
 }

@@ -53,18 +53,15 @@ public:
   [[nodiscard]] bool is_valid() const;
 
   // ---- Iterators ----
-  template<bool> class basic_iterator;
-  using const_iterator = basic_iterator<true>;
-  using iterator = basic_iterator<false>;
-  using value_type = gene;
+  template<bool> class basic_exon_iterator;
+  using const_exon_iterator = basic_exon_iterator<true>;
+  using exon_iterator = basic_exon_iterator<false>;
 
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  template<class> class exons_range;
+  [[nodiscard]] exons_range<const_exon_iterator> exons() const;
+  [[nodiscard]] exons_range<exon_iterator> exons();
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
-
-  template<bool> friend class basic_iterator;
+  template<bool> friend class basic_exon_iterator;
 
 private:
   // ---- Private data members ----
