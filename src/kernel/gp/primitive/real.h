@@ -178,8 +178,8 @@ class aq : public function
 {
 public:
   explicit aq(return_type r = symbol::default_category,
-               const param_data_types &pt = {symbol::default_category,
-                                             symbol::default_category})
+              const param_data_types &pt = {symbol::default_category,
+                                            symbol::default_category})
     : function("AQ", r, pt)
   {
     Expects(pt.size() == 2);

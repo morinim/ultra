@@ -54,10 +54,18 @@ std::size_t function::arity() const
 /// \param[in] i index of a input parameter
 /// \return      category of the `i`-th input parameter
 ///
-symbol::category_t function::arg_category(std::size_t i) const
+symbol::category_t function::categories(std::size_t i) const
 {
   Expects(i < arity());
-  return params_[i];
+  return categories()[i];
+}
+
+///
+/// \return list of the categories of the input parameters
+///
+const function::param_data_types &function::categories() const
+{
+  return params_;
 }
 
 ///

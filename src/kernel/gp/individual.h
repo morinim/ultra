@@ -17,6 +17,7 @@
 
 #include "kernel/individual.h"
 #include "kernel/problem.h"
+#include "kernel/random.h"
 #include "kernel/gp/gene.h"
 #include "utility/matrix.h"
 
@@ -36,9 +37,7 @@ public:
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 
-  // ---- Recombination operators ----
-  enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
-
+  [[nodiscard]] std::size_t active_functions() const;
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
@@ -63,6 +62,11 @@ public:
 
   template<bool> friend class basic_exon_iterator;
 
+  // ---- Recombination operators ----
+  enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
+
+  unsigned mutation(double, const problem &);
+
 private:
   // ---- Private data members ----
   void pack(const locus &, std::vector<std::byte> *) const;
@@ -75,7 +79,7 @@ private:
 
   // Crossover operator used to create this individual. Initially this is set
   // to a random type.
-  crossover_t active_crossover_type_;
+  crossover_t active_crossover_type_ {random::sup(NUM_CROSSOVERS)};
 };
 
 [[nodiscard]] unsigned distance(const individual &, const individual &);

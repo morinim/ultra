@@ -46,7 +46,7 @@ locus gene::locus_of_argument(std::size_t i) const
   Expects(std::holds_alternative<D_ADDRESS>(args[i]));
 
   return {static_cast<locus::index_t>(std::get<D_ADDRESS>(args[i])),
-          func->arg_category(i)};
+          func->categories(i)};
 }
 
 ///
@@ -59,7 +59,7 @@ locus gene::locus_of_argument(const arg_pack::value_type &a) const
 
   return {
            static_cast<locus::index_t>(std::get<D_ADDRESS>(a)),
-           func->arg_category(get_index(a, args))
+           func->categories(get_index(a, args))
          };
 }
 
@@ -71,7 +71,7 @@ symbol::category_t gene::category() const
 
 bool gene::is_valid() const
 {
-  return func && func->arity() == args.size();
+  return (func && func->arity() == args.size()) || (!func && args.empty());
 }
 
 }  // namespace ultra

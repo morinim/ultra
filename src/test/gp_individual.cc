@@ -15,6 +15,8 @@
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
+#include "test/fixture2.h"
+#include "test/fixture3.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -46,6 +48,62 @@ TEST_CASE_FIXTURE(fixture1, "Random creation")
           if (const auto *pa(std::get_if<param_address>(&a)); pa)
             CHECK(as_integer(*pa) < i);
       }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture2, "Random creation multicategories")
+{
+  using namespace ultra;
+
+  // Variable length random creation.
+  for (auto l(1); l < 100; ++l)
+  {
+    prob.env.slp.code_length = l;
+    gp::individual ind(prob);
+
+    CHECK(ind.is_valid());
+    CHECK(ind.size() == l);
+    CHECK(!ind.empty());
+    CHECK(ind.age() == 0);
+
+    for (locus::index_t i(0); i < ind.size(); ++i)
+      for (symbol::category_t c(0); c < prob.sset.categories(); ++c)
+        if (prob.sset.functions(c))
+        {
+          CHECK(ind[{i, c}].category() == c);
+
+          for (const auto &a : ind[{i, c}].args)
+            if (const auto *pa(std::get_if<param_address>(&a)); pa)
+              CHECK(as_integer(*pa) < i);
+        }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture3, "Random creation full-multicategories")
+{
+  using namespace ultra;
+
+  // Variable length random creation.
+  for (auto l(1); l < 100; ++l)
+  {
+    prob.env.slp.code_length = l;
+    gp::individual ind(prob);
+
+    CHECK(ind.is_valid());
+    CHECK(ind.size() == l);
+    CHECK(!ind.empty());
+    CHECK(ind.age() == 0);
+
+    for (locus::index_t i(0); i < ind.size(); ++i)
+      for (symbol::category_t c(0); c < prob.sset.categories(); ++c)
+        if (prob.sset.functions(c))
+        {
+          CHECK(ind[{i, c}].category() == c);
+
+          for (const auto &a : ind[{i, c}].args)
+            if (const auto *pa(std::get_if<param_address>(&a)); pa)
+              CHECK(as_integer(*pa) < i);
+        }
   }
 }
 
@@ -84,19 +142,6 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
   {
     prob.env.slp.code_length = l;
     gp::individual ind(prob);
-
-    //SUBCASE("Standard iterators")
-    //{
-    //  for (const auto &g : ind)
-    //    CHECK(g.is_valid());
-
-    //  locus previous(locus::npos());
-    //  for (auto it(ind.begin()); it != ind.end(); ++it)
-    //  {
-    //    CHECK(it.locus() < previous);
-    //    previous = it.locus();
-    //  }
-    //}
 
     SUBCASE("Exons")
     {
@@ -183,6 +228,59 @@ TEST_CASE_FIXTURE(fixture1, "Signature")
   CHECK(i.signature() != neq2.signature());
 }
 
+TEST_CASE_FIXTURE(fixture1, "Mutation")
+{
+  using namespace ultra;
+
+  prob.env.slp.code_length = 100;
+
+  gp::individual ind(prob);
+  const gp::individual orig(ind);
+
+  const unsigned n(4000);
+
+  SUBCASE("Zero probability mutation")
+  {
+    for (unsigned i(0); i < n; ++i)
+    {
+      ind.mutation(0.0, prob);
+      CHECK(ind == orig);
+    }
+  }
+
+  SUBCASE("Mutation")
+  {
+    for (unsigned j(0); j < 10; ++j)
+    {
+      const double p(random::between(0.1, 0.9));
+      unsigned total_length(0), total_mut(0);
+
+      for (unsigned i(0); i < n; ++i)
+      {
+        const gp::individual i1(ind);
+
+        const auto mut(ind.mutation(p, prob));
+        const auto dist(distance(i1, ind));
+
+        CHECK(mut >= dist);
+
+        if (i1.signature() != ind.signature())
+        {
+          CHECK(mut > 0);
+          CHECK(dist > 0);
+        }
+
+        total_mut += mut;
+        total_length += i1.active_functions();
+      }
+
+      const double perc(100.0 * total_mut / total_length);
+      CHECK(perc > p * 100.0 - 2.0);
+      CHECK(perc < p * 100.0 + 2.0);
+    }
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
@@ -211,9 +309,9 @@ TEST_CASE_FIXTURE(fixture1, "Output")
 
   gp::individual i(
     {
-      {f_add, {2.0, z}},          // [0] ADD 2.0 Z()
-      {f_add, {3.0, 4.0}},        // [1] ADD 3.0 4.0
-      {f_sub, {0_addr, 1_addr}},  // [2] SUB [0] [1]
+      {f_add, {2.0, z}},         // [0] ADD 2.0 Z()
+      {f_add, {3.0, 4.0}},       // [1] ADD 3.0 4.0
+      {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
   std::stringstream ss;
@@ -230,6 +328,42 @@ TEST_CASE_FIXTURE(fixture1, "Output")
   {
     ss << ultra::out::in_line << i;
     CHECK(ss.str() == "FSUB FADD 2 Z() FADD 3 4");
+  }
+}
+
+TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
+{
+  using namespace ultra;
+
+  gp::individual i(
+    {
+      {s_ife, {s1->instance(), s2->instance(), s1->instance(), s3->instance()}},
+                                  // [0] SIFE "hello" "world" "hello" ":-)"
+      {f_len, {0_addr}},          // [1] FLENGTH [0]
+      {f_len, {s2->instance()}},  // [2] FLENGTH "world"
+      {f_add, {1_addr, 2_addr}}   // [3] FADD [1] [2]
+    });
+
+  std::stringstream ss;
+
+  SUBCASE("Dump")
+  {
+    ss << ultra::out::dump << i;
+    CHECK(ss.str() == "[0,0]\n"
+                      "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n"
+                      "[1,0] FLENGTH [0,1]\n"
+                      "[1,1]\n"
+                      "[2,0] FLENGTH \"world\"\n"
+                      "[2,1]\n"
+                      "[3,0] FADD [1,0] [2,0]\n"
+                      "[3,1]\n");
+  }
+
+  SUBCASE("Inline")
+  {
+    ss << ultra::out::in_line << i;
+    CHECK(ss.str()
+          == "FADD FLENGTH SIFE \"hello\" \"world\" \"hello\" \":-)\" FLENGTH \"world\"");
   }
 }
 

@@ -47,9 +47,10 @@ public:
   explicit ife(return_type r, const param_data_types &pt)
     : function("SIFE", r, pt)
   {
-    Expects(pt.size() == 2);
-    Expects(r != pt[0]);
+    Expects(pt.size() == 4);
+    Expects(r == pt[2]);
     Expects(pt[0] == pt[1]);
+    Expects(pt[2] == pt[3]);
   }
 
   [[nodiscard]] std::string to_string(format f) const final
@@ -57,7 +58,7 @@ public:
     switch (f)
     {
     case python_format:  return "({2} if {0} == {1} else {3})";
-    default:             return "{0}=={1}";
+    default:             return "({0}=={1} ? {2} : {3})";
     }
   }
 

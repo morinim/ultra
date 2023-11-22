@@ -14,7 +14,6 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/nullary.h"
-#include "kernel/random.h"
 #include "utility/log.h"
 #include "utility/misc.h"
 
@@ -30,30 +29,28 @@ namespace ultra::gp
 /// of the type system's constraints.
 ///
 individual::individual(const problem &p)
-  : ultra::individual(), genome_(p.env.slp.code_length, p.sset.categories()),
-    active_crossover_type_(random::sup(NUM_CROSSOVERS))
+  : ultra::individual(), genome_(p.env.slp.code_length, p.sset.categories())
 {
   Expects(size());
   Expects(categories());
 
   const auto generate_index_line(
-    [&](locus::index_t i, const auto &gen_f)
+    [&](locus::index_t i, const auto &gen)
     {
       const symbol::category_t c_sup(categories());
 
       for (symbol::category_t c(0); c < c_sup; ++c)
-      {
-        gene &g(genome_(i, c));
+        if (p.sset.functions(c))
+        {
+          gene &g(genome_(i, c));
 
-        g.func = p.sset.roulette_function(c);
+          g.func = p.sset.roulette_function(c);
+          g.args.reserve(g.func->arity());
 
-        const auto arity(g.func->arity());
-        g.args.reserve(arity);
-
-        const auto gen([&]() { return gen_f(c); });
-
-        std::generate_n(std::back_inserter(g.args), arity, gen);
-      }
+          std::ranges::transform(g.func->categories(),
+                                 std::back_inserter(g.args),
+                                 gen);
+        }
     });
 
   generate_index_line(0, [&p](symbol::category_t c)
@@ -65,7 +62,7 @@ individual::individual(const problem &p)
   for (locus::index_t i(1); i < i_sup; ++i)
     generate_index_line(i, [&](symbol::category_t c)
                            {
-                             return p.sset.roulette_terminal_and_param(i, c);
+                             return p.sset.roulette_terminal(i, c);
                            });
 
   Ensures(is_valid());
@@ -81,12 +78,11 @@ individual::individual(const problem &p)
 individual::individual(const std::vector<gene> &gv)
   : ultra::individual(),
     genome_(gv.size(),
-            std::max_element(std::begin(gv), std::end(gv),
+            std::ranges::max(gv,
                              [](const gene &g1, const gene &g2)
                              {
                                return g1.category() < g2.category();
-                             })->category() + 1),
-    active_crossover_type_(random::sup(NUM_CROSSOVERS))
+                             }).category() + 1)
 {
   locus::index_t i(0);
 
@@ -317,6 +313,82 @@ unsigned distance(const individual &lhs, const individual &rhs)
     }
 
   return d;
+}
+
+///
+/// Number of active symbols.
+///
+/// \return number of active symbols
+///
+/// \see
+/// size()
+///
+/// When `category() > 1`, active_functions() can be greater than size(). For
+/// instance consider the following individual:
+///
+///     [0, 1] FIFL 1 2 2 3
+///     [1, 0] "car"
+///     [2, 0] "plane"
+///     [2, 1] 10
+///     [3, 1] 20
+///
+/// `size() == 4` (four slots / rows) and `active_functions() == 5`.
+///
+std::size_t individual::active_functions() const
+{
+  const auto exr(exons());
+  return static_cast<std::size_t>(std::distance(exr.begin(), exr.end()));
+}
+
+///
+/// A new individual is created mutating `this`.
+///
+/// \param[in] pgm probability of gene mutation
+/// \param[in] prb the current problem
+/// \return        number of mutations performed
+///
+unsigned individual::mutation(double pgm, const problem &prb)
+{
+  Expects(0.0 <= pgm && pgm <= 1.0);
+
+  unsigned n(0);
+
+  const auto re(exons());
+  for (auto i(re.begin()); i != re.end(); ++i)  // mutation affects only exons
+    if (random::boolean(pgm))
+    {
+      const auto ix(i.locus().index);
+
+      if (const auto pos(random::sup(i->args.size() + 1));
+          pos == i->args.size())
+      {
+        gene g;
+        g.func = prb.sset.roulette_function(i->category());
+        g.args.reserve(g.func->arity());
+
+        std::ranges::transform(
+          g.func->categories(), std::back_inserter(g.args),
+          [&](symbol::category_t c)
+          {
+            return prb.sset.roulette_terminal(ix, c);
+          });
+
+        *i = g;
+      }
+      else  // input parameter
+      {
+        const auto c(i->func->categories(pos));
+        i->args[pos] = prb.sset.roulette_terminal(ix, c);
+      }
+
+      ++n;
+    }
+
+  if (n)
+    signature_.clear();
+
+  Ensures(is_valid());
+  return n;
 }
 
 ///
@@ -555,12 +627,17 @@ std::ostream &dump(std::ostream &s, const individual &prg)
       if (categories > 1)
         s << ',' << std::setw(w2) << c;
 
-      s  << "] " << g.func->name();
+      s  << "]";
 
-      for (std::size_t j(0); j < g.args.size(); ++j)
+      if (g.func)
       {
-        s << ' ';
-        print_arg(s, symbol::c_format, prg, g, j);
+        s << ' ' << g.func->name();
+
+        for (std::size_t j(0); j < g.args.size(); ++j)
+        {
+          s << ' ';
+          print_arg(s, symbol::c_format, prg, g, j);
+        }
       }
 
       s << '\n';
@@ -629,42 +706,65 @@ bool individual::is_valid() const
     return true;
   }
 
+  if (!genome_(start()).func)
+  {
+    ultraERROR << "Empty function pointer at start (" << start() << ")";
+    return false;
+  }
+
+  // Check function and arguments consistency (both number of arguments and
+  // category).
   for (locus::index_t i(0); i < size(); ++i)
     for (symbol::category_t c(0); c < categories(); ++c)
     {
       const locus l(i, c);
+      const gene &g(genome_(l));
 
-      if (!genome_(l).func)
-      {
-        ultraERROR << "Empty symbol pointer at locus " << l;
-        return false;
-      }
-
-      if (!genome_(l).is_valid())
+      if (!g.is_valid())
       {
         ultraERROR << "Arity and actual arguments don't match";
         return false;
       }
-    }
 
-  // Type checking.
-  for (locus::index_t i(0); i < size(); ++i)
-    for (symbol::category_t c(0); c < categories(); ++c)
-    {
-      const locus l(i, c);
-
-      if (genome_(l).category() != c)
+      if (const auto *func = g.func)
       {
-        ultraERROR << "Wrong category: " << l << genome_(l).func->name()
-                   << " -> " << genome_(l).category()
-                   << " should be " << c;
-        return false;
+        if (func->category() != c)
+        {
+          ultraERROR << "Wrong category: " << l << func->name()
+                     << " -> " << g.category() << " should be " << c;
+          return false;
+        }
+
+        for (const auto &a : g.args)
+          switch (a.index())
+          {
+          case d_address:
+            if (const auto al(g.locus_of_argument(a)); !genome_(al).func)
+            {
+              ultraERROR << "Argument " << get_index(a, g.args)
+                         << " of function " << l << func->name()
+                         << " is the address (" << al << ") of an empty gene";
+              return false;
+            }
+            break;
+
+          case d_nullary:
+            if (const auto *n(get_if_nullary(a)); n->category() != c)
+            {
+              ultraERROR << "Argument " << get_index(a, g.args)
+                         << " of function " << l << func->name()
+                         << " is the nullary " << a << " -> " << n->category()
+                         << " but category should be " << c;
+              return false;
+            }
+            break;
+          }
       }
     }
 
-  //if (categories() == 1 && active_symbols() > size())
+  //if (categories() == 1 && active_functions() > size())
   //{
-  //  ultraERROR << "`active_symbols()` cannot be greater than `size()` "
+  //  ultraERROR << "`active_functions()` cannot be greater than `size()` "
   //               "in single-category individuals";
   //  return false;
   //}

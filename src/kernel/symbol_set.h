@@ -124,6 +124,8 @@ public:
   std::add_pointer_t<S> insert(Args &&...);
 
   [[nodiscard]] symbol::category_t categories() const;
+  [[nodiscard]] std::size_t functions(
+    symbol::category_t = symbol::default_category) const;
   [[nodiscard]] std::size_t terminals(
     symbol::category_t = symbol::default_category) const;
 
@@ -133,7 +135,7 @@ public:
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] value_t roulette_terminal(
     symbol::category_t = symbol::default_category) const;
-  [[nodiscard]] value_t roulette_terminal_and_param(
+  [[nodiscard]] value_t roulette_terminal(
     std::size_t, symbol::category_t  = symbol::default_category,
     weight_t = default_weight) const;
   [[nodiscard]] const symbol *roulette_free(

@@ -10,13 +10,14 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(FIXTURE1_H)
-#define      FIXTURE1_H
+#if !defined(FIXTURE2_H)
+#define      FIXTURE2_H
 
 #include "kernel/gp/primitive/real.h"
+#include "kernel/gp/primitive/string.h"
 
-// Useful for single category tests.
-struct fixture1
+// Useful for single category functions / multi-categories terminals tests.
+struct fixture2
 {
   struct Z final : public ultra::nullary
   {
@@ -30,7 +31,7 @@ struct fixture1
   static constexpr ultra::D_DOUBLE x_val = 123.0;
   static constexpr ultra::D_DOUBLE y_val = 321.0;
 
-  fixture1()
+  fixture2()
   {
     prob.env.init().slp.code_length = 32;
   }
@@ -61,6 +62,15 @@ struct fixture1
   ultra::function *f_sin {prob.sset.insert<ultra::real::sin>()};
   ultra::function *f_sqrt {prob.sset.insert<ultra::real::sqrt>()};
   ultra::function *f_sub {prob.sset.insert<ultra::real::sub>()};
+
+  ultra::str::literal *s1 {prob.sset.insert<ultra::str::literal>("hello", 1)};
+  ultra::str::literal *s2 {prob.sset.insert<ultra::str::literal>("world", 1)};
+  ultra::str::literal *s3 {prob.sset.insert<ultra::str::literal>(":-)", 1)};
+
+  ultra::function *s_ife {prob.sset.insert<ultra::str::ife>(
+      0, ultra::function::param_data_types{1, 1, 0, 0})};
+  ultra::function *f_len {prob.sset.insert<ultra::real::length>(
+      0, ultra::function::param_data_types{1})};
 };
 
 #endif  // include guard

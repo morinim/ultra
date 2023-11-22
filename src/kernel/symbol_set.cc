@@ -296,6 +296,15 @@ symbol::category_t symbol_set::categories() const
 
 ///
 /// \param[in] c a category
+/// \return      number of functions in category `c`
+///
+std::size_t symbol_set::functions(symbol::category_t c) const
+{
+  return c < categories() ? views_[c].functions.size() : 0;
+}
+
+///
+/// \param[in] c a category
 /// \return      number of terminals in category `c`
 ///
 std::size_t symbol_set::terminals(symbol::category_t c) const
@@ -317,12 +326,8 @@ bool symbol_set::enough_terminals() const
   std::set<symbol::category_t> need;
 
   for (const auto &s : symbols_)
-    if (const auto *f(dynamic_cast<const function *>(s.get())); f)
-    {
-      const auto arity(f->arity());
-      for (std::size_t i(0); i < arity; ++i)
-        need.insert(f->arg_category(i));
-    }
+    if (const auto *f = get_if<function>(s.get()))
+      need.insert(f->categories().begin(), f->categories().end());
 
   for (const auto &i : need)
     if (i >= categories() || !views_[i].terminals.size())
@@ -374,6 +379,8 @@ const function *symbol_set::roulette_function(symbol::category_t c) const
 }
 
 ///
+/// Extracts a **literal** terminal value.
+///
 /// \param[in] c a category
 /// \return      a random value of category `c`
 ///
@@ -394,22 +401,23 @@ value_t symbol_set::roulette_terminal(symbol::category_t c) const
 /// \param[in] pa_w weight used for `param_addr` type
 /// \return         a random value among those allowed for category `c`
 ///
-value_t symbol_set::roulette_terminal_and_param(std::size_t sup,
-                                                symbol::category_t c,
-                                                weight_t pa_w) const
+value_t symbol_set::roulette_terminal(std::size_t sup,
+                                      symbol::category_t c,
+                                      weight_t pa_w) const
 {
-  Expects(sup);
   Expects(pa_w > 0);
   Expects(c < categories());
-  Expects(views_[c].terminals.size());
+  Expects(terminals(c) > 0);
 
-  const auto sum(views_[c].terminals.sum() + pa_w);
+  if (sup && functions(c))
+  {
+    const auto sum(views_[c].terminals.sum() + pa_w);
 
-  if (const auto r(random::sup(sum)); r < pa_w)
-    return param_address(r % sup);
+    if (const auto r(random::sup(sum)); r < pa_w)
+      return param_address(r % sup);
+  }
 
-  return static_cast<const terminal *>(views_[c].terminals.roulette())
-         ->instance();
+  return roulette_terminal(c);
 }
 
 ///
@@ -511,9 +519,9 @@ std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
 
     if (const auto *f = get_if<function>(s.get()))
     {
-      o << '(' << f->arg_category(0);
+      o << '(' << f->categories(0);
       for (std::size_t j(1); j < f->arity(); ++j)
-        o << ", " << f->arg_category(j);
+        o << ", " << f->categories(j);
       o << ')';
     }
 

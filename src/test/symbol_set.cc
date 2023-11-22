@@ -66,7 +66,7 @@ TEST_CASE("Constructor / Insertion")
   {
     ss.insert<real::add>();
     ss.insert<real::number>();
-    ss.insert<str::ife>(0, function::param_data_types{1, 1});
+    ss.insert<str::ife>(0, function::param_data_types{1, 1, 0, 0});
     CHECK(ss.categories() == 1);
     CHECK(ss.terminals() == 1);
     CHECK(!ss.enough_terminals());
@@ -106,12 +106,13 @@ TEST_CASE("Distribution")
       number = ss.insert<real::number, number_weight>(),
       ss.insert<real::add, 300>(),
       ss.insert<real::sub, 200>(),
-      ss.insert<str::ife, 200>(0, function::param_data_types{1, 1}),
+      ss.insert<str::ife, 200>(0, function::param_data_types{1, 1, 0, 0}),
       ss.insert<real::mul, 100>()
     },
     {
       apple = ss.insert<str::literal, apple_weight>("apple", 1),
-      orange = ss.insert<str::literal, orange_weight>("orange", 1)
+      orange = ss.insert<str::literal, orange_weight>("orange", 1),
+      ss.insert<str::ife, 200>(1, function::param_data_types{1, 1, 1, 1}),
     }
   };
 
@@ -123,7 +124,8 @@ TEST_CASE("Distribution")
     {symbols[0][3], 200},
     {symbols[0][4], 100},
     {symbols[1][0], apple_weight},
-    {symbols[1][1], orange_weight}
+    {symbols[1][1], orange_weight},
+    {symbols[1][2], 200}
   };
 
   const symbol_set::weight_t sum_c[2] =
@@ -197,7 +199,7 @@ TEST_CASE("Distribution")
         }
   }
 
-  SUBCASE("roulette_terminal_and_param")
+  SUBCASE("roulette_terminal with parameters")
   {
     const std::size_t sup(11);
     const symbol_set::weight_t weight(100);
@@ -206,7 +208,7 @@ TEST_CASE("Distribution")
     for (unsigned i(0); i < n; ++i)
     {
       const symbol::category_t c(random::boolean());
-      if (const auto v(ss.roulette_terminal_and_param(sup, c, weight));
+      if (const auto v(ss.roulette_terminal(sup, c, weight));
           v.index() == d_address)
         ++count_p[c];
     }
