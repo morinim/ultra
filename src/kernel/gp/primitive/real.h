@@ -51,18 +51,18 @@ static_assert(std::numeric_limits<D_DOUBLE>::is_iec559,
 ///
 /// A random floating point number in a specified range.
 ///
-class number : public arithmetic_terminal
+class number : public terminal
 {
 public:
   explicit number(D_DOUBLE m = -1000.0, D_DOUBLE s = 1000.0,
                   category_t c = symbol::default_category)
-    : arithmetic_terminal("REAL", c), min_(m), sup_(s)
+    : terminal("REAL", c), min_(m), sup_(s)
   {
     Expects(m < s);
   }
 
-  [[nodiscard]] value_t min() const final { return min_; }
-  [[nodiscard]] value_t sup() const final { return sup_; }
+  [[nodiscard]] D_DOUBLE min() const { return min_; }
+  [[nodiscard]] D_DOUBLE sup() const { return sup_; }
 
   [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }
@@ -74,18 +74,18 @@ private:
 ///
 /// This is like real::real but restricted to integer numbers.
 ///
-class integer : public arithmetic_terminal
+class integer : public terminal
 {
 public:
   explicit integer(D_INT m = -128, D_INT s = 128,
                    category_t c = symbol::default_category)
-    : arithmetic_terminal("IREAL", c), min_(m), sup_(s)
+    : terminal("IREAL", c), min_(m), sup_(s)
   {
     Expects(m < s);
   }
 
-  [[nodiscard]] value_t min() const final {return static_cast<D_DOUBLE>(min_);}
-  [[nodiscard]] value_t sup() const final {return static_cast<D_DOUBLE>(sup_);}
+  [[nodiscard]] D_DOUBLE min() const {return static_cast<D_DOUBLE>(min_);}
+  [[nodiscard]] D_DOUBLE sup() const {return static_cast<D_DOUBLE>(sup_);}
 
   [[nodiscard]] value_t instance() const final
   { return static_cast<D_DOUBLE>(random::between(min_, sup_)); }

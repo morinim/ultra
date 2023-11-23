@@ -60,18 +60,18 @@ namespace detail
 ///
 /// A random integer number in a specified range.
 ///
-class number : public arithmetic_terminal
+class number : public terminal
 {
 public:
   explicit number(D_INT m = -128, D_INT s = 128,
                   category_t c = symbol::default_category)
-    : arithmetic_terminal("INT", c), min_(m), sup_(s)
+    : terminal("INT", c), min_(m), sup_(s)
   {
     Expects(m < s);
   }
 
-  [[nodiscard]] value_t min() const final { return min_; }
-  [[nodiscard]] value_t sup() const final { return sup_; }
+  [[nodiscard]] D_INT min() const { return min_; }
+  [[nodiscard]] D_INT sup() const { return sup_; }
 
   [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }

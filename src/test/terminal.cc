@@ -33,8 +33,8 @@ TEST_CASE("Real")
     real::number r(m, s);
     CHECK(r.is_valid());
     CHECK(r.category() == symbol::default_category);
-    CHECK(almost_equal(std::get<D_DOUBLE>(r.min()), m));
-    CHECK(almost_equal(std::get<D_DOUBLE>(r.sup()), s));
+    CHECK(almost_equal(r.min(), m));
+    CHECK(almost_equal(r.sup(), s));
 
     std::vector<D_DOUBLE> v(1000);
     std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });
@@ -65,8 +65,8 @@ TEST_CASE("IReal")
   real::integer r(m, s);
   CHECK(r.is_valid());
   CHECK(r.category() == symbol::default_category);
-  CHECK(static_cast<int>(std::get<D_DOUBLE>(r.min())) == m);
-  CHECK(static_cast<int>(std::get<D_DOUBLE>(r.sup())) == s);
+  CHECK(static_cast<int>(r.min()) == m);
+  CHECK(static_cast<int>(r.sup()) == s);
 
   std::vector<D_DOUBLE> v(1000);
   std::ranges::generate(v, [&r] { return std::get<D_DOUBLE>(r.instance()); });

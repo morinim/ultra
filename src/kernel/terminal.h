@@ -27,28 +27,7 @@ public:
   using symbol::symbol;
 
   [[nodiscard]] virtual value_t instance() const = 0;
-
-  /// Arithmetic types have additional functionalities / member functions.
-  [[nodiscard]] virtual bool is_arithmetic() const { return false; }
 };
-
-///
-/// Arithmetic terminals are numbers (integer, floating point...).
-///
-class arithmetic_terminal : public terminal
-{
-public:
-  using terminal::terminal;
-
-  [[nodiscard]] virtual std::string to_string(const value_t &,
-                                              format = c_format) const;
-
-  [[nodiscard]] virtual value_t min() const = 0;
-  [[nodiscard]] virtual value_t sup() const = 0;
-};
-
-[[nodiscard]] bool is_arithmetic(const symbol &);
-[[nodiscard]] bool is_arithmetic(const symbol *);
 
 }  // namespace ultra
 
