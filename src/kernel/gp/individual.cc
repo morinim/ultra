@@ -328,9 +328,20 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
-std::size_t individual::active_functions() const
+unsigned individual::active_functions() const
 {
   return std::ranges::distance(cexons());
+}
+
+[[nodiscard]] locus random_locus(const individual &prg)
+{
+  const auto exs(prg.cexons());
+
+  std::vector<locus> loci;
+  for (auto it(exs.begin()); it != exs.end(); ++it)
+    loci.push_back(it.locus());
+
+  return random::element(loci);
 }
 
 ///
@@ -382,10 +393,8 @@ std::size_t individual::active_functions() const
 /// the i-th gene of `from` and 50% with i-th gene of `to`.
 ///
 /// Uniform crossover, as the name suggests, is a GP operator inspired by the
-/// GA operator of the same name (G. Syswerda. Uniform crossover in genetic
-/// algorithms - Proceedings of the Third International Conference on Genetic
-/// Algorithms. 1989). GA uniform crossover constructs offspring on a
-/// bitwise basis, copying each allele from each parent with a 50%
+/// GA operator of the same name. GA uniform crossover constructs offspring on
+/// a bitwise basis, copying each allele from each parent with a 50%
 /// probability. Thus the information at each gene location is equally likely
 /// to have come from either parent and on average each parent donates 50%
 /// of its genetic material. The whole operation, of course, relies on the
@@ -402,76 +411,60 @@ std::size_t individual::active_functions() const
 /// doesn't rise the individual's fitness but only its performance over time.
 ///
 /// \see
-/// https://github.com/morinim/vita/wiki/bibliography#6
+/// - https://github.com/morinim/ultra/wiki/bibliography#1
+/// - https://github.com/morinim/ultra/wiki/bibliography#2
 ///
 /// \relates
 /// individual
 ///
-/*individual crossover(const individual &lhs, const individual &rhs)
+individual crossover(const individual &lhs, const individual &rhs)
 {
   Expects(lhs.size() == rhs.size());
+  Expects(std::distance(lhs.begin(), lhs.end())
+          == std::distance(rhs.begin(), rhs.end()));
 
   const bool b(random::boolean());
   const auto &from(b ? rhs : lhs);
   auto          to(b ? lhs : rhs);
 
+  const auto genes(std::distance(from.begin(), from.end()));
+
   switch (from.active_crossover_type_)
   {
   case individual::crossover_t::one_point:
   {
-    const auto i_sup(from.size());
-    const auto c_sup(from.categories());
-    const auto cut(random::between<index_t>(1, i_sup - 1));
+    const auto cut(random::sup(genes - 1));
 
-    for (locus::index_t i(cut); i < i_sup; ++i)
-      for (symbol::category_t c(0); c < c_sup; ++c)
-      {
-        const locus l{i, c};
-        to.genome_(l) = from[l];
-      }
-  }
+    std::copy(std::next(from.begin(), cut), from.end(),
+              std::next(to.begin(), cut));
     break;
+  }
 
   case individual::crossover_t::two_points:
-    {
-    const auto i_sup(from.size());
-    const auto c_sup(from.categories());
+  {
+    const auto cut1(random::sup(genes - 1));
+    const auto cut2(random::between(cut1 + 1, genes));
 
-    const auto cut1(random::sup(i_sup - 1));
-    const auto cut2(random::between(cut1 + 1, i_sup));
-
-    for (index_t i(cut1); i != cut2; ++i)
-      for (category_t c(0); c < c_sup; ++c)
-      {
-        const locus l{i, c};
-        to.genome_(l) = from[l];
-      }
-    }
+    std::copy(std::next(from.begin(), cut1), std::next(from.begin(), cut2),
+              std::next(to.begin(), cut1));
     break;
+  }
 
   case individual::crossover_t::uniform:
-    {
-    const auto i_sup(from.size());
-    const auto c_sup(from.categories());
-
-    for (index_t i(0); i != i_sup; ++i)
-      for (category_t c(0); c < c_sup; ++c)
-        if (random::boolean())
-        {
-          const locus l{i, c};
-          to.genome_(l) = from[l];
-        }
-    }
+    std::transform(from.begin(), from.end(), to.begin(), to.begin(),
+                   [](const auto &g1, const auto &g2)
+                   { return random::boolean() ? g1 : g2; });
     break;
 
   default:  // Tree crossover
     {
-      auto crossover_ = [&](locus l, const auto &lambda) -> void
+      auto crossover_ = [&](const locus &l, const auto &lambda) -> void
       {
         to.genome_(l) = from[l];
 
-        for (const auto &al : from[l].arguments())
-          lambda(al, lambda);
+        for (const auto &al : from[l].args)
+          if (std::holds_alternative<D_ADDRESS>(al))
+            lambda(from[l].locus_of_argument(al), lambda);
       };
 
       crossover_(random_locus(from), crossover_);
@@ -480,12 +473,12 @@ std::size_t individual::active_functions() const
   }
 
   to.active_crossover_type_ = from.active_crossover_type_;
-  to.set_older_age(from.age());
+  to.set_if_older_age(from.age());
   to.signature_.clear();
 
   Ensures(to.is_valid());
   return to;
-  }*/
+}
 
 ///
 /// A new individual is created mutating `this`.
@@ -877,7 +870,7 @@ bool individual::is_valid() const
       {
         if (func->category() != c)
         {
-          ultraERROR << "Wrong category: " << l << func->name()
+          ultraERROR << "Wrong category: " << l << ' ' << func->name()
                      << " -> " << g.category() << " should be " << c;
           return false;
         }
@@ -886,11 +879,18 @@ bool individual::is_valid() const
           switch (a.index())
           {
           case d_address:
-            if (const auto al(g.locus_of_argument(a)); !genome_(al).func)
+            if (const auto al(g.locus_of_argument(a)); al.index >= i)
             {
-              ultraERROR << "Argument " << get_index(a, g.args)
-                         << " of function " << l << func->name()
-                         << " is the address (" << al << ") of an empty gene";
+              ultraERROR << "Argument `" << get_index(a, g.args)
+                         << "` (`" << a << "`) of function `" << l << ' '
+                         << func->name() << "` should be < `" << i << "`)";
+              return false;
+            }
+            else if (!genome_(al).func)
+            {
+              ultraERROR << "Argument `" << get_index(a, g.args)
+                         << "` of function `" << l << ' ' << func->name()
+                         << "` is the address `" << al << "` of an empty gene";
               return false;
             }
             break;
@@ -898,10 +898,10 @@ bool individual::is_valid() const
           case d_nullary:
             if (const auto *n(get_if_nullary(a)); n->category() != c)
             {
-              ultraERROR << "Argument " << get_index(a, g.args)
-                         << " of function " << l << func->name()
-                         << " is the nullary " << a << " -> " << n->category()
-                         << " but category should be " << c;
+              ultraERROR << "Argument `" << get_index(a, g.args)
+                         << "` of function `" << l << ' ' << func->name()
+                         << "` is the nullary `" << a << " -> " << n->category()
+                         << "` but category should be `" << c << '`';
               return false;
             }
             break;

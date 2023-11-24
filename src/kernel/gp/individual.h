@@ -39,7 +39,7 @@ public:
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 
-  [[nodiscard]] std::size_t active_functions() const;
+  [[nodiscard]] unsigned active_functions() const;
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
@@ -68,10 +68,14 @@ public:
 
   [[nodiscard]] const_exon_range cexons() const;
 
+  [[nodiscard]] auto begin() const { return genome_.begin(); }
+  [[nodiscard]] auto end() const { return genome_.end(); }
+
   template<bool> friend class internal::basic_exon_iterator;
 
 private:
   // ---- Private data members ----
+  [[nodiscard]] auto begin() { return genome_.begin(); }
   [[nodiscard]] exon_range exons();
 
   void pack(const locus &, std::vector<std::byte> *) const;

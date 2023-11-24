@@ -39,7 +39,7 @@ public:
   using age_t = unsigned;
 
   [[nodiscard]] age_t age() const;
-  void inc_age();
+  void inc_age(unsigned = 1);
 
   // Serialization.
   bool load(std::istream &, const symbol_set &);

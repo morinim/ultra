@@ -248,7 +248,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
     }
   }
 
-  SUBCASE("Mutation")
+  SUBCASE("Random probability")
   {
     for (unsigned j(0); j < 10; ++j)
     {
@@ -278,6 +278,33 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
       CHECK(perc > p * 100.0 - 2.0);
       CHECK(perc < p * 100.0 + 2.0);
     }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Crossover")
+{
+  using namespace ultra;
+
+  prob.env.slp.code_length = 100;
+
+  const unsigned n(2000);
+  for (unsigned j(0); j < n; ++j)
+  {
+    gp::individual i1(prob), i2(prob);
+
+    i1.inc_age(random::sup(n));
+    i2.inc_age(random::sup(n));
+
+    const auto ic(crossover(i1, i2));
+    CHECK(ic.is_valid());
+    CHECK(ic.age() == std::max(i1.age(), i2.age()));
+
+    for (locus::index_t i(0); i < ic.size(); ++i)
+      for (symbol::category_t c(0); c < ic.categories(); ++c)
+      {
+        const locus l{i, c};
+        CHECK((ic[l] == i1[l] || ic[l] == i2[l]));
+      }
   }
 }
 

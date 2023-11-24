@@ -37,9 +37,9 @@ public:
   using reference = value_type &;
   using const_reference = const value_type &;
 
-  using ptr = std::conditional_t<is_const, const_pointer, pointer>;
-  using ref = std::conditional_t<is_const, const_reference, reference>;
-  using ind = std::conditional_t<is_const, const gp::individual, gp::individual>;
+  using ptr= std::conditional_t<is_const, const_pointer, pointer>;
+  using ref= std::conditional_t<is_const, const_reference, reference>;
+  using ind= std::conditional_t<is_const, const gp::individual, gp::individual>;
 
   /// Builds an empty iterator.
   ///

@@ -51,9 +51,11 @@ individual::age_t individual::age() const
 ///
 /// Increments the individual's age.
 ///
-void individual::inc_age()
+/// \param[in] delta increment
+///
+void individual::inc_age(unsigned delta)
 {
-  ++age_;
+  age_ += delta;
 }
 
 ///

@@ -69,9 +69,9 @@ public:
   using const_iterator = typename values_t::const_iterator;
 
   [[nodiscard]] iterator begin();
+  [[nodiscard]] iterator end();
   [[nodiscard]] const_iterator begin() const;
   [[nodiscard]] const_iterator end() const;
-  [[nodiscard]] iterator end();
 
   // *** Serialization ***
   bool load(std::istream &);
@@ -83,6 +83,7 @@ private:
   [[nodiscard]] std::size_t index(std::size_t, std::size_t) const;
 
   // *** Private data members ***
+  // Elements stored in row-major order (element are stored row by row).
   values_t data_;
 
   std::size_t cols_;
