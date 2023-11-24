@@ -15,14 +15,10 @@
 namespace
 {
 
-///
-/// Index of the print format flag (used as argument of `std::iword`).
-///
+// Index of the print format flag (used as argument of `std::iword`).
 static const int print_format_index {std::ios_base::xalloc()};
 
-///
-/// Index of the long-format flag (used as argument of `std::iword`).
-///
+// Index of the long-format flag (used as argument of `std::iword`).
 static const int long_form_index {std::ios_base::xalloc()};
 
 }  // unnamed namespace
@@ -139,7 +135,8 @@ std::ostream &operator<<(std::ostream &o, print_format pf)
 ///
 /// Used to print the content of an individual in c-language format.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &c_language(std::ostream &o)
 {
@@ -150,7 +147,8 @@ std::ostream &c_language(std::ostream &o)
 ///
 /// Used to print the content of an individual in cpp-language format.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &cpp_language(std::ostream &o)
 {
@@ -161,7 +159,8 @@ std::ostream &cpp_language(std::ostream &o)
 ///
 /// Used to print the content of an individual in python-language format.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &python_language(std::ostream &o)
 {
@@ -172,8 +171,11 @@ std::ostream &python_language(std::ostream &o)
 ///
 /// Used to print the complete content of an individual.
 ///
-/// \note Mostly used during debugging.
-/// \remark Sticky manipulator.
+/// \note
+/// Mostly used during debugging.
+///
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &dump(std::ostream &o)
 {
@@ -184,8 +186,11 @@ std::ostream &dump(std::ostream &o)
 ///
 /// Used to print a graph, in dot language, representing the individual.
 ///
-/// \see http://www.graphviz.org/
-/// \remark Sticky manipulator.
+/// \see
+/// https://www.graphviz.org/
+///
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &graphviz(std::ostream &o)
 {
@@ -198,7 +203,8 @@ std::ostream &graphviz(std::ostream &o)
 ///
 /// Not at all human readable, but a compact representation for import/export.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &in_line(std::ostream &o)
 {
@@ -215,7 +221,8 @@ std::ostream &in_line(std::ostream &o)
 ///     20 PRINT "SWEET"
 ///     30 GOTO 10
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &list(std::ostream &o)
 {
@@ -226,7 +233,8 @@ std::ostream &list(std::ostream &o)
 ///
 /// Used to print the individual as a tree structure.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &tree(std::ostream &o)
 {
@@ -237,7 +245,8 @@ std::ostream &tree(std::ostream &o)
 ///
 /// Enable printing of every detail of the individual.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &long_form(std::ostream &o)
 {
@@ -248,7 +257,8 @@ std::ostream &long_form(std::ostream &o)
 ///
 /// Hide secondary details of the individual.
 ///
-/// \remark Sticky manipulator.
+/// \remark
+/// Sticky manipulator.
 ///
 std::ostream &short_form(std::ostream &o)
 {

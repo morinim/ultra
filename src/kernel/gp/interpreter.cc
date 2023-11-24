@@ -72,8 +72,8 @@ value_t interpreter::run()
 /// REFERENTIAL TRANSPARENCY for all the expressions.
 ///
 /// \see
-/// - <https://en.wikipedia.org/wiki/Referential_transparency>
-/// - <https://en.wikipedia.org/wiki/Memoization>
+/// - https://en.wikipedia.org/wiki/Referential_transparency
+/// - https://en.wikipedia.org/wiki/Memoization
 ///
 value_t interpreter::fetch_arg(std::size_t i) const
 {

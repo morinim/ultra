@@ -221,7 +221,7 @@ bool distribution<T>::is_valid() const
 {
   // This way, for "regular" types we'll use std::infinite / std::isnan
   // ("taken in" by the using statement), while for our types the overload
-  // will prevail due to Koenig lookup (<http://www.gotw.ca/gotw/030.htm>).
+  // will prevail due to Koenig lookup (http://www.gotw.ca/gotw/030.htm).
   using std::isfinite;
   using std::isnan;
 
