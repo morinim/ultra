@@ -16,10 +16,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -40,3 +36,6 @@ tmp/
 GPATH
 GRTAGS
 GTAGS
+
+# Clone of Github's Vita Wiki
+doc/wiki/
