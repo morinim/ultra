@@ -145,10 +145,10 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
 
     SUBCASE("Exons")
     {
-      for (const auto &g : ind.exons())
+      for (const auto &g : ind.cexons())
         CHECK(g.is_valid());
 
-      auto exons(ind.exons());
+      auto exons(ind.cexons());
       locus previous(locus::npos());
       for (auto it(exons.begin()); it != exons.end(); ++it)
       {

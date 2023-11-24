@@ -17,11 +17,16 @@
 #if !defined(ULTRA_GP_INDIVIDUAL_ITERATOR_TCC)
 #define      ULTRA_GP_INDIVIDUAL_ITERATOR_TCC
 
+class individual;
+
+namespace internal
+{
+
 ///
 /// Iterator to scan the active genes of an individual.
 ///
 template<bool is_const>
-class individual::basic_exon_iterator
+class basic_exon_iterator
 {
 public:
   using iterator_category = std::input_iterator_tag;
@@ -34,7 +39,7 @@ public:
 
   using ptr = std::conditional_t<is_const, const_pointer, pointer>;
   using ref = std::conditional_t<is_const, const_reference, reference>;
-  using ind = std::conditional_t<is_const, const individual, individual>;
+  using ind = std::conditional_t<is_const, const gp::individual, gp::individual>;
 
   /// Builds an empty iterator.
   ///
@@ -112,11 +117,11 @@ private:
 ///
 /// A range for iterating over exons.
 ///
-template<class Iterator>
-class individual::exons_range
+template<std::input_iterator Iterator>
+class basic_exon_range
 {
 public:
-  exons_range(Iterator b, Iterator e) : b_(b), e_(e) {}
+  basic_exon_range(Iterator b, Iterator e) : b_(b), e_(e) {}
 
   [[nodiscard]] Iterator begin() const { return b_; }
   [[nodiscard]] Iterator end() const { return e_; }
@@ -125,5 +130,7 @@ private:
   Iterator b_;
   Iterator e_;
 };
+
+}  // namespace internal
 
 #endif  // include guard

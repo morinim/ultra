@@ -330,7 +330,7 @@ bool symbol_set::enough_terminals() const
       need.insert(f->categories().begin(), f->categories().end());
 
   for (const auto &i : need)
-    if (i >= categories() || !views_[i].terminals.size())
+    if (i >= categories() || !terminals(i))
       return false;
 
   return true;
@@ -358,9 +358,9 @@ bool symbol_set::enough_terminals() const
 const symbol *symbol_set::roulette(symbol::category_t c) const
 {
   Expects(c < categories());
-  Expects(views_[c].terminals.size());
+  Expects(terminals(c) > 0);
 
-  if (random::boolean() && views_[c].functions.size())
+  if (random::boolean() && functions(c) > 0)
     return views_[c].functions.roulette();
 
   return views_[c].terminals.roulette();
@@ -373,7 +373,7 @@ const symbol *symbol_set::roulette(symbol::category_t c) const
 const function *symbol_set::roulette_function(symbol::category_t c) const
 {
   Expects(c < categories());
-  Expects(views_[c].functions.size());
+  Expects(functions(c) > 0);
 
   return static_cast<const function *>(views_[c].functions.roulette());
 }
@@ -387,7 +387,7 @@ const function *symbol_set::roulette_function(symbol::category_t c) const
 value_t symbol_set::roulette_terminal(symbol::category_t c) const
 {
   Expects(c < categories());
-  Expects(views_[c].terminals.size());
+  Expects(terminals(c) > 0);
 
   return static_cast<const terminal *>(views_[c].terminals.roulette())
          ->instance();

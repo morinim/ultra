@@ -34,36 +34,25 @@ individual::individual(const problem &p)
   Expects(size());
   Expects(categories());
 
-  const auto generate_index_line(
-    [&](locus::index_t i, const auto &gen)
-    {
-      const symbol::category_t c_sup(categories());
-
-      for (symbol::category_t c(0); c < c_sup; ++c)
-        if (p.sset.functions(c))
-        {
-          gene &g(genome_(i, c));
-
-          g.func = p.sset.roulette_function(c);
-          g.args.reserve(g.func->arity());
-
-          std::ranges::transform(g.func->categories(),
-                                 std::back_inserter(g.args),
-                                 gen);
-        }
-    });
-
-  generate_index_line(0, [&p](symbol::category_t c)
-                         {
-                           return p.sset.roulette_terminal(c);
-                         });
-
   const locus::index_t i_sup(size());
-  for (locus::index_t i(1); i < i_sup; ++i)
-    generate_index_line(i, [&](symbol::category_t c)
-                           {
-                             return p.sset.roulette_terminal(i, c);
-                           });
+  const symbol::category_t c_sup(categories());
+
+  for (locus::index_t i(0); i < i_sup; ++i)
+    for (symbol::category_t c(0); c < c_sup; ++c)
+      if (p.sset.functions(c))
+      {
+        gene &g(genome_(i, c));
+
+        g.func = p.sset.roulette_function(c);
+        g.args.reserve(g.func->arity());
+
+        std::ranges::transform(g.func->categories(),
+                               std::back_inserter(g.args),
+                               [&](auto arg_c)
+                               {
+                                 return p.sset.roulette_terminal(i, arg_c);
+                               });
+      }
 
   Ensures(is_valid());
 }
@@ -121,13 +110,18 @@ locus::index_t individual::size() const
   return static_cast<locus::index_t>(genome_.rows());
 }
 
-individual::exons_range<individual::exon_iterator> individual::exons()
+///
+/// \return a range to iterate through exons (active genes).
+///
+individual::exon_range individual::exons()
 {
   return {exon_iterator(*this), exon_iterator()};
 }
 
-individual::exons_range<individual::const_exon_iterator>
-individual::exons() const
+///
+/// \return a const range to iterate through exons (active genes).
+///
+individual::const_exon_range individual::cexons() const
 {
   return {const_exon_iterator(*this), const_exon_iterator()};
 }
@@ -326,19 +320,172 @@ unsigned distance(const individual &lhs, const individual &rhs)
 /// When `category() > 1`, active_functions() can be greater than size(). For
 /// instance consider the following individual:
 ///
-///     [0, 1] FIFL 1 2 2 3
-///     [1, 0] "car"
-///     [2, 0] "plane"
-///     [2, 1] 10
-///     [3, 1] 20
+///     [0,0] function returning a number
+///     [1,0] function returning a number
+///     [1,1] function returning a string
+///     [2,1] function returning a string
+///     [3,0] function [2,1] [1,1] [1,0] [0,0]
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
 std::size_t individual::active_functions() const
 {
-  const auto exr(exons());
-  return static_cast<std::size_t>(std::distance(exr.begin(), exr.end()));
+  return std::ranges::distance(cexons());
 }
+
+///
+/// A Self-Adaptive Crossover operator.
+///
+/// \param[in] lhs first parent
+/// \param[in] rhs second parent
+/// \return        the result of the crossover (we only generate a single
+///                offspring)
+///
+/// Well known elementary crossover operators traverse the problem domain in
+/// different ways, exhibiting variable performances and specific problems.
+/// An attempt to make the algorithm more robust is combining various search
+/// strategies, encapsulated by the different elementary crossover operators
+/// available, via self adaptation.
+///
+/// We associate to each individual the type of crossover used to create it
+/// (initially this is set to a random type). This type is used afterwards to
+/// determine which crossover to apply and allows the algorithm to adjust the
+/// relative mixture of operators.
+///
+/// Here we briefly describe the elementary crossover operators that are
+/// utilised:
+///
+/// **ONE POINT**
+///
+/// We randomly select a parent (between `from` and `to`) and a single locus
+/// (common crossover point). The offspring is created with genes from the
+/// chosen parent up to the crossover point and genes from the other parent
+/// beyond that point.
+/// One-point crossover is the oldest homologous crossover in tree-based GP.
+///
+/// **TREE**
+///
+/// Inserts a complete tree from one parent into the other.
+/// The operation is less disruptive than other forms of crossover since
+/// an entire tree is copied (not just a part).
+///
+/// **TWO POINTS**
+///
+/// We randomly select two loci (common crossover points). The offspring is
+/// created with genes from the one parent before the first crossover point and
+/// after the second crossover point; genes between crossover points are taken
+/// from the other parent.
+///
+/// **UNIFORM CROSSOVER**
+///
+/// The i-th locus of the offspring has a 50% probability to be filled with
+/// the i-th gene of `from` and 50% with i-th gene of `to`.
+///
+/// Uniform crossover, as the name suggests, is a GP operator inspired by the
+/// GA operator of the same name (G. Syswerda. Uniform crossover in genetic
+/// algorithms - Proceedings of the Third International Conference on Genetic
+/// Algorithms. 1989). GA uniform crossover constructs offspring on a
+/// bitwise basis, copying each allele from each parent with a 50%
+/// probability. Thus the information at each gene location is equally likely
+/// to have come from either parent and on average each parent donates 50%
+/// of its genetic material. The whole operation, of course, relies on the
+/// fact that all the chromosomes in the population are of the same structure
+/// and the same length. GP uniform crossover begins with the observation that
+/// many parse trees are at least partially structurally similar.
+///
+/// \note
+/// Parents must have the same size.
+///
+/// \remark
+/// What has to be noticed is that the adaption of the parameter happens before
+/// the fitness is given to it. That means that getting a good parameter
+/// doesn't rise the individual's fitness but only its performance over time.
+///
+/// \see
+/// https://github.com/morinim/vita/wiki/bibliography#6
+///
+/// \relates
+/// individual
+///
+/*individual crossover(const individual &lhs, const individual &rhs)
+{
+  Expects(lhs.size() == rhs.size());
+
+  const bool b(random::boolean());
+  const auto &from(b ? rhs : lhs);
+  auto          to(b ? lhs : rhs);
+
+  switch (from.active_crossover_type_)
+  {
+  case individual::crossover_t::one_point:
+  {
+    const auto i_sup(from.size());
+    const auto c_sup(from.categories());
+    const auto cut(random::between<index_t>(1, i_sup - 1));
+
+    for (locus::index_t i(cut); i < i_sup; ++i)
+      for (symbol::category_t c(0); c < c_sup; ++c)
+      {
+        const locus l{i, c};
+        to.genome_(l) = from[l];
+      }
+  }
+    break;
+
+  case individual::crossover_t::two_points:
+    {
+    const auto i_sup(from.size());
+    const auto c_sup(from.categories());
+
+    const auto cut1(random::sup(i_sup - 1));
+    const auto cut2(random::between(cut1 + 1, i_sup));
+
+    for (index_t i(cut1); i != cut2; ++i)
+      for (category_t c(0); c < c_sup; ++c)
+      {
+        const locus l{i, c};
+        to.genome_(l) = from[l];
+      }
+    }
+    break;
+
+  case individual::crossover_t::uniform:
+    {
+    const auto i_sup(from.size());
+    const auto c_sup(from.categories());
+
+    for (index_t i(0); i != i_sup; ++i)
+      for (category_t c(0); c < c_sup; ++c)
+        if (random::boolean())
+        {
+          const locus l{i, c};
+          to.genome_(l) = from[l];
+        }
+    }
+    break;
+
+  default:  // Tree crossover
+    {
+      auto crossover_ = [&](locus l, const auto &lambda) -> void
+      {
+        to.genome_(l) = from[l];
+
+        for (const auto &al : from[l].arguments())
+          lambda(al, lambda);
+      };
+
+      crossover_(random_locus(from), crossover_);
+    }
+    break;
+  }
+
+  to.active_crossover_type_ = from.active_crossover_type_;
+  to.set_older_age(from.age());
+  to.signature_.clear();
+
+  Ensures(to.is_valid());
+  return to;
+  }*/
 
 ///
 /// A new individual is created mutating `this`.
@@ -357,7 +504,7 @@ unsigned individual::mutation(double pgm, const problem &prb)
   for (auto i(re.begin()); i != re.end(); ++i)  // mutation affects only exons
     if (random::boolean(pgm))
     {
-      const auto ix(i.locus().index);
+      const auto idx(i.locus().index);
 
       if (const auto pos(random::sup(i->args.size() + 1));
           pos == i->args.size())
@@ -370,7 +517,7 @@ unsigned individual::mutation(double pgm, const problem &prb)
           g.func->categories(), std::back_inserter(g.args),
           [&](symbol::category_t c)
           {
-            return prb.sset.roulette_terminal(ix, c);
+            return prb.sset.roulette_terminal(idx, c);
           });
 
         *i = g;
@@ -378,7 +525,7 @@ unsigned individual::mutation(double pgm, const problem &prb)
       else  // input parameter
       {
         const auto c(i->func->categories(pos));
-        i->args[pos] = prb.sset.roulette_terminal(ix, c);
+        i->args[pos] = prb.sset.roulette_terminal(idx, c);
       }
 
       ++n;
@@ -762,13 +909,13 @@ bool individual::is_valid() const
       }
     }
 
-  //if (categories() == 1 && active_functions() > size())
-  //{
-  //  ultraERROR << "`active_functions()` cannot be greater than `size()` "
-  //               "in single-category individuals";
-  //  return false;
-  //}
-  //
+  if (categories() == 1 && active_functions() > size())
+  {
+    ultraERROR << "`active_functions()` (== " << active_functions()
+               << ") cannot be greater than `size()` (" << size()
+               << ") in single-category individuals";
+    return false;
+  }
 
   return signature_.empty() || signature_ == hash();
 }

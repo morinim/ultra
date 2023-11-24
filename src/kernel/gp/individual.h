@@ -24,6 +24,8 @@
 namespace ultra::gp
 {
 
+#include "kernel/gp/individual_iterator.tcc"
+
 ///
 /// A single member of a genetic programming population.
 ///
@@ -51,26 +53,30 @@ public:
 
   [[nodiscard]] bool is_valid() const;
 
-  // ---- Iterators ----
-  template<bool> class basic_exon_iterator;
-  using const_exon_iterator = basic_exon_iterator<true>;
-  using exon_iterator = basic_exon_iterator<false>;
-
-  template<class> class exons_range;
-  [[nodiscard]] exons_range<const_exon_iterator> exons() const;
-  [[nodiscard]] exons_range<exon_iterator> exons();
-
-  template<bool> friend class basic_exon_iterator;
-
   // ---- Recombination operators ----
   enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
 
+  friend individual crossover(const individual &, const individual &);
   unsigned mutation(double, const problem &);
+
+  // ---- Iterators ----
+  using const_exon_iterator = internal::basic_exon_iterator<true>;
+  using exon_iterator = internal::basic_exon_iterator<false>;
+
+  using const_exon_range = internal::basic_exon_range<const_exon_iterator>;
+  using exon_range = internal::basic_exon_range<exon_iterator>;
+
+  [[nodiscard]] const_exon_range cexons() const;
+
+  template<bool> friend class internal::basic_exon_iterator;
 
 private:
   // ---- Private data members ----
+  [[nodiscard]] exon_range exons();
+
   void pack(const locus &, std::vector<std::byte> *) const;
   [[nodiscard]] hash_t hash() const;
+
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
@@ -82,11 +88,10 @@ private:
   crossover_t active_crossover_type_ {random::sup(NUM_CROSSOVERS)};
 };
 
+[[nodiscard]] individual crossover(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 
 std::ostream &operator<<(std::ostream &, const individual &);
-
-#include "kernel/gp/individual_iterator.tcc"
 
 }  // namespace ultra::gp
 
