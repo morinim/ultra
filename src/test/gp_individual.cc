@@ -287,6 +287,7 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
 
   prob.env.slp.code_length = 100;
 
+  unsigned different(0);
   const unsigned n(2000);
   for (unsigned j(0); j < n; ++j)
   {
@@ -299,6 +300,9 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
     CHECK(ic.is_valid());
     CHECK(ic.age() == std::max(i1.age(), i2.age()));
 
+    if (ic != i1 && ic != i2)
+      ++different;
+
     for (locus::index_t i(0); i < ic.size(); ++i)
       for (symbol::category_t c(0); c < ic.categories(); ++c)
       {
@@ -306,6 +310,9 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
         CHECK((ic[l] == i1[l] || ic[l] == i2[l]));
       }
   }
+
+  CHECK(95 * n / 100 < different);
+  CHECK(different < n);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")
@@ -356,6 +363,28 @@ TEST_CASE_FIXTURE(fixture1, "Output")
     ss << ultra::out::in_line << i;
     CHECK(ss.str() == "FSUB FADD 2 Z() FADD 3 4");
   }
+
+  SUBCASE("Graphviz")
+  {
+    ss << ultra::out::graphviz << i;
+    CHECK(ss.str()
+          == "graph\n"
+             "{\n"
+             "g2_0 [label=\"FSUB\", shape=box];\n"
+             "g2_0 -- g0_0 [label=0, fontcolor=lightgray];\n"
+             "g2_0 -- g1_0 [label=1, fontcolor=lightgray];\n"
+             "g1_0 [label=\"FADD\", shape=box];\n"
+             "g1_0 -- a1_0_0 [label=0, fontcolor=lightgray];\n"
+             "a1_0_0 [label=3];\n"
+             "g1_0 -- a1_0_1 [label=1, fontcolor=lightgray];\n"
+             "a1_0_1 [label=4];\n"
+             "g0_0 [label=\"FADD\", shape=box];\n"
+             "g0_0 -- a0_0_0 [label=0, fontcolor=lightgray];\n"
+             "a0_0_0 [label=2];\n"
+             "g0_0 -- a0_0_1 [label=1, fontcolor=lightgray];\n"
+             "a0_0_1 [label=\"Z()\"];\n"
+             "}");
+  }
 }
 
 TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
@@ -391,6 +420,32 @@ TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
     ss << ultra::out::in_line << i;
     CHECK(ss.str()
           == "FADD FLENGTH SIFE \"hello\" \"world\" \"hello\" \":-)\" FLENGTH \"world\"");
+  }
+
+  SUBCASE("Graphviz")
+  {
+    ss << ultra::out::graphviz << i;
+    CHECK(ss.str()
+          == "graph\n"
+             "{\n"
+             "g3_0 [label=\"FADD\", shape=box];\n"
+             "g3_0 -- g1_0 [label=0, fontcolor=lightgray];\n"
+             "g3_0 -- g2_0 [label=1, fontcolor=lightgray];\n"
+             "g2_0 [label=\"FLENGTH\", shape=box];\n"
+             "g2_0 -- a2_0_0 [label=0, fontcolor=lightgray];\n"
+             "a2_0_0 [label=\"world\"];\n"
+             "g1_0 [label=\"FLENGTH\", shape=box];\n"
+             "g1_0 -- g0_1 [label=0, fontcolor=lightgray];\n"
+             "g0_1 [label=\"SIFE\", shape=box];\n"
+             "g0_1 -- a0_1_0 [label=0, fontcolor=lightgray];\n"
+             "a0_1_0 [label=\"hello\"];\n"
+             "g0_1 -- a0_1_1 [label=1, fontcolor=lightgray];\n"
+             "a0_1_1 [label=\"world\"];\n"
+             "g0_1 -- a0_1_2 [label=2, fontcolor=lightgray];\n"
+             "a0_1_2 [label=\"hello\"];\n"
+             "g0_1 -- a0_1_3 [label=3, fontcolor=lightgray];\n"
+             "a0_1_3 [label=\":-)\"];\n"
+             "}");
   }
 }
 

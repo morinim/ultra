@@ -786,6 +786,58 @@ std::ostream &dump(std::ostream &s, const individual &prg)
   return s;
 }
 
+std::ostream &graphviz(std::ostream &s, const individual &prg)
+{
+  s << "graph\n{\n";
+
+  const auto exr(prg.cexons());
+  for (auto i(exr.begin()); i != exr.end(); ++i)
+  {
+    s << 'g' << i.locus().index << '_' << i.locus().category << " [label="
+      << std::quoted(i->func->name()) << ", shape=box];\n";
+
+    for (unsigned j(0); j < i->func->arity(); ++j)
+    {
+      s << 'g' << i.locus().index << '_' << i.locus().category << " -- ";
+
+      const std::string arg_ord_attr(" [label="
+                                     + std::to_string(j)
+                                     + ", fontcolor=lightgray];\n");
+
+      const auto index(i->args[j].index());
+      switch (index)
+      {
+      case d_address:
+        s << 'g' << std::get<D_ADDRESS>(i->args[j]) << '_'
+          << i->func->categories(j) << arg_ord_attr;
+        break;
+      default:
+      {
+        const std::string arg_unique_id(
+          "a"
+          + std::to_string(i.locus().index) + "_"
+          + std::to_string(i.locus().category)  + "_"
+          + std::to_string(j));
+
+        s << arg_unique_id << arg_ord_attr
+          << arg_unique_id << " [label=";
+
+        if (index == d_nullary) s << '"';
+        s << i->args[j];
+        if (index == d_nullary) s << '"';
+
+        s << "];\n";
+        break;
+      }
+      }
+    }
+  }
+
+  s << '}';
+
+  return s;
+}
+
 }  // namespace
 
 ///
@@ -807,11 +859,10 @@ std::ostream &operator<<(std::ostream &s, const individual &prg)
   case out::in_line_f:
     return in_line(s, prg);
 
-/*
   case out::graphviz_f:
-    graphviz(ind, s);
-    return s;
+    return graphviz(s, prg);
 
+/*
   case out::list_f:
     return list(ind, s);
 

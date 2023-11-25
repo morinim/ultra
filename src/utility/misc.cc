@@ -11,6 +11,7 @@
  */
 
 #include "utility/misc.h"
+#include "kernel/nullary.h"
 
 namespace ultra
 {
@@ -170,6 +171,7 @@ std::string lexical_cast<std::string>(const ultra::value_t &v)
   case d_double:  return std::to_string(std::get<D_DOUBLE>(v));
   case d_int:     return std::to_string(   std::get<D_INT>(v));
   case d_string:  return std::get<D_STRING>(v);
+  case d_nullary: return get_if_nullary(v)->name();
   default:        return {};
   }
 }
