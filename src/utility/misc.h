@@ -115,6 +115,13 @@ private:
 };
 #define SAVE_FLAGS(s) ios_flag_saver save ## __LINE__(s)
 
+///
+/// Find the index of a value contained in a continuous container.
+///
+/// \param[in] val       value to be found
+/// \param[in] container continuous container
+/// \return              the index of `val` in `container`
+///
 template<class T, std::ranges::contiguous_range C>
 requires std::same_as<std::ranges::range_value_t<C>, T>
 [[nodiscard]] std::size_t get_index(const T &val, const C &container)
