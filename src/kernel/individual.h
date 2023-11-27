@@ -88,9 +88,6 @@ std::ostream &in_line(std::ostream &);
 std::ostream &list(std::ostream &);
 std::ostream &python_language(std::ostream &);
 std::ostream &tree(std::ostream &);
-
-std::ostream &long_form(std::ostream &);
-std::ostream &short_form(std::ostream &);
 }  // namespace out
 
 }  // namespace ultra

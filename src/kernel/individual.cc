@@ -18,9 +18,6 @@ namespace
 // Index of the print format flag (used as argument of `std::iword`).
 static const int print_format_index {std::ios_base::xalloc()};
 
-// Index of the long-format flag (used as argument of `std::iword`).
-static const int long_form_index {std::ios_base::xalloc()};
-
 }  // unnamed namespace
 
 namespace ultra
@@ -110,15 +107,6 @@ void individual::set_if_older_age(individual::age_t rhs_age)
 // **********************
 namespace out
 {
-///
-/// \param[in] o an output stream
-/// \return      the current value of the long format flag for the `o` stream
-///
-bool long_form_flag(std::ostream &o)
-{
-  return o.iword(long_form_index);
-}
-
 ///
 /// \param[in] o an output stream
 /// \return      the current value of the print format flag for the `o` stream
@@ -241,30 +229,6 @@ std::ostream &list(std::ostream &o)
 std::ostream &tree(std::ostream &o)
 {
   o.iword(print_format_index) = tree_f;
-  return o;
-}
-
-///
-/// Enable printing of every detail of the individual.
-///
-/// \remark
-/// Sticky manipulator.
-///
-std::ostream &long_form(std::ostream &o)
-{
-  o.iword(long_form_index) = true;
-  return o;
-}
-
-///
-/// Hide secondary details of the individual.
-///
-/// \remark
-/// Sticky manipulator.
-///
-std::ostream &short_form(std::ostream &o)
-{
-  o.iword(long_form_index) = false;
   return o;
 }
 

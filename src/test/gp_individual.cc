@@ -385,6 +385,14 @@ TEST_CASE_FIXTURE(fixture1, "Output")
              "a0_0_1 [label=\"Z()\"];\n"
              "}");
   }
+
+  SUBCASE("List")
+  {
+    ss << ultra::out::list << i;
+    CHECK(ss.str() == "[2] FSUB [0] [1]\n"
+                      "[1] FADD 3 4\n"
+                      "[0] FADD 2 Z()\n");
+  }
 }
 
 TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
@@ -446,6 +454,15 @@ TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
              "g0_1 -- a0_1_3 [label=3, fontcolor=lightgray];\n"
              "a0_1_3 [label=\":-)\"];\n"
              "}");
+  }
+
+  SUBCASE("List")
+  {
+    ss << ultra::out::list << i;
+    CHECK(ss.str() == "[3,0] FADD [1,0] [2,0]\n"
+                      "[2,0] FLENGTH \"world\"\n"
+                      "[1,0] FLENGTH [0,1]\n"
+                      "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n");
   }
 }
 

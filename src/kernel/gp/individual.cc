@@ -10,6 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <functional>
 #include <span>
 
 #include "kernel/gp/individual.h"
@@ -667,6 +668,22 @@ bool individual::save_impl(std::ostream &out) const
 namespace
 {
 
+std::string print_locus(const individual &prg, const locus &l)
+{
+  const auto w1(1 + static_cast<int>(std::log10(prg.size() - 1)));
+  const auto w2(1 + static_cast<int>(std::log10(prg.categories())));
+
+  std::stringstream ss;
+  ss << '[' << std::setfill('0') << std::setw(w1) << l.index;
+
+  if (prg.categories() > 1)
+    ss << ',' << std::setw(w2) << l.category;
+
+  ss  << "]";
+
+  return ss.str();
+}
+
 std::ostream &print_arg(std::ostream &s, symbol::format fmt,
                         const individual &prg,
                         const gene &g, std::size_t idx)
@@ -676,10 +693,7 @@ std::ostream &print_arg(std::ostream &s, symbol::format fmt,
   switch (a.index())
   {
   case d_address:
-    if (prg.categories() > 1)
-      s << g.locus_of_argument(idx);
-    else
-      s << '[' << g.locus_of_argument(idx).index << ']';
+    s << print_locus(prg, g.locus_of_argument(idx));
     break;
   case d_nullary:
     s << std::get<const D_NULLARY *>(a)->to_string(fmt);
@@ -687,6 +701,22 @@ std::ostream &print_arg(std::ostream &s, symbol::format fmt,
   default:
     s << a;
     break;
+  }
+
+  return s;
+}
+
+std::ostream &print_gene(std::ostream &s, const individual &prg, const gene &g)
+{
+  if (g.func)
+  {
+    s << ' ' << g.func->name();
+
+    for (std::size_t j(0); j < g.args.size(); ++j)
+    {
+      s << ' ';
+      print_arg(s, symbol::c_format, prg, g, j);
+    }
   }
 
   return s;
@@ -754,31 +784,13 @@ std::ostream &dump(std::ostream &s, const individual &prg)
   const auto size(prg.size());
   const auto categories(prg.categories());
 
-  const auto w1(1 + static_cast<int>(std::log10(size - 1)));
-  const auto w2(1 + static_cast<int>(std::log10(categories)));
-
   for (locus::index_t i(0); i < size; ++i)
     for (symbol::category_t c(0); c < categories; ++c)
     {
-      const gene &g(prg[{i, c}]);
+      const locus l(i, c);
+      s << print_locus(prg, l);
 
-      s << '[' << std::setfill('0') << std::setw(w1) << i;
-
-      if (categories > 1)
-        s << ',' << std::setw(w2) << c;
-
-      s  << "]";
-
-      if (g.func)
-      {
-        s << ' ' << g.func->name();
-
-        for (std::size_t j(0); j < g.args.size(); ++j)
-        {
-          s << ' ';
-          print_arg(s, symbol::c_format, prg, g, j);
-        }
-      }
+      print_gene(s, prg, prg[l]);
 
       s << '\n';
     }
@@ -838,6 +850,23 @@ std::ostream &graphviz(std::ostream &s, const individual &prg)
   return s;
 }
 
+std::ostream &list(std::ostream &s, const individual &prg)
+{
+  SAVE_FLAGS(s);
+
+  const auto exr(prg.cexons());
+  for (auto i(exr.begin()); i != exr.end(); ++i)
+  {
+    s << print_locus(prg, i.locus());
+
+    print_gene(s, prg, *i);
+
+    s << '\n';
+  }
+
+  return s;
+}
+
 }  // namespace
 
 ///
@@ -862,10 +891,10 @@ std::ostream &operator<<(std::ostream &s, const individual &prg)
   case out::graphviz_f:
     return graphviz(s, prg);
 
-/*
   case out::list_f:
-    return list(ind, s);
+    return list(s, prg);
 
+/*
   case out::tree_f:
     return tree(ind, s);
 */
