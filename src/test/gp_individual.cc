@@ -315,6 +315,32 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
   CHECK(different < n);
 }
 
+TEST_CASE_FIXTURE(fixture3, "Random locus")
+{
+  using namespace ultra;
+
+  for (unsigned k(0); k < 100; ++k)
+  {
+    std::map<locus, unsigned> exons;
+
+    const gp::individual prg(prob);
+    CHECK(prg.is_valid());
+
+    const auto as(prg.active_functions());
+
+    const unsigned n(10000);
+    for (unsigned j(0); j < n; ++j)
+      ++exons[random_locus(prg)];
+
+    const double avg(n / as);
+    for (const auto &e : exons)
+    {
+      CHECK(avg * 0.95 <= e.second);
+      CHECK(e.second <= 1.05 *avg);
+    }
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;

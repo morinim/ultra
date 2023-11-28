@@ -334,7 +334,7 @@ unsigned individual::active_functions() const
   return std::ranges::distance(cexons());
 }
 
-[[nodiscard]] locus random_locus(const individual &prg)
+locus random_locus(const individual &prg)
 {
   const auto exs(prg.cexons());
 

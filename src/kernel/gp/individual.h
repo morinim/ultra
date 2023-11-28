@@ -94,6 +94,7 @@ private:
 
 [[nodiscard]] individual crossover(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
+[[nodiscard]] locus random_locus(const individual &);
 
 std::ostream &operator<<(std::ostream &, const individual &);
 
