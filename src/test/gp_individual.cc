@@ -393,6 +393,18 @@ TEST_CASE_FIXTURE(fixture1, "Output")
                       "[1] FADD 3 4\n"
                       "[0] FADD 2 Z()\n");
   }
+
+  SUBCASE("Tree")
+  {
+    ss << ultra::out::tree << i;
+    CHECK(ss.str() == "FSUB\n"
+                      "  FADD\n"
+                      "    2\n"
+                      "    Z()\n"
+                      "  FADD\n"
+                      "    3\n"
+                      "    4\n");
+  }
 }
 
 TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
@@ -463,6 +475,20 @@ TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
                       "[2,0] FLENGTH \"world\"\n"
                       "[1,0] FLENGTH [0,1]\n"
                       "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n");
+  }
+
+  SUBCASE("Tree")
+  {
+    ss << ultra::out::tree << i;
+    CHECK(ss.str() == "FADD\n"
+                      "  FLENGTH\n"
+                      "    SIFE\n"
+                      "      \"hello\"\n"
+                      "      \"world\"\n"
+                      "      \"hello\"\n"
+                      "      \":-)\"\n"
+                      "  FLENGTH\n"
+                      "    \"world\"\n");
   }
 }
 

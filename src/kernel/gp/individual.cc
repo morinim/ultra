@@ -867,6 +867,33 @@ std::ostream &list(std::ostream &s, const individual &prg)
   return s;
 }
 
+std::ostream &tree(std::ostream &s, const individual &prg)
+{
+  std::function<void (const gene &, unsigned)> tree_;
+  tree_ = [&](const gene &curr, unsigned indent)
+          {
+            s << std::string(indent, ' ') << curr.func->name() << '\n';
+
+            indent += 2;
+
+            for (std::size_t i(0); i < curr.args.size(); ++i)
+              switch (curr.args[i].index())
+              {
+              case d_address:
+                tree_(prg[curr.locus_of_argument(i)], indent);
+                break;
+              default:
+                s << std::string(indent, ' ');
+                print_arg(s, symbol::c_format, prg, curr, i);
+                s << '\n';
+                break;
+              }
+          };
+
+  tree_(prg[prg.start()], 0);
+  return s;
+}
+
 }  // namespace
 
 ///
@@ -894,10 +921,9 @@ std::ostream &operator<<(std::ostream &s, const individual &prg)
   case out::list_f:
     return list(s, prg);
 
-/*
   case out::tree_f:
-    return tree(ind, s);
-*/
+    return tree(s, prg);
+
   default:
     assert(format >= out::language_f);
     return language(s, symbol::format(format - out::language_f), prg);
