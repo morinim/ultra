@@ -10,8 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(VITA_HASH_T_H)
-#define      VITA_HASH_T_H
+#if !defined(ULTRA_HASH_T_H)
+#define      ULTRA_HASH_T_H
 
 #include <bit>
 #include <cstdint>

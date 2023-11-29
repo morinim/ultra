@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -175,9 +176,6 @@ template<std::floating_point T>
 template<std::floating_point T>
 std::ostream &save_float_to_stream(std::ostream &out, T i)
 {
-  static_assert(std::is_floating_point<T>::value,
-                "save_float_to_stream requires a floating point type");
-
   SAVE_FLAGS(out);
 
   out << std::fixed << std::scientific
@@ -195,14 +193,27 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 template<std::floating_point T>
 bool load_float_from_stream(std::istream &in, T *i)
 {
-  static_assert(std::is_floating_point_v<T>,
-                "load_float_from_stream requires a floating point type");
+  // This doesn't support `inf` and `NaN`
+  // SAVE_FLAGS(in);
+  //return !!(in >> std::fixed >> std::scientific
+  //             >> std::setprecision(std::numeric_limits<T>::digits10 + 1)
+  //             >> *i);
 
-  SAVE_FLAGS(in);
+  std::string str;
+  if (!(in >> str))
+    return false;
 
-  return !!(in >> std::fixed >> std::scientific
-               >> std::setprecision(std::numeric_limits<T>::digits10 + 1)
-               >> *i);
+  str = trim(str);
+
+  char *end;
+  const double val(std::strtod(str.c_str(), &end));
+
+  if (end == str.c_str() || *end != '\0')  // if no conversion can be
+    return false;                          // performed, `end` is set
+                                           // to `str.c_str()`
+
+  *i = val;
+  return true;
 }
 
 template<typename T> concept IsEnum = std::is_enum_v<T>;
