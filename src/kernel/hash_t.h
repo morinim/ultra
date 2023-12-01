@@ -34,6 +34,12 @@ struct hash_t
   /// Standard equality operator for hash signature.
   [[nodiscard]] bool operator==(const hash_t &) const = default;
 
+  [[nodiscard]] bool operator<(const hash_t &rhs) const
+  {
+    return data[0] < rhs.data[0]
+           || (data[0] == rhs.data[0] && data[1] < rhs.data[1]);
+  }
+
   /// Used to combine multiple hashes.
   ///
   /// \note

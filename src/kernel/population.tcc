@@ -127,6 +127,35 @@ void population<I>::layer_t::pop_back()
 }
 
 ///
+/// \return a const iterator to the beginning of the given range
+///
+template<Individual I>
+typename population<I>::layer_t::const_iterator
+population<I>::layer_t::begin() const
+{
+  return members.begin();
+}
+
+///
+/// \return an iterator to the beginning of the given range
+///
+template<Individual I>
+typename population<I>::layer_t::iterator population<I>::layer_t::begin()
+{
+  return members.begin();
+}
+
+///
+/// \return a const iterator to the end of the given range
+///
+template<Individual I>
+typename population<I>::layer_t::const_iterator
+population<I>::layer_t::end() const
+{
+  return members.end();
+}
+
+///
 /// Resets layer `l` of the population.
 ///
 /// \param[in] l a layer of the population
@@ -138,7 +167,7 @@ void population<I>::init(layer_t &l)
 {
   l.clear();
 
-  std::generate_n(std::back_inserter(l.members), l.allowed(),
+  std::generate_n(std::back_inserter(l), l.allowed(),
                   [this] {return I(problem()); });
 }
 
@@ -282,6 +311,48 @@ void population<I>::inc_age()
   std::ranges::for_each(*this, [](auto &i) { i.inc_age(); });
 }
 
+namespace random
+{
+
+///
+/// \return the coordinates of a random individual of the population
+///
+template<Individual I>
+typename population<I>::coord coord(const population<I> &p)
+{
+  const auto n_layers(p.layers());
+
+  if (n_layers == 1)
+    return {0, random::sup(p.layer(0).size())};
+
+  // With multiple layers we cannot be sure that every layer has the same
+  // number of individuals. So the simple (and fast) solution:
+  //
+  //     const auto l(random::sup(n_layers));
+  //     return p[{l, random::sup(p.layer(l).size())}];
+  //
+  // isn't appropriate.
+
+  std::vector<std::size_t> s(n_layers);
+  for (std::size_t i(0); i < n_layers; ++i)
+    s[i] = p.layer(i).size();
+
+  std::discrete_distribution<std::size_t> dd(s.begin(), s.end());
+  const auto l(dd(random::engine));
+  return {l, random::sup(p.layer(l).size())};
+}
+
+///
+/// \return the index of a random individual of the population
+///
+template<Individual I>
+I pickup(const population<I> &p)
+{
+  return p[coord(p)];
+}
+
+}  // namespace random
+
 ///
 /// \param[in] in input stream
 /// \return       `true` if population has been correctly loaded
@@ -338,7 +409,7 @@ bool population<I>::save(std::ostream &out) const
   {
     out << l.allowed() << ' ' << l.size() << '\n';
 
-    for (const auto &prg : l.members)
+    for (const auto &prg : l)
       prg.save(out);
   }
 

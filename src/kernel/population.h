@@ -19,6 +19,7 @@
 #include "kernel/environment.h"
 #include "kernel/individual.h"
 #include "kernel/problem.h"
+#include "kernel/random.h"
 
 #include "utility/log.h"
 
@@ -76,19 +77,29 @@ public:
   bool save(std::ostream &) const;
 
 private:
-  /*const environment &get_helper(environment *) const;
-  const problem &get_helper(problem *) const;
-  */
-
   const ultra::problem *prob_;
 
   std::vector<layer_t> layers_ {};
 };
 
+namespace random
+{
+template<Individual I>
+[[nodiscard]] typename population<I>::coord coord(const population<I> &);
+
+template<Individual I>
+[[nodiscard]] I pickup(const population<I> &);
+}
+
 template<Individual I>
 class population<I>::layer_t
 {
 public:
+  using value_type = I;
+  using const_iterator = typename std::vector<I>::const_iterator;
+  using iterator = typename std::vector<I>::iterator;
+  using difference_type = std::ptrdiff_t;
+
   [[nodiscard]] std::size_t size() const;
 
   [[nodiscard]] bool empty() const;
@@ -99,6 +110,10 @@ public:
 
   void push_back(const I &);
   void pop_back();
+
+  [[nodiscard]] const_iterator begin() const;
+  [[nodiscard]] iterator begin();
+  [[nodiscard]] const_iterator end() const;
 
   std::vector<I> members {};
 
@@ -111,7 +126,6 @@ private:
 #include "kernel/population_iterator.tcc"
 
 /*
-template<Individual I> typename population<I>::coord pickup(const population<I> &);
 template<Individual I> typename population<I>::coord pickup(
   const population<I> &, typename population<T>::coord);
 */

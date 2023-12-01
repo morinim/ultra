@@ -148,30 +148,37 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-/*
 TEST_CASE_FIXTURE(fixture1, "Pickup")
 {
-  prob.env.individuals = 30;
-  prob.env.layers = 1;
+  using namespace ultra;
 
-  vita::population<vita::i_mep> pop(prob);
+  prob.env.population.individuals = 30;
+  prob.env.population.layers = 1;
+
+  population<gp::individual> pop(prob);
 
   for (unsigned i(0); i < 10; ++i)
   {
-    std::map<vita::population<vita::i_mep>::coord, int> frequency;
+    std::map<population<gp::individual>::coord, int> frequency;
 
-    const int draws(5000 * pop.individuals());
+    const int draws(5000 * pop.size());
     for (int j(0); j < draws; ++j)
-      ++frequency[vita::pickup(pop)];
+      ++frequency[random::coord(pop)];
 
-    const int expected(draws / pop.individuals());
+    const int expected(draws / pop.size());
     const int tolerance(expected / 10);
 
     for (const auto &p : frequency)
+    {
+      if (std::abs(p.second - expected) > tolerance)
+      {
+        std::cout << pop.layers() << "    Extracted: " << p.second << "   Expected: " << expected << std::endl;
+      }
       CHECK(std::abs(p.second - expected) <= tolerance);
+    }
 
     pop.add_layer();
   }
 }
-*/
+
 }  // TEST_SUITE("POPULATION")
