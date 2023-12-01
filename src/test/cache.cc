@@ -24,7 +24,7 @@
 
 [[nodiscard]] bool approx_equal(double v1, double v2)
 {
-  if (v1 == v2)
+  if (std::isinf(v1) && std::isinf(v2) && std::signbit(v1) == std::signbit(v2))
     return true;
 
   return v1 == doctest::Approx(v2);
@@ -123,7 +123,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
       const auto *f(cache2.find(vi[i].signature()));
       CHECK(f);
-      CHECK(approx_equal(*f, *f));
+      CHECK(approx_equal(*f, f1));
     }
 }
 
