@@ -36,8 +36,12 @@ namespace ultra
 environment &environment::init()
 {
   slp.code_length = 100;
+
   population.individuals = 100;
   population.layers = 1;
+
+  evolution.mate_zone = 20;
+  evolution.tournament_size = 5;
 
   return *this;
 }
@@ -71,7 +75,37 @@ bool environment::is_valid(bool force_defined) const
       return false;
     }
 
+    if (!evolution.mate_zone)
+    {
+      ultraERROR << "Undefined mate_zone data member";
+      return false;
+    }
+
+    if (!evolution.tournament_size)
+    {
+      ultraERROR << "Undefined tournament_size data member";
+      return false;
+    }
+
+    if (evolution.mate_zone && evolution.tournament_size
+        && evolution.tournament_size > evolution.mate_zone)
+    {
+      ultraERROR << "`tournament_size` (" << evolution.tournament_size
+                 << ") cannot be greater than `mate_zone` ("
+                 << evolution.mate_zone << ")";
+      return false;
+    }
+
   }  // if (force_defined)
+
+  if (population.individuals && evolution.tournament_size
+      && evolution.tournament_size > population.individuals)
+  {
+    ultraERROR << "`tournament_size` (" << evolution.tournament_size
+              << ") cannot be greater than population size ("
+              << population.individuals << ")";
+    return false;
+  }
 
   return true;
 }

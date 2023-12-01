@@ -65,7 +65,38 @@ struct environment
     std::size_t layers {1};
   } population;
 
-  environment &init();
+  struct evolution_parameters
+  {
+    /// This is used for the trivial geography scheme.
+    /// The population is viewed as having a 1-dimensional spatial structure -
+    /// actually a circle, as we consider the first and last locations to be
+    /// adiacent. The production of an individual from location `i` is permitted
+    /// to involve only parents from `i`'s local neightborhood, where the
+    /// neightborhood is defined as all individuals within distance
+    /// `mate_zone` of `i`.
+    ///
+    /// \note
+    /// - `0` means auto-tune.
+    /// - `std::numeric_limits<std::size_t>::max()` (or a large enough number)
+    ///   disables the scheme.
+    ///
+    /// \see https://github.com/morinim/ultra/wiki/bibliography#3
+    std::size_t mate_zone {0};
+
+    /// Size of the tournament to choose the parents from.
+    ///
+    /// Tournament sizes tend to be small relative to the population size. The
+    /// ratio of tournament size to population size can be used as a measure of
+    /// selective pressure.
+    ///
+    /// \note
+    /// - A tournament size of `1` would be equivalent to selecting individuals
+    ///   at random.
+    /// - A length of `0` means auto-tune.
+    std::size_t tournament_size {0};
+  } evolution;
+
+  [[nodiscard]] environment &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // environment
 
