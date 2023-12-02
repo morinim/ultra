@@ -97,6 +97,12 @@ public:
     return layer_;
   }
 
+  [[nodiscard]] typename population<I>::coord coord() const
+  {
+    return {layer_, index_};
+  }
+
+
   /// \return reference to the current individual
   [[nodiscard]] ref operator*() const
   {

@@ -26,6 +26,17 @@
 namespace ultra
 {
 
+template<class P>
+concept Population = requires(const P &p)
+{
+  requires std::ranges::sized_range<P>;
+  typename P::value_type;
+  requires Individual<typename P::value_type>;
+
+  typename P::coord;
+  p[typename P::coord()];
+};
+
 ///
 /// A group of individuals which may interact together (for example by mating)
 /// producing offspring.
@@ -40,6 +51,8 @@ class population
 public:
   struct coord;
   class layer_t;
+
+  using value_type = I;
 
   explicit population(const ultra::problem &);
 
@@ -88,7 +101,11 @@ template<Individual I>
 [[nodiscard]] typename population<I>::coord coord(const population<I> &);
 
 template<Individual I>
-[[nodiscard]] I pickup(const population<I> &);
+[[nodiscard]] typename population<I>::coord coord(
+  const population<I> &, typename population<I>::coord, std::size_t);
+
+template<class P>
+[[nodiscard]] typename P::value_type element(const P &);
 }
 
 template<Individual I>
@@ -99,6 +116,10 @@ public:
   using const_iterator = typename std::vector<I>::const_iterator;
   using iterator = typename std::vector<I>::iterator;
   using difference_type = std::ptrdiff_t;
+  using coord = std::size_t;
+
+  [[nodiscard]] I &operator[](std::size_t);
+  [[nodiscard]] const I &operator[](std::size_t) const;
 
   [[nodiscard]] std::size_t size() const;
 
@@ -121,14 +142,16 @@ private:
   std::size_t allowed_ {0};
 };
 
+namespace random
+{
+template<Population P> [[nodiscard]] std::size_t coord(const P &);
+template<Population P>
+[[nodiscard]] std::size_t coord(const P &, std::size_t, std::size_t);
+}
+
 #include "kernel/population.tcc"
 #include "kernel/population_coord.tcc"
 #include "kernel/population_iterator.tcc"
-
-/*
-template<Individual I> typename population<I>::coord pickup(
-  const population<I> &, typename population<T>::coord);
-*/
 
 }  // namespace ultra
 

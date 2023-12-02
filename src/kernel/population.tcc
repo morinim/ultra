@@ -38,6 +38,10 @@ population<I>::population(const ultra::problem &p)
   Ensures(is_valid());
 }
 
+///
+/// \param[in] l layer index
+/// \return      a const reference to a layer of the population
+///
 template<Individual I>
 const typename population<I>::layer_t &population<I>::layer(std::size_t l) const
 {
@@ -45,11 +49,37 @@ const typename population<I>::layer_t &population<I>::layer(std::size_t l) const
   return layers_[l];
 }
 
+///
+/// \param[in] l layer index
+/// \return      reference to a layer of the population
+///
 template<Individual I>
 typename population<I>::layer_t &population<I>::layer(std::size_t l)
 {
   Expects(l < layers());
   return layers_[l];
+}
+
+///
+/// \param[in] i index of an individual
+/// \return      a reference to the individual at index `i`
+///
+template<Individual I>
+I &population<I>::layer_t::operator[](std::size_t i)
+{
+  Expects(i < size());
+  return members[i];
+}
+
+///
+/// \param[in] i index of an individual
+/// \return      a constant reference to the individual at index `i`
+///
+template<Individual I>
+const I &population<I>::layer_t::operator[](std::size_t i) const
+{
+  Expects(i < size());
+  return members[i];
 }
 
 ///
@@ -314,8 +344,17 @@ void population<I>::inc_age()
 namespace random
 {
 
+template<Population P>
+std::size_t coord(const P &l)
+{
+  return sup(l.size());
+}
+
 ///
 /// \return the coordinates of a random individual of the population
+///
+/// \related
+/// population
 ///
 template<Individual I>
 typename population<I>::coord coord(const population<I> &p)
@@ -323,7 +362,7 @@ typename population<I>::coord coord(const population<I> &p)
   const auto n_layers(p.layers());
 
   if (n_layers == 1)
-    return {0, random::sup(p.layer(0).size())};
+    return {0, random::coord(p.layer(0))};
 
   // With multiple layers we cannot be sure that every layer has the same
   // number of individuals. So the simple (and fast) solution:
@@ -339,16 +378,42 @@ typename population<I>::coord coord(const population<I> &p)
 
   std::discrete_distribution<std::size_t> dd(s.begin(), s.end());
   const auto l(dd(random::engine));
-  return {l, random::sup(p.layer(l).size())};
+  return {l, random::coord(p.layer(l))};
+}
+
+template<Population P>
+std::size_t coord(const P &l, std::size_t i, std::size_t mate_zone)
+{
+  return random::ring(i, mate_zone, l.size());
+}
+
+///
+/// \param[in] p         a population
+/// \param[in] target    coordinates of a reference individual
+/// \param[in] mate_zone restricts the selection of individuals to a maximum
+///                      radius
+/// \return              the coordinates of a random individual in the
+///                      `mate_zone` of `target`
+///
+/// \related
+/// population
+///
+template<Individual I>
+typename population<I>::coord coord(const population<I> &p,
+                                    typename population<I>::coord target,
+                                    std::size_t mate_zone)
+{
+  return {target.layer,
+          random::coord(p.layer(target.layer), target.index, mate_zone)};
 }
 
 ///
 /// \return the index of a random individual of the population
 ///
-template<Individual I>
-I pickup(const population<I> &p)
+template<Population P>
+typename P::value_type element(const P &p)
 {
-  return p[coord(p)];
+  return p[random::coord(p)];
 }
 
 }  // namespace random
