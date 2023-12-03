@@ -26,13 +26,8 @@ template<Individual I>
 population<I>::population(const ultra::problem &p)
   : prob_(&p), layers_{p.env.population.layers}
 {
-  const auto n(p.env.population.individuals);
-  for (std::size_t l(0); l < layers(); ++l)
-  {
-    layers_[l].members.reserve(n);
-    layers_[l].allowed(n);
-    init(layers_[l]);
-  }
+  for (auto &l : layers_)
+    init(l);
 
   Ensures(layers() == p.env.population.layers);
   Ensures(is_valid());
@@ -68,7 +63,7 @@ template<Individual I>
 I &population<I>::layer_t::operator[](std::size_t i)
 {
   Expects(i < size());
-  return members[i];
+  return members_[i];
 }
 
 ///
@@ -79,7 +74,7 @@ template<Individual I>
 const I &population<I>::layer_t::operator[](std::size_t i) const
 {
   Expects(i < size());
-  return members[i];
+  return members_[i];
 }
 
 ///
@@ -88,7 +83,7 @@ const I &population<I>::layer_t::operator[](std::size_t i) const
 template<Individual I>
 std::size_t population<I>::layer_t::size() const
 {
-  return members.size();
+  return members_.size();
 }
 
 ///
@@ -113,7 +108,7 @@ std::size_t population<I>::layer_t::allowed() const
 template<Individual I>
 bool population<I>::layer_t::empty() const
 {
-  return members.empty();
+  return members_.empty();
 }
 
 ///
@@ -122,7 +117,7 @@ bool population<I>::layer_t::empty() const
 template<Individual I>
 void population<I>::layer_t::clear()
 {
-  members.clear();
+  members_.clear();
 }
 
 ///
@@ -131,8 +126,8 @@ void population<I>::layer_t::clear()
 template<Individual I>
 void population<I>::layer_t::allowed(std::size_t n)
 {
+  members_.reserve(n);
   allowed_ = n;
-  Ensures(size() <= allowed());
 }
 
 ///
@@ -144,7 +139,7 @@ template<Individual I>
 void population<I>::layer_t::push_back(const I &i)
 {
   if (size() < allowed())
-    members.push_back(i);
+    members_.push_back(i);
 }
 
 ///
@@ -153,7 +148,7 @@ void population<I>::layer_t::push_back(const I &i)
 template<Individual I>
 void population<I>::layer_t::pop_back()
 {
-  members.pop_back();
+  members_.pop_back();
 }
 
 ///
@@ -163,7 +158,7 @@ template<Individual I>
 typename population<I>::layer_t::const_iterator
 population<I>::layer_t::begin() const
 {
-  return members.begin();
+  return members_.begin();
 }
 
 ///
@@ -172,7 +167,7 @@ population<I>::layer_t::begin() const
 template<Individual I>
 typename population<I>::layer_t::iterator population<I>::layer_t::begin()
 {
-  return members.begin();
+  return members_.begin();
 }
 
 ///
@@ -182,7 +177,7 @@ template<Individual I>
 typename population<I>::layer_t::const_iterator
 population<I>::layer_t::end() const
 {
-  return members.end();
+  return members_.end();
 }
 
 ///
@@ -196,6 +191,7 @@ template<Individual I>
 void population<I>::init(layer_t &l)
 {
   l.clear();
+  l.allowed(problem().env.population.individuals);
 
   std::generate_n(std::back_inserter(l), l.allowed(),
                   [this] {return I(problem()); });
@@ -249,7 +245,7 @@ I &population<I>::operator[](const coord &c)
 {
   Expects(c.layer < layers());
   Expects(c.index < layer(c.layer).size());
-  return layers_[c.layer].members[c.index];
+  return layers_[c.layer][c.index];
 }
 
 ///
@@ -261,7 +257,7 @@ const I &population<I>::operator[](const coord &c) const
 {
   Expects(c.layer < layers());
   Expects(c.index < layer(c.layer).size());
-  return layers_[c.layer].members[c.index];
+  return layers_[c.layer][c.index];
 }
 
 ///
@@ -277,9 +273,6 @@ void population<I>::add_layer()
 #endif
 
   layers_.insert(layers_.begin(), layer_t());
-  layer(0).allowed(problem().env.population.individuals);
-  layers_[0].members.reserve(layer(0).allowed());
-
   init(layer(0));
 
 #if !defined(NDEBUG)
@@ -441,7 +434,7 @@ bool population<I>::load(std::istream &in)
     if (!(in >> allowed))
       return false;
 
-    p.layers_[l].allowed(allowed);
+    p.layer(l).allowed(allowed);
 
     std::size_t n_elem;
     if (!(in >> n_elem))
@@ -491,15 +484,9 @@ bool population<I>::is_valid() const
     if (!i.is_valid())
       return false;
 
-  const auto n(layers());
-  for (std::size_t l(0); l < n; ++l)
-  {
-    if (layer(l).allowed() < layer(l).size())
+  for (const auto &l : layers_)
+    if (l.allowed() < l.size())
       return false;
-
-    if (layers_[l].members.capacity() < layer(l).allowed())
-      return false;
-  }
 
   if (!prob_)
   {

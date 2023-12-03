@@ -136,9 +136,8 @@ public:
   [[nodiscard]] iterator begin();
   [[nodiscard]] const_iterator end() const;
 
-  std::vector<I> members {};
-
 private:
+  std::vector<I> members_ {};
   std::size_t allowed_ {0};
 };
 
