@@ -50,15 +50,15 @@ strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
 ///   in the test suite).
 ///
 template<Evaluator E>
-template<Individual I>
-std::vector<I> tournament<E>::run(const population<I> &pop)
+template<Population P>
+std::vector<typename P::value_type> tournament<E>::operator()(const P &pop)
 {
   const auto rounds(this->env_.evolution.tournament_size);
   const auto mate_zone(this->env_.evolution.mate_zone);
   assert(rounds);
 
   const auto target(random::coord(pop));
-  std::vector<typename population<I>::coord> ret(rounds);
+  std::vector<typename P::coord> ret(rounds);
 
   // This is the inner loop of an insertion sort algorithm. It's simple, fast
   // (if `rounds` is small) and doesn't perform too much comparisons.
@@ -76,7 +76,7 @@ std::vector<I> tournament<E>::run(const population<I> &pop)
     ret[j] = new_coord;
   }
 
-  std::vector<I> ri;
+  std::vector<typename P::value_type> ri;
   ri.reserve(ret.size());
   std::ranges::transform(ret, std::back_inserter(ri),
                          [&pop](const auto &c) { return pop[c]; });

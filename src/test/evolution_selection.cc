@@ -37,7 +37,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-  selection::tournament sel(eva, prob.env);
+  selection::tournament select(eva, prob.env);
 
   // Every individual has a unique fitness (`test_evaluator_type::distinct`),
   // so there is just one maximum-fitness-individual.
@@ -57,7 +57,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
     {
-      auto parents(sel.run(pop));
+      auto parents(select(pop));
 
       CHECK(parents.size() == prob.env.evolution.tournament_size);
 

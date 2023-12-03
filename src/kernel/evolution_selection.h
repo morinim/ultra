@@ -62,63 +62,12 @@ class tournament : public strategy<E>
 public:
   using tournament::strategy::strategy;
 
-  template<Individual I> std::vector<I> run(const population<I> &);
+  template<Population P>
+  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &);
 };
 
 template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
 
-/*
-///
-/// Alps selection as described in <https://github.com/ghornby/alps> (see also
-/// ultra::basic_alps_es for further details).
-///
-template<class T>
-class alps : public strategy<T>
-{
-public:
-  using alps::strategy::strategy;
-
-  typename strategy<T>::parents_t run();
-
-private:
-  [[nodiscard]] bool aged(const typename population<T>::coord &) const;
-  [[nodiscard]] typename population<T>::coord pickup(unsigned,
-                                                     double = 1.0) const;
-};
-
-///
-/// Pareto tournament selection as described in "Pursuing the Pareto
-/// Paradigm" (Mark Kotanchek, Guido Smits, Ekaterina Vladislavleva).
-///
-template<class T>
-class pareto : public strategy<T>
-{
-public:
-  using pareto::strategy::strategy;
-
-  typename strategy<T>::parents_t run();
-
-private:
-  void front(const std::vector<unsigned> &, std::set<unsigned> *,
-             std::set<unsigned> *) const;
-};
-
-///
-/// Pick a set of random individuals.
-///
-/// Very simple selection strategy: pick a set of random individuals. The
-/// environment::tournamnet_size property controls the cardinality of the
-/// set.
-///
-template<class T>
-class random : public strategy<T>
-{
-public:
-  using random::strategy::strategy;
-
-  typename strategy<T>::parents_t run();
-};
-*/
 #include "kernel/evolution_selection.tcc"
 
 }  // namespace ultra::selection
