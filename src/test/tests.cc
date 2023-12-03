@@ -10,6 +10,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#include "test/analyzer.cc"
 #include "test/distribution.cc"
 #include "test/evaluator.cc"
 #include "test/evolution_selection.cc"

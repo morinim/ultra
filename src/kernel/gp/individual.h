@@ -39,7 +39,6 @@ public:
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 
-  [[nodiscard]] unsigned active_functions() const;
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;
@@ -92,6 +91,7 @@ private:
   crossover_t active_crossover_type_ {random::sup(NUM_CROSSOVERS)};
 };
 
+[[nodiscard]] unsigned active_slots(const individual &);
 [[nodiscard]] individual crossover(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] locus random_locus(const individual &);

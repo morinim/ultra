@@ -13,6 +13,8 @@
 #if !defined(FIXTURE1_H)
 #define      FIXTURE1_H
 
+#include "kernel/problem.h"
+
 #include "kernel/gp/primitive/real.h"
 
 // Useful for single category tests.

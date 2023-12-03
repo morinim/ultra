@@ -311,9 +311,9 @@ unsigned distance(const individual &lhs, const individual &rhs)
 }
 
 ///
-/// Number of active symbols.
+/// Number of active functions.
 ///
-/// \return number of active symbols
+/// \return number of active functions
 ///
 /// \see
 /// size()
@@ -329,9 +329,11 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
-unsigned individual::active_functions() const
+/// \relates gp::individual
+///
+unsigned active_slots(const individual &prg)
 {
-  return std::ranges::distance(cexons());
+  return std::ranges::distance(prg.cexons());
 }
 
 locus random_locus(const individual &prg)
@@ -1015,9 +1017,9 @@ bool individual::is_valid() const
       }
     }
 
-  if (categories() == 1 && active_functions() > size())
+  if (categories() == 1 && active_slots(*this) > size())
   {
-    ultraERROR << "`active_functions()` (== " << active_functions()
+    ultraERROR << "`active_functions()` (== " << active_slots(*this)
                << ") cannot be greater than `size()` (" << size()
                << ") in single-category individuals";
     return false;

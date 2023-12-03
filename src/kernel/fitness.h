@@ -13,6 +13,8 @@
 #if !defined(ULTRA_FITNESS_H)
 #define      ULTRA_FITNESS_H
 
+#include <cmath>
+
 #include "utility/misc.h"
 
 namespace ultra
@@ -61,13 +63,25 @@ template<class F> concept Fitness = requires(F f1, F f2)
   requires F(-1) < F(0);
 };
 
+template<std::integral F>
+[[nodiscard]] bool isfinite(F)
+{
+  return true;
+}
+
+template<std::floating_point F>
+[[nodiscard]] bool isfinite(const F &f)
+{
+  return std::isfinite(f);
+}
+
 ///
 /// \param[out] out output stream
 /// \param[in]  f   fitness to be saved
 /// \return         `true` if object has been saved correctly
 ///
 template<std::floating_point F>
-[[nodiscard]] bool save(std::ostream &out, const F &f)
+[[nodiscard]] bool save(std::ostream &out, F f)
 {
   save_float_to_stream(out, f);
   out << '\n';
@@ -76,7 +90,7 @@ template<std::floating_point F>
 }
 
 template<std::integral F>
-[[nodiscard]] bool save(std::ostream &out, const F &f)
+[[nodiscard]] bool save(std::ostream &out, F f)
 {
   out << f << '\n';
 

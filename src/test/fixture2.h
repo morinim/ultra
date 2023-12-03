@@ -13,6 +13,8 @@
 #if !defined(FIXTURE2_H)
 #define      FIXTURE2_H
 
+#include "kernel/problem.h"
+
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/primitive/string.h"
 

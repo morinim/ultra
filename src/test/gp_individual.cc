@@ -271,7 +271,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
         }
 
         total_mut += mut;
-        total_length += i1.active_functions();
+        total_length += active_slots(i1);
       }
 
       const double perc(100.0 * total_mut / total_length);
@@ -326,7 +326,7 @@ TEST_CASE_FIXTURE(fixture3, "Random locus")
     const gp::individual prg(prob);
     CHECK(prg.is_valid());
 
-    const auto as(prg.active_functions());
+    const auto as(active_slots(prg));
 
     const unsigned n(10000);
     for (unsigned j(0); j < n; ++j)
