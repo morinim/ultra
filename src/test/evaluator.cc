@@ -40,4 +40,41 @@ TEST_CASE_FIXTURE(fixture1, "Concepts")
   static_assert(Evaluator<decltype(eva2)>);
 }
 
+TEST_CASE_FIXTURE(fixture1, "Test evaluator")
+{
+  using namespace ultra;
+
+  SUBCASE("Distinct")
+  {
+    std::vector<gp::individual> distinct;
+    for (unsigned i(0); i < 100; ++i)
+      if (gp::individual prg(prob);
+          std::ranges::find(distinct, prg) == distinct.end())
+        distinct.push_back(prg);
+
+    test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+    std::set<double> fitness;
+    for (const auto &prg : distinct)
+    {
+      const auto f(eva(prg));
+      CHECK(!fitness.contains(f));
+      fitness.insert(f);
+    }
+  }
+
+  SUBCASE("Fixed")
+  {
+    population<gp::individual> p(prob);
+
+    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+    const auto val(eva(random::element(p)));
+
+    CHECK(std::ranges::all_of(p,
+                              [&](const auto &prg)
+                              {
+                                return eva(prg) == doctest::Approx(val);
+                              }));
+  }
+}
+
 }  // TEST_SUITE("EVALUATOR")

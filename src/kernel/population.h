@@ -53,6 +53,7 @@ public:
   class layer_t;
 
   using value_type = I;
+  using difference_type = std::ptrdiff_t;
 
   explicit population(const ultra::problem &);
 
@@ -115,7 +116,7 @@ public:
   using value_type = I;
   using const_iterator = typename std::vector<I>::const_iterator;
   using iterator = typename std::vector<I>::iterator;
-  using difference_type = std::ptrdiff_t;
+  using difference_type = typename std::vector<I>::difference_type;
   using coord = std::size_t;
 
   [[nodiscard]] I &operator[](std::size_t);

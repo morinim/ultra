@@ -165,13 +165,7 @@ TEST_CASE_FIXTURE(fixture1, "Pickup")
     const int tolerance(expected / 10);
 
     for (const auto &p : frequency)
-    {
-      if (std::abs(p.second - expected) > tolerance)
-      {
-        std::cout << pop.layers() << "    Extracted: " << p.second << "   Expected: " << expected << std::endl;
-      }
       CHECK(std::abs(p.second - expected) <= tolerance);
-    }
 
     pop.add_layer();
   }

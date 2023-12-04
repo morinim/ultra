@@ -10,8 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(FIXTURE1_H)
-#define      FIXTURE1_H
+#if !defined(ULTRA_FIXTURE1_H)
+#define      ULTRA_FIXTURE1_H
 
 #include "kernel/problem.h"
 
