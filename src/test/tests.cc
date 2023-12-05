@@ -14,6 +14,7 @@
 #include "test/distribution.cc"
 #include "test/evaluator.cc"
 #include "test/evolution_selection.cc"
+#include "test/fitness.cc"
 #include "test/function.cc"
 #include "test/gene.cc"
 #include "test/gp_individual.cc"

@@ -14,6 +14,7 @@
 #define      ULTRA_FITNESS_H
 
 #include <cmath>
+#include <numeric>
 
 #include "utility/misc.h"
 
@@ -52,7 +53,7 @@ namespace ultra
 ///
 template<class F> concept Fitness = requires(F f1, F f2)
 {
-  requires std::three_way_comparable<F>;
+  requires std::totally_ordered<F>;
 
   {f1 + f2} -> std::convertible_to<F>;
   {f1 - f2} -> std::convertible_to<F>;
@@ -60,62 +61,11 @@ template<class F> concept Fitness = requires(F f1, F f2)
   {f1 * double()} -> std::convertible_to<F>;
   {f1 / f2} -> std::convertible_to<F>;
 
+  // This also requires that F is a signed type.
   requires F(-1) < F(0);
 };
 
-template<std::integral F>
-[[nodiscard]] bool isfinite(F)
-{
-  return true;
-}
-
-template<std::floating_point F>
-[[nodiscard]] bool isfinite(const F &f)
-{
-  return std::isfinite(f);
-}
-
-///
-/// \param[out] out output stream
-/// \param[in]  f   fitness to be saved
-/// \return         `true` if object has been saved correctly
-///
-template<std::floating_point F>
-[[nodiscard]] bool save(std::ostream &out, F f)
-{
-  save_float_to_stream(out, f);
-  out << '\n';
-
-  return out.good();
-}
-
-template<std::integral F>
-[[nodiscard]] bool save(std::ostream &out, F f)
-{
-  out << f << '\n';
-
-  return out.good();
-}
-
-///
-/// \param[in]  in input stream
-/// \param[out] f  load the fitness here
-/// \return        `true` if the object has been loaded correctly
-///
-/// \note
-/// If the load operation isn't successful `f` isn't changed.
-///
-template<std::floating_point F>
-bool load(std::istream &in, F *f)
-{
-  return load_float_from_stream(in, f);
-}
-
-template<std::integral F>
-bool load(std::istream &in, F *f)
-{
-  return in >> *f;
-}
+#include "kernel/fitness.tcc"
 
 }  // namespace ultra
 
