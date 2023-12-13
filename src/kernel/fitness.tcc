@@ -24,9 +24,19 @@ template<std::integral F>
 }
 
 template<std::floating_point F>
-[[nodiscard]] bool isfinite(const F &f)
+[[nodiscard]] bool isfinite(F f)
 {
   return std::isfinite(f);
+}
+
+///
+/// \param[in] f fitness to check
+/// \return      `true` if every component of the fitness is finite
+///
+template<MultiDimFitness F>
+[[nodiscard]] bool isfinite(const F &f)
+{
+  return std::ranges::all_of(f, [](auto v) { return std::isfinite(v); });
 }
 
 ///
@@ -53,7 +63,7 @@ requires std::is_arithmetic_v<F>
   return rhs < lhs;
 }
 
-template<Fitness F>
+template<MultiDimFitness F>
 [[nodiscard]] bool dominating(const F &lhs, const F &rhs)
 {
   bool one_better(lhs.size() && !rhs.size());
@@ -87,14 +97,14 @@ requires std::is_arithmetic_v<F>
   return std::fabs(f1 - f2);
 }
 
-template<Fitness F>
+template<MultiDimFitness F>
 [[nodiscard]] double distance(const F &f1, const F &f2)
 {
   Expects(f1.size() == f2.size());
 
-  return std::inner_product(f1.begin(), f1.end(), f2.begin(), 0.0,
-                            std::plus<>(),
-                            [](auto a, auto b) { return std::fabs(a - b); });
+  return std::transform_reduce(
+    f1.begin(), f1.end(), f2.begin(), 0.0,
+    std::plus{}, [](auto a, auto b) { return std::fabs(a - b); });
 }
 
 ///
@@ -116,6 +126,20 @@ template<std::integral F>
 [[nodiscard]] bool save(std::ostream &out, F f)
 {
   out << f << '\n';
+
+  return out.good();
+}
+
+template<MultiDimFitness F>
+[[nodiscard]] bool save(std::ostream &out, const F &f)
+{
+  for (const auto &i : f)
+  {
+    save_float_to_stream(out, i);
+    out << ' ';
+  }
+
+  out << '\n';
 
   return out.good();
 }

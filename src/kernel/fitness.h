@@ -15,7 +15,9 @@
 
 #include <cmath>
 #include <numeric>
+#include <vector>
 
+#include "utility/assert.h"
 #include "utility/misc.h"
 
 namespace ultra
@@ -53,17 +55,107 @@ namespace ultra
 ///
 template<class F> concept Fitness = requires(F f1, F f2)
 {
+  // --------- Raw fitness ---------
   requires std::totally_ordered<F>;
 
   {f1 + f2} -> std::convertible_to<F>;
   {f1 - f2} -> std::convertible_to<F>;
   {f1 * f2} -> std::convertible_to<F>;
-  {f1 * double()} -> std::convertible_to<F>;
   {f1 / f2} -> std::convertible_to<F>;
+  {-f1} -> std::convertible_to<F>;
+  {f1 * double()} -> std::convertible_to<F>;
 
-  // This also requires that F is a signed type.
-  requires F(-1) < F(0);
+  // --------- Standardized fitness ---------
+  // This also requires that `F` is a signed type.
+  requires F{-1} < F{0};
 };
+
+template<class F> concept MultiDimFitness =
+Fitness<F> && std::ranges::sized_range<F>;
+
+///
+/// Tag representing size.
+///
+/// Used to initialize containers in a way that is completely unambiguous.
+///
+/// \see https://akrzemi1.wordpress.com/2016/06/29/competing-constructors/
+///
+class with_size
+{
+public:
+  explicit with_size(std::size_t s) : size_(s) {}
+  std::size_t operator()() const { return size_; }
+
+private:
+  std::size_t size_;
+};
+
+///
+/// A basic multi-dimensional fitness type.
+///
+/// Useful for rapid prototyping. Real use cases may require ad-hoc fitness
+/// type.
+///
+class fitnd
+{
+public:
+  // Type alias and iterators.
+  using value_type = double;
+  using values_t = std::vector<value_type>;
+  using iterator = values_t::iterator;
+  using const_iterator = values_t::const_iterator;
+  using difference_type = values_t::difference_type;
+
+  fitnd() = default;
+  constexpr fitnd(std::initializer_list<double> l) : vect_(l) {}
+  fitnd(values_t);
+  fitnd(with_size, value_type = std::numeric_limits<value_type>::lowest());
+
+  [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] value_type operator[](std::size_t) const;
+  [[nodiscard]] value_type &operator[](std::size_t);
+
+  [[nodiscard]] iterator begin();
+  [[nodiscard]] const_iterator begin() const;
+  [[nodiscard]] const_iterator end() const;
+
+  [[nodiscard]] friend auto operator<=>(const fitnd &, const fitnd &) = default;
+
+  fitnd &operator+=(const fitnd &);
+  fitnd &operator-=(const fitnd &);
+  fitnd &operator*=(const fitnd &);
+  fitnd &operator/=(const fitnd &);
+
+  friend bool load(std::istream &, fitnd *);
+  friend fitnd combine(const fitnd &, const fitnd &);
+
+private:
+  values_t vect_ {};
+};
+
+// ***********************************************************************
+// *  Arithmetic operators                                               *
+// ***********************************************************************
+[[nodiscard]] fitnd operator+(fitnd, const fitnd &);
+[[nodiscard]] fitnd operator-(fitnd, const fitnd &);
+[[nodiscard]] fitnd operator*(fitnd, const fitnd &);
+[[nodiscard]] fitnd operator/(fitnd, const fitnd &);
+[[nodiscard]] fitnd operator*(fitnd, fitnd::value_type);
+[[nodiscard]] fitnd operator/(fitnd, fitnd::value_type);
+[[nodiscard]] fitnd operator-(fitnd);
+
+// ***********************************************************************
+// *  Serialization                                                      *
+// ***********************************************************************
+bool load(std::istream &, fitnd *);
+
+// ***********************************************************************
+// *  Other functions                                                    *
+// ***********************************************************************
+[[nodiscard]] fitnd abs(fitnd);
+[[nodiscard]] fitnd sqrt(fitnd);
+[[nodiscard]] fitnd combine(const fitnd &, const fitnd &);
+std::ostream &operator<<(std::ostream &, const fitnd &);
 
 #include "kernel/fitness.tcc"
 

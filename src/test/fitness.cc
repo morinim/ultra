@@ -27,23 +27,22 @@ TEST_CASE("Concepts")
 
   static_assert(Fitness<double>);
   static_assert(Fitness<int>);
-//  static_assert(Fitness<std::vector<double>>);
+  static_assert(Fitness<fitnd>);
 }
 
-/*
 TEST_CASE("Comparison")
 {
   using namespace ultra;
 
-  std::valarray<double> fit2d(2, std::numeric_limits<double>::min());
-  std::valarray<double> fit3d(3, std::numeric_limits<double>::min());
-  std::valarray<double> fit4d(4, std::numeric_limits<double>::min());
+  fitnd fit2d(with_size(2));
+  fitnd fit3d(with_size(3));
+  fitnd fit4d(with_size(4));
 
-  std::valarray<double> f1{3.0, 0.0, 0.0}, f2{2.0, 1.0, 0.0}, f3{2.0, 0.0, 0.0};
+  fitnd f1{3.0, 0.0, 0.0}, f2{2.0, 1.0, 0.0}, f3{2.0, 0.0, 0.0};
 
-  //CHECK(fit2d.size() == 2);
-  //CHECK(fit3d.size() == 3);
-  //CHECK(fit4d.size() == 4);
+  CHECK(fit2d.size() == 2);
+  CHECK(fit3d.size() == 3);
+  CHECK(fit4d.size() == 4);
 
   CHECK(f1 > f2);
   CHECK(f1 >= f2);
@@ -72,18 +71,18 @@ TEST_CASE("Comparison")
 
 TEST_CASE("Serialization")
 {
-  using vita::fitness_t;
+  using namespace ultra;
 
-  const fitness_t f{1.0, 2.0, 3.0,
-                    std::numeric_limits<fitness_t::value_type>::lowest()};
+  const fitnd f{1.0, 2.0, 3.0,
+                std::numeric_limits<fitnd::value_type>::lowest()};
 
   std::stringstream ss;
 
-  CHECK(f.save(ss));
+  CHECK(save(ss, f));
 
-  fitness_t f2;
+  fitnd f2;
   CHECK(f2.size() == 0);
-  CHECK(f2.load(ss));
+  CHECK(load(ss, &f2));
 
   CHECK(f2.size() == 4);
   CHECK(f == f2);
@@ -91,14 +90,12 @@ TEST_CASE("Serialization")
 
 TEST_CASE("Operators")
 {
-  using vita::fitness_t;
-  using vita::with_size;
+  using namespace ultra;
 
-  fitness_t x{2.0, 4.0, 8.0};
-  fitness_t f1{2.0, 4.0, 8.0};
-  fitness_t f2{4.0, 8.0, 16.0};
-  fitness_t inf(with_size(3),
-                std::numeric_limits<fitness_t::value_type>::infinity());
+  fitnd x{2.0, 4.0, 8.0};
+  fitnd f1{2.0, 4.0, 8.0};
+  fitnd f2{4.0, 8.0, 16.0};
+  fitnd inf(with_size(3), std::numeric_limits<fitnd::value_type>::infinity());
 
   x += x;
   CHECK(x == f2);
@@ -107,7 +104,7 @@ TEST_CASE("Operators")
 
   CHECK(f1 * 2.0 == f2);
 
-  x = f1 * fitness_t{2.0, 2.0, 2.0};
+  x = f1 * fitnd{2.0, 2.0, 2.0};
   CHECK(x == f2);
 
   x += {0.0, 0.0, 0.0};
@@ -133,29 +130,27 @@ TEST_CASE("Operators")
 
 TEST_CASE("Joining")
 {
-  using vita::combine;
-  using vita::fitness_t;
+  using namespace ultra;
 
-  const fitness_t f1{1.0, 2.0, 3.0}, f2{4.0, 5.0, 6.0};
+  const fitnd f1{1.0, 2.0, 3.0}, f2{4.0, 5.0, 6.0};
 
-  const fitness_t f3(combine(f1, f2));
-  const fitness_t f4{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  const fitnd f3(combine(f1, f2));
+  const fitnd f4{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
   CHECK(f3 == f4);
 }
+
 TEST_CASE("Distance")
 {
-  using vita::combine;
-  using vita::distance;
-  using vita::fitness_t;
+  using namespace ultra;
 
-  fitness_t f1{1.0, 2.0, 3.0}, f2{-4.0, -5.0, -6.0};
+  fitnd f1{1.0, 2.0, 3.0}, f2{-4.0, -5.0, -6.0};
 
   CHECK(distance(f1, f1) == doctest::Approx(0.0));
   CHECK(distance(f2, f2) == doctest::Approx(0.0));
 
   CHECK(distance(f1, f2) == doctest::Approx(distance(f2, f1)));
 
-  fitness_t f3{1.0, 1.0, 1.0}, f4{3.0, 2.0, 3.0};
+  fitnd f3{1.0, 1.0, 1.0}, f4{3.0, 2.0, 3.0};
   const auto d1(distance(f1, f2));
   const auto d2(distance(f3, f4));
 
@@ -165,5 +160,5 @@ TEST_CASE("Distance")
   CHECK(distance(f1, f3) < distance(f2, f3));
   CHECK(distance(f1, f4) == doctest::Approx(2.0));
 }
-*/
+
 }  // TEST_SUITE("FITNESS")
