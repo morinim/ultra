@@ -87,8 +87,8 @@ public:
   [[nodiscard]] bool is_valid() const;
 
   // Serialization.
-  bool load(std::istream &);
-  bool save(std::ostream &) const;
+  [[nodiscard]] bool load(std::istream &);
+  [[nodiscard]] bool save(std::ostream &) const;
 
 private:
   const ultra::problem *prob_;

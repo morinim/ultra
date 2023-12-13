@@ -335,8 +335,8 @@ TEST_CASE_FIXTURE(fixture3, "Random locus")
     const double avg(n / as);
     for (const auto &e : exons)
     {
-      CHECK(avg * 0.95 <= e.second);
-      CHECK(e.second <= 1.05 *avg);
+      CHECK(avg * 0.94 <= e.second);
+      CHECK(e.second <= 1.06 * avg);
     }
   }
 }

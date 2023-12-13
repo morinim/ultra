@@ -95,7 +95,7 @@ symbol::category_t individual::categories() const
 ///
 bool individual::empty() const
 {
-  return size() == 0;
+  return genome_.empty();
 }
 
 ///

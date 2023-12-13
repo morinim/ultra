@@ -117,7 +117,7 @@ typename matrix<T>::reference matrix<T>::operator()(std::size_t r,
 template<class T>
 bool matrix<T>::empty() const
 {
-  return size() == 0;
+  return data_.empty();
 }
 
 ///

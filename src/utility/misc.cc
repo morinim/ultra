@@ -23,9 +23,9 @@ namespace ultra
 ///
 bool iequals(const std::string &lhs, const std::string &rhs)
 {
-  return std::equal(
-    lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-    [](auto c1, auto c2) { return std::tolower(c1) == std::tolower(c2); });
+  return std::ranges::equal(lhs, rhs,
+                            [](auto c1, auto c2)
+                            { return std::tolower(c1) == std::tolower(c2); });
 }
 
 ///
@@ -51,8 +51,8 @@ bool is_number(std::string s)
 ///
 std::string trim(const std::string &s)
 {
-  auto front = std::find_if_not(s.begin(), s.end(),
-                                [](auto c) { return std::isspace(c); });
+  auto front = std::ranges::find_if_not(
+    s, [](auto c) { return std::isspace(c); });
 
   // The search is limited in the reverse direction to the last non-space value
   // found in the search in the forward direction.

@@ -468,7 +468,8 @@ bool population<I>::save(std::ostream &out) const
     out << l.allowed() << ' ' << l.size() << '\n';
 
     for (const auto &prg : l)
-      prg.save(out);
+      if (!prg.save(out))
+        return false;
   }
 
   return out.good();

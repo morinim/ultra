@@ -42,8 +42,8 @@ public:
   void inc_age(unsigned = 1);
 
   // Serialization.
-  bool load(std::istream &, const symbol_set &);
-  bool save(std::ostream &) const;
+  [[nodiscard]] bool load(std::istream &, const symbol_set &);
+  [[nodiscard]] bool save(std::ostream &) const;
 
 protected:
   ~individual() = default;
@@ -62,7 +62,13 @@ private:
   age_t age_ {0};
 };  // class individual
 
-template<class I> concept Individual = std::derived_from<I, individual>;
+template<class I> concept Individual = requires(I i)
+{
+  requires std::derived_from<I, individual>;
+
+  I();
+  i.empty();
+};
 
 namespace out
 {

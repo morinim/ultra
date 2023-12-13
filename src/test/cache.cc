@@ -106,10 +106,10 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
   std::vector<std::uint8_t> present(n);
   std::ranges::transform(vi, present.begin(),
-                 [&cache1](const auto &i)
-                 {
-                   return cache1.find(i.signature()) != nullptr;
-                 });
+                         [&cache1](const auto &i)
+                         {
+                           return cache1.find(i.signature()) != nullptr;
+                         });
 
   std::stringstream ss;
   CHECK(cache1.save(ss));

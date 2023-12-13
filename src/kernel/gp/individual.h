@@ -35,7 +35,7 @@ namespace ultra::gp
 class individual final : public ultra::individual
 {
 public:
-  //individual() = default;
+  individual() = default;
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 
@@ -73,7 +73,7 @@ public:
   template<bool> friend class internal::basic_exon_iterator;
 
 private:
-  // ---- Private data members ----
+  // ---- Private member functions ----
   [[nodiscard]] auto begin() { return genome_.begin(); }
   [[nodiscard]] exon_range exons();
 
@@ -83,8 +83,9 @@ private:
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
+  // ---- Private data members ----
   // This is the genome: the entire collection of genes.
-  matrix<gene> genome_;
+  matrix<gene> genome_ {};
 
   // Crossover operator used to create this individual. Initially this is set
   // to a random type.

@@ -25,34 +25,20 @@ struct model_measurements
 {
   model_measurements() = default;
 
-  model_measurements(const F &f, double a, bool s)
-    : fitness(f), accuracy(a), is_solution(s)
-  {
-    Expects(accuracy <= 1.0);
-  }
+  model_measurements(const F &, double);
 
-  F        fitness {};
-  double  accuracy {-1.0};
-  bool is_solution {false};
+  [[nodiscard]] friend auto operator<=>(const model_measurements &,
+                                        const model_measurements &) = default;
+
+  // --- Serialization ---
+  [[nodiscard]] bool load(std::istream &);
+  [[nodiscard]] bool save(std::ostream &) const;
+
+  F      fitness  {};
+  double accuracy {};
 };
 
-///
-/// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparision
-///
-/// \warning
-/// This is a partial ordering relation since is somewhat based on Pareto
-/// dominance.
-///
-/// \relates model_measurements
-///
-template<Fitness F>
-[[nodiscard]] bool operator>=(const model_measurements<F> &lhs,
-                              const model_measurements<F> &rhs)
-{
-  return dominating(lhs.fitness, rhs.fitness) &&
-         lhs.accuracy >= rhs.accuracy;
-}
+#include "kernel/model_measurements.tcc"
 
 }  // namespace ultra
 
