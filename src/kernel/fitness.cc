@@ -18,9 +18,9 @@ namespace ultra
 ///
 /// Builds a fitness from a list of values.
 ///
-//constexpr fitnd::fitnd(std::initializer_list<double> l) : vect_(l)
-//{
-//}
+fitnd::fitnd(std::initializer_list<double> l) : vect_(l)
+{
+}
 
 ///
 /// Fills the fitness with copies of a given value.

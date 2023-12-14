@@ -53,7 +53,7 @@ namespace ultra
 /// all you have to remember when dealing with examples/problems expressed
 /// in the other notation.
 ///
-template<class F> concept Fitness = requires(F f1, F f2)
+/*template<class F> concept Fitness = requires(F f1, F f2)
 {
   // --------- Raw fitness ---------
   requires std::totally_ordered<F>;
@@ -67,8 +67,31 @@ template<class F> concept Fitness = requires(F f1, F f2)
 
   // --------- Standardized fitness ---------
   // This also requires that `F` is a signed type.
-  requires F{-1} < F{0};
+  requires F(-1) < F(0);
+  };*/
+
+template<class F> concept RawFitness = requires(F f1, F f2)
+{
+  requires std::totally_ordered<F>;
+
+  {f1 + f2} -> std::convertible_to<F>;
+  {f1 - f2} -> std::convertible_to<F>;
+  {f1 * f2} -> std::convertible_to<F>;
+  {f1 / f2} -> std::convertible_to<F>;
+  {-f1} -> std::convertible_to<F>;
+  {f1 * double()} -> std::convertible_to<F>;
+
+  {f1 < f2} -> std::convertible_to<bool>;
+
+  // This also requires that `F` is a signed type.
+  // requires F{-1} < F{1};
+  // Currently commented out because many compilers/libraries don't support
+  // constexpr vector constructors.
 };
+
+template<class F> concept Fitness =
+  RawFitness<F>
+  && (std::ranges::sized_range<F> || (requires { requires F(-1) < F(0); }));
 
 template<class F> concept MultiDimFitness =
 Fitness<F> && std::ranges::sized_range<F>;
@@ -107,7 +130,7 @@ public:
   using difference_type = values_t::difference_type;
 
   fitnd() = default;
-  constexpr fitnd(std::initializer_list<double> l) : vect_(l) {}
+  fitnd(std::initializer_list<double>);
   fitnd(values_t);
   fitnd(with_size, value_type = std::numeric_limits<value_type>::lowest());
 
