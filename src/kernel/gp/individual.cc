@@ -295,19 +295,8 @@ unsigned distance(const individual &lhs, const individual &rhs)
   Expects(lhs.size() == rhs.size());
   Expects(lhs.categories() == rhs.categories());
 
-  const locus::index_t i_sup(lhs.size());
-  const symbol::category_t c_sup(lhs.categories());
-
-  unsigned d(0);
-  for (locus::index_t i(0); i < i_sup; ++i)
-    for (symbol::category_t c(0); c < c_sup; ++c)
-    {
-      const locus l{i, c};
-      if (lhs[l] != rhs[l])
-        ++d;
-    }
-
-  return d;
+  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0u,
+                            std::plus{}, std::not_equal_to{});
 }
 
 ///
