@@ -23,17 +23,18 @@
 
 namespace ultra
 {
-template<class T> concept ArithmeticType =
-  (std::is_floating_point_v<T>
-   || std::is_floating_point_v<typename T::value_type>)
-  && requires(T x, T y)
+template<class A> concept ArithmeticType =
+  (std::is_floating_point_v<A>
+   || std::is_floating_point_v<typename A::value_type>)
+  && requires(A x, A y)
 {
-  {x + y};
-  {x - y};
-  {x * y};
-  {x / y};
-  {x < y};
-  {x / 0.1};
+  {x + y} -> std::convertible_to<A>;
+  {x - y} -> std::convertible_to<A>;
+  {x * y} -> std::convertible_to<A>;
+  {x / y} -> std::convertible_to<A>;
+  {x / 0.1} -> std::convertible_to<A>;
+
+  {x < y} -> std::convertible_to<bool>;
 };
 
 ///
