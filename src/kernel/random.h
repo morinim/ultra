@@ -16,6 +16,8 @@
 #include <cstdlib>
 #include <random>
 
+#include "kernel/interval.h"
+
 #include "utility/assert.h"
 #include "utility/xoshiro256ss.h"
 
@@ -118,6 +120,16 @@ template<std::ranges::sized_range C>
   return *std::next(
     c.begin(),
     static_cast<typename C::difference_type>(sup(c.size())));
+}
+
+///
+/// \param[in] i a right-open interval
+/// \return      a random element of `i`
+///
+template<ArithmeticScalar A>
+[[nodiscard]] A element(const interval_t<A> &i)
+{
+  return between(i.first, i.second);
 }
 
 ///
