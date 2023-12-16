@@ -68,6 +68,21 @@ public:
 
 template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
 
+///
+/// Pick a set of four individuals suited for DE recombination.
+///
+template<Evaluator E>
+class de : public strategy<E>
+{
+public:
+  using de::strategy::strategy;
+
+  template<Population P>
+  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &);
+};
+
+template<Evaluator E> de(E &, const environment &) -> de<E>;
+
 #include "kernel/evolution_selection.tcc"
 
 }  // namespace ultra::selection

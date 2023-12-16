@@ -35,10 +35,7 @@ strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
 /// those individuals.
 /// Recall that better individuals have higher fitness.
 ///
-/// Parameters from the environment:
-/// * `mate_zone` - to restrict the selection of individuals to a segment of
-///   the population;
-/// * `tournament_size` - to control selection pressure.
+/// Parameters from the environment: `mate_zone`, `tournament_size`.
 ///
 /// \remark
 /// Different compilers may optimize the code producing slightly different
@@ -89,6 +86,29 @@ std::vector<typename P::value_type> tournament<E>::operator()(const P &pop)
                                  }));
 
   return ri;
+}
+
+///
+/// \param[in] pop a population
+/// \return        a collection of four individuals suited for DE recombination
+///
+/// Parameters from the environment: `mate_zone`.
+///
+template<Evaluator E>
+template<Population P>
+std::vector<typename P::value_type> de<E>::operator()(const P &pop)
+{
+  const auto mate_zone(this->env_.evolution.mate_zone);
+
+  const auto p1(random::coord(pop));
+  const auto p2(random::coord(pop));
+
+  auto a(random::coord(pop, p1, mate_zone));
+
+  decltype(a) b;
+  do b = random::coord(pop, p1, mate_zone); while (a == b);
+
+  return {pop[p1], pop[p2], pop[a], pop[b]};
 }
 
 #endif  // include guard

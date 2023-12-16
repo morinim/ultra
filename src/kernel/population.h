@@ -96,6 +96,9 @@ private:
   std::vector<layer_t> layers_ {};
 };
 
+template<Individual I>
+[[nodiscard]] population<I> make_debug_population(const ultra::problem &);
+
 namespace random
 {
 template<Individual I>

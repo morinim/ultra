@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "kernel/evolution_selection.h"
+#include "kernel/distribution.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
@@ -34,7 +35,9 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   // The test assumes independent draws.
   prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
 
-  population<gp::individual> pop(prob);
+  // Individuals have distinct ages.
+  const auto pop(make_debug_population<gp::individual>(prob));
+
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
   selection::tournament select(eva, prob.env);
@@ -53,7 +56,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     double p_not_present((pop.size() - 1) / static_cast<double>(pop.size()));
     double p_present(1.0 - std::pow(p_not_present, ts));
 
-    const unsigned n(2000);
+    const unsigned n(prob.env.population.individuals * 100);
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
     {
@@ -70,7 +73,12 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
 
       CHECK(is_sorted);
 
-      if (std::ranges::find(parents, max) != parents.end())
+      if (std::ranges::find_if(parents,
+                               [ma = max.age()](const auto &prg)
+                               {
+                                 return prg.age() == ma;
+                               })
+          != parents.end())
         ++found;
     }
     const double frequency(static_cast<double>(found) / n);
@@ -78,6 +86,54 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     CHECK(frequency > p_present - 0.1);
     CHECK(frequency < p_present + 0.1);
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "DE")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals = 100;
+  prob.env.population.layers      =   1;
+
+  // The test assumes independent draws.
+  prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
+
+  // Individuals have distinct ages.
+  const auto pop(make_debug_population<gp::individual>(prob));
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+
+  selection::de select(eva, prob.env);
+
+  auto max(std::ranges::max(pop, [eva](const auto &p1, const auto &p2)
+                                 {
+                                   return eva(p1) < eva(p2);
+                                 }));
+
+  double p_not_present((pop.size() - 1) / static_cast<double>(pop.size()));
+  double p_present(1.0 - std::pow(p_not_present, 4));
+
+  const unsigned n(prob.env.population.individuals * 100);
+  unsigned found(0);
+  for (unsigned i(0); i < n; ++i)
+  {
+    auto parents(select(pop));
+
+    CHECK(parents.size() == 4);
+
+    if (std::ranges::find_if(parents,
+                             [ma = max.age()](const auto &prg)
+                             {
+                               return prg.age() == ma;
+                             })
+        != parents.end())
+      ++found;
+  }
+
+  const double frequency(static_cast<double>(found) / n);
+
+  CHECK(frequency > p_present - 0.1);
+  CHECK(frequency < p_present + 0.1);
 }
 
 }  // TEST_SUITE("EVOLUTION SELECTION")

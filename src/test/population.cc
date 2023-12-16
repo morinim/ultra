@@ -144,7 +144,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Pickup")
+TEST_CASE_FIXTURE(fixture1, "Coord")
 {
   using namespace ultra;
 
@@ -168,6 +168,21 @@ TEST_CASE_FIXTURE(fixture1, "Pickup")
       CHECK(std::abs(p.second - expected) <= tolerance);
 
     pop.add_layer();
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Make debug population")
+{
+  using namespace ultra;
+  // Individuals have distinct ages.
+  const auto pop(make_debug_population<gp::individual>(prob));
+
+  std::vector<bool> seen(pop.size(), false);
+
+  for (const auto &prg : pop)
+  {
+    CHECK(!seen[prg.age()]);
+    seen[prg.age()] = true;
   }
 }
 
