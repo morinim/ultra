@@ -12,6 +12,7 @@
 
 #include "test/analyzer.cc"
 #include "test/de_problem.cc"
+#include "test/de_individual.cc"
 #include "test/distribution.cc"
 #include "test/evaluator.cc"
 #include "test/evolution_selection.cc"

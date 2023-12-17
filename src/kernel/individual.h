@@ -42,7 +42,7 @@ public:
   void inc_age(unsigned = 1);
 
   // Serialization.
-  [[nodiscard]] bool load(std::istream &, const symbol_set &);
+  [[nodiscard]] bool load(std::istream &, const symbol_set & = {});
   [[nodiscard]] bool save(std::ostream &) const;
 
 protected:

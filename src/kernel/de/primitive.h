@@ -40,7 +40,7 @@ public:
   /// \param[in] c an optional category
   ///
   explicit real(const interval_t<double> &i = {-1000.0, 1000.0},
-                symbol::category_t c = symbol::default_category)
+                symbol::category_t c = symbol::undefined_category)
     : terminal("REAL", c), interval_(i)
   {
     Expects(i.first < i.second);

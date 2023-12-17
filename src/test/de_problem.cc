@@ -32,9 +32,9 @@ TEST_CASE("Base")
     CHECK(p.parameters() == 0);
     p.insert(interval(-100.0, 100.0));
     CHECK(p.parameters() == 1);
-    p.insert(interval(400.0, 500.0));
+    p.insert(interval(400.0, 500.0), 0);
     CHECK(p.parameters() == 1);
-    p.insert(interval(-100.0, 100.0), 1);
+    p.insert(interval(-100.0, 100.0));
     CHECK(p.parameters() == 2);
   }
 

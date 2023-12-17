@@ -13,6 +13,7 @@
 #if !defined(ULTRA_ENVIRONMENT_H)
 #define      ULTRA_ENVIRONMENT_H
 
+#include "kernel/interval.h"
 #include "kernel/symbol.h"
 
 namespace ultra
@@ -83,6 +84,12 @@ struct environment
     /// \see https://github.com/morinim/ultra/wiki/bibliography#3
     std::size_t mate_zone {0};
 
+    /// Crossover probability.
+    ///
+    /// \note
+    /// A negative value means means undefined (auto-tune).
+    double p_cross {-1.0};
+
     /// Size of the tournament to choose the parents from.
     ///
     /// Tournament sizes tend to be small relative to the population size. The
@@ -96,7 +103,18 @@ struct environment
     std::size_t tournament_size {0};
   } evolution;
 
-  [[nodiscard]] environment &init();
+  struct de_parameters
+  {
+    /// Weighting factor range (aka differential factor range).
+    ///
+    /// It has been found recently that selecting the weight from the
+    /// interval `[0.5, 1.0]` randomly for each generation or for each
+    /// difference vector, a technique called dither, improves convergence
+    /// behaviour significantly, especially for noisy objective functions.
+    interval_t<double> weight {0.5, 1.0};
+  } de;
+
+  environment &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // environment
 

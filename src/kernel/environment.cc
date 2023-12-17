@@ -41,6 +41,7 @@ environment &environment::init()
   population.layers = 1;
 
   evolution.mate_zone = 20;
+  evolution.p_cross = 0.9;
   evolution.tournament_size = 5;
 
   return *this;
@@ -71,19 +72,25 @@ bool environment::is_valid(bool force_defined) const
 
     if (!population.layers)
     {
-      ultraERROR << "Undefined population.layers data member";
+      ultraERROR << "Undefined `population.layers` data member";
       return false;
     }
 
     if (!evolution.mate_zone)
     {
-      ultraERROR << "Undefined mate_zone data member";
+      ultraERROR << "Undefined `mate_zone` data member";
+      return false;
+    }
+
+    if (evolution.p_cross < 0.0)
+    {
+      ultraERROR << "Undefined `p_cross` data member";
       return false;
     }
 
     if (!evolution.tournament_size)
     {
-      ultraERROR << "Undefined tournament_size data member";
+      ultraERROR << "Undefined `tournament_size` data member";
       return false;
     }
 
@@ -98,12 +105,24 @@ bool environment::is_valid(bool force_defined) const
 
   }  // if (force_defined)
 
+  if (evolution.p_cross > 1.0)
+  {
+    ultraERROR << "`p_cross` out of range";
+    return false;
+  }
+
   if (population.individuals && evolution.tournament_size
       && evolution.tournament_size > population.individuals)
   {
     ultraERROR << "`tournament_size` (" << evolution.tournament_size
               << ") cannot be greater than population size ("
               << population.individuals << ")";
+    return false;
+  }
+
+  if (de.weight.first > de.weight.second)
+  {
+    ultraERROR << "Wrong DE dither interval";
     return false;
   }
 

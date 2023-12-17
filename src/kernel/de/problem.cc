@@ -28,12 +28,12 @@ namespace ultra::de
 /// *raison d'etre* of this constructor).
 ///
 problem::problem(std::size_t nparam, const interval_t<double> &interval)
-  : problem()
+  : ultra::problem()
 {
   Expects(parameters() == 0);
 
   for (symbol::category_t c(0); c < nparam; ++c)
-    insert(interval, c);
+    insert(interval);
 }
 
 ///
@@ -47,12 +47,12 @@ problem::problem(std::size_t nparam, const interval_t<double> &interval)
 /// its own range.
 ///
 problem::problem(const std::vector<interval_t<double>> &intervals)
-  : problem()
+  : ultra::problem()
 {
   Expects(parameters() == 0);
 
-  for (symbol::category_t c(0); c < intervals.size(); ++c)
-    insert(intervals[c], c);
+  for (const auto &interval : intervals)
+    insert(interval);
 }
 
 std::size_t problem::parameters() const
