@@ -24,6 +24,7 @@
 
 namespace ultra
 {
+
 [[nodiscard]] bool is_number(std::string);
 [[nodiscard]] bool iequals(const std::string &, const std::string &);
 [[nodiscard]] std::string replace(std::string, const std::string &,
@@ -48,54 +49,9 @@ template<class A> concept ArithmeticType = requires(A x, A y)
 template<class A> concept OrderedArithmeticType =
   ArithmeticType<A> && std::totally_ordered<A>;
 
-
-
-///
-/// Check if a value is almost equal to zero.
-///
-/// \tparam T type we want to check
-///
-/// \param[in] v value to check
-/// \return      `true` if `v` is less than `epsilon`-tolerance
-///
-/// \note
-/// `epsilon` is the smallest `T`-value that can be added to `1.0` without
-/// getting `1.0` back (this is a much larger value than `DBL_MIN`).
-///
-template<class T> [[nodiscard]] bool issmall(T v)
-{
-  static constexpr auto e(std::numeric_limits<T>::epsilon());
-
-  return std::abs(v) < 2.0 * e;
-}
-
-///
-/// \param[in] v value to check
-/// \return      `true` if `v` is nonnegative
-///
-template<class T>
-requires std::is_arithmetic_v<T>
-[[nodiscard]] bool isnonnegative(T v)
-{
-  return v >= static_cast<T>(0);
-}
-
-///
-/// Reduced version of `boost::lexical_cast`.
-///
-/// \tparam T type we want to cast to
-///
-/// \return the content of the input string converted in an object of type `T`
-///
-template<class T> [[nodiscard]] T lexical_cast(const std::string &);
-template<std::integral T> [[nodiscard]] T lexical_cast(const std::string &s)
-{ return std::stoi(s); }
-template<> [[nodiscard]] inline double lexical_cast(const std::string &s)
-{ return std::stod(s); }
-template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
-{ return s; }
-template<class T> [[nodiscard]] T lexical_cast(const value_t &);
-
+// *******************************************************************
+// Classes
+// *******************************************************************
 ///
 /// A RAII class to restore the state of a stream to its original state.
 ///
@@ -133,6 +89,69 @@ private:
   std::streamsize width_;
 };
 #define SAVE_FLAGS(s) ios_flag_saver save ## __LINE__(s)
+
+template <class T>
+requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>
+class revert_on_scope_exit
+{
+public:
+  explicit revert_on_scope_exit(T &src) : val_ref_(src), orig_(src) {}
+
+  ~revert_on_scope_exit() { val_ref_ = orig_; }
+
+private:
+  T &val_ref_;
+  const T orig_;
+};
+
+// *******************************************************************
+// Functions
+// *******************************************************************
+///
+/// Check if a value is almost equal to zero.
+///
+/// \tparam T type we want to check
+///
+/// \param[in] v value to check
+/// \return      `true` if `v` is less than `epsilon`-tolerance
+///
+/// \note
+/// `epsilon` is the smallest `T`-value that can be added to `1.0` without
+/// getting `1.0` back (this is a much larger value than `DBL_MIN`).
+///
+template<std::floating_point T> [[nodiscard]] bool issmall(T v)
+{
+  static constexpr auto e(std::numeric_limits<T>::epsilon());
+
+  return std::abs(v) < 2.0 * e;
+}
+
+///
+/// \param[in] v value to check
+/// \return      `true` if `v` is nonnegative
+///
+template<class T>
+requires std::is_arithmetic_v<T>
+[[nodiscard]] bool isnonnegative(T v)
+{
+  return v >= static_cast<T>(0);
+}
+
+///
+/// Reduced version of `boost::lexical_cast`.
+///
+/// \tparam T type we want to cast to
+///
+/// \return the content of the input string converted in an object of type `T`
+///
+template<class T> [[nodiscard]] T lexical_cast(const std::string &);
+template<std::integral T> [[nodiscard]] T lexical_cast(const std::string &s)
+{ return std::stoi(s); }
+template<> [[nodiscard]] inline double lexical_cast(const std::string &s)
+{ return std::stod(s); }
+template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
+{ return s; }
+template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 
 ///
 /// Find the index of a value contained in a continuous container.
@@ -264,20 +283,6 @@ template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 {
   return s << as_integer(v);
 }
-
-template <class T>
-requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>
-class revert_on_scope_exit
-{
-public:
-  explicit revert_on_scope_exit(T &src) : val_ref_(src), orig_(src) {}
-
-  ~revert_on_scope_exit() { val_ref_ = orig_; }
-
-private:
-  T &val_ref_;
-  const T orig_;
-};
 
 }  // namespace ultra
 

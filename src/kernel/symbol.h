@@ -72,27 +72,28 @@ private:
 template<class S> concept Symbol = std::derived_from<S, symbol>;
 
 ///
-/// \return a pointer to the `const T *` value stored in the symbol pointed to
+/// \return a pointer to the `const S *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr std::add_pointer_t<const S> get_if(const symbol *s)
+[[nodiscard]] constexpr auto get_if(const symbol *s)
 {
-  return dynamic_cast<std::add_pointer_t<const S>>(s);
+  return dynamic_cast<
+    const std::remove_cvref_t<std::remove_pointer_t<S>> *>(s);
 }
 
 ///
-/// \return a pointer to the `const T *` value stored in the symbol referenced
+/// \return a pointer to the `const S *` value stored in the symbol referenced
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr std::add_pointer_t<const S> get_if(const symbol &s)
+[[nodiscard]] constexpr auto get_if(const symbol &s)
 {
   return get_if<S>(&s);
 }
 
 ///
-/// \return a pointer to the `const T *` value stored in the symbol pointed to
+/// \return a pointer to the `const S *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
@@ -102,7 +103,7 @@ template<Symbol S>
 }
 
 ///
-/// \return a pointer to the `const T *` value stored in the symbol pointed to
+/// \return a pointer to the `const S *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
