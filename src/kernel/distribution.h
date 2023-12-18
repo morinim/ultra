@@ -23,25 +23,17 @@
 
 namespace ultra
 {
-template<class A> concept ArithmeticType =
-  (std::is_floating_point_v<A>
-   || std::is_floating_point_v<typename A::value_type>)
-  && requires(A x, A y)
-{
-  {x + y} -> std::convertible_to<A>;
-  {x - y} -> std::convertible_to<A>;
-  {x * y} -> std::convertible_to<A>;
-  {x / y} -> std::convertible_to<A>;
-  {x / 0.1} -> std::convertible_to<A>;
 
-  {x < y} -> std::convertible_to<bool>;
-};
+template<class A> concept ArithmeticFloatingType =
+  OrderedArithmeticType<A>
+  && (std::is_floating_point_v<A>
+      || std::is_floating_point_v<typename A::value_type>);
 
 ///
 /// Simplifies the calculation of statistics regarding a sequence (mean,
 /// variance, standard deviation, entropy, min and max).
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 class distribution
 {
 public:

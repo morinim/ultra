@@ -32,6 +32,24 @@ namespace ultra
                                       const std::string &);
 [[nodiscard]] std::string trim(const std::string &);
 
+// *******************************************************************
+// Concepts
+// *******************************************************************
+template<class A> concept ArithmeticType = requires(A x, A y)
+{
+  {x + y} -> std::convertible_to<A>;
+  {x - y} -> std::convertible_to<A>;
+  {x * y} -> std::convertible_to<A>;
+  {x / y} -> std::convertible_to<A>;
+  {-x} -> std::convertible_to<A>;
+  {x / double()} -> std::convertible_to<A>;
+};
+
+template<class A> concept OrderedArithmeticType =
+  ArithmeticType<A> && std::totally_ordered<A>;
+
+
+
 ///
 /// Check if a value is almost equal to zero.
 ///

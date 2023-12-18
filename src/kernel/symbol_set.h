@@ -120,7 +120,7 @@ public:
   void clear();
 
   symbol *insert(std::unique_ptr<symbol>, weight_t = default_weight);
-  template<is_symbol_v S, weight_t = default_weight, class ...Args>
+  template<Symbol S, weight_t = default_weight, class ...Args>
   std::add_pointer_t<S> insert(Args &&...);
 
   [[nodiscard]] symbol::category_t categories() const;
@@ -177,7 +177,7 @@ private:
 /// Only partially replaces the `insert(std::unique_ptr)` method (e.g. building
 /// from factory).
 ///
-template<is_symbol_v S, symbol_set::weight_t W, class ...Args>
+template<Symbol S, symbol_set::weight_t W, class ...Args>
 std::add_pointer_t<S> symbol_set::insert(Args &&... args)
 {
   return static_cast<std::add_pointer_t<S>>(

@@ -53,48 +53,12 @@ namespace ultra
 /// all you have to remember when dealing with examples/problems expressed
 /// in the other notation.
 ///
-/*template<class F> concept Fitness = requires(F f1, F f2)
-{
-  // --------- Raw fitness ---------
-  requires std::totally_ordered<F>;
-
-  {f1 + f2} -> std::convertible_to<F>;
-  {f1 - f2} -> std::convertible_to<F>;
-  {f1 * f2} -> std::convertible_to<F>;
-  {f1 / f2} -> std::convertible_to<F>;
-  {-f1} -> std::convertible_to<F>;
-  {f1 * double()} -> std::convertible_to<F>;
-
-  // --------- Standardized fitness ---------
-  // This also requires that `F` is a signed type.
-  requires F(-1) < F(0);
-  };*/
-
-template<class F> concept RawFitness = requires(F f1, F f2)
-{
-  requires std::totally_ordered<F>;
-
-  {f1 + f2} -> std::convertible_to<F>;
-  {f1 - f2} -> std::convertible_to<F>;
-  {f1 * f2} -> std::convertible_to<F>;
-  {f1 / f2} -> std::convertible_to<F>;
-  {-f1} -> std::convertible_to<F>;
-  {f1 * double()} -> std::convertible_to<F>;
-
-  {f1 < f2} -> std::convertible_to<bool>;
-
-  // This also requires that `F` is a signed type.
-  // requires F{-1} < F{1};
-  // Currently commented out because many compilers/libraries don't support
-  // constexpr vector constructors.
-};
-
 template<class F> concept Fitness =
-  RawFitness<F>
+  OrderedArithmeticType<F>
   && (std::ranges::sized_range<F> || (requires { requires F(-1) < F(0); }));
 
 template<class F> concept MultiDimFitness =
-Fitness<F> && std::ranges::sized_range<F>;
+  Fitness<F> && std::ranges::sized_range<F>;
 
 ///
 /// Tag representing size.

@@ -20,7 +20,7 @@
 ///
 /// Resets gathered statics.
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 void distribution<T>::clear()
 {
   *this = distribution();
@@ -29,7 +29,7 @@ void distribution<T>::clear()
 ///
 /// \return number of elements of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 std::size_t distribution<T>::size() const
 {
   return size_;
@@ -38,7 +38,7 @@ std::size_t distribution<T>::size() const
 ///
 /// \return the maximum value of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 T distribution<T>::max() const
 {
   Expects(size());
@@ -48,7 +48,7 @@ T distribution<T>::max() const
 ///
 /// \return the minimum value of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 T distribution<T>::min() const
 {
   Expects(size());
@@ -58,7 +58,7 @@ T distribution<T>::min() const
 ///
 /// \return the mean value of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 T distribution<T>::mean() const
 {
   Expects(size());
@@ -68,7 +68,7 @@ T distribution<T>::mean() const
 ///
 /// \return the variance of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 T distribution<T>::variance() const
 {
   Expects(size());
@@ -83,7 +83,7 @@ T distribution<T>::variance() const
 /// \remark
 /// Function ignores NAN values.
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 void distribution<T>::add(T val)
 {
   using std::isnan;
@@ -114,7 +114,7 @@ void distribution<T>::add(T val)
 /// * https://en.wikipedia.org/wiki/Online_algorithm
 /// * https://en.wikipedia.org/wiki/Moving_average#Cumulative_average
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 void distribution<T>::update_variance(T val)
 {
   Expects(size());
@@ -134,7 +134,7 @@ void distribution<T>::update_variance(T val)
 ///
 /// \return the standard deviation of the distribution
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 T distribution<T>::standard_deviation() const
 {
   // This way, for "regular" types we'll use std::sqrt ("taken in" by the
@@ -151,7 +151,7 @@ T distribution<T>::standard_deviation() const
 /// \param[out] out output stream
 /// \return         true on success
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 bool distribution<T>::save(std::ostream &out) const
 {
   SAVE_FLAGS(out);
@@ -176,7 +176,7 @@ bool distribution<T>::save(std::ostream &out) const
 /// \note
 /// If the load operation isn't successful the current object isn't modified.
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 bool distribution<T>::load(std::istream &in)
 {
   SAVE_FLAGS(in);
@@ -216,7 +216,7 @@ bool distribution<T>::load(std::istream &in)
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<ArithmeticType T>
+template<ArithmeticFloatingType T>
 bool distribution<T>::is_valid() const
 {
   // This way, for "regular" types we'll use std::infinite / std::isnan

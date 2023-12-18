@@ -69,46 +69,46 @@ private:
   opcode_t opcode_;
 };
 
-template<class T> concept is_symbol_v = std::derived_from<T, symbol>;
+template<class S> concept Symbol = std::derived_from<S, symbol>;
 
 ///
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<is_symbol_v T>
-[[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol *s)
+template<Symbol S>
+[[nodiscard]] constexpr std::add_pointer_t<const S> get_if(const symbol *s)
 {
-  return dynamic_cast<std::add_pointer_t<const T>>(s);
+  return dynamic_cast<std::add_pointer_t<const S>>(s);
 }
 
 ///
 /// \return a pointer to the `const T *` value stored in the symbol referenced
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<is_symbol_v T>
-[[nodiscard]] constexpr std::add_pointer_t<const T> get_if(const symbol &s)
+template<Symbol S>
+[[nodiscard]] constexpr std::add_pointer_t<const S> get_if(const symbol &s)
 {
-  return get_if<T>(&s);
+  return get_if<S>(&s);
 }
 
 ///
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<is_symbol_v T>
+template<Symbol S>
 [[nodiscard]] constexpr bool is(const symbol *s)
 {
-  return get_if<T>(s);
+  return get_if<S>(s);
 }
 
 ///
 /// \return a pointer to the `const T *` value stored in the symbol pointed to
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
-template<is_symbol_v T>
+template<Symbol S>
 [[nodiscard]] constexpr bool is(const symbol &s)
 {
-  return is<T>(&s);
+  return is<S>(&s);
 }
 
 }  // namespace ultra
