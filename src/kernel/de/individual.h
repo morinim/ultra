@@ -23,6 +23,8 @@ namespace ultra::de
 ///
 /// An individual optimized for differential evolution.
 ///
+/// \see https://github.com/morinim/ultra/wiki/bibliography#4
+///
 class individual final : public ultra::individual
 {
 public:

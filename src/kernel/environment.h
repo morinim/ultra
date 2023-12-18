@@ -111,6 +111,8 @@ struct environment
     /// interval `[0.5, 1.0]` randomly for each generation or for each
     /// difference vector, a technique called dither, improves convergence
     /// behaviour significantly, especially for noisy objective functions.
+    ///
+    /// \see https://github.com/morinim/ultra/wiki/bibliography#5
     interval_t<double> weight {0.5, 1.0};
   } de;
 
