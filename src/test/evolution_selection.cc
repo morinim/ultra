@@ -15,9 +15,11 @@
 
 #include "kernel/evolution_selection.h"
 #include "kernel/distribution.h"
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
+#include "test/fixture4.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -53,9 +55,6 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
                                      return eva(p1) < eva(p2);
                                    }));
 
-    double p_not_present((pop.size() - 1) / static_cast<double>(pop.size()));
-    double p_present(1.0 - std::pow(p_not_present, ts));
-
     const unsigned n(prob.env.population.individuals * 100);
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
@@ -70,7 +69,6 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
                                {
                                  return eva(p1) > eva(p2);
                                }));
-
       CHECK(is_sorted);
 
       if (std::ranges::find_if(parents,
@@ -81,14 +79,17 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
           != parents.end())
         ++found;
     }
-    const double frequency(static_cast<double>(found) / n);
 
+    const double frequency(static_cast<double>(found) / n);
+    const double p_not_present((pop.size() - 1)
+                               / static_cast<double>(pop.size()));
+    const double p_present(1.0 - std::pow(p_not_present, ts));
     CHECK(frequency > p_present - 0.1);
     CHECK(frequency < p_present + 0.1);
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "DE")
+TEST_CASE_FIXTURE(fixture4, "DE")
 {
   using namespace ultra;
 
@@ -98,10 +99,12 @@ TEST_CASE_FIXTURE(fixture1, "DE")
   // The test assumes independent draws.
   prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
 
-  // Individuals have distinct ages.
-  const auto pop(make_debug_population<gp::individual>(prob));
+  distribution<double> dist;
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  // Individuals have distinct ages.
+  const auto pop(make_debug_population<de::individual>(prob));
+
+  test_evaluator<de::individual> eva(test_evaluator_type::distinct);
 
   selection::de select(eva, prob.env);
 
@@ -110,15 +113,11 @@ TEST_CASE_FIXTURE(fixture1, "DE")
                                    return eva(p1) < eva(p2);
                                  }));
 
-  double p_not_present((pop.size() - 1) / static_cast<double>(pop.size()));
-  double p_present(1.0 - std::pow(p_not_present, 4));
-
   const unsigned n(prob.env.population.individuals * 100);
   unsigned found(0);
   for (unsigned i(0); i < n; ++i)
   {
     auto parents(select(pop));
-
     CHECK(parents.size() == 4);
 
     if (std::ranges::find_if(parents,
@@ -128,12 +127,22 @@ TEST_CASE_FIXTURE(fixture1, "DE")
                              })
         != parents.end())
       ++found;
+
+    for (const auto &prg : parents)
+      dist.add(prg.age());
   }
 
   const double frequency(static_cast<double>(found) / n);
-
+  const double p_not_present((pop.size() - 1)
+                             / static_cast<double>(pop.size()));
+  const double p_present(1.0 - std::pow(p_not_present, 4));
   CHECK(frequency > p_present - 0.1);
   CHECK(frequency < p_present + 0.1);
+
+  const double avg(pop.size() / 2);
+  const double delta(pop.size() / 20);
+  CHECK(avg - delta <= dist.mean());
+  CHECK(dist.mean() <= avg + delta);
 }
 
 }  // TEST_SUITE("EVOLUTION SELECTION")
