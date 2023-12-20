@@ -63,7 +63,7 @@ public:
   using tournament::strategy::strategy;
 
   template<Population P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &);
+  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
 template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
@@ -78,7 +78,7 @@ public:
   using de::strategy::strategy;
 
   template<Population P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &);
+  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
 template<Evaluator E> de(E &, const environment &) -> de<E>;

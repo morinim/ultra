@@ -48,7 +48,8 @@ strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
 ///
 template<Evaluator E>
 template<Population P>
-std::vector<typename P::value_type> tournament<E>::operator()(const P &pop)
+std::vector<typename P::value_type>
+tournament<E>::operator()(const P &pop) const
 {
   const auto rounds(this->env_.evolution.tournament_size);
   const auto mate_zone(this->env_.evolution.mate_zone);
@@ -96,7 +97,7 @@ std::vector<typename P::value_type> tournament<E>::operator()(const P &pop)
 ///
 template<Evaluator E>
 template<Population P>
-std::vector<typename P::value_type> de<E>::operator()(const P &pop)
+std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
 {
   const auto mate_zone(this->env_.evolution.mate_zone);
 
