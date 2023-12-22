@@ -35,6 +35,9 @@ test_evaluator<I>::test_evaluator(test_evaluator_type et) : et_(et)
 template<Individual I>
 double test_evaluator<I>::operator()(const I &prg) const
 {
+  if (delay_ > std::chrono::milliseconds{0})
+    std::this_thread::sleep_for(delay_);
+
   if (et_ == test_evaluator_type::fixed)
     return 0.0;
 
@@ -54,6 +57,19 @@ double test_evaluator<I>::operator()(const I &prg) const
   static random::engine_t e;
   e.seed(dist);
   return static_cast<double>(e());
+}
+
+///
+/// Add a fixed delay for every call to the evaluator.
+///
+/// \param[in] ms a delay
+///
+/// This is useful for simulating complex evaluators.
+///
+template<Individual I>
+void test_evaluator<I>::delay(std::chrono::milliseconds ms)
+{
+  delay_ = ms;
 }
 
 #endif  // include guard

@@ -56,7 +56,7 @@ public:
   enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
 
   friend individual crossover(const individual &, const individual &);
-  unsigned mutation(double, const problem &);
+  unsigned mutation(const problem &);
 
   // ---- Iterators ----
   using const_exon_iterator = internal::basic_exon_iterator<true>;

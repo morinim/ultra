@@ -15,6 +15,7 @@
 #include "test/de_individual.cc"
 #include "test/distribution.cc"
 #include "test/evaluator.cc"
+#include "test/evolution_recombination.cc"
 #include "test/evolution_selection.cc"
 #include "test/evolution_summary.cc"
 #include "test/fitness.cc"

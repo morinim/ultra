@@ -241,9 +241,11 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
 
   SUBCASE("Zero probability mutation")
   {
+    prob.env.evolution.p_mutation = 0.0;
+
     for (unsigned i(0); i < n; ++i)
     {
-      ind.mutation(0.0, prob);
+      ind.mutation(prob);
       CHECK(ind == orig);
     }
   }
@@ -252,14 +254,14 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
   {
     for (unsigned j(0); j < 10; ++j)
     {
-      const double p(random::between(0.1, 0.9));
+      prob.env.evolution.p_mutation = random::between(0.1, 0.9);
       unsigned total_length(0), total_mut(0);
 
       for (unsigned i(0); i < n; ++i)
       {
         const gp::individual i1(ind);
 
-        const auto mut(ind.mutation(p, prob));
+        const auto mut(ind.mutation(prob));
         const auto dist(distance(i1, ind));
 
         CHECK(mut >= dist);
@@ -275,8 +277,8 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
       }
 
       const double perc(100.0 * total_mut / total_length);
-      CHECK(perc > p * 100.0 - 2.0);
-      CHECK(perc < p * 100.0 + 2.0);
+      CHECK(perc > prob.env.evolution.p_mutation * 100.0 - 2.0);
+      CHECK(perc < prob.env.evolution.p_mutation * 100.0 + 2.0);
     }
   }
 }

@@ -14,10 +14,11 @@
 #define      ULTRA_EVALUATOR_H
 
 #include <functional>
-#include "kernel/random.h"
+#include <thread>
 
 #include "kernel/individual.h"
 #include "kernel/fitness.h"
+#include "kernel/random.h"
 
 namespace ultra
 {
@@ -78,11 +79,15 @@ class test_evaluator
 public:
   explicit test_evaluator(test_evaluator_type = test_evaluator_type::random);
 
+  void delay(std::chrono::milliseconds);
+
   [[nodiscard]] double operator()(const I &) const;
 
 private:
   mutable std::vector<I> buffer_ {};
   const test_evaluator_type et_;
+
+  std::chrono::milliseconds delay_ {0};
 };
 
 #include "kernel/evaluator.tcc"

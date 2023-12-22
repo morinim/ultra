@@ -40,8 +40,10 @@ environment &environment::init()
   population.individuals = 100;
   population.layers = 1;
 
+  evolution.brood_recombination = 1;
   evolution.mate_zone = 20;
   evolution.p_cross = 0.9;
+  evolution.p_mutation = 0.04;
   evolution.tournament_size = 5;
 
   return *this;
@@ -58,9 +60,33 @@ bool environment::is_valid(bool force_defined) const
 {
   if (force_defined)
   {
-    if (!slp.code_length)
+    if (!evolution.brood_recombination)
     {
-      ultraERROR << "Undefined `slp.code_length` data member";
+      ultraERROR << "Undefined `evolution.brood_recombination` data member";
+      return false;
+    }
+
+    if (!evolution.mate_zone)
+    {
+      ultraERROR << "Undefined `evolution.mate_zone` data member";
+      return false;
+    }
+
+    if (evolution.p_cross < 0.0)
+    {
+      ultraERROR << "Undefined `evolution.p_cross` data member";
+      return false;
+    }
+
+    if (evolution.p_mutation < 0.0)
+    {
+      ultraERROR << "Undefined `evolution.p_mutation` data member";
+      return false;
+    }
+
+    if (!evolution.tournament_size)
+    {
+      ultraERROR << "Undefined `evolution.tournament_size` data member";
       return false;
     }
 
@@ -76,45 +102,38 @@ bool environment::is_valid(bool force_defined) const
       return false;
     }
 
-    if (!evolution.mate_zone)
+    if (!slp.code_length)
     {
-      ultraERROR << "Undefined `mate_zone` data member";
+      ultraERROR << "Undefined `slp.code_length` data member";
       return false;
     }
-
-    if (evolution.p_cross < 0.0)
-    {
-      ultraERROR << "Undefined `p_cross` data member";
-      return false;
-    }
-
-    if (!evolution.tournament_size)
-    {
-      ultraERROR << "Undefined `tournament_size` data member";
-      return false;
-    }
-
-    if (evolution.mate_zone && evolution.tournament_size
-        && evolution.tournament_size > evolution.mate_zone)
-    {
-      ultraERROR << "`tournament_size` (" << evolution.tournament_size
-                 << ") cannot be greater than `mate_zone` ("
-                 << evolution.mate_zone << ")";
-      return false;
-    }
-
   }  // if (force_defined)
 
   if (evolution.p_cross > 1.0)
   {
-    ultraERROR << "`p_cross` out of range";
+    ultraERROR << "`evolution.p_cross` out of range";
+    return false;
+  }
+
+  if (evolution.p_mutation > 1.0)
+  {
+    ultraERROR << "`evolution.p_mutation` out of range";
+    return false;
+  }
+
+  if (evolution.mate_zone && evolution.tournament_size
+      && evolution.tournament_size > evolution.mate_zone)
+  {
+    ultraERROR << "`tournament_size` (" << evolution.tournament_size
+               << ") cannot be greater than `mate_zone` ("
+               << evolution.mate_zone << ")";
     return false;
   }
 
   if (population.individuals && evolution.tournament_size
       && evolution.tournament_size > population.individuals)
   {
-    ultraERROR << "`tournament_size` (" << evolution.tournament_size
+    ultraERROR << "`evolution.tournament_size` (" << evolution.tournament_size
               << ") cannot be greater than population size ("
               << population.individuals << ")";
     return false;

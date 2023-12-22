@@ -87,8 +87,23 @@ struct environment
     /// Crossover probability.
     ///
     /// \note
-    /// A negative value means means undefined (auto-tune).
+    /// A negative value means means auto-tune.
     double p_cross {-1.0};
+
+    /// Mutation rate probability.
+    ///
+    /// Mutation is one of the principal "search operators" used to transform
+    /// individuals in evolutionary algorithms. It causes random changes in
+    /// the genes.
+    ///
+    /// \warning
+    /// `p_cross + p_mutation != 1.0`: `p_mutation` is the probability to
+    /// mutate a gene; it's not the probability of choosing the mutation
+    /// operator (which depends depends on the recombination algorithm).
+    ///
+    /// \note
+    /// A negative value means auto-tune.
+    double p_mutation {-1.0};
 
     /// Size of the tournament to choose the parents from.
     ///
@@ -101,6 +116,29 @@ struct environment
     ///   at random.
     /// - A length of `0` means auto-tune.
     std::size_t tournament_size {0};
+
+    /// This parameter controls the brood recombination/selection level (`1` to
+    /// turn it off).
+    ///
+    /// In nature it's common for organisms to produce many offspring and then
+    /// neglect, abort, resorb, eat some of them or allow them to eat each
+    /// other. There are various reasons for this behavior (e.g. progeny choice
+    /// hypothesis). The phenomenon is known variously as soft selection, brood
+    /// selection, spontaneous abortion. The "bottom line" of this behaviour in
+    /// nature is the reduction of parental resource investment in offspring who
+    /// are potentially less fit than others.
+    ///
+    /// \see
+    /// - https://github.com/morinim/vita/wiki/bibliography#6
+    /// - https://github.com/morinim/vita/wiki/bibliography#7
+    /// - https://github.com/morinim/vita/wiki/bibliography#8
+    ///
+    /// \note
+    /// - `0` means auto-tune;
+    //  - `1` is the standard recombination (perform `1` crossover);
+    //  - larger values enable the brood recombination method (more than one
+    //    crossover).
+    unsigned brood_recombination {0};
   } evolution;
 
   struct de_parameters

@@ -475,12 +475,12 @@ individual crossover(const individual &lhs, const individual &rhs)
 ///
 /// A new individual is created mutating `this`.
 ///
-/// \param[in] pgm probability of gene mutation
 /// \param[in] prb the current problem
 /// \return        number of mutations performed
 ///
-unsigned individual::mutation(double pgm, const problem &prb)
+unsigned individual::mutation(const problem &prb)
 {
+  const double pgm(prb.env.evolution.p_mutation);
   Expects(0.0 <= pgm && pgm <= 1.0);
 
   unsigned n(0);
