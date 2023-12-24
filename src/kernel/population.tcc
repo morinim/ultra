@@ -87,6 +87,24 @@ std::size_t population<I>::layer_t::size() const
 }
 
 ///
+/// \return reference max age for current layer
+///
+template<Individual I>
+unsigned population<I>::layer_t::max_age() const
+{
+  return max_age_;
+}
+
+///
+/// \param[in] m set the reference max age for the current layer
+///
+template<Individual I>
+void population<I>::layer_t::max_age(unsigned m)
+{
+  max_age_ = m;
+}
+
+///
 /// \return number of individuals allowed in this layer
 ///
 /// \note
@@ -96,6 +114,16 @@ template<Individual I>
 std::size_t population<I>::layer_t::allowed() const
 {
   return allowed_;
+}
+
+///
+/// \param[in] n number of individuals allowed in this layer
+///
+template<Individual I>
+void population<I>::layer_t::allowed(std::size_t n)
+{
+  members_.reserve(n);
+  allowed_ = n;
 }
 
 ///
@@ -118,16 +146,6 @@ template<Individual I>
 void population<I>::layer_t::clear()
 {
   members_.clear();
-}
-
-///
-/// \param[in] n number of individuals allowed in this layer
-///
-template<Individual I>
-void population<I>::layer_t::allowed(std::size_t n)
-{
-  members_.reserve(n);
-  allowed_ = n;
 }
 
 ///

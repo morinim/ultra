@@ -133,6 +133,9 @@ public:
   [[nodiscard]] std::size_t allowed() const;
   void allowed(std::size_t);
 
+  [[nodiscard]] unsigned max_age() const;
+  void max_age(unsigned);
+
   void push_back(const I &);
   void pop_back();
 
@@ -143,6 +146,8 @@ public:
 private:
   std::vector<I> members_ {};
   std::size_t allowed_ {0};
+
+  unsigned max_age_ {std::numeric_limits<unsigned>::max()};
 };
 
 namespace random

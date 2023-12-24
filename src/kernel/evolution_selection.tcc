@@ -91,6 +91,72 @@ tournament<E>::operator()(const P &pop) const
 
 ///
 /// \param[in] pop a population
+/// \return        a collection of chosen individuals
+///
+/// Parameters from the environment:
+/// - `tournament_size` to control number of selected individuals.
+///
+template<Evaluator E>
+template<Population P>
+std::vector<typename P::value_type>
+alps<E>::operator()(const P &pop) const
+{
+  Expects(this->env_.evolution.tournament_size);
+
+  const auto young([&pop](const auto &prg)
+                   { return prg.age() <= pop.max_age(); });
+
+  // Extends the basic fitness with the age and takes advantage of the
+  // lexicographic comparison capabilities of `std::pair`.
+  const auto alps_fit([&](const auto &prg)
+                      { return std::pair(young(prg), this->eva_(prg)); });
+
+  auto c0(random::coord(pop));
+  auto c1(random::coord(pop));
+
+  auto fit0{alps_fit(pop[c0])};
+  auto fit1{alps_fit(pop[c1])};
+
+  if (fit0 < fit1)
+  {
+    std::swap(c0, c1);
+    std::swap(fit0, fit1);
+  }
+
+  assert(fit0 >= fit1);
+
+  for (auto rounds(this->env_.evolution.tournament_size - 1); rounds; --rounds)
+  {
+    const auto tmp(random::coord(pop));
+    const auto tmp_fit{alps_fit(pop[tmp])};
+
+    if (fit0 < tmp_fit)
+    {
+      c1 = c0;
+      fit1 = fit0;
+
+      c0 = tmp;
+      fit0 = tmp_fit;
+    }
+    else if (fit1 < tmp_fit)
+    {
+      c1 = tmp;
+      fit1 = tmp_fit;
+    }
+
+    assert(fit0.first == young(pop[c0]));
+    assert(fit1.first == young(pop[c1]));
+    assert(almost_equal(fit0.second, this->eva_(pop[c0])));
+    assert(almost_equal(fit1.second, this->eva_(pop[c1])));
+    assert(fit0 >= fit1);
+    assert(young(pop[c0]) || !young(pop[c1]));
+  }
+
+  return {pop[c0], pop[c1]};
+}
+
+///
+/// \param[in] pop a population
 /// \return        a collection of four individuals suited for DE recombination
 ///
 /// Parameters from the environment: `mate_zone`.

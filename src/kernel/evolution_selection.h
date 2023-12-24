@@ -69,6 +69,21 @@ public:
 template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
 
 ///
+/// Alps selection as described in <https://github.com/ghornby/alps>.
+///
+template<Evaluator E>
+class alps : public strategy<E>
+{
+public:
+  using alps::strategy::strategy;
+
+  template<Population P>
+  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
+};
+
+template<Evaluator E> alps(E &, const environment &) -> alps<E>;
+
+///
 /// Pick a set of four individuals suited for DE recombination.
 ///
 template<Evaluator E>

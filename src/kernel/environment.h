@@ -13,6 +13,7 @@
 #if !defined(ULTRA_ENVIRONMENT_H)
 #define      ULTRA_ENVIRONMENT_H
 
+#include "kernel/alps.h"
 #include "kernel/interval.h"
 #include "kernel/symbol.h"
 
@@ -56,10 +57,11 @@ struct environment
     /// Number of layers the population is structured on.
     ///
     /// \warning
-    /// When the evolution strategy is `basic_std_es`, setting `layers > 1` is
-    /// like running multiple populations autonomously (there isn't any
-    /// interaction among layers). A value greater than one is usually choosen
-    /// for `basic_alps_es` or with other strategies that allow migrants.
+    /// Setting `layers > 1` with the standard evolution strategy is like
+    /// running multiple populations autonomously (there isn't any direct
+    /// interaction among layers. Fitness values could be shared via cache).
+    /// A value greater than one is required for for ALPS or other strategies
+    /// that allow migrants.
     ///
     /// \note
     /// `0` means undefined (auto-tune).
@@ -140,6 +142,8 @@ struct environment
     //    crossover).
     unsigned brood_recombination {0};
   } evolution;
+
+  alps::parameters alps;
 
   struct de_parameters
   {

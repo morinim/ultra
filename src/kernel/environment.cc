@@ -60,6 +60,12 @@ bool environment::is_valid(bool force_defined) const
 {
   if (force_defined)
   {
+    if (!alps.age_gap)
+    {
+      ultraERROR << "Undefined `age_gap` parameter";
+      return false;
+    }
+
     if (!evolution.brood_recombination)
     {
       ultraERROR << "Undefined `evolution.brood_recombination` data member";

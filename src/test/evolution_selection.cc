@@ -89,6 +89,92 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "ALPS")
+{
+  using namespace ultra;
+
+  const auto alps_select =
+    [this](unsigned tournament)
+    {
+      prob.env.population.individuals    =        100;
+      prob.env.population.layers         =          1;
+      prob.env.evolution.tournament_size = tournament;
+
+      population<gp::individual> pop(prob);
+      test_evaluator<gp::individual>   eva;
+
+      unsigned j(0);
+      pop.layer(0).max_age(0);
+      for (auto &prg : pop.layer(0))
+        prg.inc_age(j++ % 2);
+
+      unsigned both_young(0), both_aged(0);
+      const unsigned n(2000);
+      for (unsigned i(0); i < n; ++i)
+      {
+        selection::alps select(eva, prob.env);
+
+        const auto parents(select(pop.layer(0)));
+        CHECK(parents.size() == 2);
+
+        if (parents[0].age() > pop.layer(0).max_age())
+          ++both_aged;
+        else if (parents[1].age() <= pop.layer(0).max_age())
+          ++both_young;
+      }
+
+      return std::pair(both_aged / double(n), both_young / double(n));
+    };
+
+  const double prob_single_aged(0.5);
+  const double prob_single_young(1.0 - prob_single_aged);
+  const double tolerance(0.05);
+
+  SUBCASE("Tournament 1")
+  {
+    const auto res(alps_select(1));
+
+    const double both_aged(prob_single_aged * prob_single_aged);
+    CHECK(both_aged - tolerance <= res.first);
+    CHECK(res.first <= both_aged + tolerance);
+
+    const double both_young(prob_single_young * prob_single_young);
+    CHECK(both_young - tolerance <= res.second);
+    CHECK(res.second <= both_young + tolerance);
+  }
+
+  SUBCASE("Tournament 2")
+  {
+    const auto res(alps_select(2));
+
+    const double both_aged(std::pow(prob_single_aged, 3));
+    CHECK(both_aged - tolerance <= res.first);
+    CHECK(res.first <= both_aged + tolerance);
+
+    const double both_young(
+      prob_single_young * prob_single_young * prob_single_aged * 3
+      + std::pow(prob_single_young, 3));
+    CHECK(both_young - tolerance <= res.second);
+    CHECK(res.second <= both_young + tolerance);
+  }
+
+  SUBCASE("Tournament 3")
+  {
+    const auto res(alps_select(3));
+
+    const double both_aged(std::pow(prob_single_aged, 4.0));
+    CHECK(both_aged - tolerance <= res.first);
+    CHECK(res.first <= both_aged + tolerance);
+
+    const double both_young(
+      std::pow(prob_single_young, 2) * std::pow(prob_single_aged, 2) * 6
+      + std::pow(prob_single_young, 3) * prob_single_aged * 4
+      + std::pow(prob_single_young, 4));
+    CHECK(both_young - tolerance <= res.second);
+    CHECK(res.second <= both_young + tolerance);
+  }
+}
+
 TEST_CASE_FIXTURE(fixture4, "DE")
 {
   using namespace ultra;
