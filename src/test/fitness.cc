@@ -124,8 +124,8 @@ TEST_CASE("Operators")
   x = abs(x);
   CHECK(f1 == x);
 
-  CHECK(isfinite(x));
-  CHECK(!isfinite(inf));
+  CHECK(ultra::isfinite(x));
+  CHECK(!ultra::isfinite(inf));
 }
 
 TEST_CASE("Joining")

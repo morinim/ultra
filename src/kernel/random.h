@@ -14,6 +14,7 @@
 #define      ULTRA_RANDOM_H
 
 #include <cstdlib>
+#include <numeric>
 #include <random>
 
 #include "kernel/interval.h"

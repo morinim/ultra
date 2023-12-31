@@ -55,7 +55,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
                                      return eva(p1) < eva(p2);
                                    }));
 
-    const unsigned n(prob.env.population.individuals * 100);
+    const auto n(prob.env.population.individuals * 100);
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
     {

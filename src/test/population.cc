@@ -140,7 +140,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     CHECK(pop1.layers() == pop2.layers());
     CHECK(pop1.size() == pop2.size());
     for (std::size_t l(0); l < pop1.layers(); ++l)
-      std::ranges::equal(pop1.layer(l), pop2.layer(l));
+      CHECK(std::ranges::equal(pop1.layer(l), pop2.layer(l)));
   }
 }
 
