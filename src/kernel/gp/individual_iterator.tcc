@@ -82,8 +82,12 @@ public:
   {
     Ensures(!ind_ || !rhs.ind_ || ind_ == rhs.ind_);
 
-    return (loci_.empty() && rhs.loci_.empty())
-           || loci_.cbegin() == rhs.loci_.cbegin();
+    return loci_.empty() == rhs.loci_.empty()
+           && (loci_.empty() || locus() == rhs.locus());
+
+    // Cannot use the expression
+    //     loci_.cbegin() == rhs.loci_.cbegin()
+    // since comparison of iterators from different containers are illegal.
   }
 
   /// \return reference to the current locus of the individual

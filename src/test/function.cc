@@ -214,10 +214,10 @@ TEST_CASE("REAL")
   {
     real::lt f(0, {1, 1});
 
-    CHECK(std::get<D_INT>(f.eval(debug_params({0.0, 1.0}))) == true);
-    CHECK(std::get<D_INT>(f.eval(debug_params({1.0, 0.0}))) == false);
-    CHECK(std::get<D_INT>(f.eval(debug_params({-inf, +inf}))) == true);
-    CHECK(std::get<D_INT>(f.eval(debug_params({10.0, inf}))) == true);
+    CHECK(std::get<D_INT>(f.eval(debug_params({0.0, 1.0}))) != 0);
+    CHECK(std::get<D_INT>(f.eval(debug_params({1.0, 0.0}))) == 0);
+    CHECK(std::get<D_INT>(f.eval(debug_params({-inf, +inf}))) != 0);
+    CHECK(std::get<D_INT>(f.eval(debug_params({10.0, inf}))) != 0);
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
     CHECK(!has_value(f.eval(debug_params({inf, {}}))));
