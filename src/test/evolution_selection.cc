@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -96,34 +96,56 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   const auto alps_select =
     [this](unsigned tournament)
     {
-      prob.env.population.individuals    =        100;
-      prob.env.population.layers         =          1;
+      prob.env.population.individuals    =         50;
+      prob.env.population.layers         =          2;
       prob.env.evolution.tournament_size = tournament;
 
       population<gp::individual> pop(prob);
-      test_evaluator<gp::individual>   eva;
+      test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
       unsigned j(0);
-      pop.layer(0).max_age(0);
-      for (auto &prg : pop.layer(0))
-        prg.inc_age(j++ % 2);
+      for (std::size_t l(0); l < prob.env.population.layers; ++l)
+      {
+        pop.layer(l).max_age(0);
+
+        for (auto &prg : pop.layer(l))
+        {
+          prg.inc_age(j++ % 2);
+          [[maybe_unused]] auto fit(eva(prg));
+        }
+      }
 
       unsigned both_young(0), both_aged(0);
+      std::vector from_layer(prob.env.population.layers, 0u);
+
       const unsigned n(2000);
       for (unsigned i(0); i < n; ++i)
       {
         selection::alps select(eva, prob.env);
 
-        const auto parents(select(pop.layer(0)));
+        const auto parents(select(std::vector{std::cref(pop.layer(0)),
+                                              std::cref(pop.layer(1))}));
         CHECK(parents.size() == 2);
 
-        if (parents[0].age() > pop.layer(0).max_age())
+        const auto get_layer([&](const gp::individual &prg)
+        {
+          return eva(prg) < prob.env.population.individuals ? 0 : 1;
+        });
+
+        const auto l0(get_layer(parents[0]));
+        const auto l1(get_layer(parents[1]));
+
+        if (parents[0].age() > pop.layer(l0).max_age())
           ++both_aged;
-        else if (parents[1].age() <= pop.layer(0).max_age())
+        else if (parents[1].age() <= pop.layer(l1).max_age())
           ++both_young;
+
+        ++from_layer[l0];
+        ++from_layer[l1];
       }
 
-      return std::pair(both_aged / double(n), both_young / double(n));
+      return std::vector{both_aged / double(n), both_young / double(n),
+                         from_layer[0] / double(2 * n)};
     };
 
   const double prob_single_aged(0.5);
@@ -132,46 +154,55 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 
   SUBCASE("Tournament 1")
   {
+    prob.env.alps.p_main_layer = 0.75;
     const auto res(alps_select(1));
 
     const double both_aged(prob_single_aged * prob_single_aged);
-    CHECK(both_aged - tolerance <= res.first);
-    CHECK(res.first <= both_aged + tolerance);
+    CHECK(both_aged - tolerance <= res[0]);
+    CHECK(res[0] <= both_aged + tolerance);
 
     const double both_young(prob_single_young * prob_single_young);
-    CHECK(both_young - tolerance <= res.second);
-    CHECK(res.second <= both_young + tolerance);
+    CHECK(both_young - tolerance <= res[1]);
+    CHECK(res[1] <= both_young + tolerance);
+
+    CHECK(res[2] == doctest::Approx(1.0));
   }
 
   SUBCASE("Tournament 2")
   {
+    prob.env.alps.p_main_layer = 1.0;
     const auto res(alps_select(2));
 
     const double both_aged(std::pow(prob_single_aged, 3));
-    CHECK(both_aged - tolerance <= res.first);
-    CHECK(res.first <= both_aged + tolerance);
+    CHECK(both_aged - tolerance <= res[0]);
+    CHECK(res[0] <= both_aged + tolerance);
 
     const double both_young(
       prob_single_young * prob_single_young * prob_single_aged * 3
       + std::pow(prob_single_young, 3));
-    CHECK(both_young - tolerance <= res.second);
-    CHECK(res.second <= both_young + tolerance);
+    CHECK(both_young - tolerance <= res[1]);
+    CHECK(res[1] <= both_young + tolerance);
+
+    CHECK(res[2] == doctest::Approx(1.0));
   }
 
   SUBCASE("Tournament 3")
   {
+    prob.env.alps.p_main_layer = 0.5;
     const auto res(alps_select(3));
 
     const double both_aged(std::pow(prob_single_aged, 4.0));
-    CHECK(both_aged - tolerance <= res.first);
-    CHECK(res.first <= both_aged + tolerance);
+    CHECK(both_aged - tolerance <= res[0]);
+    CHECK(res[0] <= both_aged + tolerance);
 
     const double both_young(
       std::pow(prob_single_young, 2) * std::pow(prob_single_aged, 2) * 6
       + std::pow(prob_single_young, 3) * prob_single_aged * 4
       + std::pow(prob_single_young, 4));
-    CHECK(both_young - tolerance <= res.second);
-    CHECK(res.second <= both_young + tolerance);
+    CHECK(both_young - tolerance <= res[1]);
+    CHECK(res[1] <= both_young + tolerance);
+
+    CHECK(res[2] > prob.env.alps.p_main_layer);
   }
 }
 
@@ -203,7 +234,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   unsigned found(0);
   for (unsigned i(0); i < n; ++i)
   {
-    auto parents(select(pop));
+    auto parents(select(pop.layer(0)));
     CHECK(parents.size() == 4);
 
     if (std::ranges::find_if(parents,

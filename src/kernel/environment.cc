@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -63,6 +63,12 @@ bool environment::is_valid(bool force_defined) const
     if (!alps.age_gap)
     {
       ultraERROR << "Undefined `age_gap` parameter";
+      return false;
+    }
+
+    if (alps.p_main_layer < 0.0)
+    {
+      ultraERROR << "Undefined `p_main_layer` parameter";
       return false;
     }
 
@@ -148,6 +154,12 @@ bool environment::is_valid(bool force_defined) const
   if (de.weight.first > de.weight.second)
   {
     ultraERROR << "Wrong DE dither interval";
+    return false;
+  }
+
+  if (alps.p_main_layer > 1.0)
+  {
+    ultraERROR << "`p_main_layer` out of range";
     return false;
   }
 

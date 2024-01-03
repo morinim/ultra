@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -93,6 +93,12 @@ template<Individual I>
 unsigned population<I>::layer_t::max_age() const
 {
   return max_age_;
+}
+
+template<Individual I>
+std::shared_mutex &population<I>::layer_t::mutex() const
+{
+  return *pmutex_;
 }
 
 ///
@@ -419,11 +425,13 @@ typename population<I>::coord coord(const population<I> &p,
 }
 
 ///
-/// \return the index of a random individual of the population
+/// \param[in] p a population
+/// \return      a random individual of the population
 ///
-template<Population P>
-typename P::value_type element(const P &p)
+template<PopulationWithMutex P>
+typename P::value_type individual(const P &p)
 {
+  std::shared_lock lock(p.mutex());
   return p[random::coord(p)];
 }
 

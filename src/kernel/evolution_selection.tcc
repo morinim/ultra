@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -90,69 +90,73 @@ tournament<E>::operator()(const P &pop) const
 }
 
 ///
-/// \param[in] pop a population
+/// \param[in] pop a collection of populations. ALPS uses the subpopulations
+///                (the first element is the primary population)
 /// \return        a collection of chosen individuals
 ///
 /// Parameters from the environment:
 /// - `tournament_size` to control number of selected individuals.
+/// - `p_main_layer`
 ///
 template<Evaluator E>
-template<Population P>
+template<PopulationWithMutex P>
 std::vector<typename P::value_type>
-alps<E>::operator()(const P &pop) const
+alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pop) const
 {
   Expects(this->env_.evolution.tournament_size);
+  Expects(pop.size() && pop.size() <= 2);
 
-  const auto young([&pop](const auto &prg)
-                   { return prg.age() <= pop.max_age(); });
+  const auto young([](const auto &sub_pop, const auto &prg)
+                   { return prg.age() <= sub_pop.max_age(); });
 
   // Extends the basic fitness with the age and takes advantage of the
   // lexicographic comparison capabilities of `std::pair`.
-  const auto alps_fit([&](const auto &prg)
-                      { return std::pair(young(prg), this->eva_(prg)); });
+  const auto alps_fit([&](const auto &sp, const auto &prg)
+                      { return std::pair(young(sp, prg), this->eva_(prg)); });
 
-  auto c0(random::coord(pop));
-  auto c1(random::coord(pop));
+  auto p0(random::individual(pop.front().get()));
+  auto fit0{alps_fit(pop.front().get(), p0)};
 
-  auto fit0{alps_fit(pop[c0])};
-  auto fit1{alps_fit(pop[c1])};
+  auto p1(random::individual(pop.front().get()));
+  auto fit1{alps_fit(pop.front().get(), p1)};
 
   if (fit0 < fit1)
   {
-    std::swap(c0, c1);
+    std::swap(p0, p1);
     std::swap(fit0, fit1);
   }
 
   assert(fit0 >= fit1);
 
+  const auto p(1.0 - this->env_.alps.p_main_layer);
+
   for (auto rounds(this->env_.evolution.tournament_size - 1); rounds; --rounds)
   {
-    const auto tmp(random::coord(pop));
-    const auto tmp_fit{alps_fit(pop[tmp])};
+    const auto &sub_pop(pop[pop.size() > 1 ? random::boolean(p) : 0].get());
+    const auto tmp(random::individual(sub_pop));
+    const auto tmp_fit{alps_fit(sub_pop, tmp)};
 
     if (fit0 < tmp_fit)
     {
-      c1 = c0;
+      p1 = p0;
       fit1 = fit0;
 
-      c0 = tmp;
+      p0 = tmp;
       fit0 = tmp_fit;
     }
     else if (fit1 < tmp_fit)
     {
-      c1 = tmp;
+      p1 = tmp;
       fit1 = tmp_fit;
     }
 
-    assert(fit0.first == young(pop[c0]));
-    assert(fit1.first == young(pop[c1]));
-    assert(almost_equal(fit0.second, this->eva_(pop[c0])));
-    assert(almost_equal(fit1.second, this->eva_(pop[c1])));
+    assert(almost_equal(fit0.second, this->eva_(p0)));
+    assert(almost_equal(fit1.second, this->eva_(p1)));
     assert(fit0 >= fit1);
-    assert(young(pop[c0]) || !young(pop[c1]));
+    assert(fit0.first || !fit1.first);
   }
 
-  return {pop[c0], pop[c1]};
+  return {p0, p1};
 }
 
 ///
@@ -167,15 +171,15 @@ std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
 {
   const auto mate_zone(this->env_.evolution.mate_zone);
 
-  const auto p1(random::coord(pop));
-  const auto p2(random::coord(pop));
+  const auto c1(random::coord(pop));
+  const auto c2(random::coord(pop));
 
-  auto a(random::coord(pop, p1, mate_zone));
+  auto a(random::coord(pop, c1, mate_zone));
 
   decltype(a) b;
-  do b = random::coord(pop, p1, mate_zone); while (a == b);
+  do b = random::coord(pop, c1, mate_zone); while (a == b);
 
-  return {pop[p1], pop[p2], pop[a], pop[b]};
+  return {pop[c1], pop[c2], pop[a], pop[b]};
 }
 
 #endif  // include guard

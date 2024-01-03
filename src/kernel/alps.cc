@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -18,11 +18,13 @@ namespace ultra::alps
 {
 
 ///
-/// \param[in] l a     layer index
-/// \param[in] age_gap see `age_gap` ALPS parameter
-/// \return            the maximum allowed age for an individual in layer `l`
+/// \param[in] l layer index
+/// \return      the maximum allowed age for an individual in layer `l`
 ///
-unsigned max_age(std::size_t l, unsigned age_gap)
+/// Parameters from the environment:
+/// - `age_gap`
+///
+unsigned parameters::max_age(std::size_t l) const
 {
   // A polynomial aging scheme.
   switch (l)

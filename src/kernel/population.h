@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <shared_mutex>
 
 #include "kernel/environment.h"
 #include "kernel/individual.h"
@@ -35,6 +36,12 @@ concept Population = requires(const P &p)
 
   typename P::coord;
   p[typename P::coord()];
+};
+
+template<class P>
+concept PopulationWithMutex = Population<P> && requires(const P &p)
+{
+  p.mutex();
 };
 
 ///
@@ -108,8 +115,8 @@ template<Individual I>
 [[nodiscard]] typename population<I>::coord coord(
   const population<I> &, typename population<I>::coord, std::size_t);
 
-template<class P>
-[[nodiscard]] typename P::value_type element(const P &);
+template<PopulationWithMutex P>
+[[nodiscard]] typename P::value_type individual(const P &);
 }
 
 template<Individual I>
@@ -143,7 +150,12 @@ public:
   [[nodiscard]] iterator begin();
   [[nodiscard]] const_iterator end() const;
 
+  [[nodiscard]] std::shared_mutex &mutex() const;
+
 private:
+  mutable std::shared_ptr<std::shared_mutex> pmutex_
+  {std::make_shared<std::shared_mutex>()};
+
   std::vector<I> members_ {};
   std::size_t allowed_ {0};
 

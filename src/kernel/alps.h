@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of VITA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -28,7 +28,7 @@ namespace ultra::alps
 struct parameters
 {
   [[nodiscard]] unsigned allowed_age(unsigned, unsigned) const;
-  [[nodiscard]] unsigned max_age(unsigned) const;
+  [[nodiscard]] unsigned max_age(std::size_t) const;
 
   template<class T> [[nodiscard]] bool aged(const T &,
                                             unsigned, unsigned) const;
@@ -48,9 +48,13 @@ struct parameters
   ///
   /// \note A value of 0 means undefined (auto-tune).
   unsigned age_gap {20};
-};
 
-[[nodiscard]] unsigned max_age(std::size_t, unsigned);
+  /// The probability that a parent will be extracted from the main layer.
+  ///
+  /// \note
+  /// A negative value means auto-tune.
+  double p_main_layer {0.75};
+};
 
 }  // namespace vita::alps
 

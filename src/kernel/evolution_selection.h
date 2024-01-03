@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -77,8 +77,9 @@ class alps : public strategy<E>
 public:
   using alps::strategy::strategy;
 
-  template<Population P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
+  template<PopulationWithMutex P>
+  [[nodiscard]] std::vector<typename P::value_type> operator()(
+    std::vector<std::reference_wrapper<const P>>) const;
 };
 
 template<Evaluator E> alps(E &, const environment &) -> alps<E>;
