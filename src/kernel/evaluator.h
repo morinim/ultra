@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,39 +20,10 @@
 #include "kernel/fitness.h"
 #include "kernel/random.h"
 
+#include "utility/misc.h"
+
 namespace ultra
 {
-
-template<class> struct closure_arg;
-
-template<class F>  // overloaded operator () (e.g. std::function)
-struct closure_arg
-  : closure_arg<decltype(&std::remove_reference_t<F>::operator())>
-{
-};
-
-template<class R, class Arg>  // free functions
-struct closure_arg<R(Arg)>
-{
-  using type = Arg;
-};
-
-template<class R, class Arg>  // function pointers
-struct closure_arg<R(*)(Arg)> : closure_arg<R(Arg)>
-{
-};
-
-template<class R, class C, class Arg>  // member functions
-struct closure_arg<R(C::*)(Arg)> : closure_arg<R(Arg)>
-{
-};
-
-template<class R, class C, class Arg>  // const member functions (and lambdas)
-struct closure_arg<R(C::*)(Arg) const> : closure_arg<R(C::*)(Arg)>
-{
-};
-
-template<class F> using closure_arg_t = typename closure_arg<F>::type;
 
 template<class F,
          class C = std::remove_cvref_t<F>,
