@@ -206,6 +206,43 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals    = 30;
+  prob.env.population.layers         =  3;
+  prob.env.evolution.tournament_size = 10;
+  prob.env.alps.p_main_layer         = .5;
+
+  population<gp::individual> pop(prob);
+
+  const auto search([&](auto pops)
+  {
+    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+
+    for (unsigned i(0); i < 1000; ++i)
+    {
+      selection::alps select(eva, prob.env);
+
+      const auto parents(select(pops));
+
+      for (const auto &p : parents)
+        CHECK(p.is_valid());
+    }
+  });
+
+  std::vector<std::jthread> threads;
+  threads.emplace_back(std::jthread(search,
+                                    std::vector{std::cref(pop.layer(0))}));
+
+  for (std::size_t l(1); l < prob.env.population.layers; ++l)
+    threads.emplace_back(std::jthread(search,
+                                      std::vector{
+                                        std::cref(pop.layer(l - 1)),
+                                        std::cref(pop.layer(l))}));
+}
+
 TEST_CASE_FIXTURE(fixture4, "DE")
 {
   using namespace ultra;
