@@ -104,42 +104,58 @@ private:
   const T orig_;
 };
 
+namespace internal
+{
+
+template<class> struct closure_info;
+
+template<class F>  // overloaded operator () (e.g. std::function)
+struct closure_info
+  : closure_info<decltype(&std::remove_reference_t<F>::operator())>
+{
+};
+
+template<class R, class Arg>  // free functions
+struct closure_info<R(Arg)>
+{
+  using arg_type = Arg;
+  using return_type = R;
+};
+
+template<class R, class Arg>  // function pointers
+struct closure_info<R(*)(Arg)> : closure_info<R(Arg)>
+{
+};
+
+template<class R, class C, class Arg>  // member functions
+struct closure_info<R(C::*)(Arg)> : closure_info<R(Arg)>
+{
+};
+
+template<class R, class C, class Arg>  // const member functions (and lambdas)
+struct closure_info<R(C::*)(Arg) const> : closure_info<R(C::*)(Arg)>
+{
+};
+
+}  // namespace internal
+
 ///
 /// Extracts the parameter type of a single-parameter callable object.
 ///
 /// This is mainly used to extract the type of individual from a evaluator
 /// function.
 ///
-template<class> struct closure_arg;
+template<class F> using closure_arg_t =
+  std::remove_cvref_t<typename internal::closure_info<std::remove_cvref_t<F>>::arg_type>;
 
-template<class F>  // overloaded operator () (e.g. std::function)
-struct closure_arg
-  : closure_arg<decltype(&std::remove_reference_t<F>::operator())>
-{
-};
-
-template<class R, class Arg>  // free functions
-struct closure_arg<R(Arg)>
-{
-  using type = Arg;
-};
-
-template<class R, class Arg>  // function pointers
-struct closure_arg<R(*)(Arg)> : closure_arg<R(Arg)>
-{
-};
-
-template<class R, class C, class Arg>  // member functions
-struct closure_arg<R(C::*)(Arg)> : closure_arg<R(Arg)>
-{
-};
-
-template<class R, class C, class Arg>  // const member functions (and lambdas)
-struct closure_arg<R(C::*)(Arg) const> : closure_arg<R(C::*)(Arg)>
-{
-};
-
-template<class F> using closure_arg_t = typename closure_arg<F>::type;
+///
+/// Extracts the return type of a single-parameter callable object.
+///
+/// This is mainly used to extract the type of fitness from a evaluator
+/// function.
+///
+template<class F> using closure_return_t =
+  std::remove_cvref_t<typename internal::closure_info<std::remove_cvref_t<F>>::return_type>;
 
 // *******************************************************************
 // Functions

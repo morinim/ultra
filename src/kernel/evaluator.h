@@ -26,8 +26,7 @@ namespace ultra
 {
 
 template<class F,
-         class C = std::remove_cvref_t<F>,
-         class I = std::remove_cvref_t<closure_arg_t<C>>>
+         class I = closure_arg_t<F>>
 concept Evaluator =
   Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
 
