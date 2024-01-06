@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -25,13 +25,15 @@ namespace ultra
 /// A summary of evolution (results, statistics...).
 ///
 template<Individual I, Fitness F>
-struct summary
+class summary
 {
 public:
   // --- Constructor and support functions ---
   summary() = default;
 
   void clear();
+
+  void update_best(const I &, const F &);
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);

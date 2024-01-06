@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,6 +16,7 @@
 #include "test/distribution.cc"
 #include "test/evaluator.cc"
 #include "test/evolution_recombination.cc"
+#include "test/evolution_replacement.cc"
 #include "test/evolution_selection.cc"
 #include "test/evolution_summary.cc"
 #include "test/fitness.cc"

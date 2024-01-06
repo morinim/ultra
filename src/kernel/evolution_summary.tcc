@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -24,6 +24,14 @@ template<Individual I, Fitness F>
 void summary<I, F>::clear()
 {
   *this = summary<I, F>();
+}
+
+template<Individual I, Fitness F>
+void summary<I, F>::update_best(const I &prg, const F &fit)
+{
+  last_imp = gen;
+  best.solution = prg;
+  best.score.fitness = fit;
 }
 
 ///

@@ -51,8 +51,8 @@ template<Population P>
 std::vector<typename P::value_type>
 tournament<E>::operator()(const P &pop) const
 {
-  const auto rounds(this->env_.evolution.tournament_size);
   const auto mate_zone(this->env_.evolution.mate_zone);
+  const auto rounds(this->env_.evolution.tournament_size);
   assert(rounds);
 
   const auto target(random::coord(pop));
