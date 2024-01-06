@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -17,6 +17,7 @@
 #include "kernel/evolution_summary.h"
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
+#include "kernel/population.h"
 #include "kernel/problem.h"
 
 namespace ultra::recombination
@@ -67,7 +68,7 @@ class base : public strategy<I, F>
 public:
   using base::strategy::strategy;
 
-  template<std::ranges::sized_range R, Evaluator E>
+  template<SizedRangeOfIndividuals R, Evaluator E>
   [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
   operator()(const R &, E &) const;
 };

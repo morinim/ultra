@@ -28,9 +28,16 @@ namespace ultra
 {
 
 template<class P>
-concept Population = requires(const P &p)
+concept SizedRangeOfIndividuals = requires(const P &p)
 {
   requires std::ranges::sized_range<P>;
+  requires Individual<std::ranges::range_value_t<P>>;
+};
+
+template<class P>
+concept Population = requires(const P &p)
+{
+  requires SizedRangeOfIndividuals<P>;
   typename P::value_type;
   requires Individual<typename P::value_type>;
 

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -36,11 +36,12 @@ strategy<I, F>::strategy(const problem &prob, summary<I, F> *stats)
 /// \return            the offspring (single child)
 ///
 template<Individual I, Fitness F>
-template<std::ranges::sized_range R, Evaluator E>
+template<SizedRangeOfIndividuals R, Evaluator E>
 [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
 base<I, F>::operator()(const R &parents, E &eva) const
 {
   static_assert(std::is_same_v<I, std::ranges::range_value_t<R>>);
+  static_assert(std::is_same_v<I, closure_arg_t<E>>);
   static_assert(std::convertible_to<decltype(eva(I())), F>);
 
   const auto p_cross(this->prob_.env.evolution.p_cross);

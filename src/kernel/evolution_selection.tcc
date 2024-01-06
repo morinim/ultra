@@ -18,8 +18,8 @@
 #define      ULTRA_EVOLUTION_SELECTION_TCC
 
 ///
-/// \param[in] env environment (for selection specific parameters)
 /// \param[in] eva current evaluator
+/// \param[in] env environment (for selection specific parameters)
 ///
 template<Evaluator E>
 strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
@@ -90,8 +90,7 @@ tournament<E>::operator()(const P &pop) const
 }
 
 ///
-/// \param[in] pop a collection of populations. ALPS uses the subpopulations
-///                (the first element is the primary population)
+/// \param[in] pop a population
 /// \return        a collection of chosen individuals
 ///
 /// Parameters from the environment:
