@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -70,6 +70,39 @@ struct environment
 
   struct evolution_parameters
   {
+    /// This parameter controls the brood recombination/selection level (`1` to
+    /// turn it off).
+    ///
+    /// In nature it's common for organisms to produce many offspring and then
+    /// neglect, abort, resorb, eat some of them or allow them to eat each
+    /// other. There are various reasons for this behavior (e.g. progeny choice
+    /// hypothesis). The phenomenon is known variously as soft selection, brood
+    /// selection, spontaneous abortion. The "bottom line" of this behaviour in
+    /// nature is the reduction of parental resource investment in offspring who
+    /// are potentially less fit than others.
+    ///
+    /// \see
+    /// - https://github.com/morinim/vita/wiki/bibliography#6
+    /// - https://github.com/morinim/vita/wiki/bibliography#7
+    /// - https://github.com/morinim/vita/wiki/bibliography#8
+    ///
+    /// \note
+    /// - `0` means auto-tune;
+    //  - `1` is the standard recombination (perform `1` crossover);
+    //  - larger values enable the brood recombination method (more than one
+    //    crossover).
+    unsigned brood_recombination {0};
+
+    /// An elitist algorithm is one that ALWAYS retains in the population the
+    /// best individual found so far. With higher elitism the population will
+    /// converge quicker but losing diversity.
+    ///
+    /// \note
+    /// - `0.0` disable elitism
+    /// - `1.0` always applies elitism
+    /// - values outside the `[0.0;1.0]` range mean auto-tune
+    double elitism {-1.0};
+
     /// This is used for the trivial geography scheme.
     /// The population is viewed as having a 1-dimensional spatial structure -
     /// actually a circle, as we consider the first and last locations to be
@@ -118,29 +151,6 @@ struct environment
     ///   at random.
     /// - A length of `0` means auto-tune.
     std::size_t tournament_size {0};
-
-    /// This parameter controls the brood recombination/selection level (`1` to
-    /// turn it off).
-    ///
-    /// In nature it's common for organisms to produce many offspring and then
-    /// neglect, abort, resorb, eat some of them or allow them to eat each
-    /// other. There are various reasons for this behavior (e.g. progeny choice
-    /// hypothesis). The phenomenon is known variously as soft selection, brood
-    /// selection, spontaneous abortion. The "bottom line" of this behaviour in
-    /// nature is the reduction of parental resource investment in offspring who
-    /// are potentially less fit than others.
-    ///
-    /// \see
-    /// - https://github.com/morinim/vita/wiki/bibliography#6
-    /// - https://github.com/morinim/vita/wiki/bibliography#7
-    /// - https://github.com/morinim/vita/wiki/bibliography#8
-    ///
-    /// \note
-    /// - `0` means auto-tune;
-    //  - `1` is the standard recombination (perform `1` crossover);
-    //  - larger values enable the brood recombination method (more than one
-    //    crossover).
-    unsigned brood_recombination {0};
   } evolution;
 
   alps::parameters alps;

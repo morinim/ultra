@@ -41,6 +41,7 @@ environment &environment::init()
   population.layers = 1;
 
   evolution.brood_recombination = 1;
+  evolution.elitism = 1.0;
   evolution.mate_zone = 20;
   evolution.p_cross = 0.9;
   evolution.p_mutation = 0.04;
@@ -75,6 +76,12 @@ bool environment::is_valid(bool force_defined) const
     if (!evolution.brood_recombination)
     {
       ultraERROR << "Undefined `evolution.brood_recombination` data member";
+      return false;
+    }
+
+    if (evolution.elitism < 0.0 || evolution.elitism > 1.0)
+    {
+      ultraERROR << "Undefined `evolution.elitism` data member";
       return false;
     }
 
