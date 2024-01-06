@@ -27,11 +27,7 @@ namespace ultra::alps
 ///
 struct parameters
 {
-  [[nodiscard]] unsigned allowed_age(unsigned, unsigned) const;
   [[nodiscard]] unsigned max_age(std::size_t) const;
-
-  template<class T> [[nodiscard]] bool aged(const T &,
-                                            unsigned, unsigned) const;
 
   /// The maximum ages for age layers is monotonically increasing and
   /// different methods can be used for setting these values. Since there is

@@ -18,6 +18,9 @@ namespace ultra::alps
 {
 
 ///
+/// Given a layer index returns the associated maximum allowed age of the
+/// members.
+///
 /// \param[in] l layer index
 /// \return      the maximum allowed age for an individual in layer `l`
 ///
