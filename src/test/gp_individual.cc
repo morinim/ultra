@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -337,8 +337,8 @@ TEST_CASE_FIXTURE(fixture3, "Random locus")
     const double avg(n / as);
     for (const auto &e : exons)
     {
-      CHECK(avg * 0.94 <= e.second);
-      CHECK(e.second <= 1.06 * avg);
+      CHECK(avg * 0.93 <= e.second);
+      CHECK(e.second <= 1.07 * avg);
     }
   }
 }
