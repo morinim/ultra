@@ -90,8 +90,11 @@ tournament<E>::operator()(const P &pop) const
 }
 
 ///
-/// \param[in] pop a population
-/// \return        a collection of chosen individuals
+/// \param[in] pops a collection of references to populations. Can contain one
+///                 or two elements. The first one (`pop[0]`) is the
+///                 main/current layer; the second one, if available, is the
+///                 lower level layer
+/// \return         picked up individuals
 ///
 /// Parameters from the environment:
 /// - `tournament_size` to control number of selected individuals.
@@ -100,10 +103,10 @@ tournament<E>::operator()(const P &pop) const
 template<Evaluator E>
 template<PopulationWithMutex P>
 std::vector<typename P::value_type>
-alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pop) const
+alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 {
   Expects(this->env_.evolution.tournament_size);
-  Expects(pop.size() && pop.size() <= 2);
+  Expects(pops.size() && pops.size() <= 2);
 
   const auto young([](const auto &sub_pop, const auto &prg)
                    { return prg.age() <= sub_pop.max_age(); });
@@ -113,11 +116,11 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pop) const
   const auto alps_fit([&](const auto &sp, const auto &prg)
                       { return std::pair(young(sp, prg), this->eva_(prg)); });
 
-  auto p0(random::individual(pop.front().get()));
-  auto fit0{alps_fit(pop.front().get(), p0)};
+  auto p0(random::individual(pops.front().get()));
+  auto fit0{alps_fit(pops.front().get(), p0)};
 
-  auto p1(random::individual(pop.front().get()));
-  auto fit1{alps_fit(pop.front().get(), p1)};
+  auto p1(random::individual(pops.front().get()));
+  auto fit1{alps_fit(pops.front().get(), p1)};
 
   if (fit0 < fit1)
   {
@@ -131,7 +134,7 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pop) const
 
   for (auto rounds(this->env_.evolution.tournament_size - 1); rounds; --rounds)
   {
-    const auto &sub_pop(pop[pop.size() > 1 ? random::boolean(p) : 0].get());
+    const auto &sub_pop(pops[pops.size() > 1 ? random::boolean(p) : 0].get());
     const auto tmp(random::individual(sub_pop));
     const auto tmp_fit{alps_fit(sub_pop, tmp)};
 

@@ -61,40 +61,40 @@ template<Evaluator E> tournament(
   E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> *)
   -> tournament<E>;
 
-/*
+
 ///
 /// ALPS based replacement scheme.
 ///
-/// \tparam T type of program (individual/team)
-///
 /// This strategy select an individual for replacement by an ad hoc kill
 /// tournament.
-/// When an individual is too old for its current layer, it cannot be used
-/// to generate new individuals for that layer and eventually is removed
-/// from the layer. Optionally, an attempt can be made to move this
-/// individual up to the next layer -- in which case it replaces some
-/// individual there that it is better than.
+/// When an individual is too old for its current layer, it cannot be used to
+/// generate new individuals for that layer and eventually is removed from the
+/// layer. Optionally, an attempt can be made to move this individual up to the
+/// next layer -- in which case it replaces some individual there that it's
+/// better than.
 ///
 /// \see
 /// "Replacement Strategies in Steady State Genetic Algorithms: Static
 /// Environments" - Jim Smith, Frank Vavak.
 ///
-template<class T>
-class alps : public strategy<T>
+template<Evaluator E>
+class alps : public strategy<E>
 {
 public:
   using alps::strategy::strategy;
 
-  void run(const typename strategy<T>::parents_t &,
-           const typename strategy<T>::offspring_t &, summary<T> *);
+  template<PopulationWithMutex P, SizedRangeOfIndividuals R>
+  void operator()(std::vector<std::reference_wrapper<P>>, const R &) const;
 
-  void try_move_up_layer(unsigned);
+  //void try_move_up_layer(std::size_t);
 
 private:
-  [[nodiscard]] unsigned allowed_age(unsigned) const;
-  bool try_add_to_layer(unsigned, const T &);
+  //[[nodiscard]] unsigned allowed_age(unsigned) const;
+  template<PopulationWithMutex P, Individual I>
+  bool try_add_to_layer(std::vector<std::reference_wrapper<P>>,
+                        const I &) const;
 };
-*/
+
 #include "kernel/evolution_replacement.tcc"
 
 }  // namespace ultra::replacement

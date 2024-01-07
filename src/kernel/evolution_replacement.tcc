@@ -45,6 +45,7 @@ void tournament<E>::operator()(P &pop, const R &offspring) const
   static_assert(std::is_same_v<typename P::value_type, closure_arg_t<E>>);
 
   Expects(offspring.size() == 1);
+  Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
   const auto rounds(this->env_.evolution.tournament_size);
   assert(rounds);
@@ -106,124 +107,112 @@ void alps<T>::try_move_up_layer(unsigned l)
       try_add_to_layer(l + 1, pop[{l, i}]);
   }
 }
+*/
 
 ///
-/// \param[in] layer a layer
+/// \param[in] pops     a collection of references to populations. Can contain
+///                     one or two elements. The first one (`pop[0]`) is the
+///                     main/current layer; the second one, if available, is
+///                     the upper level layer
 /// \param[in] incoming an individual
 ///
-/// We would like to add `incoming` in layer `layer`. The insertion will
+/// We would like to add `incoming` in layer `pops[0]`. The insertion will
 /// take place if:
-/// * `layer` is not full or...
-/// * after a "kill tournament" selection, the worst individual found is
+/// - `pop[0]` is not full or...
+/// - after a "kill tournament" selection, the worst individual found is
 ///   too old for `layer` while the incoming one is within the limits or...
-/// * the worst individual has a lower fitness than the incoming one and
-///   both are simultaneously within/outside the time frame of `layer`.
+/// - the worst individual has a lower fitness than the incoming one and
+///   both are simultaneously within/outside the time frame of the layer.
 ///
-template<class T>
-bool alps<T>::try_add_to_layer(unsigned layer, const T &incoming)
+template<Evaluator E>
+template<PopulationWithMutex P, Individual I>
+bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
+                               const I &incoming) const
 {
-  using coord = typename population<T>::coord;
+  const auto pop(pops.front().get());
 
-  auto &p(this->pop_);
-  assert(layer < p.layers());
+  I worst;
+  assert(worst.empty());
 
-  if (p.individuals(layer) < p.allowed(layer))
   {
-    p.add_to_layer(layer, incoming);  // layer not full... inserting incoming
-    return true;
-  }
+    std::lock_guard lock(pop.mutex());
 
-  // Layer is full, can we replace an existing individual?
-  const auto m_age(allowed_age(layer));
-
-  // Well, let's see if the worst individual we can find with a tournament...
-  coord c_worst{layer, random::sup(p.individuals(layer))};
-  auto f_worst(this->eva_(p[c_worst]));
-
-  auto rounds(p.get_problem().env.tournament_size);
-  while (rounds--)
-  {
-    const coord c_x{layer, random::sup(p.individuals(layer))};
-    const auto f_x(this->eva_(p[c_x]));
-
-    if ((p[c_x].age() > p[c_worst].age() && p[c_x].age() > m_age) ||
-        (p[c_worst].age() <= m_age && p[c_x].age() <= m_age &&
-         f_x < f_worst))
+    if (pop.size < pop.allowed())
     {
-      c_worst = c_x;
-      f_worst = f_x;
+      pop.push_back(incoming);
+      return true;
+    }
+
+    // Layer is full, can we replace an existing individual?
+    const auto m_age(pop.max_age());
+
+    // Well, let's see if the worst individual we can find with a tournament...
+    auto worst_coord(random::coord(pop));
+    auto worst_fit(this->eva_(worst));
+
+    auto rounds(this->env_.evolution.tournament_size);
+    assert(rounds);
+
+    while (rounds--)
+    {
+      const auto trial_coord(random::coord(pop));
+      const auto trial_fit(this->eva_(pop[trial_coord]));
+
+      if (pop[trial_coord].age() > std::max(pop[worst_coord].age(), m_age)
+          || (std::max(pop[worst_coord].age(), pop[trial_coord].age()) <= m_age
+              && trial_fit < worst_fit))
+      {
+        worst_coord = trial_coord;
+        worst_fit = trial_fit;
+      }
+    }
+
+    bool worst_replaced((incoming.age() <= m_age && worst.age() > m_age)
+                        || ((incoming.age() <= m_age || worst.age() > m_age)
+                            && this->eva_(incoming) >= worst_fit));
+    if (worst_replaced)
+    {
+      worst = pop[worst_coord];
+      pop[worst_coord] = incoming;
     }
   }
 
   // ... is worse than the incoming individual.
-  if ((incoming.age() <= m_age && p[c_worst].age() > m_age) ||
-      ((incoming.age() <= m_age || p[c_worst].age() > m_age) &&
-       this->eva_(incoming) >= f_worst))
-  {
-    if (layer + 1 < p.layers())
-      try_add_to_layer(layer + 1, p[c_worst]);
-    p[c_worst] = incoming;
+  if (!worst.empty() && pops.size() > 1)
+    try_add_to_layer(std::vector{pops[1]}, worst);
 
-    return true;
-  }
-
-  return false;
+  return !worst.empty();
 }
 
 ///
-/// \param[in] parent coordinates of the candidate parents.
-///                   The list is sorted in descending fitness, so the
-///                   last element is the coordinates of the worst individual
-///                   of the tournament.
-/// \param[in] offspring vector of the "children".
-/// \param[in,out] s statistical summary.
+/// \param[in] pops      a collection of references to populations. Can contain
+///                      one or two elements. The first one (`pop[0]`) is the
+///                      main/current layer; the second one, if available, is
+///                      the upper level layer
+/// \param[in] offspring a range of the "children"
 ///
 /// Parameters from the environment:
-/// * elitism is `true` => a new best individual is always inserted into the
-///   population.
+/// - `evolution.elitism`;
+/// - `evolution.tournament_size`.
 ///
-template<class T>
-void alps<T>::run(
-  const typename strategy<T>::parents_t &parent,
-  const typename strategy<T>::offspring_t &offspring, summary<T> *s)
+template<Evaluator E>
+template<PopulationWithMutex P, SizedRangeOfIndividuals R>
+void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
+                         const R &offspring) const
 {
-  const auto layer(std::max(parent[0].layer, parent[1].layer));
-  const auto f_off(this->eva_(offspring[0]));
-  const auto &pop(this->pop_);
-  const auto elitism(pop.get_problem().env.elitism);
+  static_assert(std::is_same_v<typename P::value_type,
+                               std::ranges::range_value_t<R>>);
+  static_assert(std::is_same_v<typename P::value_type, closure_arg_t<E>>);
 
-  Expects(elitism != trilean::unknown);
+  Expects(pops.size() == 2);
+  Expects(offspring.size() == 1);
+  Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
-  bool ins;
-#if defined(MUTUAL_IMPROVEMENT)
-  // To protect the algorithm from the potential deleterious effect of intense
-  // exploratory dynamics, we can use a constraint which mandate that an
-  // individual must be better than both its parents before insertion into
-  // the population.
-  // See "Exploiting The Path of Least Resistance In Evolution" (Gearoid Murphy
-  // and Conor Ryan).
-  if (f_off > this->eva_(pop[parent[0]]) && f_off > this->eva_(pop[parent[1]]))
-#endif
-  {
-    ins = try_add_to_layer(layer, offspring[0]);
-  }
+  try_add_to_layer(pops, offspring[0]);
 
-  if (f_off > s->best.score.fitness)
-  {
-    // Sometimes a new best individual is discovered in a lower layer but he is
-    // too old for its layer and the random tournament may choose only "not
-    // aged" individuals (i.e. individuals within the age limit of their layer).
-    // When this happen the new best individual would be lost without the
-    // command below.
-    // There isn't an age limit for the last layer so try_add_to_layer will
-    // always succeed.
-    if (!ins && elitism == trilean::yes)
-      try_add_to_layer(pop.layers() - 1, offspring[0]);
-
-    s->last_imp           = s->gen;
-    s->best.solution      = offspring[0];
-    s->best.score.fitness = f_off;
-  }
+  if (const auto f_off(this->eva_(offspring[0]));
+      f_off > this->stats_.best.score.fitness)
+    this->stats_.update_best(offspring[0], f_off);
 }
-*/
+
 #endif  // include guard
