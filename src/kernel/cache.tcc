@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -48,7 +48,7 @@ inline std::size_t cache<F>::index(const hash_t &h) const
 template<Fitness F>
 void cache<F>::clear()
 {
-  std::unique_lock lock(mutex_);
+  std::lock_guard lock(mutex_);
   ++seal_;
 }
 
@@ -60,7 +60,7 @@ void cache<F>::clear()
 template<Fitness F>
 void cache<F>::clear(const hash_t &h)
 {
-  std::unique_lock lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   // Invalidates the slot since the first valid value for seal is `1`.
   table_[index(h)].seal = 0;
@@ -92,7 +92,7 @@ const F *cache<F>::find(const hash_t &h) const
 template<Fitness F>
 void cache<F>::insert(const hash_t &h, const F &fitness)
 {
-  std::unique_lock lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   const slot s{h, fitness, seal_};
   table_[index(s.hash)] = s;
@@ -108,7 +108,7 @@ void cache<F>::insert(const hash_t &h, const F &fitness)
 template<Fitness F>
 bool cache<F>::load(std::istream &in)
 {
-  std::unique_lock lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   decltype(seal_) t_seal;
   if (!(in >> t_seal))
