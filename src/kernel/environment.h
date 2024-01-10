@@ -20,17 +20,6 @@
 namespace ultra
 {
 
-namespace out
-{
-/// Rendering format used to print an individual.
-enum print_format_t {list_f,  // default value
-                     dump_f, graphviz_f, in_line_f, tree_f,
-                     language_f,
-                     c_language_f = language_f + symbol::c_format,
-                     cpp_language_f = language_f + symbol::cpp_format,
-                     python_language_f = language_f + symbol::python_format};
-}  // namespace out
-
 struct environment
 {
   struct slp_parameters
