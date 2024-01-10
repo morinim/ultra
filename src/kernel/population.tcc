@@ -56,6 +56,46 @@ typename population<I>::layer_t &population<I>::layer(std::size_t l)
 }
 
 ///
+/// \return const reference to the first layer of the population
+///
+template<Individual I>
+const typename population<I>::layer_t &population<I>::front() const
+{
+  Expects(layers());
+  return layer(0);
+}
+
+///
+/// \return reference to the first layer of the population
+///
+template<Individual I>
+typename population<I>::layer_t &population<I>::front()
+{
+  Expects(layers());
+  return layer(0);
+}
+
+///
+/// \return const reference to the last layer of the population
+///
+template<Individual I>
+const typename population<I>::layer_t &population<I>::back() const
+{
+  Expects(layers());
+  return layer(layers() - 1);
+}
+
+///
+/// \return reference to the last layer of the population
+///
+template<Individual I>
+typename population<I>::layer_t &population<I>::back()
+{
+  Expects(layers());
+  return layer(layers() - 1);
+}
+
+///
 /// \param[in] i index of an individual
 /// \return      a reference to the individual at index `i`
 ///

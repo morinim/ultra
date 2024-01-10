@@ -17,7 +17,6 @@
 #include <numeric>
 #include <shared_mutex>
 
-#include "kernel/environment.h"
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 #include "kernel/random.h"
@@ -70,6 +69,11 @@ public:
   using difference_type = std::ptrdiff_t;
 
   explicit population(const ultra::problem &);
+
+  [[nodiscard]] const layer_t &front() const;
+  [[nodiscard]] layer_t &front();
+  [[nodiscard]] const layer_t &back() const;
+  [[nodiscard]] layer_t &back();
 
   [[nodiscard]] std::size_t layers() const;
   [[nodiscard]] const layer_t &layer(std::size_t) const;
