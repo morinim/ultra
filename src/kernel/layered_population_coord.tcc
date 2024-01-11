@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,18 +10,18 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_POPULATION_H)
+#if !defined(ULTRA_LAYERED_POPULATION_H)
 #  error "Don't include this file directly, include the specific .h instead"
 #endif
 
-#if !defined(ULTRA_POPULATION_COORD_TCC)
-#define      ULTRA_POPULATION_COORD_TCC
+#if !defined(ULTRA_LAYERED_POPULATION_COORD_TCC)
+#define      ULTRA_LAYERED_POPULATION_COORD_TCC
 
 ///
 /// Holds the coordinates of an individual in a population.
 ///
 template<Individual I>
-struct population<I>::coord
+struct layered_population<I>::coord
 {
   std::size_t layer;
   std::size_t index;

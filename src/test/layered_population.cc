@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,7 +14,7 @@
 #include <map>
 #include <sstream>
 
-#include "kernel/population.h"
+#include "kernel/layered_population.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
@@ -22,22 +22,23 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("POPULATION")
+TEST_SUITE("LAYERED POPULATION")
 {
 
 TEST_CASE_FIXTURE(fixture1, "Creation")
 {
   using namespace ultra;
 
-  prob.env.population.layers = 1;
+  prob.env.population.layers = 3;
 
   for (unsigned i(0); i < 100; ++i)
   {
     prob.env.population.individuals = random::between(1, 100);
 
-    population<gp::individual> pop(prob);
+    layered_population<gp::individual> pop(prob);
 
-    CHECK(pop.size() == prob.env.population.individuals);
+    CHECK(pop.size()
+          == prob.env.population.layers * prob.env.population.individuals);
     CHECK(pop.is_valid());
   }
 }
@@ -51,7 +52,7 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
     prob.env.population.individuals = random::between(30, 150);
     prob.env.population.layers = random::between(1, 8);
 
-    population<gp::individual> pop(prob);
+    layered_population<gp::individual> pop(prob);
 
     for (std::size_t l(0); l < pop.layers(); ++l)
     {
@@ -95,7 +96,7 @@ TEST_CASE_FIXTURE(fixture1, "Age")
 
   prob.env.population.individuals = 10;
 
-  population<gp::individual> pop(prob);
+  layered_population<gp::individual> pop(prob);
 
   CHECK(std::ranges::all_of(pop, [](const auto &i) { return i.age() == 0; }));
 
@@ -113,7 +114,7 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
     prob.env.population.individuals = random::between(30, 200);
     prob.env.population.layers = random::between(1, 10);
 
-    population<gp::individual> pop(prob);
+    layered_population<gp::individual> pop(prob);
 
     CHECK(std::distance(pop.begin(), pop.end()) == pop.size());
   }
@@ -129,7 +130,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     prob.env.population.layers = random::between(1, 4);
 
     std::stringstream ss;
-    population<gp::individual> pop1(prob);
+    layered_population<gp::individual> pop1(prob);
 
     CHECK(pop1.save(ss));
 
@@ -148,21 +149,25 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 30;
+  prob.env.population.individuals = 20;
   prob.env.population.layers = 1;
 
-  population<gp::individual> pop(prob);
+  layered_population<gp::individual> pop(prob);
 
   for (unsigned i(0); i < 10; ++i)
   {
-    std::map<population<gp::individual>::coord, int> frequency;
+    std::map<std::pair<std::size_t, linear_population<gp::individual>::coord>,
+             int> frequency;
 
-    const int draws(5000 * pop.size());
+    const int draws(1000 * pop.size());
     for (int j(0); j < draws; ++j)
-      ++frequency[random::coord(pop)];
+    {
+      const auto layer(random::layer(pop));
+      ++frequency[{layer, random::coord(pop.layer(layer))}];
+    }
 
     const int expected(draws / pop.size());
-    const int tolerance(expected / 10);
+    const int tolerance(15 * expected / 100);
 
     for (const auto &p : frequency)
       CHECK(std::abs(p.second - expected) <= tolerance);

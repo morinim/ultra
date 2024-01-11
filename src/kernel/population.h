@@ -13,15 +13,10 @@
 #if !defined(ULTRA_POPULATION_H)
 #define      ULTRA_POPULATION_H
 
-#include <algorithm>
-#include <numeric>
 #include <shared_mutex>
 
 #include "kernel/individual.h"
-#include "kernel/problem.h"
 #include "kernel/random.h"
-
-#include "utility/log.h"
 
 namespace ultra
 {
@@ -39,150 +34,56 @@ concept Population = requires(const P &p)
   requires SizedRangeOfIndividuals<P>;
   typename P::value_type;
   requires Individual<typename P::value_type>;
+};
 
+template<class P>
+concept LayeredPopulation = Population<P> && requires(const P &p)
+{
+  p.layers();
+};
+
+template<class P>
+concept RandomAccessPopulation = requires(const P &p)
+{
+  requires Population<P>;
   typename P::coord;
   p[typename P::coord()];
 };
 
 template<class P>
-concept PopulationWithMutex = Population<P> && requires(const P &p)
+concept PopulationWithMutex = RandomAccessPopulation<P> && requires(const P &p)
 {
   p.mutex();
 };
 
-///
-/// A group of individuals which may interact together (for example by mating)
-/// producing offspring.
-///
-/// Typical population size in GP ranges from ten to many thousands. The
-/// population is organized in one or more layers that can interact in
-/// many ways (depending on the evolution strategy).
-///
-template<Individual I>
-class population
-{
-public:
-  struct coord;
-  class layer_t;
-
-  using value_type = I;
-  using difference_type = std::ptrdiff_t;
-
-  explicit population(const ultra::problem &);
-
-  [[nodiscard]] const layer_t &front() const;
-  [[nodiscard]] layer_t &front();
-  [[nodiscard]] const layer_t &back() const;
-  [[nodiscard]] layer_t &back();
-
-  [[nodiscard]] std::size_t layers() const;
-  [[nodiscard]] const layer_t &layer(std::size_t) const;
-  [[nodiscard]] layer_t &layer(std::size_t);
-
-  void init(layer_t &);
-  void add_layer();
-  void remove(layer_t &);
-
-  [[nodiscard]] I &operator[](const coord &);
-  [[nodiscard]] const I &operator[](const coord &) const;
-
-  [[nodiscard]] std::size_t size() const;
-
-  void inc_age();
-
-  [[nodiscard]] const ultra::problem &problem() const;
-
-  // Iterators.
-  template<bool> class base_iterator;
-  using const_iterator = base_iterator<true>;
-  using iterator = base_iterator<false>;
-
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
-
-  [[nodiscard]] bool is_valid() const;
-
-  // Serialization.
-  [[nodiscard]] bool load(std::istream &);
-  [[nodiscard]] bool save(std::ostream &) const;
-
-private:
-  const ultra::problem *prob_;
-
-  std::vector<layer_t> layers_ {};
-};
-
-template<Individual I>
-[[nodiscard]] population<I> make_debug_population(const ultra::problem &);
-
 namespace random
 {
-template<Individual I>
-[[nodiscard]] typename population<I>::coord coord(const population<I> &);
 
-template<Individual I>
-[[nodiscard]] typename population<I>::coord coord(
-  const population<I> &, typename population<I>::coord, std::size_t);
+template<RandomAccessPopulation P>
+[[nodiscard]] std::size_t coord(const P &l)
+{
+  return sup(l.size());
+}
 
+template<RandomAccessPopulation P>
+[[nodiscard]] std::size_t
+coord(const P &l, std::size_t i, std::size_t mate_zone)
+{
+  return random::ring(i, mate_zone, l.size());
+}
+
+///
+/// \param[in] p a population
+/// \return      a random individual of the population
+///
 template<PopulationWithMutex P>
-[[nodiscard]] typename P::value_type individual(const P &);
+[[nodiscard]] typename P::value_type individual(const P &p)
+{
+  std::shared_lock lock(p.mutex());
+  return p[random::coord(p)];
 }
 
-template<Individual I>
-class population<I>::layer_t
-{
-public:
-  using value_type = I;
-  using const_iterator = typename std::vector<I>::const_iterator;
-  using iterator = typename std::vector<I>::iterator;
-  using difference_type = typename std::vector<I>::difference_type;
-  using coord = std::size_t;
-
-  [[nodiscard]] I &operator[](std::size_t);
-  [[nodiscard]] const I &operator[](std::size_t) const;
-
-  [[nodiscard]] std::size_t size() const;
-
-  [[nodiscard]] bool empty() const;
-  void clear();
-
-  [[nodiscard]] std::size_t allowed() const;
-  void allowed(std::size_t);
-
-  [[nodiscard]] unsigned max_age() const;
-  void max_age(unsigned);
-
-  void push_back(const I &);
-  void pop_back();
-
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] const_iterator end() const;
-
-  [[nodiscard]] std::shared_mutex &mutex() const;
-
-private:
-  mutable std::shared_ptr<std::shared_mutex> pmutex_
-  {std::make_shared<std::shared_mutex>()};
-
-  std::vector<I> members_ {};
-  std::size_t allowed_ {0};
-
-  unsigned max_age_ {std::numeric_limits<unsigned>::max()};
-};
-
-namespace random
-{
-template<Population P> [[nodiscard]] std::size_t coord(const P &);
-template<Population P>
-[[nodiscard]] std::size_t coord(const P &, std::size_t, std::size_t);
-}
-
-#include "kernel/population.tcc"
-#include "kernel/population_coord.tcc"
-#include "kernel/population_iterator.tcc"
+}  // namespace random
 
 }  // namespace ultra
 

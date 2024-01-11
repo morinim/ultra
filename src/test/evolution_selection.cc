@@ -15,6 +15,7 @@
 
 #include "kernel/evolution_selection.h"
 #include "kernel/distribution.h"
+#include "kernel/layered_population.h"
 #include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 
@@ -59,7 +60,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
     {
-      auto parents(select(pop));
+      auto parents(select(pop.layer(0)));
 
       CHECK(parents.size() == prob.env.evolution.tournament_size);
 
@@ -100,7 +101,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       prob.env.population.layers         =          2;
       prob.env.evolution.tournament_size = tournament;
 
-      population<gp::individual> pop(prob);
+      layered_population<gp::individual> pop(prob);
       test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
       unsigned j(0);
@@ -215,7 +216,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   prob.env.evolution.tournament_size = 10;
   prob.env.alps.p_main_layer         = .5;
 
-  population<gp::individual> pop(prob);
+  layered_population<gp::individual> pop(prob);
 
   const auto search([&](auto pops)
   {

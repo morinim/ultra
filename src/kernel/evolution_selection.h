@@ -16,7 +16,8 @@
 #include <set>
 
 #include "kernel/evaluator.h"
-#include "kernel/population.h"
+#include "kernel/environment.h"
+#include "kernel/linear_population.h"
 
 namespace ultra::selection
 {
@@ -62,7 +63,7 @@ class tournament : public strategy<E>
 public:
   using tournament::strategy::strategy;
 
-  template<Population P>
+  template<RandomAccessPopulation P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
@@ -93,7 +94,7 @@ class de : public strategy<E>
 public:
   using de::strategy::strategy;
 
-  template<Population P>
+  template<RandomAccessPopulation P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 

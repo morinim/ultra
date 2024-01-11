@@ -47,7 +47,7 @@ strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
 ///   in the test suite).
 ///
 template<Evaluator E>
-template<Population P>
+template<RandomAccessPopulation P>
 std::vector<typename P::value_type>
 tournament<E>::operator()(const P &pop) const
 {
@@ -168,7 +168,7 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 /// Parameters from the environment: `mate_zone`.
 ///
 template<Evaluator E>
-template<Population P>
+template<RandomAccessPopulation P>
 std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
 {
   const auto mate_zone(this->env_.evolution.mate_zone);

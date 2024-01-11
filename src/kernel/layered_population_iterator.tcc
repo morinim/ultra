@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,28 +10,24 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_POPULATION_H)
+#if !defined(ULTRA_LAYERED_POPULATION_H)
 #  error "Don't include this file directly, include the specific .h instead"
 #endif
 
-#if !defined(ULTRA_POPULATION_ITERATOR_TCC)
-#define      ULTRA_POPULATION_ITERATOR_TCC
+#if !defined(ULTRA_LAYERED_POPULATION_ITERATOR_TCC)
+#define      ULTRA_LAYERED_POPULATION_ITERATOR_TCC
 
 ///
 /// Iterator for a population.
 ///
-/// `population<I>::base_iterator` / `population<I>::begin()` /
-/// `population<I>::end()` are general and clear, so they should be the
+/// `layered_population<I>::base_iterator` / `layered_population<I>::begin()` /
+/// `layered_population<I>::end()` are general and clear, so they should be the
 /// preferred way to scan / perform an action over every individual of a
-/// population.
-///
-/// \remark
-/// For performance critical code accessing individuals via the `operator[]`
-/// could give better results.
+/// layered population.
 ///
 template<Individual I>
 template<bool is_const>
-class population<I>::base_iterator
+class layered_population<I>::base_iterator
 {
 public:
   using iterator_category = std::forward_iterator_tag;
@@ -44,7 +40,8 @@ public:
 
   using ptr = std::conditional_t<is_const, const_pointer, pointer>;
   using ref = std::conditional_t<is_const, const_reference, reference>;
-  using pop = std::conditional_t<is_const, const population, population>;
+  using pop = std::conditional_t<is_const,
+                                 const layered_population, layered_population>;
 
   // A requirement for `std::input_iterator` is that it must be
   // default-initializable.
@@ -97,7 +94,7 @@ public:
     return layer_;
   }
 
-  [[nodiscard]] typename population<I>::coord coord() const
+  [[nodiscard]] typename layered_population<I>::coord coord() const
   {
     return {layer_, index_};
   }
@@ -122,7 +119,9 @@ public:
   }
 
 private:
-  std::conditional_t<is_const, const population *, population *> pop_ {nullptr};
+  std::conditional_t<is_const,
+                     const layered_population *,
+                     layered_population *> pop_ {nullptr};
 
   std::size_t layer_ {0};
   std::size_t index_ {0};

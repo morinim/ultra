@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "kernel/evolution_selection.h"
+#include "kernel/layered_population.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
@@ -31,7 +32,7 @@ TEST_CASE_FIXTURE(fixture1, "Concepts")
   prob.env.population.individuals = 2;
   prob.env.population.layers      = 1;
 
-  population<gp::individual> pop(prob);
+  layered_population<gp::individual> pop(prob);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
   static_assert(Evaluator<decltype(eva)>);
@@ -64,7 +65,7 @@ TEST_CASE_FIXTURE(fixture1, "Test evaluator")
 
   SUBCASE("Fixed")
   {
-    population<gp::individual> p(prob);
+    layered_population<gp::individual> p(prob);
 
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
     const auto val(eva(random::element(p)));

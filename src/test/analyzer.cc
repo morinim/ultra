@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,7 +14,7 @@
 
 #include "kernel/analyzer.h"
 #include "kernel/gp/individual.h"
-#include "kernel/population.h"
+#include "kernel/layered_population.h"
 
 #include "test/fixture1.h"
 
@@ -39,7 +39,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
         prob.env.population.individuals = i;
         prob.env.slp.code_length = c;
 
-        population<gp::individual> pop(prob);
+        layered_population<gp::individual> pop(prob);
 
         analyzer<gp::individual, double> az;
 

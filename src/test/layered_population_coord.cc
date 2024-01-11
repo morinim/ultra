@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,21 +12,21 @@
 
 #include <cstdlib>
 
-#include "kernel/population.h"
+#include "kernel/layered_population.h"
 #include "kernel/random.h"
 #include "kernel/gp/individual.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("POPULATION_COORD")
+TEST_SUITE("LAYERED_POPULATION_COORD")
 {
 
 TEST_CASE("Comparison")
 {
   using namespace ultra;
 
-  using coord = population<gp::individual>::coord;
+  using coord = layered_population<gp::individual>::coord;
 
   const coord c{random::between(0u, 100u), random::between(0u, 100u)};
   const auto c1(c);
