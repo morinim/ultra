@@ -45,11 +45,11 @@ public:
 
   // A requirement for `std::input_iterator` is that it must be
   // default-initializable.
-  base_iterator() = default;
+  base_iterator() noexcept = default;
 
   /// \param[in] p     a population
   /// \param[in] begin `false` for the `end()` iterator
-  base_iterator(pop &p, bool begin)
+  base_iterator(pop &p, bool begin) noexcept
     : pop_(&p), layer_(begin ? 0 : p.layers())
   {
   }
@@ -58,7 +58,7 @@ public:
   /// \return iterator to the next individual
   /// \warning
   /// Advancing past the `end()` iterator results in undefined behaviour.
-  base_iterator &operator++()
+  base_iterator &operator++() noexcept
   {
     if (++index_ >= pop_->layer(layer_).size())
     {
@@ -78,7 +78,7 @@ public:
 
   /// Postfix increment operator.
   /// \return iterator to the current individual
-  base_iterator operator++(int)
+  base_iterator operator++(int) noexcept
   {
     base_iterator tmp(*this);
     operator++();
@@ -87,27 +87,28 @@ public:
 
   /// \param[in] rhs second term of comparison
   /// \return        `true` if iterators point to correspondant individuals
-  [[nodiscard]] bool operator==(const base_iterator &rhs) const = default;
+  [[nodiscard]] bool operator==(const base_iterator &rhs) const noexcept
+    = default;
 
-  [[nodiscard]] std::size_t layer() const
+  [[nodiscard]] std::size_t layer() const noexcept
   {
     return layer_;
   }
 
-  [[nodiscard]] typename layered_population<I>::coord coord() const
+  [[nodiscard]] typename layered_population<I>::coord coord() const noexcept
   {
     return {layer_, index_};
   }
 
 
   /// \return reference to the current individual
-  [[nodiscard]] ref operator*() const
+  [[nodiscard]] ref operator*() const noexcept
   {
     return pop_->operator[]({layer_, index_});
   }
 
   /// \return pointer to the current individual
-  [[nodiscard]] ptr operator->() const
+  [[nodiscard]] ptr operator->() const noexcept
   {
     return &operator*();
   }

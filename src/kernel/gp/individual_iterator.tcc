@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -44,7 +44,7 @@ public:
   /// Builds an empty iterator.
   ///
   /// Empty iterator is used as sentry (it's the value returned by end()).
-  basic_exon_iterator() : loci_(), ind_(nullptr) {}
+  basic_exon_iterator() = default;
 
   /// \param[in] id an individual
   explicit basic_exon_iterator(ind &id)
@@ -78,7 +78,7 @@ public:
   /// \param[in] rhs second term of comparison
   /// \return        `true` if iterators point to the same locus or they are
   ///                both to the end
-  [[nodiscard]] bool operator==(const basic_exon_iterator &rhs) const
+  [[nodiscard]] bool operator==(const basic_exon_iterator &rhs) const noexcept
   {
     Ensures(!ind_ || !rhs.ind_ || ind_ == rhs.ind_);
 
@@ -112,10 +112,10 @@ private:
   // For different implementation see `test/speed_gp_individual_iterator.cc`.
 
   // A partial set of active loci to be explored.
-  std::set<ultra::locus, std::greater<ultra::locus>> loci_;
+  std::set<ultra::locus, std::greater<ultra::locus>> loci_ {};
 
   // A pointer to the individual we are iterating on.
-  ind *ind_;
+  ind *ind_ {nullptr};
 };
 
 ///
@@ -125,10 +125,10 @@ template<std::input_iterator Iterator>
 class basic_exon_range
 {
 public:
-  basic_exon_range(Iterator b, Iterator e) : b_(b), e_(e) {}
+  basic_exon_range(Iterator b, Iterator e) noexcept : b_(b), e_(e) {}
 
-  [[nodiscard]] Iterator begin() const { return b_; }
-  [[nodiscard]] Iterator end() const { return e_; }
+  [[nodiscard]] Iterator begin() const noexcept { return b_; }
+  [[nodiscard]] Iterator end() const noexcept { return e_; }
 
 private:
   Iterator b_;
