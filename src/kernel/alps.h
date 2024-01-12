@@ -15,6 +15,8 @@
 
 #include <cstddef>
 
+#include "kernel/population.h"
+
 namespace ultra::alps
 {
 
@@ -51,6 +53,20 @@ struct parameters
   /// A negative value means auto-tune.
   double p_main_layer {0.75};
 };
+
+template<LayeredPopulation P>
+void set_age(P &pop)
+{
+  if (!pop.layers())
+    return;
+
+  const auto &env(pop.problem().env);
+
+  for (std::size_t l(0); l < pop.layers(); ++l)
+    pop.layer(l).max_age(env.alps.max_age(l));
+
+  pop.back().max_age(std::numeric_limits<unsigned>::max());
+}
 
 }  // namespace vita::alps
 

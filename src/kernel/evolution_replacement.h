@@ -16,7 +16,7 @@
 #include "kernel/alps.h"
 #include "kernel/evaluator.h"
 #include "kernel/evolution_summary.h"
-#include "kernel/population.h"
+#include "kernel/linear_population.h"
 
 namespace ultra::replacement
 {
@@ -61,7 +61,6 @@ template<Evaluator E> tournament(
   E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> *)
   -> tournament<E>;
 
-
 ///
 /// ALPS based replacement scheme.
 ///
@@ -94,6 +93,10 @@ private:
   bool try_add_to_layer(std::vector<std::reference_wrapper<P>>,
                         const I &) const;
 };
+
+template<Evaluator E> alps(
+  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> *)
+  -> alps<E>;
 
 #include "kernel/evolution_replacement.tcc"
 

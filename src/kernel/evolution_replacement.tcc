@@ -129,7 +129,7 @@ template<PopulationWithMutex P, Individual I>
 bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
                                const I &incoming) const
 {
-  const auto pop(pops.front().get());
+  auto &pop(pops.front().get());
 
   I worst;
   assert(worst.empty());
@@ -137,7 +137,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
   {
     std::lock_guard lock(pop.mutex());
 
-    if (pop.size < pop.allowed())
+    if (pop.size() < pop.allowed())
     {
       pop.push_back(incoming);
       return true;
@@ -167,10 +167,10 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
       }
     }
 
-    bool worst_replaced((incoming.age() <= m_age && worst.age() > m_age)
-                        || ((incoming.age() <= m_age || worst.age() > m_age)
-                            && this->eva_(incoming) >= worst_fit));
-    if (worst_replaced)
+    bool replace_worst((incoming.age() <= m_age && worst.age() > m_age)
+                       || ((incoming.age() <= m_age || worst.age() > m_age)
+                           && this->eva_(incoming) >= worst_fit));
+    if (replace_worst)
     {
       worst = pop[worst_coord];
       pop[worst_coord] = incoming;
@@ -189,7 +189,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 ///                      one or two elements. The first one (`pop[0]`) is the
 ///                      main/current layer; the second one, if available, is
 ///                      the upper level layer
-/// \param[in] offspring a range of the "children"
+/// \param[in] offspring a range containing the offspring
 ///
 /// Parameters from the environment:
 /// - `evolution.elitism`;
@@ -204,15 +204,22 @@ void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
                                std::ranges::range_value_t<R>>);
   static_assert(std::is_same_v<typename P::value_type, closure_arg_t<E>>);
 
-  Expects(pops.size() == 2);
-  Expects(offspring.size() == 1);
+  Expects(0 < pops.size() && pops.size() <= 2);
   Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
-  try_add_to_layer(pops, offspring[0]);
+  for (const auto &off : offspring)
+  {
+    const bool ins(try_add_to_layer(pops, off));
 
-  if (const auto f_off(this->eva_(offspring[0]));
-      f_off > this->stats_.best.score.fitness)
-    this->stats_.update_best(offspring[0], f_off);
+    if (const auto f_off(this->eva_(off));
+        f_off > this->stats_.best.score.fitness)
+    {
+      this->stats_.update_best(off, f_off);
+
+      if (!ins)
+        try_add_to_layer(std::vector{pops.back()}, off);
+    }
+  }
 }
 
 #endif  // include guard
