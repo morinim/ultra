@@ -14,7 +14,7 @@
 #include <iostream>
 
 #include "kernel/evolution_selection.h"
-#include "kernel/layered_population.h"
+#include "kernel/linear_population.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
@@ -30,9 +30,8 @@ TEST_CASE_FIXTURE(fixture1, "Concepts")
   using namespace ultra;
 
   prob.env.population.individuals = 2;
-  prob.env.population.layers      = 1;
 
-  layered_population<gp::individual> pop(prob);
+  linear_population<gp::individual> pop(prob);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
   static_assert(Evaluator<decltype(eva)>);
@@ -65,7 +64,7 @@ TEST_CASE_FIXTURE(fixture1, "Test evaluator")
 
   SUBCASE("Fixed")
   {
-    layered_population<gp::individual> p(prob);
+    linear_population<gp::individual> p(prob);
 
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
     const auto val(eva(random::element(p)));
