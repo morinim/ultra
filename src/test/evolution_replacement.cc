@@ -64,7 +64,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     prob.env.evolution.tournament_size = 1;
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), std::vector{worst});
+      replace(pop.layer(0), worst);
 
     for (const auto &prg : pop.layer(0))
       CHECK(prg == worst);
@@ -79,16 +79,16 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     const auto backup(pop);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), std::vector{worst});
+      replace(pop.layer(0), worst);
 
     CHECK(std::ranges::equal(pop, backup));
     CHECK(sum.best.solution == worst);
 
-    replace(pop.layer(0), std::vector{best});
+    replace(pop.layer(0), best);
     CHECK(sum.best.solution == best);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), std::vector{best});
+      replace(pop.layer(0), best);
 
     for (const auto &prg : pop.layer(0))
       CHECK(prg == best);
@@ -130,50 +130,34 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 
   const unsigned big_age(10000);
 
-  // A new best, very old individual is found and there is free space in the
-  // first layer.
-  SUBCASE("Very old best - free space")
+  SUBCASE("Best fitness but old")
   {
-    gp::individual new_best1(prob);
-    new_best1.inc_age(big_age);
-    CHECK(eva(new_best1) > best_fit);
+    // A new best individual is found but it's too old for its layer and all
+    // layers are full. Individual shouldn't be lost.
+    gp::individual new_best(prob);
+    new_best.inc_age(big_age);
+    CHECK(eva(new_best) > best_fit);
 
     for (std::size_t l(0); l < pop.layers() - 1; ++l)
-      CHECK(new_best1.age() > pop.layer(l).max_age());
-    CHECK(new_best1.age() <= pop.back().max_age());
+      CHECK(new_best.age() > pop.layer(l).max_age());
+    CHECK(new_best.age() <= pop.back().max_age());
 
-    pop.front().clear();
-    replace(std::vector{std::ref(pop.front()), std::ref(pop.back())},
-            std::vector{new_best1});
+    replace({std::ref(pop.front()), std::ref(pop.back())}, new_best);
 
-    CHECK(std::ranges::find(pop.front(), new_best1) != pop.front().end());
+    CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
+    CHECK(sum.best.solution == new_best);
+
+    // A new best, very old individual is found and there is free space in an
+    // intermediate layer.
+    for (std::size_t l(pop.layers() - 1); l; --l)
+    {
+      pop.layer(l - 1).clear();
+      replace({std::ref(pop.layer(l - 1)), std::ref(pop.back())}, new_best);
+      CHECK(std::ranges::find(pop.layer(l - 1), new_best)
+            != pop.layer(l - 1).end());
+    }
   }
 
-  // A new best, very old individual is found and there is free space in an
-  // intermediate layer.
-  SUBCASE("Very old best - free space")
-  {
-    gp::individual new_best1(prob);
-    new_best1.inc_age(big_age);
-
-    pop.front().clear();
-    replace(std::vector{std::ref(pop.front()), std::ref(pop.back())},
-            std::vector{new_best1});
-
-    CHECK(std::ranges::find(pop.front(), new_best1) != pop.front().end());
-  }
-
-  // A new best individual is found but it's too old for its layer and all
-  // layers are full. Individual shouldn't be lost.
-  SUBCASE("Very old best")
-  {
-    gp::individual new_best1(prob);
-    new_best1.inc_age(big_age);
-
-    pop.layer(2) .clear();
-    replace(std::vector{std::ref(pop.layer(2)), std::ref(pop.layer(2))},
-            std::vector{new_best1});
-  }
 }
 
 }  // TEST_SUITE("EVOLUTION REPLACEMENT")

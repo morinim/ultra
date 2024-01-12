@@ -53,8 +53,8 @@ class tournament : public strategy<E>
 public:
   using tournament::strategy::strategy;
 
-  template<Population P, SizedRangeOfIndividuals R>
-  void operator()(P &, const R &) const;
+  template<Population P, Individual I>
+  void operator()(P &, const I &) const;
 };
 
 template<Evaluator E> tournament(
@@ -72,18 +72,18 @@ template<Evaluator E> tournament(
 /// next layer -- in which case it replaces some individual there that it's
 /// better than.
 ///
-/// \see
-/// "Replacement Strategies in Steady State Genetic Algorithms: Static
-/// Environments" - Jim Smith, Frank Vavak.
-///
 template<Evaluator E>
 class alps : public strategy<E>
 {
 public:
   using alps::strategy::strategy;
 
-  template<PopulationWithMutex P, SizedRangeOfIndividuals R>
-  void operator()(std::vector<std::reference_wrapper<P>>, const R &) const;
+  template<PopulationWithMutex P, Individual I>
+  void operator()(std::initializer_list<std::reference_wrapper<P>>,
+                  const I &) const;
+
+  template<PopulationWithMutex P, Individual I>
+  void operator()(std::vector<std::reference_wrapper<P>>, const I &) const;
 
   //void try_move_up_layer(std::size_t);
 

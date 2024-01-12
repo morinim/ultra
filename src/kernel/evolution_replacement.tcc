@@ -37,14 +37,12 @@ strategy<E>::strategy(E &eva, const environment &env,
 /// - `evolution.tournament_size`;
 ///
 template<Evaluator E>
-template<Population P, SizedRangeOfIndividuals R>
-void tournament<E>::operator()(P &pop, const R &offspring) const
+template<Population P, Individual I>
+void tournament<E>::operator()(P &pop, const I &offspring) const
 {
-  static_assert(std::is_same_v<typename P::value_type,
-                               std::ranges::range_value_t<R>>);
-  static_assert(std::is_same_v<typename P::value_type, closure_arg_t<E>>);
+  static_assert(std::is_same_v<I, typename P::value_type>);
+  static_assert(std::is_same_v<I, closure_arg_t<E>>);
 
-  Expects(offspring.size() == 1);
   Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
   const auto rounds(this->env_.evolution.tournament_size);
@@ -65,29 +63,16 @@ void tournament<E>::operator()(P &pop, const R &offspring) const
     }
   }
 
-  const auto off_fit(this->eva_(offspring[0]));
-  if (off_fit > this->stats_.best.score.fitness)
-    this->stats_.update_best(offspring[0], off_fit);
+  const auto off_fit(this->eva_(offspring));
 
-  if (!random::boolean(this->env_.evolution.elitism) || off_fit > worst_fitness)
-    pop[worst_coord] = offspring[0];
+  if (off_fit > this->stats_.best.score.fitness)
+    this->stats_.update_best(offspring, off_fit);
+
+  if (off_fit > worst_fitness || !random::boolean(this->env_.evolution.elitism))
+    pop[worst_coord] = offspring;
 }
 
 /*
-///
-/// \param[in] l a layer
-/// \return    the maximum allowed age for an individual in layer `l`
-///
-/// This is just a convenience method to save some keystroke.
-///
-template<class T>
-unsigned alps<T>::allowed_age(unsigned l) const
-{
-  const auto &pop(this->pop_);
-
-  return pop.get_problem().env.alps.allowed_age(l, pop.layers());
-}
-
 ///
 /// \param[in] l a layer
 ///
@@ -111,16 +96,16 @@ void alps<T>::try_move_up_layer(unsigned l)
 
 ///
 /// \param[in] pops     a collection of references to populations. Can contain
-///                     one or two elements. The first one (`pop[0]`) is the
-///                     main/current layer; the second one, if available, is
-///                     the upper level layer
+///                     one or two elements. The first one (`pops.front()`) is
+///                     the main/current layer; the second one, if available,
+///                     is the upper level layer
 /// \param[in] incoming an individual
 ///
-/// We would like to add `incoming` in layer `pops[0]`. The insertion will
+/// We would like to add `incoming` in layer `pops.front()`. The insertion will
 /// take place if:
-/// - `pop[0]` is not full or...
+/// - `pops.front()` is not full or...
 /// - after a "kill tournament" selection, the worst individual found is
-///   too old for `layer` while the incoming one is within the limits or...
+///   too old for its layer while the incoming one is within the limits or...
 /// - the worst individual has a lower fitness than the incoming one and
 ///   both are simultaneously within/outside the time frame of the layer.
 ///
@@ -196,30 +181,34 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 /// - `evolution.tournament_size`.
 ///
 template<Evaluator E>
-template<PopulationWithMutex P, SizedRangeOfIndividuals R>
+template<PopulationWithMutex P, Individual I>
 void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
-                         const R &offspring) const
+                         const I &offspring) const
 {
-  static_assert(std::is_same_v<typename P::value_type,
-                               std::ranges::range_value_t<R>>);
-  static_assert(std::is_same_v<typename P::value_type, closure_arg_t<E>>);
+  static_assert(std::is_same_v<I, typename P::value_type>);
+  static_assert(std::is_same_v<I, closure_arg_t<E>>);
 
   Expects(0 < pops.size() && pops.size() <= 2);
   Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
-  for (const auto &off : offspring)
+  const bool ins(try_add_to_layer(pops, offspring));
+
+  if (const auto f_off(this->eva_(offspring));
+      f_off > this->stats_.best.score.fitness)
   {
-    const bool ins(try_add_to_layer(pops, off));
+    this->stats_.update_best(offspring, f_off);
 
-    if (const auto f_off(this->eva_(off));
-        f_off > this->stats_.best.score.fitness)
-    {
-      this->stats_.update_best(off, f_off);
-
-      if (!ins)
-        try_add_to_layer(std::vector{pops.back()}, off);
-    }
+    if (!ins)
+      try_add_to_layer(std::vector{pops.back()}, offspring);
   }
+}
+
+template<Evaluator E>
+template<PopulationWithMutex P, Individual I>
+void alps<E>::operator()(std::initializer_list<std::reference_wrapper<P>> pops,
+                         const I &offspring) const
+{
+  operator()(std::vector(pops), offspring);
 }
 
 #endif  // include guard
