@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -114,7 +114,7 @@ locus::index_t individual::size() const
 ///
 /// \return a range to iterate through exons (active genes).
 ///
-individual::exon_range individual::exons()
+basic_range<individual::exon_iterator> individual::exons()
 {
   return {exon_iterator(*this), exon_iterator()};
 }
@@ -122,7 +122,7 @@ individual::exon_range individual::exons()
 ///
 /// \return a const range to iterate through exons (active genes).
 ///
-individual::const_exon_range individual::cexons() const
+basic_range<individual::const_exon_iterator> individual::cexons() const
 {
   return {const_exon_iterator(*this), const_exon_iterator()};
 }

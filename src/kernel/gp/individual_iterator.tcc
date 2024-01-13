@@ -118,23 +118,6 @@ private:
   ind *ind_ {nullptr};
 };
 
-///
-/// A range for iterating over exons.
-///
-template<std::input_iterator Iterator>
-class basic_exon_range
-{
-public:
-  basic_exon_range(Iterator b, Iterator e) noexcept : b_(b), e_(e) {}
-
-  [[nodiscard]] Iterator begin() const noexcept { return b_; }
-  [[nodiscard]] Iterator end() const noexcept { return e_; }
-
-private:
-  Iterator b_;
-  Iterator e_;
-};
-
 }  // namespace internal
 
 #endif  // include guard

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,6 +20,7 @@
 #include "kernel/random.h"
 #include "kernel/gp/gene.h"
 #include "utility/matrix.h"
+#include "utility/misc.h"
 
 namespace ultra::gp
 {
@@ -62,10 +63,7 @@ public:
   using const_exon_iterator = internal::basic_exon_iterator<true>;
   using exon_iterator = internal::basic_exon_iterator<false>;
 
-  using const_exon_range = internal::basic_exon_range<const_exon_iterator>;
-  using exon_range = internal::basic_exon_range<exon_iterator>;
-
-  [[nodiscard]] const_exon_range cexons() const;
+  [[nodiscard]] basic_range<const_exon_iterator> cexons() const;
 
   [[nodiscard]] auto begin() const { return genome_.begin(); }
   [[nodiscard]] auto end() const { return genome_.end(); }
@@ -75,7 +73,7 @@ public:
 private:
   // ---- Private member functions ----
   [[nodiscard]] auto begin() { return genome_.begin(); }
-  [[nodiscard]] exon_range exons();
+  [[nodiscard]] basic_range<exon_iterator> exons();
 
   void pack(const locus &, std::vector<std::byte> *) const;
   [[nodiscard]] hash_t hash() const;
