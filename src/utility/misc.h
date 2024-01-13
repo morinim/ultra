@@ -157,6 +157,23 @@ template<class F> using closure_arg_t =
 template<class F> using closure_return_t =
   std::remove_cvref_t<typename internal::closure_info<std::remove_cvref_t<F>>::return_type>;
 
+///
+/// A very basic range type.
+///
+template<std::input_iterator Iterator>
+class basic_range
+{
+public:
+  basic_range(Iterator b, Iterator e) noexcept : b_(b), e_(e) {}
+
+  [[nodiscard]] Iterator begin() const noexcept { return b_; }
+  [[nodiscard]] Iterator end() const noexcept { return e_; }
+
+private:
+  Iterator b_;
+  Iterator e_;
+};
+
 // *******************************************************************
 // Functions
 // *******************************************************************

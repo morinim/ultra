@@ -18,12 +18,7 @@
 #define      ULTRA_LAYERED_POPULATION_ITERATOR_TCC
 
 ///
-/// Iterator for a population.
-///
-/// `layered_population<I>::base_iterator` / `layered_population<I>::begin()` /
-/// `layered_population<I>::end()` are general and clear, so they should be the
-/// preferred way to scan / perform an action over every individual of a
-/// layered population.
+/// Iterator for scanning individuals of a layered population.
 ///
 template<Individual I>
 template<bool is_const>
@@ -42,6 +37,9 @@ public:
   using ref = std::conditional_t<is_const, const_reference, reference>;
   using pop = std::conditional_t<is_const,
                                  const layered_population, layered_population>;
+  using itr = std::conditional_t<is_const,
+                                 typename pop::layer_const_iter,
+                                 typename pop::layer_iter>;
 
   // A requirement for `std::input_iterator` is that it must be
   // default-initializable.
@@ -50,7 +48,9 @@ public:
   /// \param[in] p     a population
   /// \param[in] begin `false` for the `end()` iterator
   base_iterator(pop &p, bool begin) noexcept
-    : pop_(&p), layer_(begin ? 0 : p.layers())
+    : begin_(p.range_of_layers().begin()),
+      end_(p.range_of_layers().end()),
+    layer_(begin ? begin_ : end_)
   {
   }
 
@@ -60,18 +60,17 @@ public:
   /// Advancing past the `end()` iterator results in undefined behaviour.
   base_iterator &operator++() noexcept
   {
-    if (++index_ >= pop_->layer(layer_).size())
+    if (++index_ >= layer_->size())
     {
       index_ = 0;
 
       do  // skipping empty layers
         ++layer_;
-      while (layer_ < pop_->layers() && pop_->layer(layer_).empty());
+      while (layer_ != end_ && layer_->empty());
     }
 
-    assert((layer_ < pop_->layers()
-            && index_ < pop_->layer(layer_).size())
-           || (layer_ == pop_->layers() && index_ == 0));
+    assert((layer_ != end_ && index_ < layer_->size())
+           || (layer_ == end_ && index_ == 0));
 
     return *this;
   }
@@ -87,24 +86,23 @@ public:
 
   /// \param[in] rhs second term of comparison
   /// \return        `true` if iterators point to correspondant individuals
-  [[nodiscard]] bool operator==(const base_iterator &rhs) const noexcept
-    = default;
+  [[nodiscard]] bool operator==(const base_iterator &) const noexcept = default;
 
   [[nodiscard]] std::size_t layer() const noexcept
   {
-    return layer_;
+    return std::distance(begin_, layer_);
   }
 
-  [[nodiscard]] typename layered_population<I>::coord coord() const noexcept
+  [[nodiscard]] typename layered_population::coord coord() const noexcept
   {
-    return {layer_, index_};
+    return {layer(), index_};
   }
 
 
   /// \return reference to the current individual
   [[nodiscard]] ref operator*() const noexcept
   {
-    return pop_->operator[]({layer_, index_});
+    return (*layer_)[index_];
   }
 
   /// \return pointer to the current individual
@@ -115,16 +113,13 @@ public:
 
   friend std::ostream &operator<<(std::ostream &out, const base_iterator &i)
   {
-    out << '[' << i.layer_ << ',' << i.index_ << ']';
+    out << '[' << i.layer() << ',' << i.index_ << ']';
     return out;
   }
 
 private:
-  std::conditional_t<is_const,
-                     const layered_population *,
-                     layered_population *> pop_ {nullptr};
-
-  std::size_t layer_ {0};
+  itr begin_ {}, end_ {};
+  itr layer_ {};
   std::size_t index_ {0};
 };
 

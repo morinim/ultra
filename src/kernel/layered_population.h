@@ -21,6 +21,7 @@
 #include "kernel/random.h"
 
 #include "utility/log.h"
+#include "utility/misc.h"
 
 namespace ultra
 {
@@ -39,6 +40,8 @@ class layered_population
 public:
   struct coord;
   using layer_t = linear_population<I>;
+  using layer_iter = typename std::vector<layer_t>::iterator;
+  using layer_const_iter = typename std::vector<layer_t>::const_iterator;
 
   using value_type = I;
   using difference_type = std::ptrdiff_t;
@@ -54,6 +57,9 @@ public:
   [[nodiscard]] std::size_t layers() const;
   [[nodiscard]] const layer_t &layer(std::size_t) const;
   [[nodiscard]] layer_t &layer(std::size_t);
+
+  [[nodiscard]] basic_range<layer_const_iter> range_of_layers() const;
+  [[nodiscard]] basic_range<layer_iter> range_of_layers();
 
   void init(layer_t &);
   void add_layer();

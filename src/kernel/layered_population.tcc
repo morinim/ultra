@@ -89,6 +89,20 @@ layered_population<I>::back() const
   return layers_.back();
 }
 
+template<Individual I>
+basic_range<typename layered_population<I>::layer_const_iter>
+layered_population<I>::range_of_layers() const
+{
+  return {layers_.begin(), layers_.end()};
+}
+
+template<Individual I>
+basic_range<typename layered_population<I>::layer_iter>
+layered_population<I>::range_of_layers()
+{
+  return {layers_.begin(), layers_.end()};
+}
+
 ///
 /// \return reference to the last layer of the population
 ///
