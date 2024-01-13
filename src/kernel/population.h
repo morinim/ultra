@@ -22,19 +22,15 @@ namespace ultra
 {
 
 template<class P>
-concept SizedRangeOfIndividuals = requires(const P &p)
-{
-  requires std::ranges::sized_range<P>;
-  requires Individual<std::ranges::range_value_t<P>>;
-};
+concept SizedRangeOfIndividuals =
+  std::ranges::sized_range<P> && Individual<std::ranges::range_value_t<P>>;
 
 template<class P>
-concept Population = requires(const P &p)
-{
-  requires SizedRangeOfIndividuals<P>;
-  typename P::value_type;
-  requires Individual<typename P::value_type>;
-};
+concept Population =
+  std::ranges::range<P>
+  && Individual<std::ranges::range_value_t<P>>
+  && requires { typename P::value_type; }
+  && std::same_as<typename P::value_type, std::ranges::range_value_t<P>>;
 
 template<class P>
 concept LayeredPopulation = Population<P> && requires(const P &p)
@@ -43,9 +39,10 @@ concept LayeredPopulation = Population<P> && requires(const P &p)
 };
 
 template<class P>
-concept RandomAccessPopulation = requires(const P &p)
+concept RandomAccessPopulation = Population<P> && requires(const P &p)
 {
-  requires Population<P>;
+  requires std::ranges::sized_range<P>;
+  requires std::ranges::random_access_range<P>;
   typename P::coord;
   p[typename P::coord()];
 };
