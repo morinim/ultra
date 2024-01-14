@@ -114,6 +114,8 @@ template<PopulationWithMutex P, Individual I>
 bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
                                const I &incoming) const
 {
+  Expects(incoming.is_valid());
+
   auto &pop(pops.front().get());
 
   I worst;
@@ -134,6 +136,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
     // Well, let's see if the worst individual we can find with a tournament...
     auto worst_coord(random::coord(pop));
     auto worst_fit(this->eva_(worst));
+    auto worst_age(pop[worst_coord].age());
 
     auto rounds(this->env_.evolution.tournament_size);
     assert(rounds);
@@ -142,18 +145,19 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
     {
       const auto trial_coord(random::coord(pop));
       const auto trial_fit(this->eva_(pop[trial_coord]));
+      const auto trial_age(pop[trial_coord].age());
 
-      if (pop[trial_coord].age() > std::max(pop[worst_coord].age(), m_age)
-          || (std::max(pop[worst_coord].age(), pop[trial_coord].age()) <= m_age
-              && trial_fit < worst_fit))
+      if (trial_age > std::max(worst_age, m_age)
+          || (std::max(worst_age, trial_age) <= m_age && trial_fit < worst_fit))
       {
         worst_coord = trial_coord;
         worst_fit = trial_fit;
+        worst_age = trial_age;
       }
     }
 
-    bool replace_worst((incoming.age() <= m_age && worst.age() > m_age)
-                       || ((incoming.age() <= m_age || worst.age() > m_age)
+    bool replace_worst((incoming.age() <= m_age && worst_age > m_age)
+                       || ((incoming.age() <= m_age || worst_age > m_age)
                            && this->eva_(incoming) >= worst_fit));
     if (replace_worst)
     {
