@@ -158,6 +158,74 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     }
   }
 
+  SUBCASE("Random fitness")
+  {
+    const auto backup(pop);
+
+    for (std::size_t l(0); l < pop.layers() - 1; ++l)
+      for (unsigned i(0); i < 10; ++i)
+      {
+        const auto elem(random::individual(pop.layer(l)));
+        replace({std::ref(pop.layer(l)), std::ref(pop.back())}, elem);
+
+        if (const auto it(std::ranges::mismatch(pop.layer(l), backup.layer(l)));
+            it.in1 != pop.layer(l).end())
+        {
+          // `elem` replaces a less fit individual.
+          CHECK(*it.in1 == elem);
+          CHECK(eva(elem) > eva(*it.in2));
+
+          // only one modified element
+          *it.in1 = *it.in2;
+          CHECK(std::ranges::equal(pop.layer(l), backup.layer(l)));
+        }
+
+        for (std::size_t m(l + 1); m < pop.layers() - 1; ++m)
+          CHECK(std::ranges::equal(pop.layer(m), backup.layer(m)));
+      }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals    = 30;
+  prob.env.population.layers         = 10;
+  prob.env.evolution.tournament_size = 10;
+
+  layered_population<gp::individual> pop(prob);
+  alps::set_age(pop);
+
+  const auto search([&](auto pops)
+  {
+    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+    summary<gp::individual, double> sum;
+    replacement::alps replace(eva, prob.env, &sum);
+
+    for (unsigned i(0); i < 30000; ++i)
+    {
+      const auto offspring{gp::individual(prob)};
+      CHECK(offspring.is_valid());
+
+      replace(pops, offspring);
+    }
+  });
+
+  {
+    std::vector<std::jthread> threads;
+
+    for (std::size_t l(0); l < prob.env.population.layers - 1; ++l)
+      threads.emplace_back(std::jthread(search,
+                                        std::vector{
+                                          std::ref(pop.layer(l)),
+                                          std::ref(pop.back())}));
+
+    threads.emplace_back(std::jthread(search,
+                                      std::vector{std::ref(pop.back())}));
+  }
+
+  CHECK(pop.is_valid());
 }
 
 }  // TEST_SUITE("EVOLUTION REPLACEMENT")
