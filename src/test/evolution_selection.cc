@@ -212,7 +212,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   using namespace ultra;
 
   prob.env.population.individuals    = 30;
-  prob.env.population.layers         =  3;
+  prob.env.population.layers         =  4;
   prob.env.evolution.tournament_size = 10;
   prob.env.alps.p_main_layer         = .5;
 
@@ -221,11 +221,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   const auto search([&](auto pops)
   {
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+    selection::alps select(eva, prob.env);
 
-    for (unsigned i(0); i < 1000; ++i)
+    for (unsigned i(0); i < 5000; ++i)
     {
-      selection::alps select(eva, prob.env);
-
       const auto parents(select(pops));
 
       for (const auto &p : parents)
