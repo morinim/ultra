@@ -10,6 +10,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+#include "test/alps.cc"
 #include "test/analyzer.cc"
 #include "test/de_problem.cc"
 #include "test/de_individual.cc"
