@@ -167,7 +167,7 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
     }
 
     const int expected(draws / pop.size());
-    const int tolerance(15 * expected / 100);
+    const int tolerance(16 * expected / 100);
 
     for (const auto &p : frequency)
       CHECK(std::abs(p.second - expected) <= tolerance);

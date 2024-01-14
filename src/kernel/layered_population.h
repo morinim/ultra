@@ -88,11 +88,6 @@ public:
   [[nodiscard]] bool load(std::istream &);
   [[nodiscard]] bool save(std::ostream &) const;
 
-  [[nodiscard]] const value_type &operator[](const coord &c) const
-  {return layers_[c.layer][c.index]; }
-  [[nodiscard]] value_type &operator[](const coord &c)
-  {return layers_[c.layer][c.index]; }
-
 private:
   const ultra::problem *prob_;
 
