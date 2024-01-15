@@ -24,7 +24,7 @@
 ///
 template<Individual I>
 layered_population<I>::layered_population(const ultra::problem &p)
-  : prob_(&p), layers_{p.env.population.layers}
+  : prob_(&p), layers_(p.env.population.layers)
 {
   for (auto &l : layers_)
     init(l);
@@ -42,7 +42,7 @@ const typename layered_population<I>::layer_t &
 layered_population<I>::layer(std::size_t l) const
 {
   Expects(l < layers());
-  return layers_[l];
+  return *std::next(layers_.begin(), l);
 }
 
 ///
@@ -54,7 +54,7 @@ typename layered_population<I>::layer_t &
 layered_population<I>::layer(std::size_t l)
 {
   Expects(l < layers());
-  return layers_[l];
+  return *std::next(layers_.begin(), l);
 }
 
 ///
@@ -65,7 +65,7 @@ const typename layered_population<I>::layer_t &
 layered_population<I>::front() const
 {
   Expects(layers());
-  return layer(0);
+  return layers_.front();
 }
 
 ///
@@ -75,7 +75,7 @@ template<Individual I>
 typename layered_population<I>::layer_t &layered_population<I>::front()
 {
   Expects(layers());
-  return layer(0);
+  return layers_.front();
 }
 
 ///
@@ -84,6 +84,16 @@ typename layered_population<I>::layer_t &layered_population<I>::front()
 template<Individual I>
 const typename layered_population<I>::layer_t &
 layered_population<I>::back() const
+{
+  Expects(layers());
+  return layers_.back();
+}
+
+///
+/// \return reference to the last layer of the population
+///
+template<Individual I>
+typename layered_population<I>::layer_t &layered_population<I>::back()
 {
   Expects(layers());
   return layers_.back();
@@ -104,21 +114,12 @@ layered_population<I>::range_of_layers()
 }
 
 ///
-/// \return reference to the last layer of the population
-///
-template<Individual I>
-typename layered_population<I>::layer_t &layered_population<I>::back()
-{
-  Expects(layers());
-  return layers_.back();
-}
-
-///
-/// Resets layer `l` of the population.
+/// Resets a layer of the population.
 ///
 /// \param[in] l a layer of the population
 ///
-/// \warning If layer `l` is nonexistent/empty the method doesn't work!
+/// \warning
+/// If layer `l` is nonexistent/empty the method doesn't work!
 ///
 template<Individual I>
 void layered_population<I>::init(layer_t &l)
@@ -182,7 +183,7 @@ void layered_population<I>::add_layer()
 #endif
 
   layers_.insert(layers_.begin(), layer_t());
-  init(layer(0));
+  init(front());
 
 #if !defined(NDEBUG)
   Ensures(layers() == nl + 1);
@@ -190,7 +191,7 @@ void layered_population<I>::add_layer()
 }
 
 template<Individual I>
-void layered_population<I>::remove(layer_t &l)
+void layered_population<I>::erase(layer_t &l)
 {
   layers_.erase(std::next(layers_.begin(), get_index(l, layers_)));
 }

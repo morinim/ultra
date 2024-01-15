@@ -84,7 +84,7 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
 
     for (unsigned j(0); j < added_layers; ++j)
     {
-      pop.remove(pop.layer(random::sup(pop.layers())));
+      pop.erase(pop.layer(random::sup(pop.layers())));
       CHECK(pop.layers() == prob.env.population.layers + added_layers - j - 1);
     }
   }
