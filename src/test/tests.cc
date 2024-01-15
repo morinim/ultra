@@ -27,7 +27,6 @@
 #include "test/hash_t.cc"
 #include "test/interpreter.cc"
 #include "test/layered_population.cc"
-#include "test/layered_population_coord.cc"
 #include "test/linear_population.cc"
 #include "test/locus.cc"
 #include "test/matrix.cc"

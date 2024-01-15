@@ -38,7 +38,6 @@ template<Individual I>
 class layered_population
 {
 public:
-  struct coord;
   using layer_t = linear_population<I>;
   using layer_iter = typename std::vector<layer_t>::iterator;
   using layer_const_iter = typename std::vector<layer_t>::const_iterator;
@@ -107,7 +106,6 @@ template<LayeredPopulation P>
 }  // namespace random
 
 #include "kernel/layered_population.tcc"
-#include "kernel/layered_population_coord.tcc"
 #include "kernel/layered_population_iterator.tcc"
 
 }  // namespace ultra

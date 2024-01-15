@@ -93,12 +93,6 @@ public:
     return std::distance(begin_, layer_);
   }
 
-  [[nodiscard]] typename layered_population::coord coord() const noexcept
-  {
-    return {layer(), index_};
-  }
-
-
   /// \return reference to the current individual
   [[nodiscard]] ref operator*() const noexcept
   {
