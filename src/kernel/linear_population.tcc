@@ -209,6 +209,11 @@ bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
 {
   linear_population<I> tmp;
 
+  if (unsigned ma; !(in >> ma))
+    return false;
+  else
+    tmp.max_age(ma);
+
   if (std::size_t allowed; !(in >> allowed))
     return false;
   else
@@ -238,7 +243,7 @@ bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
 template<Individual I>
 bool linear_population<I>::save(std::ostream &out) const
 {
-  out << allowed() << ' ' << size() << '\n';
+  out << max_age() << ' ' << allowed() << ' ' << size() << '\n';
 
   for (const auto &prg : *this)
     if (!prg.save(out))

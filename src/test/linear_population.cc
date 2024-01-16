@@ -76,11 +76,11 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   for (unsigned i(0); i < 100; ++i)
   {
     prob.env.population.individuals = random::between(10, 50);
-    prob.env.population.layers = random::between(1, 4);
+
+    linear_population<gp::individual> pop1(prob);
+    pop1.max_age(1234);
 
     std::stringstream ss;
-    linear_population<gp::individual> pop1(prob);
-
     CHECK(pop1.save(ss));
 
     decltype(pop1) pop2(prob);
@@ -89,6 +89,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(pop1.size() == pop2.size());
     CHECK(std::ranges::equal(pop1, pop2));
+    CHECK(pop1.max_age() == pop2.max_age());
   }
 }
 
