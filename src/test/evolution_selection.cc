@@ -218,14 +218,14 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
 
   layered_population<gp::individual> pop(prob);
 
-  const auto search([&](auto pops)
+  const auto search([&](auto from_layers)
   {
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
     selection::alps select(eva, prob.env);
 
     for (unsigned i(0); i < 5000; ++i)
     {
-      const auto parents(select(pops));
+      const auto parents(select(from_layers));
 
       for (const auto &p : parents)
         CHECK(p.is_valid());

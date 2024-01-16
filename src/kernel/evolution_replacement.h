@@ -85,7 +85,8 @@ public:
   template<PopulationWithMutex P, Individual I>
   void operator()(std::vector<std::reference_wrapper<P>>, const I &) const;
 
-  //void try_move_up_layer(std::size_t);
+  template<RandomAccessPopulation P>
+  void try_move_up_layer(const P &, P &);
 
 private:
   //[[nodiscard]] unsigned allowed_age(unsigned) const;

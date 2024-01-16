@@ -72,27 +72,20 @@ void tournament<E>::operator()(P &pop, const I &offspring) const
     pop[worst_coord] = offspring;
 }
 
-/*
 ///
-/// \param[in] l a layer
+/// \param[in]  from starting layer
+/// \param[out] to   destination layer
 ///
-/// Try to move individuals in layer `l` in the upper layer (calling
-/// try_add_to_layer for each individual).
+/// Try to move individuals from layer `from` to the upper layer (calling
+/// `try_add_to_layer` for each individual).
 ///
-template<class T>
-void alps<T>::try_move_up_layer(unsigned l)
+template<Evaluator E>
+template<RandomAccessPopulation P>
+void alps<E>::try_move_up_layer(const P &from, P &to)
 {
-  auto &pop(this->pop_);
-
-  if (l + 1 < pop.layers())
-  {
-    const auto n(pop.individuals(l));
-
-    for (auto i(decltype(n){0}); i < n; ++i)
-      try_add_to_layer(l + 1, pop[{l, i}]);
-  }
+  for (const auto &prg : from)
+    try_add_to_layer(std::vector{std::ref(to)}, prg);
 }
-*/
 
 ///
 /// \param[in] pops     a collection of references to populations. Can contain

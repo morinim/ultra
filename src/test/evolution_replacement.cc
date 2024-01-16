@@ -197,7 +197,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
-  const auto search([&](auto pops)
+  const auto search([&](auto to_layers)
   {
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
     summary<gp::individual, double> sum;
@@ -208,17 +208,18 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
       const auto offspring{gp::individual(prob)};
       CHECK(offspring.is_valid());
 
-      replace(pops, offspring);
+      replace(to_layers, offspring);
     }
   });
 
   {
     std::vector<std::jthread> threads;
 
-    for (std::size_t l(0); l < prob.env.population.layers - 1; ++l)
+    const auto range(pop.range_of_layers());
+    for (auto l(range.begin()), stop(std::prev(range.end())); l != stop; ++l)
       threads.emplace_back(std::jthread(search,
                                         std::vector{
-                                          std::ref(pop.layer(l)),
+                                          std::ref(*l),
                                           std::ref(pop.back())}));
 
     threads.emplace_back(std::jthread(search,
@@ -226,6 +227,45 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   }
 
   CHECK(pop.is_valid());
+}
+
+TEST_CASE_FIXTURE(fixture1, "Move up layer")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals    = 30;
+  prob.env.population.layers         = 10;
+
+  layered_population<gp::individual> pop(prob);
+  alps::set_age(pop);
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::random);
+  summary<gp::individual, double> sum;
+  replacement::alps replace(eva, prob.env, &sum);
+
+  const auto range(pop.range_of_layers());
+  for (auto l(std::prev(range.end())); l != range.begin(); --l)
+  {
+    const auto backup(*l);
+
+    replace.try_move_up_layer(*std::prev(l), *l);
+
+    std::vector<gp::individual> replaced;
+    for (const auto &old : backup)
+      if (std::ranges::find(*l, old) == l->end())
+        replaced.push_back(old);
+
+    for (const auto &prg : *l)
+      if (std::ranges::find(backup, prg) == backup.end())
+      {
+        CHECK(std::ranges::find(*std::prev(l), prg) != std::prev(l)->end());
+        CHECK(std::ranges::any_of(replaced,
+                                  [&eva, &prg](const auto &ind)
+                                  {
+                                    return eva(ind) < eva(prg);
+                                  }));
+      }
+  }
 }
 
 }  // TEST_SUITE("EVOLUTION REPLACEMENT")

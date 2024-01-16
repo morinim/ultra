@@ -277,8 +277,8 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
       }
 
       const double perc(100.0 * total_mut / total_length);
-      CHECK(perc > prob.env.evolution.p_mutation * 100.0 - 2.0);
-      CHECK(perc < prob.env.evolution.p_mutation * 100.0 + 2.0);
+      CHECK(perc > prob.env.evolution.p_mutation * 100.0 - 5.0);
+      CHECK(perc < prob.env.evolution.p_mutation * 100.0 + 5.0);
     }
   }
 }

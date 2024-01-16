@@ -166,8 +166,14 @@ class basic_range
 public:
   basic_range(Iterator b, Iterator e) noexcept : b_(b), e_(e) {}
 
-  [[nodiscard]] Iterator begin() const noexcept { return b_; }
-  [[nodiscard]] Iterator end() const noexcept { return e_; }
+  [[nodiscard]] auto begin() const noexcept { return b_; }
+  [[nodiscard]] auto end() const noexcept { return e_; }
+
+  [[nodiscard]] auto rbegin() const noexcept
+  { return std::reverse_iterator(e_); }
+
+  [[nodiscard]] auto rend() const noexcept
+  { return std::reverse_iterator(b_); }
 
 private:
   Iterator b_;
