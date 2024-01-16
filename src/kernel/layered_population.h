@@ -14,6 +14,7 @@
 #define      ULTRA_LAYERED_POPULATION_H
 
 #include <algorithm>
+#include <list>
 #include <numeric>
 
 #include "kernel/linear_population.h"
@@ -39,13 +40,13 @@ class layered_population
 {
 public:
   using layer_t = linear_population<I>;
-  using layer_iter = typename std::vector<layer_t>::iterator;
-  using layer_const_iter = typename std::vector<layer_t>::const_iterator;
+  using layer_iter = typename std::list<layer_t>::iterator;
+  using layer_const_iter = typename std::list<layer_t>::const_iterator;
 
   using value_type = I;
   using difference_type = std::ptrdiff_t;
 
-  explicit layered_population(const ultra::problem &);
+  explicit layered_population(const ultra::problem &, bool = true);
 
   // Layer-related
   [[nodiscard]] const layer_t &front() const;
@@ -61,8 +62,9 @@ public:
   [[nodiscard]] basic_range<layer_iter> range_of_layers();
 
   void init(layer_t &);
+  void init(layer_iter);
   void add_layer();
-  void erase(layer_t &);
+  bool erase(layer_t &);
 
   [[nodiscard]] std::size_t size() const;
 
@@ -90,7 +92,7 @@ public:
 private:
   const ultra::problem *prob_;
 
-  std::vector<layer_t> layers_ {};
+  std::list<layer_t> layers_ {};
 };
 
 template<Individual I>

@@ -36,6 +36,9 @@ template<class P>
 concept LayeredPopulation = Population<P> && requires(const P &p)
 {
   p.layers();
+
+  p.range_of_layers();
+  requires std::ranges::range<decltype(p.range_of_layers())>;
 };
 
 template<class P>

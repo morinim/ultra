@@ -105,11 +105,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
       unsigned j(0);
-      for (std::size_t l(0); l < prob.env.population.layers; ++l)
+      for (auto &layer : pop.range_of_layers())
       {
-        pop.layer(l).max_age(0);
+        layer.max_age(0);
 
-        for (auto &prg : pop.layer(l))
+        for (auto &prg : layer)
         {
           prg.inc_age(j++ % 2);
           [[maybe_unused]] auto fit(eva(prg));
@@ -124,8 +124,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       {
         selection::alps select(eva, prob.env);
 
-        const auto parents(select(std::vector{std::cref(pop.layer(0)),
-                                              std::cref(pop.layer(1))}));
+        const auto parents(select(std::vector{std::cref(pop.layer(1)),
+                                              std::cref(pop.layer(0))}));
         CHECK(parents.size() == 2);
 
         const auto get_layer([&](const gp::individual &prg)
@@ -146,7 +146,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       }
 
       return std::vector{both_aged / double(n), both_young / double(n),
-                         from_layer[0] / double(2 * n)};
+                         from_layer[1] / double(2 * n)};
     };
 
   const double prob_single_aged(0.5);
@@ -234,13 +234,14 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
 
   std::vector<std::jthread> threads;
   threads.emplace_back(std::jthread(search,
-                                    std::vector{std::cref(pop.layer(0))}));
+                                    std::vector{std::cref(pop.front())}));
 
-  for (std::size_t l(1); l < prob.env.population.layers; ++l)
+  const auto range(pop.range_of_layers());
+  for (auto l(std::next(range.begin())); l != range.end(); ++l)
     threads.emplace_back(std::jthread(search,
                                       std::vector{
-                                        std::cref(pop.layer(l - 1)),
-                                        std::cref(pop.layer(l))}));
+                                        std::cref(*l),
+                                        std::cref(*std::prev(l))}));
 }
 
 TEST_CASE_FIXTURE(fixture4, "DE")

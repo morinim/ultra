@@ -20,16 +20,22 @@
 ///
 /// Creates a random population.
 ///
-/// \param[in] p current problem
+/// \param[in] p           current problem
+/// \param[in] init_layers builds `p.env.population.layers` layers
 ///
 template<Individual I>
-layered_population<I>::layered_population(const ultra::problem &p)
-  : prob_(&p), layers_(p.env.population.layers)
+layered_population<I>::layered_population(const ultra::problem &p,
+                                          bool init_layers)
+  : prob_(&p)
 {
-  for (auto &l : layers_)
-    init(l);
+  if (init_layers)
+  {
+    for (std::size_t l(0); l < p.env.population.layers; ++l)
+      init(layers_.insert(layers_.end(), layer_t()));
 
-  Ensures(layers() == p.env.population.layers);
+    assert(layers() == p.env.population.layers);
+  }
+
   Ensures(is_valid());
 }
 
@@ -118,9 +124,6 @@ layered_population<I>::range_of_layers()
 ///
 /// \param[in] l a layer of the population
 ///
-/// \warning
-/// If layer `l` is nonexistent/empty the method doesn't work!
-///
 template<Individual I>
 void layered_population<I>::init(layer_t &l)
 {
@@ -128,6 +131,33 @@ void layered_population<I>::init(layer_t &l)
   l.allowed(problem().env.population.individuals);
 
   std::generate_n(std::back_inserter(l), l.allowed(),
+                  [this] {return I(problem()); });
+}
+
+///
+/// Resets a layer of the population.
+///
+/// \param[in] l an iterator referring to layer of the population
+///
+/// \warning
+/// If layer `l` is nonexistent the method doesn't work!
+///
+template<Individual I>
+void layered_population<I>::init(layer_iter l)
+{
+  if (l == layers_.end())
+    return;
+
+  assert(std::ranges::find_if(layers_,
+                              [&l](const auto &elem)
+                              {
+                                return std::addressof(elem) == &*l;
+                              }) != layers_.end());
+
+  l->clear();
+  l->allowed(problem().env.population.individuals);
+
+  std::generate_n(std::back_inserter(*l), l->allowed(),
                   [this] {return I(problem()); });
 }
 
@@ -182,8 +212,7 @@ void layered_population<I>::add_layer()
   const auto nl(layers());
 #endif
 
-  layers_.insert(layers_.begin(), layer_t());
-  init(front());
+  init(layers_.insert(layers_.begin(), layer_t()));
 
 #if !defined(NDEBUG)
   Ensures(layers() == nl + 1);
@@ -191,9 +220,9 @@ void layered_population<I>::add_layer()
 }
 
 template<Individual I>
-void layered_population<I>::erase(layer_t &l)
+bool layered_population<I>::erase(layer_t &l)
 {
-  layers_.erase(std::next(layers_.begin(), get_index(l, layers_)));
+  return std::erase_if(layers_, [&l](const auto &l1) { return &l1 == &l; });
 }
 
 ///
@@ -291,14 +320,17 @@ bool layered_population<I>::load(std::istream &in)
   if (!(in >> n_layers) || !n_layers)
     return false;
 
-  layered_population p(*prob_);
-  p.layers_.reserve(n_layers);
+  layered_population<I> lp(*prob_, false);
 
   for (std::size_t l(0); l < n_layers; ++l)
-    if (!p.layer(l).load(in, prob_->sset))
+  {
+    if (layer_t tmp; tmp.load(in, prob_->sset))
+      lp.layers_.push_back(std::move(tmp));
+    else
       return false;
+  }
 
-  *this = p;
+  *this = lp;
   return true;
 }
 
