@@ -18,12 +18,14 @@
 #define      ULTRA_EVOLUTION_RECOMBINATION_TCC
 
 ///
+/// \param[in]  eva   a fitness function
 /// \param[in]  prob  the current problem
 /// \param[out] stats pointer to the current set of statistics
 ///
-template<Individual I, Fitness F>
-strategy<I, F>::strategy(const problem &prob, summary<I, F> *stats)
-  : prob_(prob), stats_(*stats)
+template<Evaluator E>
+strategy<E>::strategy(E &eva, const problem &prob,
+                      summary<closure_arg_t<E>, closure_return_t<E>> *stats)
+  : eva_(eva), prob_(prob), stats_(*stats)
 {
   Expects(stats);
 }
@@ -32,17 +34,15 @@ strategy<I, F>::strategy(const problem &prob, summary<I, F> *stats)
 /// This is a quite standard crossover + mutation operator.
 ///
 /// \param[in] parents a vector of ordered parents
-/// \param[in] eva     a fitness function
 /// \return            the offspring (single child)
 ///
-template<Individual I, Fitness F>
-template<SizedRangeOfIndividuals R, Evaluator E>
+template<Evaluator E>
+template<SizedRangeOfIndividuals R>
 [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
-base<I, F>::operator()(const R &parents, E &eva) const
+base<E>::operator()(const R &parents) const
 {
-  static_assert(std::is_same_v<I, std::ranges::range_value_t<R>>);
-  static_assert(std::is_same_v<I, closure_arg_t<E>>);
-  static_assert(std::convertible_to<decltype(eva(I())), F>);
+  static_assert(std::is_same_v<closure_arg_t<E>,
+                               std::ranges::range_value_t<R>>);
 
   const auto p_cross(this->prob_.env.evolution.p_cross);
   const auto brood_recombination(this->prob_.env.evolution.brood_recombination);
@@ -79,13 +79,13 @@ base<I, F>::operator()(const R &parents, E &eva) const
 
     if (brood_recombination > 1)
     {
-      auto fit_off(eva(off));
+      auto fit_off(this->eva_(off));
 
       for (unsigned i(1); i < brood_recombination; ++i)
       {
         const auto tmp(cross_and_mutate(parents[0], parents[1]));
 
-        if (const auto fit_tmp(eva(tmp)); fit_tmp > fit_off)
+        if (const auto fit_tmp(this->eva_(tmp)); fit_tmp > fit_off)
         {
           off     =     tmp;
           fit_off = fit_tmp;

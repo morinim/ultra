@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -32,7 +32,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
   summary<gp::individual, double> sum;
-  recombination::base recombine(prob, &sum);
+  recombination::base recombine(eva, prob, &sum);
 
   std::vector parents = { gp::individual(prob), gp::individual(prob) };
   while (parents[0] == parents[1])
@@ -45,7 +45,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     for (unsigned i(0); i < 100; ++i)
     {
-      const auto off(recombine(parents, eva).front());
+      const auto off(recombine(parents).front());
 
       CHECK(off.is_valid());
       const bool one_or_the_other(off == parents[0] || off == parents[1]);
@@ -62,7 +62,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     for (unsigned i(0); i < 100; ++i)
     {
-      const auto off(recombine(same_parents, eva).front());
+      const auto off(recombine(same_parents).front());
 
       CHECK(off.is_valid());
       CHECK(off == same_parents[0]);
@@ -76,7 +76,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
       sum.mutations = 0;
       sum.crossovers = 0;
 
-      const auto off(recombine(parents, eva).front());
+      const auto off(recombine(parents).front());
 
       CHECK(off.is_valid());
 

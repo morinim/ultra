@@ -44,15 +44,17 @@ namespace ultra::recombination
 /// \see
 /// * <http://en.wikipedia.org/wiki/Strategy_pattern>
 ///
-template<Individual I, Fitness F>
+template<Evaluator E>
 class strategy
 {
 public:
-  strategy(const problem &, summary<I, F> *);
+  strategy(E &, const problem &,
+           summary<closure_arg_t<E>, closure_return_t<E>> *);
 
 protected:
+  E &eva_;
   const problem &prob_;
-  summary<I, F> &stats_;
+  summary<closure_arg_t<E>, closure_return_t<E>> &stats_;
 };
 
 ///
@@ -62,19 +64,20 @@ protected:
 /// by subclasses to allow differing behaviours while ensuring that the
 /// overarching algorithm is still followed.
 ///
-template<Individual I, Fitness F>
-class base : public strategy<I, F>
+template<Evaluator E>
+class base : public strategy<E>
 {
 public:
   using base::strategy::strategy;
 
-  template<SizedRangeOfIndividuals R, Evaluator E>
+  template<SizedRangeOfIndividuals R>
   [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
-  operator()(const R &, E &) const;
+  operator()(const R &) const;
 };
 
-template<Individual I, Fitness F> base(const problem &, summary<I, F> *)
-  -> base<I, F>;
+template<Evaluator E> base(E &, const problem &,
+                           summary<closure_arg_t<E>, closure_return_t<E>> *)
+  -> base<E>;
 
 #include "kernel/evolution_recombination.tcc"
 
