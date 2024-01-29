@@ -32,7 +32,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
   summary<gp::individual, double> sum;
-  recombination::base recombine(eva, prob, &sum);
+  recombination::base recombine(eva, prob, sum);
 
   std::vector parents = { gp::individual(prob), gp::individual(prob) };
   while (parents[0] == parents[1])

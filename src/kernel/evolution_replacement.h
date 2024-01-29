@@ -29,7 +29,7 @@ class strategy
 {
 public:
   strategy(E &, const environment &,
-           summary<closure_arg_t<E>, closure_return_t<E>> *);
+           summary<closure_arg_t<E>, closure_return_t<E>> &);
 
 protected:
   E &eva_;
@@ -58,7 +58,7 @@ public:
 };
 
 template<Evaluator E> tournament(
-  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> *)
+  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> &)
   -> tournament<E>;
 
 ///
@@ -89,14 +89,13 @@ public:
   void try_move_up_layer(const P &, P &);
 
 private:
-  //[[nodiscard]] unsigned allowed_age(unsigned) const;
   template<PopulationWithMutex P, Individual I>
   bool try_add_to_layer(std::vector<std::reference_wrapper<P>>,
                         const I &) const;
 };
 
 template<Evaluator E> alps(
-  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> *)
+  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> &)
   -> alps<E>;
 
 #include "kernel/evolution_replacement.tcc"

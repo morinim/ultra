@@ -49,7 +49,7 @@ class strategy
 {
 public:
   strategy(E &, const problem &,
-           summary<closure_arg_t<E>, closure_return_t<E>> *);
+           summary<closure_arg_t<E>, closure_return_t<E>> &);
 
 protected:
   E &eva_;
@@ -76,7 +76,7 @@ public:
 };
 
 template<Evaluator E> base(E &, const problem &,
-                           summary<closure_arg_t<E>, closure_return_t<E>> *)
+                           summary<closure_arg_t<E>, closure_return_t<E>> &)
   -> base<E>;
 
 #include "kernel/evolution_recombination.tcc"

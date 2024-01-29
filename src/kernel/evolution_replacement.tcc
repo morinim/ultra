@@ -18,13 +18,14 @@
 #define      ULTRA_EVOLUTION_REPLACEMENT_TCC
 
 ///
-/// \param[in] eva current evaluator
-/// \param[in] env environment (for replacement specific parameters)
+/// \param[in]  eva   current evaluator
+/// \param[in]  env   environment (for replacement specific parameters)
+/// \param[out] stats statistics about the replacement strategy
 ///
 template<Evaluator E>
 strategy<E>::strategy(E &eva, const environment &env,
-                      summary<closure_arg_t<E>, closure_return_t<E>> *stats)
-  : eva_(eva), env_(env), stats_(*stats)
+                      summary<closure_arg_t<E>, closure_return_t<E>> &stats)
+  : eva_(eva), env_(env), stats_(stats)
 {
 }
 
@@ -161,7 +162,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 
   // ... is worse than the incoming individual.
   if (!worst.empty() && pops.size() > 1)
-    try_add_to_layer(std::vector{pops[1]}, worst);
+    try_add_to_layer(std::vector{pops.back()}, worst);
 
   return !worst.empty();
 }

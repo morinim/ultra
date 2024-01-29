@@ -53,7 +53,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   sum.best.solution = worst;
   sum.best.score.fitness = worst_fit;
 
-  replacement::tournament replace(eva, prob.env, &sum);
+  replacement::tournament replace(eva, prob.env, sum);
 
   SUBCASE("No elitism")
   {
@@ -126,7 +126,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   sum.best.solution = worst;
   sum.best.score.fitness = worst_fit;
 
-  replacement::alps replace(eva, prob.env, &sum);
+  replacement::alps replace(eva, prob.env, sum);
 
   const unsigned big_age(10000);
 
@@ -201,7 +201,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   {
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
     summary<gp::individual, double> sum;
-    replacement::alps replace(eva, prob.env, &sum);
+    replacement::alps replace(eva, prob.env, sum);
 
     for (unsigned i(0); i < 30000; ++i)
     {
@@ -241,7 +241,7 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::random);
   summary<gp::individual, double> sum;
-  replacement::alps replace(eva, prob.env, &sum);
+  replacement::alps replace(eva, prob.env, sum);
 
   const auto range(pop.range_of_layers());
   for (auto l(std::prev(range.end())); l != range.begin(); --l)

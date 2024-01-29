@@ -29,12 +29,18 @@ template<Evaluator E>
 class strategy
 {
 public:
+  using evaluator_t = E;
+
   explicit strategy(E &, const environment &);
 
 protected:
   E &eva_;
   const environment &env_;
 };
+
+template<class S>
+concept SelectionStrategy =
+  std::derived_from<S, strategy<typename S::evaluator_t>>;
 
 ///
 /// Tournament selection is a method of selecting an individual from a

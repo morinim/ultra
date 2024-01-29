@@ -20,14 +20,13 @@
 ///
 /// \param[in]  eva   a fitness function
 /// \param[in]  prob  the current problem
-/// \param[out] stats pointer to the current set of statistics
+/// \param[out] stats reference to the current set of statistics
 ///
 template<Evaluator E>
 strategy<E>::strategy(E &eva, const problem &prob,
-                      summary<closure_arg_t<E>, closure_return_t<E>> *stats)
-  : eva_(eva), prob_(prob), stats_(*stats)
+                      summary<closure_arg_t<E>, closure_return_t<E>> &stats)
+  : eva_(eva), prob_(prob), stats_(stats)
 {
-  Expects(stats);
 }
 
 ///
