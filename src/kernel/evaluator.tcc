@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -41,6 +41,7 @@ double test_evaluator<I>::operator()(const I &prg) const
   if (et_ == test_evaluator_type::fixed)
     return 0.0;
 
+  std::lock_guard guard(mutex_);
   auto it(std::ranges::find(buffer_, prg));
   if (it == buffer_.end())
   {

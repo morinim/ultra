@@ -55,6 +55,8 @@ public:
 
 private:
   mutable std::vector<I> buffer_ {};
+  mutable std::mutex mutex_ {};
+
   const test_evaluator_type et_;
 
   std::chrono::milliseconds delay_ {0};

@@ -51,7 +51,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   {
     prob.env.evolution.tournament_size = ts;
 
-    auto max(std::ranges::max(pop, [eva](const auto &p1, const auto &p2)
+    auto max(std::ranges::max(pop, [&eva](const auto &p1, const auto &p2)
                                    {
                                      return eva(p1) < eva(p2);
                                    }));
@@ -263,7 +263,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 
   selection::de select(eva, prob.env);
 
-  auto max(std::ranges::max(pop, [eva](const auto &p1, const auto &p2)
+  auto max(std::ranges::max(pop, [&eva](const auto &p1, const auto &p2)
                                  {
                                    return eva(p1) < eva(p2);
                                  }));
