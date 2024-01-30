@@ -137,7 +137,7 @@ void layered_population<I>::init(layer_t &l)
 ///
 /// Resets a layer of the population.
 ///
-/// \param[in] l an iterator referring to layer of the population
+/// \param[in] l an iterator referring to a layer of the population
 ///
 /// \warning
 /// If layer `l` is nonexistent the method doesn't work!
@@ -151,7 +151,8 @@ void layered_population<I>::init(layer_iter l)
   assert(std::ranges::find_if(layers_,
                               [&l](const auto &elem)
                               {
-                                return std::addressof(elem) == &*l;
+                                return std::addressof(elem)
+                                       == std::addressof(*l);
                               }) != layers_.end());
 
   l->clear();
