@@ -41,15 +41,18 @@ double test_evaluator<I>::operator()(const I &prg) const
   if (et_ == test_evaluator_type::fixed)
     return 0.0;
 
-  std::lock_guard guard(mutex_);
-  auto it(std::ranges::find(buffer_, prg));
-  if (it == buffer_.end())
+  std::size_t dist;
   {
-    buffer_.push_back(prg);
-    it = std::prev(buffer_.end());
-  }
+    std::lock_guard guard(mutex_);
+    auto it(std::ranges::find(buffer_, prg));
+    if (it == buffer_.end())
+    {
+      buffer_.push_back(prg);
+      it = std::prev(buffer_.end());
+    }
 
-  const auto dist(std::distance(buffer_.begin(), it));
+    dist = std::distance(buffer_.begin(), it);
+  }
 
   if (et_ == test_evaluator_type::distinct)
     return static_cast<double>(dist);
