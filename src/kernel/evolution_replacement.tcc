@@ -108,6 +108,7 @@ template<PopulationWithMutex P, Individual I>
 bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
                                const I &incoming) const
 {
+  Expects(!pops.empty());
   Expects(incoming.is_valid());
 
   auto &pop(pops.front().get());
@@ -150,9 +151,12 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
       }
     }
 
-    bool replace_worst((incoming.age() <= m_age && worst_age > m_age)
-                       || ((incoming.age() <= m_age || worst_age > m_age)
-                           && this->eva_(incoming) >= worst_fit));
+    const bool replace_worst(
+      (incoming.age() <= m_age && worst_age > m_age)
+      || ((incoming.age() <= m_age || worst_age > m_age)
+          && this->eva_(incoming) >= worst_fit));
+
+    // ... is worse than the incoming individual.
     if (replace_worst)
     {
       worst = pop[worst_coord];
@@ -160,8 +164,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
     }
   }
 
-  // ... is worse than the incoming individual.
-  if (!worst.empty() && pops.size() > 1)
+  if (pops.size() > 1 && !worst.empty())
     try_add_to_layer(std::vector{pops.back()}, worst);
 
   return !worst.empty();
