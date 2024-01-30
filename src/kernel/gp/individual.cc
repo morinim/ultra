@@ -1014,7 +1014,15 @@ bool individual::is_valid() const
     return false;
   }
 
-  return signature_.empty() || signature_ == hash();
+  if (!signature_.empty() && signature_ != hash())
+  {
+    ultraERROR << "Actual signature ("
+               << signature_ << ") doesn't match the individual` ("
+               << hash() << ')';
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace ultra::gp
