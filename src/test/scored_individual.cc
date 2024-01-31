@@ -70,9 +70,21 @@ TEST_CASE_FIXTURE(fixture1, "Comparison")
   CHECK(si1 < si2);
   CHECK(si2 > si1);
 
+  CHECK(si1 <= si1);
+  CHECK(si1 <= si2);
+
+  CHECK(si2 >= si2);
+  CHECK(si2 >= si1);
+
   const decltype(si1) empty;
   CHECK(empty < si1);
   CHECK(empty < si2);
+  CHECK(si1 > empty);
+  CHECK(si2 > empty);
+  CHECK(empty <= si1);
+  CHECK(empty <= si2);
+  CHECK(si1 >= empty);
+  CHECK(si2 >= empty);
 }
 
 }  // TEST_SUITE("SCORED INDIVIDUAL")

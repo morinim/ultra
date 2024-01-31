@@ -53,8 +53,8 @@ class tournament : public strategy<E>
 public:
   using tournament::strategy::strategy;
 
-  template<Population P, Individual I>
-  void operator()(P &, const I &) const;
+  template<Population P>
+  void operator()(P &, const closure_arg_t<E> &) const;
 };
 
 template<Evaluator E> tournament(
@@ -77,10 +77,6 @@ class alps : public strategy<E>
 {
 public:
   using alps::strategy::strategy;
-
-  template<PopulationWithMutex P, Individual I>
-  void operator()(std::initializer_list<std::reference_wrapper<P>>,
-                  const I &) const;
 
   template<PopulationWithMutex P, Individual I>
   void operator()(std::vector<std::reference_wrapper<P>>, const I &) const;

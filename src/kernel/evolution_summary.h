@@ -16,16 +16,20 @@
 #include <chrono>
 
 #include "kernel/analyzer.h"
+#include "kernel/evolution_status.h"
 #include "kernel/model_measurements.h"
-#include "kernel/problem.h"
 
 namespace ultra
 {
 ///
-/// A summary of evolution (results, statistics...).
+/// A summary of information about evolution (results, statistics...).
+///
+/// Part of the information (`status`) supports concurrent access and is keep
+/// up to date while evolution is ongoing; the remaining part is calculated at
+/// the end of evolution.
 ///
 template<Individual I, Fitness F>
-class summary
+struct summary
 {
 public:
   // --- Constructor and support functions ---
@@ -33,20 +37,16 @@ public:
 
   void clear();
 
-  void update_best(const I &, const F &);
-
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);
   [[nodiscard]] bool save(std::ostream &) const;
 
   // --- Data members ---
+  evolution_status<I, F> status;
+
   analyzer<I, F> az {};
 
-  struct
-  {
-    I                  solution {};
-    model_measurements<F> score {};
-  } best {};
+  model_measurements<F> score {};
 
   /// Time elapsed from evolution beginning.
   std::chrono::milliseconds elapsed {0};

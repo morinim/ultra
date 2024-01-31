@@ -31,18 +31,17 @@ strategy<E>::strategy(E &eva, const environment &env,
 
 ///
 /// \param[in] pop       a population
-/// \param[in] offspring collection of "children".
+/// \param[in] offspring collection of "children"
 ///
 /// Parameters from the environment:
 /// - `evolution.elitism`;
 /// - `evolution.tournament_size`;
 ///
 template<Evaluator E>
-template<Population P, Individual I>
-void tournament<E>::operator()(P &pop, const I &offspring) const
+template<Population P>
+void tournament<E>::operator()(P &pop, const closure_arg_t<E> &offspring) const
 {
-  static_assert(std::is_same_v<I, typename P::value_type>);
-  static_assert(std::is_same_v<I, closure_arg_t<E>>);
+  static_assert(std::is_same_v<closure_arg_t<E>, typename P::value_type>);
 
   Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
@@ -66,8 +65,7 @@ void tournament<E>::operator()(P &pop, const I &offspring) const
 
   const auto off_fit(this->eva_(offspring));
 
-  if (off_fit > this->stats_.best.score.fitness)
-    this->stats_.update_best(offspring, off_fit);
+  this->stats_.status.update_if_better(scored_individual(offspring, off_fit));
 
   if (off_fit > worst_fitness || !random::boolean(this->env_.evolution.elitism))
     pop[worst_coord] = offspring;
@@ -175,10 +173,9 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 ///                      one or two elements. The first one (`pop[0]`) is the
 ///                      main/current layer; the second one, if available, is
 ///                      the upper level layer
-/// \param[in] offspring a range containing the offspring
+/// \param[in] offspring the "incoming" individual
 ///
 /// Parameters from the environment:
-/// - `evolution.elitism`;
 /// - `evolution.tournament_size`.
 ///
 template<Evaluator E>
@@ -190,26 +187,15 @@ void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
   static_assert(std::is_same_v<I, closure_arg_t<E>>);
 
   Expects(0 < pops.size() && pops.size() <= 2);
-  Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
   const bool ins(try_add_to_layer(pops, offspring));
 
   if (const auto f_off(this->eva_(offspring));
-      f_off > this->stats_.best.score.fitness)
+      this->stats_.status.update_if_better(scored_individual(offspring, f_off)))
   {
-    this->stats_.update_best(offspring, f_off);
-
     if (!ins)
       try_add_to_layer(std::vector{pops.back()}, offspring);
   }
-}
-
-template<Evaluator E>
-template<PopulationWithMutex P, Individual I>
-void alps<E>::operator()(std::initializer_list<std::reference_wrapper<P>> pops,
-                         const I &offspring) const
-{
-  operator()(std::vector(pops), offspring);
 }
 
 #endif  // include guard

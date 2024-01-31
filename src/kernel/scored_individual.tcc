@@ -47,10 +47,24 @@ bool operator<(const scored_individual<I, F> &lhs,
 }
 
 template<Individual I, Fitness F>
+bool operator<=(const scored_individual<I, F> &lhs,
+                const scored_individual<I, F> &rhs)
+{
+  return lhs.fit <= rhs.fit;
+}
+
+template<Individual I, Fitness F>
 bool operator>(const scored_individual<I, F> &lhs,
                const scored_individual<I, F> &rhs)
 {
   return lhs.fit > rhs.fit;
+}
+
+template<Individual I, Fitness F>
+bool operator>=(const scored_individual<I, F> &lhs,
+                const scored_individual<I, F> &rhs)
+{
+  return lhs.fit >= rhs.fit;
 }
 
 ///

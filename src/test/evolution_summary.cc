@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -37,8 +37,9 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   s.mutations = 100;
   s.gen = 10;
   s.last_imp = 0;
+  s.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
 
-  CHECK(s.best.solution.empty());
+  CHECK(s.status.best().empty());
 
   std::stringstream ss;
 
@@ -51,24 +52,27 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     CHECK(s1.load(ss, prob));
 
     CHECK(s.elapsed == s1.elapsed);
-    CHECK(s.crossovers == s1.crossovers);
-    CHECK(s.mutations == s1.mutations);
+    CHECK(s.status.crossovers == s1.status.crossovers);
+    CHECK(s.status.mutations == s1.status.mutations);
     CHECK(s.gen == s1.gen);
     CHECK(s.last_imp == s1.last_imp);
-    CHECK(s1.best.solution.empty());
+    CHECK(s.score <= s1.score);
+    CHECK(s.score >= s1.score);
+    CHECK(s1.status.best().empty());
   }
 
   SUBCASE("With best")
   {
-    s.best.solution = gp::individual(prob);
-    s.best.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
+    s.status.update_if_better(
+      scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
+
     CHECK(s.save(ss));
 
     CHECK(s1.load(ss, prob));
 
-    CHECK(s.best.solution == s1.best.solution);
-    CHECK(s.best.score <= s1.best.score);
-    CHECK(s.best.score >= s1.best.score);
+    CHECK(s.status.best().ind == s1.status.best().ind);
+    CHECK(s.status.best() <= s1.status.best());
+    CHECK(s.status.best() >= s1.status.best());
   }
 }
 
