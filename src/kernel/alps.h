@@ -68,6 +68,32 @@ void set_age(P &pop)
   pop.back().max_age(std::numeric_limits<unsigned>::max());
 }
 
+template<LayeredPopulation P>
+std::vector<std::reference_wrapper<typename P::layer_t>>
+replacement_layers(P & pop, typename P::layer_iter l)
+{
+  Expects(pop.layers());
+  Expects(iterator_of(l, pop.range_of_layers()));
+
+  if (l == std::prev(pop.range_of_layers().end()))
+    return {std::ref(*l)};
+
+  return {std::ref(*l), std::ref(pop.back())};
+}
+
+template<LayeredPopulation P>
+std::vector<std::reference_wrapper<const typename P::layer_t>>
+selection_layers(const P & pop, typename P::layer_iter l)
+{
+  Expects(pop.layers());
+  Expects(iterator_of(l, pop.range_of_layers()));
+
+  if (l == pop.range_of_layers().begin())
+    return {std::cref(*l)};
+
+  return {std::cref(*l), std::cref(*std::prev(l))};
+}
+
 }  // namespace vita::alps
 
 #endif  // include guard
