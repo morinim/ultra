@@ -229,6 +229,16 @@ template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
 { return s; }
 template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 
+template<std::ranges::range R>
+[[nodiscard]] bool iterator_of(std::ranges::iterator_t<R> it, const R &range)
+{
+  return std::ranges::any_of(range,
+                             [it](const auto &v)
+                             {
+                               return std::addressof(v) == std::addressof(*it);
+                             });
+}
+
 ///
 /// Find the index of a value contained in a continuous container.
 ///
@@ -236,9 +246,9 @@ template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 /// \param[in] container continuous container
 /// \return              the index of `val` in `container`
 ///
-template<class T, std::ranges::contiguous_range C>
-requires std::same_as<std::ranges::range_value_t<C>, T>
-[[nodiscard]] std::size_t get_index(const T &val, const C &container)
+template<std::ranges::contiguous_range C>
+[[nodiscard]] std::size_t get_index(const std::ranges::range_value_t<C> &val,
+                                    const C &container)
 {
   const auto *data(std::data(container));
 

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -159,6 +159,17 @@ TEST_CASE("replace_all")
   CHECK(replace_all("suburban", "sub", "") == "urban");
   CHECK(replace_all("abcabc", "abc", "123") == "123123");
   CHECK(replace_all("abcdabcdabcdabcd", "cd", "") == "abababab");
+}
+
+TEST_CASE("iterator_of")
+{
+  using namespace ultra;
+
+  std::vector v = {1, 2, 3, 4, 5};
+  std::vector v1 = {6, 7, 8};
+
+  CHECK(iterator_of(std::next(v.begin(), 2), v));
+  CHECK(!iterator_of(v1.begin(), v));
 }
 
 }  // TEST_SUITE("BASE")
