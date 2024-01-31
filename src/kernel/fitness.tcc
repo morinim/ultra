@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,6 +16,12 @@
 
 #if !defined(ULTRA_FITNESS_TCC)
 #define      ULTRA_FITNESS_TCC
+
+template<Fitness F>
+[[nodiscard]] constexpr F lowest()
+{
+  return std::numeric_limits<F>::lowest();
+}
 
 template<std::integral F>
 [[nodiscard]] bool isfinite(F)

@@ -38,11 +38,14 @@ struct scored_individual
 
   // --- Data members ---
   I ind {};
-  F fit {};
+  F fit {lowest<F>()};
 };
 
 template<Individual I, Fitness F>
 [[nodiscard]] bool operator<(const scored_individual<I, F> &,
+                             const scored_individual<I, F> &);
+template<Individual I, Fitness F>
+[[nodiscard]] bool operator>(const scored_individual<I, F> &,
                              const scored_individual<I, F> &);
 
 #include "kernel/scored_individual.tcc"

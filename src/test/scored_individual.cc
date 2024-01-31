@@ -28,7 +28,6 @@ TEST_SUITE("SCORED INDIVIDUAL")
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
-  using namespace std::chrono_literals;
 
   scored_individual<gp::individual, fitnd> si;
 
@@ -69,7 +68,11 @@ TEST_CASE_FIXTURE(fixture1, "Comparison")
   const scored_individual si2(gp::individual(prob), fitnd{2.0, 3.0});
 
   CHECK(si1 < si2);
-  CHECK(!(si2 < si1));
+  CHECK(si2 > si1);
+
+  const decltype(si1) empty;
+  CHECK(empty < si1);
+  CHECK(empty < si2);
 }
 
 }  // TEST_SUITE("SCORED INDIVIDUAL")

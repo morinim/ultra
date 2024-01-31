@@ -18,14 +18,21 @@
 #define      ULTRA_SCORED_INDIVIDUAL_TCC
 
 ///
-/// Resets summary informations.
+/// Builds a new individual/fitness pair.
+///
+/// \param[in] i an individual (can be empty)
+/// \param[in] f a fitness
 ///
 template<Individual I, Fitness F>
 scored_individual<I, F>::scored_individual(const I &i, const F &f)
   : ind(i), fit(f)
 {
+  Expects(!i.empty());
 }
 
+///
+/// \return `true` if the `ind` component is empty
+///
 template<Individual I, Fitness F>
 bool scored_individual<I, F>::empty() const
 {
@@ -36,10 +43,14 @@ template<Individual I, Fitness F>
 bool operator<(const scored_individual<I, F> &lhs,
                const scored_individual<I, F> &rhs)
 {
-  Expects(!lhs.empty());
-  Expects(!rhs.empty());
-
   return lhs.fit < rhs.fit;
+}
+
+template<Individual I, Fitness F>
+bool operator>(const scored_individual<I, F> &lhs,
+               const scored_individual<I, F> &rhs)
+{
+  return lhs.fit > rhs.fit;
 }
 
 ///

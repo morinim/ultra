@@ -209,7 +209,7 @@ public:
   copyable_atomic &operator=(const copyable_atomic &other)
   {
     this->store(other.load(std::memory_order_relaxed),
-                           std::memory_order_relaxed);
+                std::memory_order_relaxed);
     return *this;
   }
 };
