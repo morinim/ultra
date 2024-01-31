@@ -14,6 +14,7 @@
 #define      ULTRA_UTILITY_H
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -180,6 +181,39 @@ private:
   Iterator e_;
 };
 
+///
+/// Drop in replacement for `std::atomic` that provides a copy constructor and
+/// copy assignment operator.
+///
+/// Contrary to normal atomics, these atomics don't prevent the generation of
+/// default constructor and copy operators for classes they are members of.
+///
+/// Copying those atomics is thread safe, but be aware that it doesn't provide
+/// any form of synchronization.
+///
+/// \see
+/// https://codereview.stackexchange.com/q/113439/279888
+///
+template<class T>
+class copyable_atomic : public std::atomic<T>
+{
+public:
+  constexpr copyable_atomic() = default;
+
+  constexpr copyable_atomic(T desired) : std::atomic<T>(desired) {}
+
+  constexpr copyable_atomic(const copyable_atomic &other)
+    : copyable_atomic(other.load(std::memory_order_relaxed))
+  {}
+
+  copyable_atomic &operator=(const copyable_atomic &other)
+  {
+    this->store(other.load(std::memory_order_relaxed),
+                           std::memory_order_relaxed);
+    return *this;
+  }
+};
+
 // *******************************************************************
 // Functions
 // *******************************************************************
@@ -229,8 +263,16 @@ template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
 { return s; }
 template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 
+///
+/// Checks if an iterator is within a range.
+///
+/// \param[in] it    iterator to be checked
+/// \param[in] range a given range
+/// \return          `true` if `it` is within `range`
+///
 template<std::ranges::range R>
-[[nodiscard]] bool iterator_of(std::ranges::iterator_t<R> it, const R &range)
+[[nodiscard]] bool iterator_of(std::ranges::iterator_t<const R> it,
+                               const R &range)
 {
   return std::ranges::any_of(range,
                              [it](const auto &v)

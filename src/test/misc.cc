@@ -182,4 +182,19 @@ TEST_CASE("get_index")
     CHECK(get_index(v[i], v) == i);
 }
 
+TEST_CASE("copyable_atomic")
+{
+  using namespace ultra;
+
+  copyable_atomic<int> v1(10), v2(20), tmp;
+
+  tmp = v1;
+  v1 = v2;
+  v2 = tmp;
+
+  CHECK(v1 == 20);
+  CHECK(v2 == 10);
+  CHECK(tmp == 10);
+}
+
 }  // TEST_SUITE("BASE")
