@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -64,11 +64,11 @@ private:
     unsigned seal;
   };
 
-  mutable std::shared_mutex mutex_;
+  mutable std::shared_mutex mutex_ {};
 
-  const std::uint64_t k_mask;
-  std::vector<slot>   table_;
-  decltype(slot::seal) seal_;
+  const std::uint64_t k_mask {};
+  std::vector<slot>   table_ {};
+  decltype(slot::seal) seal_ {1};
 };
 
 #include "kernel/cache.tcc"

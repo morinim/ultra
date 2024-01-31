@@ -23,8 +23,8 @@
 /// \param[in] bits `2^bits` is the number of elements of the table
 ///
 template<Fitness F>
-cache<F>::cache(unsigned bits) : mutex_(), k_mask((1ull << bits) - 1),
-                              table_(1ull << bits), seal_(1)
+cache<F>::cache(unsigned bits) : k_mask((1ull << bits) - 1),
+                                 table_(1ull << bits)
 {
   Expects(bits);
   Ensures(is_valid());
