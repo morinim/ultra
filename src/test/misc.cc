@@ -165,11 +165,21 @@ TEST_CASE("iterator_of")
 {
   using namespace ultra;
 
-  std::vector v = {1, 2, 3, 4, 5};
-  std::vector v1 = {6, 7, 8};
+  const std::vector v = {1, 2, 3, 4, 5};
+  const std::vector v1 = {6, 7, 8};
 
   CHECK(iterator_of(std::next(v.begin(), 2), v));
   CHECK(!iterator_of(v1.begin(), v));
+}
+
+TEST_CASE("get_index")
+{
+  using namespace ultra;
+
+  const std::vector v = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  for (std::size_t i(0); i < v.size(); ++i)
+    CHECK(get_index(v[i], v) == i);
 }
 
 }  // TEST_SUITE("BASE")
