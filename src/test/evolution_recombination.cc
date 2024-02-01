@@ -31,8 +31,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   using namespace ultra;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
-  summary<gp::individual, double> sum;
-  recombination::base recombine(eva, prob, sum);
+  evolution_status<gp::individual, double> status;
+  recombination::base recombine(eva, prob, status);
 
   std::vector parents = { gp::individual(prob), gp::individual(prob) };
   while (parents[0] == parents[1])
@@ -73,14 +73,14 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   {
     for (unsigned i(0); i < 100; ++i)
     {
-      sum.mutations = 0;
-      sum.crossovers = 0;
+      status.mutations = 0;
+      status.crossovers = 0;
 
       const auto off(recombine(parents).front());
 
       CHECK(off.is_valid());
 
-      const bool distinct(sum.mutations + sum.crossovers == 0
+      const bool distinct(status.mutations + status.crossovers == 0
                           || (off != parents[0] && off != parents[1]));
       CHECK(distinct);
     }

@@ -42,10 +42,10 @@ class evolution_strategy
 public:
   using population_t = layered_population<I>;
 
-  evolution_strategy(population_t &, summary<I, F> &);
+  evolution_strategy(population_t &, evolution_status<I, F> &);
 
 protected:
-  summary<I, F> &sum_;
+  evolution_status<I, F> &status_;
 
 private:
   population_t &pop_;
@@ -103,7 +103,7 @@ public:
   using typename alps_es::evolution_strategy::population_t;
 
   alps_es(population_t &, typename population_t::layer_iter,
-          E &, summary<I, F> &);
+          E &, evolution_status<I, F> &);
 
   void operator()();
 
@@ -123,7 +123,7 @@ private:
 template<Evaluator E, Individual I, Fitness F>
 alps_es(layered_population<I> &,
         typename layered_population<I>::layer_iter,
-        E &eva, summary<I, F> &) -> alps_es<E, I, F>;
+        E &eva, evolution_status<I, F> &) -> alps_es<E, I, F>;
 
 #include "kernel/evolution_strategy.tcc"
 }  // namespace ultra

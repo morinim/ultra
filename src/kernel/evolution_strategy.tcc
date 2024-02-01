@@ -19,8 +19,8 @@
 
 template<Individual I, Fitness F>
 evolution_strategy<I, F>::evolution_strategy(population_t &pop,
-                                             summary<I, F> &sum)
-  : sum_(sum), pop_(pop)
+                                             evolution_status<I, F> &status)
+  : status_(status), pop_(pop)
 {
 }
 
@@ -28,13 +28,13 @@ template<Evaluator E, Individual I, Fitness F>
 alps_es<E, I, F>::alps_es(population_t &pop,
                           typename population_t::layer_iter l,
                           E &eva,
-                          summary<I, F> &sum)
-  : evolution_strategy<I, F>(pop, sum),
+                          evolution_status<I, F> &status)
+  : evolution_strategy<I, F>(pop, status),
     sel_pop_(alps::selection_layers(pop, l)),
     rep_pop_(alps::replacement_layers(pop, l)),
     select_(eva, pop.problem().env),
-    recombine_(eva, pop.problem(), sum),
-    replace_(eva, pop.problem().env, sum)
+    recombine_(eva, pop.problem(), status),
+    replace_(eva, pop.problem().env, status)
 {
   static_assert(std::is_same_v<I, closure_arg_t<E>>);
   static_assert(std::is_same_v<F, closure_return_t<E>>);

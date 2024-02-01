@@ -14,7 +14,7 @@
 #define      ULTRA_EVOLUTION_RECOMBINATION_H
 
 #include "kernel/evaluator.h"
-#include "kernel/evolution_summary.h"
+#include "kernel/evolution_status.h"
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
 #include "kernel/population.h"
@@ -49,12 +49,12 @@ class strategy
 {
 public:
   strategy(E &, const problem &,
-           summary<closure_arg_t<E>, closure_return_t<E>> &);
+           evolution_status<closure_arg_t<E>, closure_return_t<E>> &);
 
 protected:
   E &eva_;
   const problem &prob_;
-  summary<closure_arg_t<E>, closure_return_t<E>> &stats_;
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status_;
 };
 
 ///
@@ -75,8 +75,9 @@ public:
   operator()(const R &) const;
 };
 
-template<Evaluator E> base(E &, const problem &,
-                           summary<closure_arg_t<E>, closure_return_t<E>> &)
+template<Evaluator E> base(
+  E &, const problem &,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &)
   -> base<E>;
 
 #include "kernel/evolution_recombination.tcc"

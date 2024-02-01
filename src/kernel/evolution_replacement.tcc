@@ -18,14 +18,15 @@
 #define      ULTRA_EVOLUTION_REPLACEMENT_TCC
 
 ///
-/// \param[in]  eva   current evaluator
-/// \param[in]  env   environment (for replacement specific parameters)
-/// \param[out] stats statistics about the replacement strategy
+/// \param[in]  eva    current evaluator
+/// \param[in]  env    environment (for replacement specific parameters)
+/// \param[out] status statistics about the replacement strategy
 ///
 template<Evaluator E>
-strategy<E>::strategy(E &eva, const environment &env,
-                      summary<closure_arg_t<E>, closure_return_t<E>> &stats)
-  : eva_(eva), env_(env), stats_(stats)
+strategy<E>::strategy(
+  E &eva, const environment &env,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status)
+  : eva_(eva), env_(env), status_(status)
 {
 }
 
@@ -65,7 +66,7 @@ void tournament<E>::operator()(P &pop, const closure_arg_t<E> &offspring) const
 
   const auto off_fit(this->eva_(offspring));
 
-  this->stats_.status.update_if_better(scored_individual(offspring, off_fit));
+  this->status_.update_if_better(scored_individual(offspring, off_fit));
 
   if (off_fit > worst_fitness || !random::boolean(this->env_.evolution.elitism))
     pop[worst_coord] = offspring;
@@ -191,7 +192,7 @@ void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
   const bool ins(try_add_to_layer(pops, offspring));
 
   if (const auto f_off(this->eva_(offspring));
-      this->stats_.status.update_if_better(scored_individual(offspring, f_off)))
+      this->status_.update_if_better(scored_individual(offspring, f_off)))
   {
     if (!ins)
       try_add_to_layer(std::vector{pops.back()}, offspring);

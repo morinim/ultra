@@ -15,7 +15,7 @@
 
 #include "kernel/alps.h"
 #include "kernel/evaluator.h"
-#include "kernel/evolution_summary.h"
+#include "kernel/evolution_status.h"
 #include "kernel/linear_population.h"
 
 namespace ultra::replacement
@@ -29,12 +29,12 @@ class strategy
 {
 public:
   strategy(E &, const environment &,
-           summary<closure_arg_t<E>, closure_return_t<E>> &);
+           evolution_status<closure_arg_t<E>, closure_return_t<E>> &);
 
 protected:
   E &eva_;
   const environment &env_;
-  summary<closure_arg_t<E>, closure_return_t<E>> &stats_;
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status_;
 };
 
 ///
@@ -58,7 +58,8 @@ public:
 };
 
 template<Evaluator E> tournament(
-  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> &)
+  E &, const environment &,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &)
   -> tournament<E>;
 
 ///
@@ -91,7 +92,8 @@ private:
 };
 
 template<Evaluator E> alps(
-  E &, const environment &, summary<closure_arg_t<E>, closure_return_t<E>> &)
+  E &, const environment &,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &)
   -> alps<E>;
 
 #include "kernel/evolution_replacement.tcc"

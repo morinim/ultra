@@ -38,12 +38,12 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
       layered_population<gp::individual> pop(prob);
       test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-      summary<gp::individual, double> sum;
+      evolution_status<gp::individual, double> status;
 
       const auto search(
         [&](auto layer_iter)
         {
-          alps_es es(pop, layer_iter, eva, sum);
+          alps_es es(pop, layer_iter, eva, status);
 
           const unsigned sup(prob.env.population.individuals < 50
                              ? 50 : prob.env.population.individuals);
@@ -63,9 +63,9 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
               pop,
               [](const auto &prg) { return prg.is_valid(); }));
 
-      CHECK(!sum.status.best().empty());
-      CHECK(eva(sum.status.best().ind)
-            == doctest::Approx(sum.status.best().fit));
+      CHECK(!status.best().empty());
+      CHECK(eva(status.best().ind)
+            == doctest::Approx(status.best().fit));
 
       const auto best(std::ranges::max(pop,
                                        [&eva](const auto &p1, const auto &p2)
@@ -73,8 +73,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
                                          return eva(p1) < eva(p2);
                                        }));
 
-      CHECK(eva(best) <= sum.status.best().fit);
-      //CHECK(std::ranges::find(pop, sum.best.solution) != pop.end());
+      CHECK(eva(best) <= status.best().fit);
+      //CHECK(std::ranges::find(pop, status.best().ind) != pop.end());
     }
 }
 

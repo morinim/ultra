@@ -48,10 +48,10 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
       best.fit = curr_fit;
     }
 
-  summary<gp::individual, double> sum;
-  sum.status.update_if_better(worst);
+  evolution_status<gp::individual, double> status;
+  status.update_if_better(worst);
 
-  replacement::tournament replace(eva, prob.env, sum);
+  replacement::tournament replace(eva, prob.env, status);
 
   SUBCASE("No elitism")
   {
@@ -67,7 +67,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     for (const auto &prg : pop.layer(0))
       CHECK(prg == worst.ind);
 
-    CHECK(sum.status.best().ind == worst.ind);
+    CHECK(status.best().ind == worst.ind);
   }
 
   SUBCASE("Elitism")
@@ -80,17 +80,17 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
       replace(pop.layer(0), worst.ind);
 
     CHECK(std::ranges::equal(pop, backup));
-    CHECK(sum.status.best().ind == worst.ind);
+    CHECK(status.best().ind == worst.ind);
 
     replace(pop.layer(0), best.ind);
-    CHECK(sum.status.best().ind == best.ind);
+    CHECK(status.best().ind == best.ind);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
       replace(pop.layer(0), best.ind);
 
     for (const auto &prg : pop.layer(0))
       CHECK(prg == best.ind);
-    CHECK(sum.status.best().ind == best.ind);
+    CHECK(status.best().ind == best.ind);
   }
 }
 
@@ -119,10 +119,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       best.fit = curr_fit;
     }
 
-  summary<gp::individual, double> sum;
-  sum.status.update_if_better(worst);
+  evolution_status<gp::individual, double> status;
+  status.update_if_better(worst);
 
-  replacement::alps replace(eva, prob.env, sum);
+  replacement::alps replace(eva, prob.env, status);
 
   const unsigned big_age(10000);
 
@@ -142,7 +142,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
             new_best);
 
     CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
-    CHECK(sum.status.best().ind == new_best);
+    CHECK(status.best().ind == new_best);
 
     // A new best, very old individual is found and there is free space in an
     // intermediate layer.
@@ -199,8 +199,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   const auto search([&](auto to_layers)
   {
     test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-    summary<gp::individual, double> sum;
-    replacement::alps replace(eva, prob.env, sum);
+    evolution_status<gp::individual, double> status;
+    replacement::alps replace(eva, prob.env, status);
 
     for (unsigned i(0); i < 30000; ++i)
     {
@@ -239,8 +239,8 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   alps::set_age(pop);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::random);
-  summary<gp::individual, double> sum;
-  replacement::alps replace(eva, prob.env, sum);
+  evolution_status<gp::individual, double> status;
+  replacement::alps replace(eva, prob.env, status);
 
   const auto range(pop.range_of_layers());
   for (auto l(std::prev(range.end())); l != range.begin(); --l)
