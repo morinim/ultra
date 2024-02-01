@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "kernel/evolution_strategy.h"
+#include "kernel/distribution.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
@@ -56,7 +57,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
 
         const auto range(pop.range_of_layers());
         for (auto l(range.begin()); l != range.end(); ++l)
-          threads.emplace_back(std::jthread(search, l));
+          threads.emplace_back(search, l);
       }
 
       CHECK(std::ranges::all_of(
@@ -76,6 +77,63 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
       CHECK(eva(best) <= status.best().fit);
       //CHECK(std::ranges::find(pop, status.best().ind) != pop.end());
     }
+}
+
+TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
+{
+  using namespace ultra;
+
+  prob.env.population.individuals = 100;
+  prob.env.population.layers      =   5;
+
+  layered_population<gp::individual> pop(prob);
+  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+
+  evolution_status<gp::individual, double> status;
+
+  const auto search(
+    [&](auto layer_iter)
+    {
+      alps_es es(pop, layer_iter, eva, status);
+
+      for (unsigned k(0); k < prob.env.population.individuals; ++k)
+        es();
+    });
+
+  std::vector<distribution<double>> previous;
+
+  for (unsigned repetitions(10); repetitions; --repetitions)
+  {
+    std::cout << repetitions << std::endl;
+    const auto range(pop.range_of_layers());
+
+    {
+      std::vector<std::jthread> threads;
+      threads.reserve(prob.env.population.layers);
+
+      for (auto l(range.begin()); l != range.end(); ++l)
+        threads.emplace_back(search, l);
+    }
+
+    std::vector<distribution<double>> current;
+    for (const auto &layer : range)
+    {
+      distribution<double> dist;
+
+      for (const auto &prg : layer)
+        dist.add(eva(prg));
+
+      current.push_back(dist);
+    }
+
+    if (!previous.empty())
+    {
+      for (std::size_t j(0); j < current.size(); ++j)
+        CHECK(previous[j].mean() < current[j].mean());
+    }
+
+    previous = current;
+  }
 }
 
 }  // TEST_SUITE("EVOLUTION STRATEGY")
