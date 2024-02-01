@@ -217,12 +217,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   prob.env.alps.p_main_layer         = .5;
 
   layered_population<gp::individual> pop(prob);
+  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+  selection::alps select(eva, prob.env);
 
   const auto search([&](auto from_layers)
   {
-    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-    selection::alps select(eva, prob.env);
-
     for (unsigned i(0); i < 5000; ++i)
     {
       const auto parents(select(from_layers));
@@ -232,16 +231,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
     }
   });
 
-  std::vector<std::jthread> threads;
-  threads.emplace_back(std::jthread(search,
-                                    std::vector{std::cref(pop.front())}));
+  {
+    std::vector<std::jthread> threads;
 
-  const auto range(pop.range_of_layers());
-  for (auto l(std::next(range.begin())); l != range.end(); ++l)
-    threads.emplace_back(std::jthread(search,
-                                      std::vector{
-                                        std::cref(*l),
-                                        std::cref(*std::prev(l))}));
+    const auto range(pop.range_of_layers());
+    for (auto l(range.begin()); l != range.end(); ++l)
+      threads.emplace_back(search, alps::selection_layers(pop, l));
+  }
 }
 
 TEST_CASE_FIXTURE(fixture4, "DE")
