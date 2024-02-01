@@ -81,11 +81,11 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
   evolution_status<gp::individual, int> status;
   const gp::individual dummy(prob);
 
-  constexpr unsigned MAX(1000);
+  constexpr int MAX(1000);
 
   const auto work([&status, &dummy](bool odd)
   {
-    for (unsigned i(1); i <= MAX; ++i)
+    for (int i(1); i <= MAX; ++i)
     {
       if (i % 2 == odd)
         status.mutations = i;
