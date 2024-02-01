@@ -10,6 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <ranges>
+
 #include "kernel/evolution_replacement.h"
 #include "kernel/layered_population.h"
 #include "kernel/de/individual.h"
@@ -32,25 +34,19 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   prob.env.population.layers      =  1;
 
   layered_population<gp::individual> pop(prob);
-
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-  scored_individual worst(pop.layer(0)[0], eva(pop.layer(0)[0])), best(worst);
-  for (const auto &prg : pop)
-    if (auto curr_fit(eva(prg)); curr_fit < worst.fit)
-    {
-      worst.ind = prg;
-      worst.fit = curr_fit;
-    }
-    else if (curr_fit > best.fit)
-    {
-      best.ind = prg;
-      best.fit = curr_fit;
-    }
+  const auto [worst_it, best_it] =
+    std::ranges::minmax_element(pop,
+                                [&eva](const auto &i1, const auto &i2)
+                                {
+                                  return eva(i1) < eva(i2);
+                                });
 
-  evolution_status<gp::individual, double> status;
-  status.update_if_better(worst);
+  const scored_individual worst(*worst_it, eva(*worst_it));
+  const scored_individual best(*best_it, eva(*best_it));
 
+  evolution_status<gp::individual, double> status(worst);
   replacement::tournament replace(eva, prob.env, status);
 
   SUBCASE("No elitism")
@@ -62,9 +58,9 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     prob.env.evolution.tournament_size = 1;
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), worst.ind);
+      replace(pop.front(), worst.ind);
 
-    for (const auto &prg : pop.layer(0))
+    for (const auto &prg : pop.front())
       CHECK(prg == worst.ind);
 
     CHECK(status.best().ind == worst.ind);
@@ -77,18 +73,18 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     const auto backup(pop);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), worst.ind);
+      replace(pop.front(), worst.ind);
 
     CHECK(std::ranges::equal(pop, backup));
     CHECK(status.best().ind == worst.ind);
 
-    replace(pop.layer(0), best.ind);
+    replace(pop.front(), best.ind);
     CHECK(status.best().ind == best.ind);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.layer(0), best.ind);
+      replace(pop.front(), best.ind);
 
-    for (const auto &prg : pop.layer(0))
+    for (const auto &prg : pop.front())
       CHECK(prg == best.ind);
     CHECK(status.best().ind == best.ind);
   }
@@ -106,22 +102,17 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-  scored_individual worst(pop.layer(0)[0], eva(pop.layer(0)[0])), best(worst);
-  for (const auto &prg : pop)
-    if (auto curr_fit(eva(prg)); curr_fit < worst.fit)
-    {
-      worst.ind = prg;
-      worst.fit = curr_fit;
-    }
-    else if (curr_fit > best.fit)
-    {
-      best.ind = prg;
-      best.fit = curr_fit;
-    }
+  const auto [worst_it, best_it] =
+    std::ranges::minmax_element(pop,
+                                [&eva](const auto &i1, const auto &i2)
+                                {
+                                  return eva(i1) < eva(i2);
+                                });
 
-  evolution_status<gp::individual, double> status;
-  status.update_if_better(worst);
+  const scored_individual worst(*worst_it, eva(*worst_it));
+  const scored_individual best(*best_it, eva(*best_it));
 
+  evolution_status<gp::individual, double> status(worst);
   replacement::alps replace(eva, prob.env, status);
 
   const unsigned big_age(10000);
@@ -134,41 +125,46 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     new_best.inc_age(big_age);
     CHECK(eva(new_best) > best.fit);
 
-    for (std::size_t l(0); l < pop.layers() - 1; ++l)
-      CHECK(new_best.age() > pop.layer(l).max_age());
-    CHECK(new_best.age() <= pop.back().max_age());
+    for (const auto &layer : pop.range_of_layers())
+      if (&layer == &pop.back())
+        CHECK(new_best.age() <= layer.max_age());
+      else
+        CHECK(new_best.age() > layer.max_age());
 
     replace(std::vector{std::ref(pop.front()), std::ref(pop.back())},
             new_best);
 
+    CHECK(std::ranges::find(pop.front(), new_best) == pop.front().end());
     CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
     CHECK(status.best().ind == new_best);
 
     // A new best, very old individual is found and there is free space in an
     // intermediate layer.
-    for (std::size_t l(pop.layers() - 1); l; --l)
+    for (auto &layer : pop.range_of_layers())
     {
-      pop.layer(l - 1).clear();
-      replace(std::vector{std::ref(pop.layer(l - 1)), std::ref(pop.back())},
+      layer.clear();
+      replace(std::vector{std::ref(layer), std::ref(pop.back())},
               new_best);
-      CHECK(std::ranges::find(pop.layer(l - 1), new_best)
-            != pop.layer(l - 1).end());
+      CHECK(std::ranges::find(layer, new_best) != layer.end());
     }
   }
 
   SUBCASE("Random fitness")
   {
     const auto backup(pop);
+    auto b(backup.range_of_layers().begin());
 
-    for (std::size_t l(0); l < pop.layers() - 1; ++l)
+    const auto rng(pop.range_of_layers());
+
+    for (auto l(rng.begin()), stop(std::prev(rng.end())); l != stop; ++l, ++b)
       for (unsigned i(0); i < 10; ++i)
       {
-        const auto elem(random::individual(pop.layer(l)));
-        replace(std::vector{std::ref(pop.layer(l)), std::ref(pop.back())},
-                elem);
+        const auto elem(random::individual(*l));
 
-        if (const auto it(std::ranges::mismatch(pop.layer(l), backup.layer(l)));
-            it.in1 != pop.layer(l).end())
+        replace(alps::replacement_layers(pop, l), elem);
+
+        if (const auto it(std::ranges::mismatch(*l, *b));
+            it.in1 != l->end())
         {
           // `elem` replaces a less fit individual.
           CHECK(*it.in1 == elem);
@@ -176,11 +172,12 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 
           // only one modified element
           *it.in1 = *it.in2;
-          CHECK(std::ranges::equal(pop.layer(l), backup.layer(l)));
+          CHECK(std::ranges::equal(*l, *b));
         }
 
-        for (std::size_t m(l + 1); m < pop.layers() - 1; ++m)
-          CHECK(std::ranges::equal(pop.layer(m), backup.layer(m)));
+        auto upper_b(std::next(b));
+        for (auto upper_l(std::next(l)); upper_l != stop; ++upper_l, ++upper_b)
+          CHECK(std::ranges::equal(*upper_l, *upper_b));
       }
   }
 }
@@ -196,12 +193,12 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
+  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+  evolution_status<gp::individual, double> status;
+  replacement::alps replace(eva, prob.env, status);
+
   const auto search([&](auto to_layers)
   {
-    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-    evolution_status<gp::individual, double> status;
-    replacement::alps replace(eva, prob.env, status);
-
     for (unsigned i(0); i < 30000; ++i)
     {
       const auto offspring{gp::individual(prob)};
@@ -215,14 +212,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
     std::vector<std::jthread> threads;
 
     const auto range(pop.range_of_layers());
-    for (auto l(range.begin()), stop(std::prev(range.end())); l != stop; ++l)
-      threads.emplace_back(std::jthread(search,
-                                        std::vector{
-                                          std::ref(*l),
-                                          std::ref(pop.back())}));
-
-    threads.emplace_back(std::jthread(search,
-                                      std::vector{std::ref(pop.back())}));
+    for (auto l(range.begin()); l != range.end(); ++l)
+      threads.emplace_back(search, alps::replacement_layers(pop, l));
   }
 
   CHECK(pop.is_valid());
