@@ -102,7 +102,7 @@ public:
 
   alps_es(population_t &, E &, evolution_status<I, F> &);
 
-  auto operations(typename population_t::layer_iter) const;
+  [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 
 private:
   const selection::alps<E>     select_;
@@ -123,12 +123,25 @@ public:
 
   std_es(population_t &, E &, evolution_status<I, F> &);
 
-  auto operations(typename population_t::layer_iter) const;
+  [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 
 private:
   const selection::tournament<E>   select_;
   const recombination::base<E>     recombine_;
   const replacement::tournament<E> replace_;
+};
+
+template<class S>
+concept Strategy = requires(S s)
+{
+  // See https://stackoverflow.com/q/71921797/3235496
+  // This C++20 template lambda only binds to `S<...>` specialisations,
+  // including classes derived from them.
+  //
+  []<Individual I, Fitness F>(evolution_strategy<I, F> &){}(s);
+
+  s.operations({});
+  s.operations({})();
 };
 
 #include "kernel/evolution_strategy.tcc"

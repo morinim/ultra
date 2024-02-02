@@ -139,4 +139,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "Strategy concept")
+{
+  using namespace ultra;
+
+  CHECK(Strategy<alps_es<test_evaluator<gp::individual>>>);
+  CHECK(Strategy<std_es<test_evaluator<gp::individual>>>);
+  CHECK(!Strategy<int>);
+}
+
 }  // TEST_SUITE("EVOLUTION STRATEGY")
