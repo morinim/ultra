@@ -37,25 +37,27 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
       prob.env.population.layers      = nl;
 
       layered_population<gp::individual> pop(prob);
+      const auto range(pop.range_of_layers());
+
       test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
       evolution_status<gp::individual, double> status;
 
+      alps_es alps(pop, eva, status);
       const auto search(
         [&](auto layer_iter)
         {
-          alps_es es(pop, layer_iter, eva, status);
+          const auto evolve(alps.operations(layer_iter));
 
-          const unsigned sup(prob.env.population.individuals < 50
-                             ? 50 : prob.env.population.individuals);
-          for (unsigned k(0); k < sup; ++k)
-            es();
+          for (unsigned iterations(prob.env.population.individuals < 50
+                                   ? 50 : prob.env.population.individuals);
+               iterations; --iterations)
+            evolve();
         });
 
       {
         std::vector<std::jthread> threads;
 
-        const auto range(pop.range_of_layers());
         for (auto l(range.begin()); l != range.end(); ++l)
           threads.emplace_back(search, l);
       }
@@ -87,26 +89,27 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
   prob.env.population.layers      =   5;
 
   layered_population<gp::individual> pop(prob);
+  const auto range(pop.range_of_layers());
+
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
   evolution_status<gp::individual, double> status;
 
+  alps_es alps(pop, eva, status);
   const auto search(
     [&](auto layer_iter)
     {
-      alps_es es(pop, layer_iter, eva, status);
+      const auto evolve(alps.operations(layer_iter));
 
-      for (unsigned k(0); k < prob.env.population.individuals; ++k)
-        es();
+      for (auto iterations(prob.env.population.individuals);
+           iterations; --iterations)
+        evolve();
     });
 
   std::vector<distribution<double>> previous;
 
-  for (unsigned repetitions(10); repetitions; --repetitions)
+  for (auto repetitions(10); repetitions; --repetitions)
   {
-    std::cout << repetitions << std::endl;
-    const auto range(pop.range_of_layers());
-
     {
       std::vector<std::jthread> threads;
       threads.reserve(prob.env.population.layers);

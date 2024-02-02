@@ -46,8 +46,6 @@ public:
 
 protected:
   evolution_status<I, F> &status_;
-
-private:
   population_t &pop_;
 };
 
@@ -102,28 +100,36 @@ class alps_es : public evolution_strategy<I, F>
 public:
   using typename alps_es::evolution_strategy::population_t;
 
-  alps_es(population_t &, typename population_t::layer_iter,
-          E &, evolution_status<I, F> &);
+  alps_es(population_t &, E &, evolution_status<I, F> &);
 
-  void operator()();
+  auto operations(typename population_t::layer_iter) const;
 
 private:
-  const
-  std::vector<std::reference_wrapper<const typename population_t::layer_t>>
-  sel_pop_;
-
-  const std::vector<std::reference_wrapper<typename population_t::layer_t>>
-  rep_pop_;
-
   const selection::alps<E>     select_;
   const recombination::base<E> recombine_;
   const replacement::alps<E>   replace_;
 };
 
-template<Evaluator E, Individual I, Fitness F>
-alps_es(layered_population<I> &,
-        typename layered_population<I>::layer_iter,
-        E &eva, evolution_status<I, F> &) -> alps_es<E, I, F>;
+///
+/// Standard evolution strategy.
+///
+template<Evaluator E,
+         Individual I = closure_arg_t<E>,
+         Fitness F = closure_return_t<E>>
+class std_es : public evolution_strategy<I, F>
+{
+public:
+  using typename std_es::evolution_strategy::population_t;
+
+  std_es(population_t &, E &, evolution_status<I, F> &);
+
+  auto operations(typename population_t::layer_iter) const;
+
+private:
+  const selection::tournament<E>   select_;
+  const recombination::base<E>     recombine_;
+  const replacement::tournament<E> replace_;
+};
 
 #include "kernel/evolution_strategy.tcc"
 }  // namespace ultra
