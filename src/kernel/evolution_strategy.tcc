@@ -71,6 +71,9 @@ std_es<E, I, F>::std_es(population_t &pop,
 template<Evaluator E, Individual I, Fitness F>
 auto std_es<E, I, F>::operations(typename population_t::layer_iter l) const
 {
+  Expects(this->pop_.layers());
+  Expects(iterator_of(l, this->pop_.range_of_layers()));
+
   return
     [this, &pop_layer = *l]()
     {
