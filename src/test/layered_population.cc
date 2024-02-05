@@ -87,6 +87,26 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
       pop.erase(pop.layer(random::sup(pop.layers())));
       CHECK(pop.layers() == prob.env.population.layers + added_layers - j - 1);
     }
+
+    if (pop.layers() > 1)
+    {
+      const auto layers(pop.range_of_layers());
+      unsigned pos(0);
+
+      for (auto it(layers.begin()); it != layers.end();)
+      {
+        if (pos % 2)
+          it = pop.erase(it);
+        else
+          ++it;
+
+        ++pos;
+      }
+
+      const auto remaining(
+        static_cast<unsigned>(std::round(prob.env.population.layers / 2.0)));
+      CHECK(pop.layers() == remaining);
+    }
   }
 }
 
@@ -173,6 +193,30 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
       CHECK(std::abs(p.second - expected) <= tolerance);
 
     pop.add_layer();
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "range_of_layers")
+{
+  using namespace ultra;
+
+  SUBCASE("One layer")
+  {
+    prob.env.population.layers = 1;
+    layered_population<gp::individual> pop(prob);
+
+    const auto range(pop.range_of_layers());
+    CHECK(&*range.begin() == &pop.front());
+  }
+
+  SUBCASE("Multiple layer")
+  {
+    prob.env.population.layers = 4;
+    layered_population<gp::individual> pop(prob);
+
+    const auto range(pop.range_of_layers());
+    for (std::size_t i(0); i < pop.layers(); ++i)
+      CHECK(&*std::next(range.begin(), i) == &pop.layer(i));
   }
 }
 

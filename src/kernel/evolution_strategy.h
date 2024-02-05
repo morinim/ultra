@@ -14,6 +14,7 @@
 #define      ULTRA_EVOLUTION_STRATEGY_H
 
 #include "kernel/alps.h"
+#include "kernel/analyzer.h"
 #include "kernel/evolution_recombination.h"
 #include "kernel/evolution_replacement.h"
 #include "kernel/evolution_selection.h"
@@ -43,6 +44,12 @@ public:
   using population_t = layered_population<I>;
 
   evolution_strategy(population_t &, evolution_status<I, F> &);
+
+  /// Sets strategy-specific parameters.
+  /// The default implementation doesn't change the user-specified
+  /// environment. Some evolution strategies force parameters to
+  /// specific values.
+  static environment shape(const environment &env) { return env; }
 
 protected:
   evolution_status<I, F> &status_;
@@ -104,6 +111,10 @@ public:
 
   [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 
+  void after_generation(const analyzer<I, F> &);
+
+  static environment shape(environment);
+
 private:
   const selection::alps<E>     select_;
   const recombination::base<E> recombine_;
@@ -142,6 +153,8 @@ concept Strategy = requires(S s)
 
   s.operations({});
   s.operations({})();
+
+  S::shape({});
 };
 
 #include "kernel/evolution_strategy.tcc"

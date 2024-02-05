@@ -220,10 +220,41 @@ void layered_population<I>::add_layer()
 #endif
 }
 
+///
+/// Erases the specified element from the container.
+///
+/// \param[in] l reference to the element to remove
+/// \return    `true` if an element has been removed; `false` otherwise
+///
 template<Individual I>
 bool layered_population<I>::erase(layer_t &l)
 {
-  return std::erase_if(layers_, [&l](const auto &l1) { return &l1 == &l; });
+  for (auto it(layers_.begin()); it != layers_.end(); ++it)
+    if (std::addressof(l) == std::addressof(*it))
+    {
+      layers_.erase(it);
+      return true;
+    }
+
+  return false;
+}
+
+///
+/// Erases the specified element from the container.
+///
+/// \param[in] pos iterator to the element to remove
+/// \return        iterator following the last removed element. If `pos` refers
+///                to the last element, then the `end()` iterator is returned
+///
+/// References and iterators to the erased element are invalidated. Other
+/// references and iterators are not affected.
+///
+template<Individual I>
+typename layered_population<I>::layer_iter
+layered_population<I>::erase(layer_iter pos)
+{
+  Expects(iterator_of(pos, range_of_layers()));
+  return layers_.erase(pos);
 }
 
 ///

@@ -65,6 +65,7 @@ public:
   void init(layer_iter);
   void add_layer();
   bool erase(layer_t &);
+  layer_iter erase(layer_iter);
 
   [[nodiscard]] std::size_t size() const;
 

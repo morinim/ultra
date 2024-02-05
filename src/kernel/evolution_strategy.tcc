@@ -55,6 +55,69 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
     };
 }
 
+///
+/// Increments population's age and checks if it's time to add a new layer.
+///
+template<Evaluator E, Individual I, Fitness F>
+void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
+{
+  const auto &status(this->status_);
+  auto &pop(this->pop_);
+  const auto &env(pop.problem().env);
+
+  pop.inc_age();
+
+  const auto layers(pop.range_of_layers());
+
+  if (pop.layers() > 1)
+  {
+    std::size_t l(1);
+
+    for (auto it(std::next(layers.begin())); it != layers.end();)
+      if (almost_equal(az.fit_dist(l - 1).mean(), az.fit_dist(l).mean()))
+        it = pop.erase(it);
+      else
+        ++it;
+  }
+
+  {
+    auto layer(std::next(layers.begin()));
+
+    for (std::size_t l(1); l < pop.layers(); ++l, ++layer)
+      if (issmall(az.fit_dist(l).standard_deviation()))
+        layer->allowed(std::max(env.min_individuals, layer->size() / 2));
+      else
+        layer->allowed(env.individuals);
+  }
+/*
+  // Code executed every `age_gap` interval.
+  if (sum->gen && sum->gen % env.alps.age_gap == 0)
+  {
+    if (layers < env.layers
+        || az.age_dist(layers - 1).mean() > env.alps.max_age(layers))
+      pop.add_layer();
+    else
+    {
+      this->replacement.try_move_up_layer(0);
+      pop.init_layer(0);
+    }
+    }*/
+}
+
+///
+/// \param[out] env environemnt
+/// \return         a strategy-specific environment
+///
+/// \remark
+/// ALPS requires more than one layer.
+///
+template<Evaluator E, Individual I, Fitness F>
+environment alps_es<E, I, F>::shape(environment env)
+{
+  env.population.layers = 4;
+  return env;
+}
+
 template<Evaluator E, Individual I, Fitness F>
 std_es<E, I, F>::std_es(population_t &pop,
                         E &eva,
