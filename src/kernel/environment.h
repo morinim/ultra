@@ -40,7 +40,7 @@ struct environment
     /// Number of individuals in a **layer** of the population.
     ///
     /// \note
-    /// `0` means undefined (auto-tune).
+    /// `0` means auto-tune.
     std::size_t individuals {0};
 
     /// Number of layers the population is structured on.
@@ -55,6 +55,15 @@ struct environment
     /// \note
     /// `0` means undefined (auto-tune).
     std::size_t layers {1};
+
+    /// Minimum number of individuals in a layer of the population.
+    ///
+    /// Some evolution strategies dynamically change the population size. This
+    /// parameter avoids to drop below a predefined limit
+    ///
+    /// \note
+    /// `0` means auto-tune.
+    std::size_t min_individuals {0};
   } population;
 
   struct evolution_parameters

@@ -39,6 +39,7 @@ environment &environment::init()
 
   population.individuals = 100;
   population.layers = 1;
+  population.min_individuals = 2;
 
   evolution.brood_recombination = 1;
   evolution.elitism = 1.0;
@@ -121,6 +122,12 @@ bool environment::is_valid(bool force_defined) const
       return false;
     }
 
+    if (!population.min_individuals)
+    {
+      ultraERROR << "Undefined `population.min_individuals` data member";
+      return false;
+    }
+
     if (!slp.code_length)
     {
       ultraERROR << "Undefined `slp.code_length` data member";
@@ -146,6 +153,20 @@ bool environment::is_valid(bool force_defined) const
     ultraERROR << "`tournament_size` (" << evolution.tournament_size
                << ") cannot be greater than `mate_zone` ("
                << evolution.mate_zone << ")";
+    return false;
+  }
+
+  if (population.min_individuals == 1)
+  {
+    ultraERROR << "At least 2 individuals for layer";
+    return false;
+  }
+
+  if (population.individuals && population.min_individuals
+      && population.individuals < population.min_individuals)
+  {
+    ultraERROR << "`population.individuals` must be greater than or equal to "
+               << "`population.min_individuals";
     return false;
   }
 
