@@ -24,6 +24,13 @@ evolution_status<I, F>::evolution_status(const scored_individual<I, F> &si)
   Expects(!si.empty());
 }
 
+template<Individual I, Fitness F>
+evolution_status<I, F>::evolution_status(const unsigned *generation)
+  : generation_(generation)
+{
+  Expects(generation);
+}
+
 ///
 /// Update, when appropriate, the best known individual.
 ///
@@ -52,6 +59,8 @@ bool evolution_status<I, F>::update_if_better(const scored_individual<I, F> &si)
   if (si > best_)
   {
     best_ = si;
+    if (generation_)
+      last_improvement_ = *generation_;
     return true;
   }
 
@@ -66,6 +75,13 @@ scored_individual<I, F> evolution_status<I, F>::best() const
 {
   std::shared_lock lock(*pmutex_);
   return best_;
+}
+
+template<Individual I, Fitness F>
+unsigned evolution_status<I, F>::last_improvement() const
+{
+  std::shared_lock lock(*pmutex_);
+  return last_improvement_;
 }
 
 ///
@@ -97,12 +113,19 @@ bool evolution_status<I, F>::load(std::istream &in, const problem &p)
   if (!(in >> tmp_cross))
     return false;
 
-  {
-    std::lock_guard lock(*pmutex_);
-    best_ = tmp_si;
-    mutations = tmp_mut;
-    crossovers = tmp_cross;
-  }
+  unsigned tmp_last_improvement;
+  static_assert(std::is_same_v<decltype(last_improvement_),
+                               decltype(tmp_last_improvement)>);
+  if (!(in >> tmp_last_improvement))
+    return false;
+  if (generation_ && tmp_last_improvement > *generation_)
+    return false;
+
+  std::lock_guard lock(*pmutex_);
+  best_ = tmp_si;
+  mutations = tmp_mut;
+  crossovers = tmp_cross;
+  last_improvement_ = tmp_last_improvement;
 
   return true;
 }
@@ -117,12 +140,15 @@ template<Individual I, Fitness F>
 bool evolution_status<I, F>::save(std::ostream &out) const
 {
   std::shared_lock lock(*pmutex_);
-  {
-    if (!best_.save(out))
-      return false;
 
-    out << mutations << ' ' << crossovers << '\n';
-  }
+  if (!best_.save(out))
+    return false;
+
+  out << mutations
+      << ' ' << crossovers
+      << ' ' << last_improvement_ << '\n';
+
+  // `generation_` is just a reference, no need to save it.
 
   return out.good();
 }

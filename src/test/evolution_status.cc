@@ -47,13 +47,19 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(status.crossovers == status1.crossovers);
     CHECK(status.mutations == status1.mutations);
+    CHECK(status.last_improvement()  == status1.last_improvement());
     CHECK(status1.best().empty());
   }
 
   SUBCASE("With best")
   {
-    evolution_status<gp::individual, fitnd> status(
-      scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
+    const unsigned generation(10);
+    evolution_status<gp::individual, fitnd> status(&generation);
+    status.update_if_better(scored_individual(gp::individual(prob),
+                                              fitnd{1.0, 2.0}));
+
+    CHECK(status.last_improvement() == generation);
+
     status.crossovers = 1000;
     status.mutations = 100;
 
@@ -66,6 +72,8 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(status.crossovers == status1.crossovers);
     CHECK(status.mutations == status1.mutations);
+
+    CHECK(status1.last_improvement() == generation);
 
     const auto best(status.best()), best1(status1.best());
     CHECK(best.ind == best1.ind);

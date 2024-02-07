@@ -42,7 +42,7 @@ public:
   [[nodiscard]] bool save(std::ostream &) const;
 
   // --- Data members ---
-  evolution_status<I, F> status;
+  evolution_status<I, F> status {&generation};
 
   analyzer<I, F> az {};
 
@@ -51,14 +51,7 @@ public:
   /// Time elapsed from evolution beginning.
   std::chrono::milliseconds elapsed {0};
 
-  /// Number of crossovers performed.
-  std::uintmax_t crossovers {0};
-
-  /// Number of mutations performed.
-  std::uintmax_t mutations {0};
-
-  unsigned gen {0};
-  unsigned last_imp {0};
+  unsigned generation {0};
 };
 
 #include "kernel/evolution_summary.tcc"

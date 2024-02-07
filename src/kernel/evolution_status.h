@@ -31,10 +31,12 @@ public:
   // --- Constructor and support functions ---
   evolution_status() = default;
   explicit evolution_status(const scored_individual<I, F> &);
+  explicit evolution_status(const unsigned *);
 
   // --- Misc ---
-  bool update_if_better(const scored_individual<I, F> &);
   [[nodiscard]] scored_individual<I, F> best() const;
+  [[nodiscard]] unsigned last_improvement() const;
+  bool update_if_better(const scored_individual<I, F> &);
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);
@@ -45,6 +47,12 @@ private:
   {std::make_shared<std::shared_mutex>()};
 
   scored_individual<I, F> best_ {};
+
+  // Current generation.
+  const unsigned *generation_ {nullptr};
+
+  // This is the generation the last improvement occurred in.
+  unsigned last_improvement_ {0};
 
 public:
   /// Number of crossovers performed.

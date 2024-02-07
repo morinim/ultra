@@ -33,10 +33,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   summary<gp::individual, fitnd> s;
 
   s.elapsed = 10000ms;
-  s.crossovers = 1000;
-  s.mutations = 100;
-  s.gen = 10;
-  s.last_imp = 0;
+  s.generation = 10;
   s.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
 
   CHECK(s.status.best().empty());
@@ -54,10 +51,10 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     CHECK(s.elapsed == s1.elapsed);
     CHECK(s.status.crossovers == s1.status.crossovers);
     CHECK(s.status.mutations == s1.status.mutations);
-    CHECK(s.gen == s1.gen);
-    CHECK(s.last_imp == s1.last_imp);
+    CHECK(s.generation == s1.generation);
     CHECK(s.score <= s1.score);
     CHECK(s.score >= s1.score);
+    CHECK(s.status.last_improvement() == s1.status.last_improvement());
     CHECK(s1.status.best().empty());
   }
 
@@ -66,9 +63,13 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     s.status.update_if_better(
       scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
 
+    CHECK(s.status.last_improvement() == s.generation);
+
     CHECK(s.save(ss));
 
     CHECK(s1.load(ss, prob));
+
+    CHECK(s1.status.last_improvement() == s1.status.last_improvement());
 
     CHECK(s.status.best().ind == s1.status.best().ind);
     CHECK(s.status.best() <= s1.status.best());

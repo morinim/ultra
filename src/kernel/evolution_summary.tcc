@@ -41,18 +41,18 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
 {
   summary tmp_summary;
 
-  if (!tmp_summary.status.load(in, p))
-    return false;
-
-  if (!tmp_summary.score.load(in))
-    return false;
-
   if (int ms; !(in >> ms))
     return false;
   else
     tmp_summary.elapsed = std::chrono::milliseconds(ms);
 
-  if (!(in >> tmp_summary.gen >> tmp_summary.last_imp))
+  if (!(in >> tmp_summary.generation))
+    return false;
+
+  if (!tmp_summary.status.load(in, p))
+    return false;
+
+  if (!tmp_summary.score.load(in))
     return false;
 
   *this = tmp_summary;
@@ -68,6 +68,10 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
 template<Individual I, Fitness F>
 bool summary<I, F>::save(std::ostream &out) const
 {
+  // Since `status` depends on `generaiton`, saving `generation` before
+  // `status` is very important.
+  out << elapsed.count() << ' ' << generation << '\n';
+
   if (!status.save(out))
     return false;
 
@@ -76,8 +80,6 @@ bool summary<I, F>::save(std::ostream &out) const
 
   if (!score.save(out))
     return false;
-
-  out << elapsed.count() << ' ' << gen << ' ' << last_imp << '\n';
 
   return out.good();
 }
