@@ -36,7 +36,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   s.generation = 10;
   s.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
 
-  CHECK(s.status.best().empty());
+  CHECK(s.best().empty());
 
   std::stringstream ss;
 
@@ -49,31 +49,24 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     CHECK(s1.load(ss, prob));
 
     CHECK(s.elapsed == s1.elapsed);
-    CHECK(s.status.crossovers == s1.status.crossovers);
-    CHECK(s.status.mutations == s1.status.mutations);
     CHECK(s.generation == s1.generation);
     CHECK(s.score <= s1.score);
     CHECK(s.score >= s1.score);
-    CHECK(s.status.last_improvement() == s1.status.last_improvement());
-    CHECK(s1.status.best().empty());
+    CHECK(s1.best().empty());
   }
 
   SUBCASE("With best")
   {
-    s.status.update_if_better(
+    s.update_if_better(
       scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
-
-    CHECK(s.status.last_improvement() == s.generation);
 
     CHECK(s.save(ss));
 
     CHECK(s1.load(ss, prob));
 
-    CHECK(s1.status.last_improvement() == s1.status.last_improvement());
-
-    CHECK(s.status.best().ind == s1.status.best().ind);
-    CHECK(s.status.best() <= s1.status.best());
-    CHECK(s.status.best() >= s1.status.best());
+    CHECK(s.best().ind == s1.best().ind);
+    CHECK(s.best() <= s1.best());
+    CHECK(s.best() >= s1.best());
   }
 }
 

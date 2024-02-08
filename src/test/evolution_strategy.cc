@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "kernel/evolution_strategy.h"
+#include "kernel/evolution_summary.h"
 #include "kernel/distribution.h"
 #include "kernel/gp/individual.h"
 
@@ -50,13 +51,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
 
       test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-      evolution_status<gp::individual, double> status;
+      summary<gp::individual, double> sum;
 
-      alps_es alps(pop, eva, status);
+      alps_es alps(pop, eva, sum.starting_status());
       const auto search(
         [&](auto layer_iter)
         {
-          const auto evolve(alps.operations(layer_iter));
+          auto evolve(alps.operations(layer_iter));
 
           for (unsigned iterations(prob.env.population.individuals < 50
                                    ? 50 : prob.env.population.individuals);
@@ -75,9 +76,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
               pop,
               [](const auto &prg) { return prg.is_valid(); }));
 
-      CHECK(!status.best().empty());
-      CHECK(eva(status.best().ind)
-            == doctest::Approx(status.best().fit));
+      CHECK(!sum.best().empty());
+      CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
       const auto best(std::ranges::max(pop,
                                        [&eva](const auto &p1, const auto &p2)
@@ -85,8 +85,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
                                          return eva(p1) < eva(p2);
                                        }));
 
-      CHECK(eva(best) <= status.best().fit);
-      //CHECK(std::ranges::find(pop, status.best().ind) != pop.end());
+      CHECK(eva(best) <= sum.best().fit);
+      //CHECK(std::ranges::find(pop, sum.best().ind) != pop.end());
     }
 }
 
@@ -102,13 +102,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-  evolution_status<gp::individual, double> status;
+  summary<gp::individual, double> sum;
 
-  alps_es alps(pop, eva, status);
+  alps_es alps(pop, eva, sum.starting_status());
   const auto search(
     [&](auto layer_iter)
     {
-      const auto evolve(alps.operations(layer_iter));
+      auto evolve(alps.operations(layer_iter));
 
       for (auto iterations(prob.env.population.individuals);
            iterations; --iterations)
@@ -160,10 +160,10 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
 
-  evolution_status<gp::individual, double> status;
+  summary<gp::individual, double> sum;
 
-  std_es standard(pop, eva, status);
-  const auto evolve(standard.operations(range.begin()));
+  std_es standard(pop, eva, sum.starting_status());
+  auto evolve(standard.operations(range.begin()));
 
   std::vector<distribution<double>> previous;
 
@@ -173,9 +173,8 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   CHECK(std::ranges::all_of(pop,
                             [](const auto &prg) { return prg.is_valid(); }));
 
-  CHECK(!status.best().empty());
-  CHECK(eva(status.best().ind)
-        == doctest::Approx(status.best().fit));
+  CHECK(!sum.best().empty());
+  CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
   const auto best(std::ranges::max(pop,
                                    [&eva](const auto &p1, const auto &p2)
@@ -183,8 +182,8 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
                                      return eva(p1) < eva(p2);
                                    }));
 
-  CHECK(eva(best) <= status.best().fit);
-  CHECK(std::ranges::find(pop, status.best().ind) != pop.end());
+  CHECK(eva(best) <= sum.best().fit);
+  CHECK(std::ranges::find(pop, sum.best().ind) != pop.end());
 }
 
 }  // TEST_SUITE("EVOLUTION STRATEGY")

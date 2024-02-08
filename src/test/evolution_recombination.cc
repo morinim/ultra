@@ -31,8 +31,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   using namespace ultra;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
-  evolution_status<gp::individual, double> status;
-  recombination::base recombine(eva, prob, status);
+  recombination::base recombine(eva, prob);
 
   std::vector parents = { gp::individual(prob), gp::individual(prob) };
   while (parents[0] == parents[1])
@@ -71,19 +70,19 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
   SUBCASE("Standard")
   {
-    for (unsigned i(0); i < 100; ++i)
+    constexpr unsigned N(200);
+    unsigned distinct(0);
+
+    for (unsigned repetitions(N); repetitions; --repetitions)
     {
-      status.mutations = 0;
-      status.crossovers = 0;
-
       const auto off(recombine(parents).front());
-
       CHECK(off.is_valid());
 
-      const bool distinct(status.mutations + status.crossovers == 0
-                          || (off != parents[0] && off != parents[1]));
-      CHECK(distinct);
+      if (off != parents[0] && off != parents[1])
+        ++distinct;
     }
+
+    CHECK(static_cast<double>(distinct) / N > prob.env.evolution.p_cross - 0.1);
   }
 }
 

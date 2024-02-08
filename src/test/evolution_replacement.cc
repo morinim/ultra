@@ -46,8 +46,8 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   const scored_individual worst(*worst_it, eva(*worst_it));
   const scored_individual best(*best_it, eva(*best_it));
 
-  evolution_status<gp::individual, double> status(worst);
-  replacement::tournament replace(eva, prob.env, status);
+  evolution_status<gp::individual, double> status;
+  replacement::tournament replace(eva, prob.env);
 
   SUBCASE("No elitism")
   {
@@ -58,7 +58,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     prob.env.evolution.tournament_size = 1;
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.front(), worst.ind);
+      replace(pop.front(), worst.ind, status);
 
     for (const auto &prg : pop.front())
       CHECK(prg == worst.ind);
@@ -73,16 +73,16 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     const auto backup(pop);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.front(), worst.ind);
+      replace(pop.front(), worst.ind, status);
 
     CHECK(std::ranges::equal(pop, backup));
     CHECK(status.best().ind == worst.ind);
 
-    replace(pop.front(), best.ind);
+    replace(pop.front(), best.ind, status);
     CHECK(status.best().ind == best.ind);
 
     for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
-      replace(pop.front(), best.ind);
+      replace(pop.front(), best.ind, status);
 
     for (const auto &prg : pop.front())
       CHECK(prg == best.ind);
@@ -112,8 +112,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   const scored_individual worst(*worst_it, eva(*worst_it));
   const scored_individual best(*best_it, eva(*best_it));
 
-  evolution_status<gp::individual, double> status(worst);
-  replacement::alps replace(eva, prob.env, status);
+  evolution_status<gp::individual, double> status;
+  replacement::alps replace(eva, prob.env);
 
   const unsigned big_age(10000);
 
@@ -132,7 +132,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
         CHECK(new_best.age() > layer.max_age());
 
     replace(std::vector{std::ref(pop.front()), std::ref(pop.back())},
-            new_best);
+            new_best, status);
 
     CHECK(std::ranges::find(pop.front(), new_best) == pop.front().end());
     CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
@@ -144,7 +144,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     {
       layer.clear();
       replace(std::vector{std::ref(layer), std::ref(pop.back())},
-              new_best);
+              new_best, status);
       CHECK(std::ranges::find(layer, new_best) != layer.end());
     }
   }
@@ -161,7 +161,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       {
         const auto elem(random::individual(*l));
 
-        replace(alps::replacement_layers(pop, l), elem);
+        replace(alps::replacement_layers(pop, l), elem, status);
 
         if (const auto it(std::ranges::mismatch(*l, *b));
             it.in1 != l->end())
@@ -194,17 +194,18 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   alps::set_age(pop);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-  evolution_status<gp::individual, double> status;
-  replacement::alps replace(eva, prob.env, status);
+  replacement::alps replace(eva, prob.env);
 
   const auto search([&](auto to_layers)
   {
+    evolution_status<gp::individual, double> status;
+
     for (unsigned i(0); i < 30000; ++i)
     {
       const auto offspring{gp::individual(prob)};
       CHECK(offspring.is_valid());
 
-      replace(to_layers, offspring);
+      replace(to_layers, offspring, status);
     }
   });
 
@@ -223,15 +224,15 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
 {
   using namespace ultra;
 
-  prob.env.population.individuals    = 30;
-  prob.env.population.layers         = 10;
+  prob.env.population.individuals = 30;
+  prob.env.population.layers      = 10;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::random);
   evolution_status<gp::individual, double> status;
-  replacement::alps replace(eva, prob.env, status);
+  replacement::alps replace(eva, prob.env);
 
   const auto range(pop.range_of_layers());
   for (auto l(std::prev(range.end())); l != range.begin(); --l)

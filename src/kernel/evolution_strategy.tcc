@@ -18,20 +18,20 @@
 #define      ULTRA_EVOLUTION_STRATEGY_TCC
 
 template<Individual I, Fitness F>
-evolution_strategy<I, F>::evolution_strategy(population_t &pop,
-                                             evolution_status<I, F> &status)
-  : status_(status), pop_(pop)
+evolution_strategy<I, F>::evolution_strategy(
+  population_t &pop, const evolution_status<I, F> &status)
+  : starting_status_(status), pop_(pop)
 {
 }
 
 template<Evaluator E, Individual I, Fitness F>
 alps_es<E, I, F>::alps_es(population_t &pop,
                           E &eva,
-                          evolution_status<I, F> &status)
+                          const evolution_status<I, F> &status)
   : evolution_strategy<I, F>(pop, status),
     select_(eva, pop.problem().env),
-    recombine_(eva, pop.problem(), status),
-    replace_(eva, pop.problem().env, status)
+    recombine_(eva, pop.problem()),
+    replace_(eva, pop.problem().env)
 {
   static_assert(std::is_same_v<I, closure_arg_t<E>>);
   static_assert(std::is_same_v<F, closure_return_t<E>>);
@@ -43,7 +43,8 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
   return
     [this,
      sel_pop = alps::selection_layers(this->pop_, l),
-     rep_pop = alps::replacement_layers(this->pop_, l)]()
+     rep_pop = alps::replacement_layers(this->pop_, l),
+     status = this->starting_status_]() mutable
     {
       Ensures(!sel_pop.empty());
       Ensures(!rep_pop.empty());
@@ -51,7 +52,7 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
 
       const auto parents(this->select_(sel_pop));
       const auto offspring(this->recombine_(parents).front());
-      this->replace_(rep_pop, offspring);
+      this->replace_(rep_pop, offspring, status);
     };
 }
 
@@ -61,7 +62,6 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
 template<Evaluator E, Individual I, Fitness F>
 void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
 {
-  const auto &status(this->status_);
   auto &pop(this->pop_);
   const auto &env(pop.problem().env);
 
@@ -96,7 +96,8 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
   }
 
   // Code executed every `age_gap` interval.
-  if (status->generation() && status->generation() % env.alps.age_gap == 0)
+  if (const auto generation(this->starting_status_);
+      generation && generation % env.alps.age_gap == 0)
   {
     if (pop.layers() < env.layers
         || az.age_dist(layers - 1).mean() > env.alps.max_age(layers))
@@ -126,11 +127,11 @@ environment alps_es<E, I, F>::shape(environment env)
 template<Evaluator E, Individual I, Fitness F>
 std_es<E, I, F>::std_es(population_t &pop,
                         E &eva,
-                        evolution_status<I, F> &status)
+                        const evolution_status<I, F> &status)
   : evolution_strategy<I, F>(pop, status),
     select_(eva, pop.problem().env),
-    recombine_(eva, pop.problem(), status),
-    replace_(eva, pop.problem().env, status)
+    recombine_(eva, pop.problem()),
+    replace_(eva, pop.problem().env)
 {
   static_assert(std::is_same_v<I, closure_arg_t<E>>);
   static_assert(std::is_same_v<F, closure_return_t<E>>);
@@ -143,13 +144,13 @@ auto std_es<E, I, F>::operations(typename population_t::layer_iter l) const
   Expects(iterator_of(l, this->pop_.range_of_layers()));
 
   return
-    [this, &pop_layer = *l]()
+    [this, &pop_layer = *l, status = this->starting_status_]() mutable
     {
       Ensures(!pop_layer.empty());
 
       const auto parents(this->select_(pop_layer));
       const auto offspring(this->recombine_(parents).front());
-      this->replace_(pop_layer, offspring);
+      this->replace_(pop_layer, offspring, status);
     };
 }
 

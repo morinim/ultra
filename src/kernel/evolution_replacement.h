@@ -28,13 +28,11 @@ template<Evaluator E>
 class strategy
 {
 public:
-  strategy(E &, const environment &,
-           evolution_status<closure_arg_t<E>, closure_return_t<E>> &);
+  strategy(E &, const environment &);
 
 protected:
   E &eva_;
   const environment &env_;
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status_;
 };
 
 ///
@@ -54,13 +52,12 @@ public:
   using tournament::strategy::strategy;
 
   template<Population P>
-  void operator()(P &, const closure_arg_t<E> &) const;
+  void operator()(
+    P &, const closure_arg_t<E> &,
+    evolution_status<closure_arg_t<E>, closure_return_t<E>> &) const;
 };
 
-template<Evaluator E> tournament(
-  E &, const environment &,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &)
-  -> tournament<E>;
+template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
 
 ///
 /// ALPS based replacement scheme.
@@ -80,7 +77,9 @@ public:
   using alps::strategy::strategy;
 
   template<PopulationWithMutex P, Individual I>
-  void operator()(std::vector<std::reference_wrapper<P>>, const I &) const;
+  void operator()(
+    std::vector<std::reference_wrapper<P>>, const I &,
+    evolution_status<closure_arg_t<E>, closure_return_t<E>> &) const;
 
   template<RandomAccessPopulation P>
   void try_move_up_layer(const P &, P &);
@@ -91,10 +90,7 @@ private:
                         const I &) const;
 };
 
-template<Evaluator E> alps(
-  E &, const environment &,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &)
-  -> alps<E>;
+template<Evaluator E> alps(E &, const environment &) -> alps<E>;
 
 #include "kernel/evolution_replacement.tcc"
 

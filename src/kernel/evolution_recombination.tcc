@@ -20,13 +20,10 @@
 ///
 /// \param[in]  eva    a fitness function
 /// \param[in]  prob   the current problem
-/// \param[out] status reference to the current set of statistics
 ///
 template<Evaluator E>
-strategy<E>::strategy(
-  E &eva, const problem &prob,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status)
-  : eva_(eva), prob_(prob), status_(status)
+strategy<E>::strategy(E &eva, const problem &prob)
+  : eva_(eva), prob_(prob)
 {
 }
 
@@ -57,7 +54,6 @@ base<E>::operator()(const R &parents) const
       [this](const auto &p1, const auto &p2)
       {
         auto ret(crossover(p1, p2));
-        ++this->status_.crossovers;
 
         if (this->prob_.env.evolution.p_mutation > 0.0)
         {
@@ -69,7 +65,7 @@ base<E>::operator()(const R &parents) const
           // - optimize the exploitation phase.
           while (p1.signature() == ret.signature()
                  || p2.signature() == ret.signature())
-            this->status_.mutations += ret.mutation(this->prob_);
+            ret.mutation(this->prob_);
         }
 
         return ret;
@@ -98,8 +94,7 @@ base<E>::operator()(const R &parents) const
 
   // !crossover
   auto off(parents[random::boolean()]);
-  this->status_.mutations += off.mutation(this->prob_);
-
+  off.mutation(this->prob_);
   return {off};
 }
 

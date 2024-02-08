@@ -27,6 +27,49 @@ void summary<I, F>::clear()
 }
 
 ///
+/// \return a valid starting evolution status to be used by an evolution
+///         strategy
+///
+/// A starting evolution status is an "empty" `evolution_status` object with
+/// reference to `this` object correctly set, i.e.:
+/// - the callback function used to keep up to date the best individual found;
+/// - the current generation.
+///
+template<Individual I, Fitness F>
+evolution_status<I, F> summary<I, F>::starting_status()
+{
+  return evolution_status<I, F>(&generation,
+                                [this](scored_individual<I, F> prg)
+                                {
+                                  update_if_better(prg);
+                                });
+}
+
+///
+/// Keeps updated the best individual found so far.
+///
+/// \param[in] prg candidate new best scored individual
+///
+template<Individual I, Fitness F>
+void summary<I, F>::update_if_better(scored_individual<I, F> prg)
+{
+  std::lock_guard guard(*pmutex_);
+
+  if (prg > best_)
+    best_ = prg;
+}
+
+///
+/// \return best scored individul found so far
+///
+template<Individual I, Fitness F>
+scored_individual<I, F> summary<I, F>::best() const
+{
+  std::lock_guard guard(*pmutex_);
+  return best_;
+}
+
+///
 /// Loads the object from a stream.
 ///
 /// \param[in] in input stream
@@ -49,10 +92,10 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
   if (!(in >> tmp_summary.generation))
     return false;
 
-  if (!tmp_summary.status.load(in, p))
+  if (!tmp_summary.score.load(in))
     return false;
 
-  if (!tmp_summary.score.load(in))
+  if (!tmp_summary.best_.load(in, p))
     return false;
 
   *this = tmp_summary;
@@ -72,13 +115,13 @@ bool summary<I, F>::save(std::ostream &out) const
   // `status` is very important.
   out << elapsed.count() << ' ' << generation << '\n';
 
-  if (!status.save(out))
-    return false;
-
   // analyzer `az` doesn't need to be saved: it'll be recalculated at the
   // beginning of evolution.
 
   if (!score.save(out))
+    return false;
+
+  if (!best_.save(out))
     return false;
 
   return out.good();

@@ -35,8 +35,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   SUBCASE("Missing best")
   {
     evolution_status<gp::individual, fitnd> status;
-    status.crossovers = 1000;
-    status.mutations = 100;
 
     CHECK(status.best().empty());
 
@@ -45,8 +43,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     decltype(status) status1;
     CHECK(status1.load(ss, prob));
 
-    CHECK(status.crossovers == status1.crossovers);
-    CHECK(status.mutations == status1.mutations);
     CHECK(status.last_improvement()  == status1.last_improvement());
     CHECK(status1.best().empty());
   }
@@ -60,18 +56,12 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(status.last_improvement() == generation);
 
-    status.crossovers = 1000;
-    status.mutations = 100;
-
     CHECK(!status.best().empty());
 
     CHECK(status.save(ss));
 
     decltype(status) status1;
     CHECK(status1.load(ss, prob));
-
-    CHECK(status.crossovers == status1.crossovers);
-    CHECK(status.mutations == status1.mutations);
 
     CHECK(status1.last_improvement() == generation);
 
@@ -95,11 +85,6 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
   {
     for (int i(1); i <= MAX; ++i)
     {
-      if (i % 2 == odd)
-        status.mutations = i;
-
-      ++status.crossovers;
-
       if (odd)
       {
         if (i < 9 * MAX / 10 && i % 2 == odd)
@@ -118,8 +103,6 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
     std::jthread t2(work, true);
   }
 
-  CHECK(status.mutations == MAX);
-  CHECK(status.crossovers == 2*MAX);
   CHECK(status.best().fit == MAX - 1);
 }
 

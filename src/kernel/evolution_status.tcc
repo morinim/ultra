@@ -18,17 +18,10 @@
 #define      ULTRA_EVOLUTION_STATUS_TCC
 
 template<Individual I, Fitness F>
-evolution_status<I, F>::evolution_status(const scored_individual<I, F> &si)
-  : best_(si)
+evolution_status<I, F>::evolution_status(const unsigned *gen,
+                                         const global_update_f &f)
+  : update_overall_best_(f), generation_(gen)
 {
-  Expects(!si.empty());
-}
-
-template<Individual I, Fitness F>
-evolution_status<I, F>::evolution_status(const unsigned *generation)
-  : generation_(generation)
-{
-  Expects(generation);
 }
 
 ///
@@ -42,29 +35,20 @@ bool evolution_status<I, F>::update_if_better(const scored_individual<I, F> &si)
 {
   Expects(!si.empty());
 
-  std::atomic_bool flag(false);
+  const bool update(si > best_);
 
-  {
-    std::shared_lock lock(*pmutex_);
-    flag = si > best_;
-
-    // By default an empty `scored_individual` has a the lowest possible
-    // fitness so it'll be immediately replaced.
-  }
-
-  if (!flag)
-    return false;
-
-  std::lock_guard lock(*pmutex_);
-  if (si > best_)
+  if (update)
   {
     best_ = si;
+
     if (generation_)
       last_improvement_ = *generation_;
-    return true;
+
+    if (update_overall_best_)
+      update_overall_best_(best_);
   }
 
-  return false;
+  return update;
 }
 
 ///
@@ -73,7 +57,6 @@ bool evolution_status<I, F>::update_if_better(const scored_individual<I, F> &si)
 template<Individual I, Fitness F>
 scored_individual<I, F> evolution_status<I, F>::best() const
 {
-  std::shared_lock lock(*pmutex_);
   return best_;
 }
 
@@ -86,7 +69,6 @@ unsigned evolution_status<I, F>::generation() const
 template<Individual I, Fitness F>
 unsigned evolution_status<I, F>::last_improvement() const
 {
-  std::shared_lock lock(*pmutex_);
   return last_improvement_;
 }
 
@@ -107,18 +89,6 @@ bool evolution_status<I, F>::load(std::istream &in, const problem &p)
   if (!tmp_si.load(in, p))
     return false;
 
-  std::uintmax_t tmp_mut;
-  static_assert(std::is_same_v<typename decltype(mutations)::value_type,
-                               decltype(tmp_mut)>);
-  if (!(in >> tmp_mut))
-    return false;
-
-  std::uintmax_t tmp_cross;
-  static_assert(std::is_same_v<typename decltype(crossovers)::value_type,
-                               decltype(tmp_cross)>);
-  if (!(in >> tmp_cross))
-    return false;
-
   unsigned tmp_last_improvement;
   static_assert(std::is_same_v<decltype(last_improvement_),
                                decltype(tmp_last_improvement)>);
@@ -127,10 +97,7 @@ bool evolution_status<I, F>::load(std::istream &in, const problem &p)
   if (generation_ && tmp_last_improvement > *generation_)
     return false;
 
-  std::lock_guard lock(*pmutex_);
   best_ = tmp_si;
-  mutations = tmp_mut;
-  crossovers = tmp_cross;
   last_improvement_ = tmp_last_improvement;
 
   return true;
@@ -145,14 +112,10 @@ bool evolution_status<I, F>::load(std::istream &in, const problem &p)
 template<Individual I, Fitness F>
 bool evolution_status<I, F>::save(std::ostream &out) const
 {
-  std::shared_lock lock(*pmutex_);
-
   if (!best_.save(out))
     return false;
 
-  out << mutations
-      << ' ' << crossovers
-      << ' ' << last_improvement_ << '\n';
+  out << last_improvement_ << '\n';
 
   // `generation_` is just a reference, no need to save it.
 

@@ -43,8 +43,6 @@ class evolution_strategy
 public:
   using population_t = layered_population<I>;
 
-  evolution_strategy(population_t &, evolution_status<I, F> &);
-
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified
   /// environment. Some evolution strategies force parameters to
@@ -52,7 +50,9 @@ public:
   static environment shape(const environment &env) { return env; }
 
 protected:
-  evolution_status<I, F> &status_;
+  evolution_strategy(population_t &, const evolution_status<I, F> &);
+
+  const evolution_status<I, F> starting_status_;
   population_t &pop_;
 };
 
@@ -107,7 +107,7 @@ class alps_es : public evolution_strategy<I, F>
 public:
   using typename alps_es::evolution_strategy::population_t;
 
-  alps_es(population_t &, E &, evolution_status<I, F> &);
+  alps_es(population_t &, E &, const evolution_status<I, F> &);
 
   [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 
@@ -132,7 +132,7 @@ class std_es : public evolution_strategy<I, F>
 public:
   using typename std_es::evolution_strategy::population_t;
 
-  std_es(population_t &, E &, evolution_status<I, F> &);
+  std_es(population_t &, E &, const evolution_status<I, F> &);
 
   [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 

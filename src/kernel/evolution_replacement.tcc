@@ -20,19 +20,17 @@
 ///
 /// \param[in]  eva    current evaluator
 /// \param[in]  env    environment (for replacement specific parameters)
-/// \param[out] status statistics about the replacement strategy
 ///
 template<Evaluator E>
-strategy<E>::strategy(
-  E &eva, const environment &env,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status)
-  : eva_(eva), env_(env), status_(status)
+strategy<E>::strategy(E &eva, const environment &env)
+  : eva_(eva), env_(env)
 {
 }
 
 ///
-/// \param[in] pop       a population
-/// \param[in] offspring collection of "children"
+/// \param[in]  pop       a population
+/// \param[in]  offspring collection of "children"
+/// \param[out] status    current evolution status
 ///
 /// Parameters from the environment:
 /// - `evolution.elitism`;
@@ -40,7 +38,9 @@ strategy<E>::strategy(
 ///
 template<Evaluator E>
 template<Population P>
-void tournament<E>::operator()(P &pop, const closure_arg_t<E> &offspring) const
+void tournament<E>::operator()(
+  P &pop, const closure_arg_t<E> &offspring,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status) const
 {
   static_assert(std::is_same_v<closure_arg_t<E>, typename P::value_type>);
 
@@ -66,7 +66,7 @@ void tournament<E>::operator()(P &pop, const closure_arg_t<E> &offspring) const
 
   const auto off_fit(this->eva_(offspring));
 
-  this->status_.update_if_better(scored_individual(offspring, off_fit));
+  status.update_if_better(scored_individual(offspring, off_fit));
 
   if (off_fit > worst_fitness || !random::boolean(this->env_.evolution.elitism))
     pop[worst_coord] = offspring;
@@ -170,19 +170,21 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 }
 
 ///
-/// \param[in] pops      a collection of references to populations. Can contain
-///                      one or two elements. The first one (`pop[0]`) is the
-///                      main/current layer; the second one, if available, is
-///                      the upper level layer
-/// \param[in] offspring the "incoming" individual
+/// \param[in]  pops      a collection of references to populations. Can
+///                       contain one or two elements. The first one (`pop[0]`)
+///                       is the main/current layer; the second one, if
+///                       available, is the upper level layer
+/// \param[in]  offspring the "incoming" individual
+/// \param[out] status    current evolution status
 ///
 /// Parameters from the environment:
 /// - `evolution.tournament_size`.
 ///
 template<Evaluator E>
 template<PopulationWithMutex P, Individual I>
-void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
-                         const I &offspring) const
+void alps<E>::operator()(
+  std::vector<std::reference_wrapper<P>> pops, const I &offspring,
+  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status) const
 {
   static_assert(std::is_same_v<I, typename P::value_type>);
   static_assert(std::is_same_v<I, closure_arg_t<E>>);
@@ -192,7 +194,7 @@ void alps<E>::operator()(std::vector<std::reference_wrapper<P>> pops,
   const bool ins(try_add_to_layer(pops, offspring));
 
   if (const auto f_off(this->eva_(offspring));
-      this->status_.update_if_better(scored_individual(offspring, f_off)))
+      status.update_if_better(scored_individual(offspring, f_off)))
   {
     if (!ins)
       try_add_to_layer(std::vector{pops.back()}, offspring);

@@ -29,7 +29,7 @@ namespace ultra
 /// the end of evolution.
 ///
 template<Individual I, Fitness F>
-struct summary
+class summary
 {
 public:
   // --- Constructor and support functions ---
@@ -37,13 +37,17 @@ public:
 
   void clear();
 
+  [[nodiscard]] evolution_status<I, F> starting_status();
+
+  // --- Concurrency aware functions ---
+  void update_if_better(scored_individual<I, F>);
+  [[nodiscard]] scored_individual<I, F> best() const;
+
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);
   [[nodiscard]] bool save(std::ostream &) const;
 
   // --- Data members ---
-  evolution_status<I, F> status {&generation};
-
   analyzer<I, F> az {};
 
   model_measurements<F> score {};
@@ -52,6 +56,12 @@ public:
   std::chrono::milliseconds elapsed {0};
 
   unsigned generation {0};
+
+private:
+  mutable std::shared_ptr<std::mutex> pmutex_
+  {std::make_shared<std::mutex>()};
+
+  scored_individual<I, F> best_ {};
 };
 
 #include "kernel/evolution_summary.tcc"

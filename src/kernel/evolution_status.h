@@ -18,20 +18,22 @@
 
 namespace ultra
 {
+
 ///
 /// A collection of information about the ongoing search.
 ///
 /// \remark
-/// Supports concurrency-safe operations.
+/// Every thread has its own `evolution_status`.
 ///
 template<Individual I, Fitness F>
 class evolution_status
 {
 public:
+  using global_update_f = std::function<void (scored_individual<I, F>)>;
+
   // --- Constructor and support functions ---
   evolution_status() = default;
-  explicit evolution_status(const scored_individual<I, F> &);
-  explicit evolution_status(const unsigned *);
+  explicit evolution_status(const unsigned *, const global_update_f & = {});
 
   // --- Misc ---
   [[nodiscard]] scored_individual<I, F> best() const;
@@ -44,23 +46,15 @@ public:
   [[nodiscard]] bool save(std::ostream &) const;
 
 private:
-  mutable std::shared_ptr<std::shared_mutex> pmutex_
-  {std::make_shared<std::shared_mutex>()};
-
   scored_individual<I, F> best_ {};
+
+  global_update_f update_overall_best_ {};
 
   // Current generation.
   const unsigned *generation_ {nullptr};
 
   // This is the generation the last improvement occurred in.
   unsigned last_improvement_ {0};
-
-public:
-  /// Number of crossovers performed.
-  copyable_atomic<std::uintmax_t> crossovers {0};
-
-  /// Number of mutations performed.
-  copyable_atomic<std::uintmax_t> mutations {0};
 };
 
 #include "kernel/evolution_status.tcc"
