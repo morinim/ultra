@@ -71,37 +71,42 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
 
   if (pop.layers() > 1)
   {
-    std::size_t l(1);
+    std::size_t l_index(1);
 
-    for (auto it(std::next(layers.begin())); it != layers.end();)
-      if (almost_equal(az.fit_dist(l - 1).mean(), az.fit_dist(l).mean()))
-        it = pop.erase(it);
+    for (auto layer(std::next(layers.begin()));
+         layer != layers.end();
+         ++l_index)
+    {
+      if (almost_equal(az.fit_dist(l_index - 1).mean(),
+                       az.fit_dist(l_index).mean()))
+        layer = pop.erase(layer);
       else
-        ++it;
+      {
+        const auto sd(az.fit_dist(l_index).standard_deviation());
+        const bool converged(issmall(sd));
+
+        if (converged)
+          layer->allowed(std::max(env.min_individuals, layer->size() / 2));
+        else
+          layer->allowed(env.individuals);
+
+        ++layer;
+      }
+    }
   }
 
-  {
-    auto layer(std::next(layers.begin()));
-
-    for (std::size_t l(1); l < pop.layers(); ++l, ++layer)
-      if (issmall(az.fit_dist(l).standard_deviation()))
-        layer->allowed(std::max(env.min_individuals, layer->size() / 2));
-      else
-        layer->allowed(env.individuals);
-  }
-/*
   // Code executed every `age_gap` interval.
-  if (sum->gen && sum->gen % env.alps.age_gap == 0)
+  if (status->generation() && status->generation() % env.alps.age_gap == 0)
   {
-    if (layers < env.layers
+    if (pop.layers() < env.layers
         || az.age_dist(layers - 1).mean() > env.alps.max_age(layers))
       pop.add_layer();
     else
     {
       this->replacement.try_move_up_layer(0);
-      pop.init_layer(0);
+      pop.front.init();
     }
-    }*/
+  }
 }
 
 ///

@@ -35,6 +35,7 @@ public:
 
   // --- Misc ---
   [[nodiscard]] scored_individual<I, F> best() const;
+  [[nodiscard]] unsigned generation() const;
   [[nodiscard]] unsigned last_improvement() const;
   bool update_if_better(const scored_individual<I, F> &);
 

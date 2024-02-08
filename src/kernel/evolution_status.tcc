@@ -78,6 +78,12 @@ scored_individual<I, F> evolution_status<I, F>::best() const
 }
 
 template<Individual I, Fitness F>
+unsigned evolution_status<I, F>::generation() const
+{
+  return generation_ ? *generation_ : std::numeric_limits<unsigned>::max();
+}
+
+template<Individual I, Fitness F>
 unsigned evolution_status<I, F>::last_improvement() const
 {
   std::shared_lock lock(*pmutex_);
