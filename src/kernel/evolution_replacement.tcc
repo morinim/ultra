@@ -129,7 +129,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 
     // Well, let's see if the worst individual we can find with a tournament...
     auto worst_coord(random::coord(pop));
-    auto worst_fit(this->eva_(worst));
+    auto worst_fit(this->eva_(pop[worst_coord]));
     auto worst_age(pop[worst_coord].age());
 
     auto rounds(this->env_.evolution.tournament_size);
