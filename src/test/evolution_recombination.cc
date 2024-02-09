@@ -30,7 +30,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 {
   using namespace ultra;
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   recombination::base recombine(eva, prob);
 
   std::vector parents = { gp::individual(prob), gp::individual(prob) };

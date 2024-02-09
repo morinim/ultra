@@ -31,10 +31,10 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   using namespace ultra;
 
   prob.env.population.individuals = 20;
-  prob.env.population.layers      =  1;
+  prob.env.population.init_layers =  1;
 
   layered_population<gp::individual> pop(prob);
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   const auto [worst_it, best_it] =
     std::ranges::minmax_element(pop,
@@ -95,12 +95,12 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   using namespace ultra;
 
   prob.env.population.individuals = 25;
-  prob.env.population.layers      =  4;
+  prob.env.population.init_layers =  4;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   const auto [worst_it, best_it] =
     std::ranges::minmax_element(pop,
@@ -112,6 +112,15 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   const scored_individual worst(*worst_it, eva(*worst_it));
   const scored_individual best(*best_it, eva(*best_it));
 
+  // We want a new "champion". Since generating a new one isn't simple, we
+  // remove every individual with fitness greater or equal to `best.fit`.
+  // Now `best.ind` can be used as new best individual.
+  std::ranges::replace_if(
+    pop,
+    [&eva, &best](const auto &prg) { return eva(prg) >= best.fit; },
+    worst.ind);
+  CHECK(std::ranges::find(pop, best.ind) == pop.end());
+
   evolution_status<gp::individual, double> status;
   replacement::alps replace(eva, prob.env);
 
@@ -121,9 +130,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   {
     // A new best individual is found but it's too old for its layer and all
     // layers are full. Individual shouldn't be lost.
-    gp::individual new_best(prob);
+    gp::individual new_best(best.ind);
     new_best.inc_age(big_age);
-    CHECK(eva(new_best) > best.fit);
 
     for (const auto &layer : pop.range_of_layers())
       if (&layer == &pop.back())
@@ -187,7 +195,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   using namespace ultra;
 
   prob.env.population.individuals    = 30;
-  prob.env.population.layers         = 10;
+  prob.env.population.init_layers    = 10;
   prob.env.evolution.tournament_size = 10;
 
   layered_population<gp::individual> pop(prob);
@@ -225,7 +233,7 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   using namespace ultra;
 
   prob.env.population.individuals = 30;
-  prob.env.population.layers      = 10;
+  prob.env.population.init_layers = 10;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);

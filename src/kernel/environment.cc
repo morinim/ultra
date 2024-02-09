@@ -38,7 +38,7 @@ environment &environment::init()
   slp.code_length = 100;
 
   population.individuals = 100;
-  population.layers = 1;
+  population.init_layers = 1;
   population.min_individuals = 2;
 
   evolution.brood_recombination = 1;
@@ -116,9 +116,9 @@ bool environment::is_valid(bool force_defined) const
       return false;
     }
 
-    if (!population.layers)
+    if (!population.init_layers)
     {
-      ultraERROR << "Undefined `population.layers` data member";
+      ultraERROR << "Undefined `population.init_layers` data member";
       return false;
     }
 

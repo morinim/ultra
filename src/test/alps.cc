@@ -29,7 +29,7 @@ TEST_CASE_FIXTURE(fixture1, "Set age")
 {
   using namespace ultra;
 
-  prob.env.population.layers = 10;
+  prob.env.population.init_layers = 10;
   prob.env.population.individuals = random::between(10, 20);
   layered_population<gp::individual> pop(prob);
 

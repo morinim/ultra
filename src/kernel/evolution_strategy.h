@@ -49,6 +49,12 @@ public:
   /// specific values.
   static environment shape(const environment &env) { return env; }
 
+  /// Initial setup performed before evolution starts.
+  void init() const {}
+
+  /// Work to be done at the end of a generation.
+  void after_generation() const {}
+
 protected:
   evolution_strategy(population_t &, const evolution_status<I, F> &);
 
@@ -111,6 +117,7 @@ public:
 
   [[nodiscard]] auto operations(typename population_t::layer_iter) const;
 
+  void init();
   void after_generation(const analyzer<I, F> &);
 
   static environment shape(environment);
@@ -118,7 +125,7 @@ public:
 private:
   const selection::alps<E>     select_;
   const recombination::base<E> recombine_;
-  const replacement::alps<E>   replace_;
+  replacement::alps<E>         replace_;
 };
 
 ///

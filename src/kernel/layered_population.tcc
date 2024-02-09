@@ -30,10 +30,10 @@ layered_population<I>::layered_population(const ultra::problem &p,
 {
   if (init_layers)
   {
-    for (std::size_t l(0); l < p.env.population.layers; ++l)
+    for (std::size_t l(0); l < p.env.population.init_layers; ++l)
       init(layers_.insert(layers_.end(), layer_t()));
-
-    assert(layers() == p.env.population.layers);
+//emplace_back
+    assert(layers() == p.env.population.init_layers);
   }
 
   Ensures(is_valid());

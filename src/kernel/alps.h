@@ -47,6 +47,9 @@ struct parameters
   /// \note A value of 0 means undefined (auto-tune).
   unsigned age_gap {20};
 
+  /// Maximum number of layers an ALPS layered population can grow to.
+  std::size_t max_layers {8};
+
   /// The probability that a parent will be extracted from the main layer.
   ///
   /// \note

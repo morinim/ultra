@@ -25,6 +25,24 @@
 TEST_SUITE("EVOLUTION SUMMARY")
 {
 
+TEST_CASE_FIXTURE(fixture1, "update_if_better")
+{
+  using namespace ultra;
+  using namespace std::chrono_literals;
+
+  summary<gp::individual, fitnd> s;
+
+  CHECK(s.best().empty());
+
+  const scored_individual si(gp::individual(prob), fitnd{1.0, 2.0});
+
+  s.update_if_better(si);
+
+  CHECK(s.best().ind == si.ind);
+  CHECK(s.best().fit >= si.fit);
+  CHECK(s.best().fit <= si.fit);
+}
+
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
@@ -35,8 +53,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   s.elapsed = 10000ms;
   s.generation = 10;
   s.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
-
-  CHECK(s.best().empty());
 
   std::stringstream ss;
 

@@ -43,18 +43,18 @@ struct environment
     /// `0` means auto-tune.
     std::size_t individuals {0};
 
-    /// Number of layers the population is structured on.
+    /// Initial number of layers the population is structured on.
     ///
     /// \warning
-    /// Setting `layers > 1` with the standard evolution strategy is like
+    /// Setting `init_layers > 1` with the standard evolution strategy is like
     /// running multiple populations autonomously (there isn't any direct
-    /// interaction among layers. Fitness values could be shared via cache).
-    /// A value greater than one is required for for ALPS or other strategies
+    /// interaction among layers; fitness values could be shared via cache).
+    /// A value greater than one is required for ALPS or other strategies
     /// that allow migrants.
     ///
     /// \note
-    /// `0` means undefined (auto-tune).
-    std::size_t layers {1};
+    /// `0` means auto-tune.
+    std::size_t init_layers {1};
 
     /// Minimum number of individuals in a layer of the population.
     ///

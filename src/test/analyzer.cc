@@ -35,7 +35,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     for (std::size_t i(1); i < 50; ++i)
       for (std::size_t c(10); c < 20; ++c)
       {
-        prob.env.population.layers = l;
+        prob.env.population.init_layers = l;
         prob.env.population.individuals = i;
         prob.env.slp.code_length = c;
 

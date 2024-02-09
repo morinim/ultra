@@ -33,7 +33,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   using namespace ultra;
 
   prob.env.population.individuals = 20;
-  prob.env.population.layers      =  1;
+  prob.env.population.init_layers =  1;
 
   // The test assumes independent draws.
   prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
@@ -41,11 +41,11 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   // Individuals have distinct ages.
   const auto pop(make_debug_population<gp::individual>(prob));
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<gp::individual> eva(test_evaluator_type::age);
 
   selection::tournament select(eva, prob.env);
 
-  // Every individual has a unique fitness (`test_evaluator_type::distinct`),
+  // Every individual has a unique fitness (`make_debug_population`),
   // so there is just one maximum-fitness-individual.
   for (unsigned ts(1); ts < prob.env.population.individuals; ++ts)
   {
@@ -60,7 +60,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     unsigned found(0);
     for (unsigned i(0); i < n; ++i)
     {
-      auto parents(select(pop.layer(0)));
+      auto parents(select(pop.front()));
 
       CHECK(parents.size() == prob.env.evolution.tournament_size);
 
@@ -98,11 +98,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     [this](unsigned tournament)
     {
       prob.env.population.individuals    =         50;
-      prob.env.population.layers         =          2;
+      prob.env.population.init_layers    =          2;
       prob.env.evolution.tournament_size = tournament;
 
       layered_population<gp::individual> pop(prob);
-      test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+      test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
       unsigned j(0);
       for (auto &layer : pop.range_of_layers())
@@ -117,7 +117,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       }
 
       unsigned both_young(0), both_aged(0);
-      std::vector from_layer(prob.env.population.layers, 0u);
+      std::vector from_layer(pop.layers(), 0u);
 
       const unsigned n(2000);
       for (unsigned i(0); i < n; ++i)
@@ -212,7 +212,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   using namespace ultra;
 
   prob.env.population.individuals    = 30;
-  prob.env.population.layers         =  4;
+  prob.env.population.init_layers    =  4;
   prob.env.evolution.tournament_size = 10;
   prob.env.alps.p_main_layer         = .5;
 
@@ -245,7 +245,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   using namespace ultra;
 
   prob.env.population.individuals = 100;
-  prob.env.population.layers      =   1;
+  prob.env.population.init_layers =   1;
 
   // The test assumes independent draws.
   prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
@@ -255,7 +255,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   // Individuals have distinct ages.
   const auto pop(make_debug_population<de::individual>(prob));
 
-  test_evaluator<de::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 
   selection::de select(eva, prob.env);
 

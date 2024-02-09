@@ -56,6 +56,12 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
     };
 }
 
+template<Evaluator E, Individual I, Fitness F>
+void alps_es<E, I, F>::init()
+{
+  alps::set_age(this->pop_);
+}
+
 ///
 /// Increments population's age and checks if it's time to add a new layer.
 ///
@@ -86,9 +92,10 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
         const bool converged(issmall(sd));
 
         if (converged)
-          layer->allowed(std::max(env.min_individuals, layer->size() / 2));
+          layer->allowed(std::max(env.population.min_individuals,
+                                  layer->size() / 2));
         else
-          layer->allowed(env.individuals);
+          layer->allowed(env.population.individuals);
 
         ++layer;
       }
@@ -96,16 +103,17 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
   }
 
   // Code executed every `age_gap` interval.
-  if (const auto generation(this->starting_status_);
+  if (const auto generation(this->starting_status_.generation());
       generation && generation % env.alps.age_gap == 0)
   {
-    if (pop.layers() < env.layers
-        || az.age_dist(layers - 1).mean() > env.alps.max_age(layers))
+    if (const auto n_layers(pop.layers());
+        n_layers < env.alps.max_layers
+        || az.age_dist(n_layers - 1).mean() > env.alps.max_age(n_layers))
       pop.add_layer();
     else
     {
-      this->replacement.try_move_up_layer(0);
-      pop.front.init();
+      this->replace_.try_move_up_layer(pop.front(), pop.layer(1));
+      pop.init(pop.front());
     }
   }
 }
@@ -120,7 +128,7 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
 template<Evaluator E, Individual I, Fitness F>
 environment alps_es<E, I, F>::shape(environment env)
 {
-  env.population.layers = 4;
+  env.alps.max_layers = 8;
   return env;
 }
 
