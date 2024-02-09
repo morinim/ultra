@@ -31,8 +31,8 @@ layered_population<I>::layered_population(const ultra::problem &p,
   if (init_layers)
   {
     for (std::size_t l(0); l < p.env.population.init_layers; ++l)
-      init(layers_.insert(layers_.end(), layer_t()));
-//emplace_back
+      layers_.emplace_back(p);
+
     assert(layers() == p.env.population.init_layers);
   }
 
@@ -135,34 +135,6 @@ void layered_population<I>::init(layer_t &l)
 }
 
 ///
-/// Resets a layer of the population.
-///
-/// \param[in] l an iterator referring to a layer of the population
-///
-/// \warning
-/// If layer `l` is nonexistent the method doesn't work!
-///
-template<Individual I>
-void layered_population<I>::init(layer_iter l)
-{
-  if (l == layers_.end())
-    return;
-
-  assert(std::ranges::find_if(layers_,
-                              [&l](const auto &elem)
-                              {
-                                return std::addressof(elem)
-                                       == std::addressof(*l);
-                              }) != layers_.end());
-
-  l->clear();
-  l->allowed(problem().env.population.individuals);
-
-  std::generate_n(std::back_inserter(*l), l->allowed(),
-                  [this] {return I(problem()); });
-}
-
-///
 /// \return number of active layers
 ///
 /// \note
@@ -213,7 +185,7 @@ void layered_population<I>::add_layer()
   const auto nl(layers());
 #endif
 
-  init(layers_.insert(layers_.begin(), layer_t()));
+  layers_.emplace(layers_.begin(), *prob_);
 
 #if !defined(NDEBUG)
   Ensures(layers() == nl + 1);
