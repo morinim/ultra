@@ -31,17 +31,10 @@ concept Evaluator =
   Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
 
 
-enum class test_evaluator_type {distinct, fixed, random};
+enum class test_evaluator_type {realistic, fixed, random, age};
 
 ///
 /// A fitness function used for debug purpose.
-///
-/// It can be:
-/// - a unique fitness (`test_evaluator_type::distinct`). Every individual has
-///   his own (time invariant) fitness;
-/// - a random (time invariant) fitness (`test_evaluator_type::random`);
-/// - a constant fitness (`test_evaluator_type::fixed`). Same fitness for the
-///   entire population.
 ///
 template<Individual I>
 class test_evaluator
@@ -54,9 +47,6 @@ public:
   [[nodiscard]] double operator()(const I &) const;
 
 private:
-  mutable std::vector<I> buffer_ {};
-  mutable std::mutex mutex_ {};
-
   const test_evaluator_type et_;
 
   std::chrono::milliseconds delay_ {0};

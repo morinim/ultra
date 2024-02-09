@@ -27,10 +27,14 @@ test_evaluator<I>::test_evaluator(test_evaluator_type et) : et_(et)
 /// \return        fitness value for individual `prg`
 ///
 /// Depending on the type of test_evaluator returns:
-/// - a random, time-invariant fitness value for `prg`;
+/// - a distinct, random, time-invariant fitness value for each semantically
+///   equivalent `prg` (realistic);
+/// - a random, time-variant fitness value for `prg` (random);
 /// - a fixed, time-invariant fitness value for every individual of the
-///   population;
-/// - a distinct, time-invariant fitness value for each `prg`.
+///   population (fixed);
+/// - the age of the individual (age). This is useful when using a static
+///   layered_population produced via `make_debug_population` (every individual
+///   has a distinct fitness).
 ///
 template<Individual I>
 double test_evaluator<I>::operator()(const I &prg) const
@@ -38,29 +42,23 @@ double test_evaluator<I>::operator()(const I &prg) const
   if (delay_ > std::chrono::milliseconds{0})
     std::this_thread::sleep_for(delay_);
 
-  if (et_ == test_evaluator_type::fixed)
-    return 0.0;
-
-  std::size_t dist;
+  switch (et_)
   {
-    std::lock_guard guard(mutex_);
-    auto it(std::ranges::find(buffer_, prg));
-    if (it == buffer_.end())
-    {
-      buffer_.push_back(prg);
-      it = std::prev(buffer_.end());
-    }
-
-    dist = std::distance(buffer_.begin(), it);
+  case test_evaluator_type::realistic:
+  {
+    const auto signature(prg.signature());
+    return static_cast<double>(static_cast<std::uint32_t>(signature.data[0]));
   }
 
-  if (et_ == test_evaluator_type::distinct)
-    return static_cast<double>(dist);
+  case test_evaluator_type::fixed:
+    return 0.0;
 
-  assert(et_ == test_evaluator_type::random);
-  static random::engine_t e;
-  e.seed(dist);
-  return static_cast<double>(e());
+  case test_evaluator_type::random:
+    return random::sup<double>(1000000);
+
+  case test_evaluator_type::age:
+    return static_cast<double>(prg.age());
+  }
 }
 
 ///

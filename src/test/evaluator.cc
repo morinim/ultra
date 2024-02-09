@@ -33,7 +33,7 @@ TEST_CASE_FIXTURE(fixture1, "Concepts")
 
   linear_population<gp::individual> pop(prob);
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   static_assert(Evaluator<decltype(eva)>);
 
   auto eva2([&eva](const gp::individual &i) { return eva(i); });
@@ -44,15 +44,18 @@ TEST_CASE_FIXTURE(fixture1, "Test evaluator")
 {
   using namespace ultra;
 
-  SUBCASE("Distinct")
+  SUBCASE("Realistic")
   {
     std::vector<gp::individual> distinct;
     for (unsigned i(0); i < 100; ++i)
       if (gp::individual prg(prob);
-          std::ranges::find(distinct, prg) == distinct.end())
+          std::ranges::find_if(
+            distinct,
+            [&prg](const auto &rhs)
+            { return prg.signature() == rhs.signature(); }) == distinct.end())
         distinct.push_back(prg);
 
-    test_evaluator<gp::individual> eva(test_evaluator_type::distinct);
+    test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
     std::set<double> fitness;
     for (const auto &prg : distinct)
     {
@@ -74,6 +77,21 @@ TEST_CASE_FIXTURE(fixture1, "Test evaluator")
                               {
                                 return eva(prg) == doctest::Approx(val);
                               }));
+  }
+
+  SUBCASE("Random")
+  {
+    const gp::individual prg(prob);
+
+    test_evaluator<gp::individual> eva(test_evaluator_type::random);
+
+    std::vector<int> results(10);
+    std::ranges::generate(results,
+                          [&prg, &eva] { return static_cast<int>(eva(prg)); });
+
+    const auto [min, max] = std::ranges::minmax(results);
+
+    CHECK(min < max);
   }
 }
 
