@@ -375,28 +375,4 @@ bool layered_population<I>::is_valid() const
   return true;
 }
 
-///
-/// Creates a random population where each individual has a different age.
-///
-/// \param[in] prob current problem
-///
-/// This function is useful for debug purpose since allows to easily
-/// distinguish among members.
-///
-/// \note
-/// The `==` operator doesn't compare the age, explicit check must be performed
-/// by the user.
-///
-template<Individual I>
-layered_population<I> make_debug_population(const ultra::problem &prob)
-{
-  layered_population<I> pop(prob);
-
-  unsigned inc(0);
-  for (auto &prg : pop)
-    prg.inc_age(inc++);
-
-  return pop;
-}
-
 #endif  // include guard

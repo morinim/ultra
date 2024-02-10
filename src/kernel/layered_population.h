@@ -95,10 +95,6 @@ private:
   std::list<layer_t> layers_ {};
 };
 
-template<Individual I>
-[[nodiscard]] layered_population<I>
-make_debug_population(const ultra::problem &);
-
 namespace random
 {
 

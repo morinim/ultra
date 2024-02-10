@@ -17,6 +17,7 @@
 #include "kernel/layered_population.h"
 #include "kernel/gp/individual.h"
 
+#include "test/debug_support.h"
 #include "test/fixture1.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -225,7 +226,7 @@ TEST_CASE_FIXTURE(fixture1, "Make debug population")
 {
   using namespace ultra;
   // Individuals have distinct ages.
-  const auto pop(make_debug_population<gp::individual>(prob));
+  const auto pop(debug::make_debug_population<gp::individual>(prob));
 
   std::vector<bool> seen(pop.size(), false);
 

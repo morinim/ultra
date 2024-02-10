@@ -19,6 +19,7 @@
 #include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 
+#include "test/debug_support.h"
 #include "test/fixture1.h"
 #include "test/fixture4.h"
 
@@ -39,7 +40,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   prob.env.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
 
   // Individuals have distinct ages.
-  const auto pop(make_debug_population<gp::individual>(prob));
+  const auto pop(debug::make_debug_population<gp::individual>(prob));
 
   test_evaluator<gp::individual> eva(test_evaluator_type::age);
 
@@ -253,7 +254,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   distribution<double> dist;
 
   // Individuals have distinct ages.
-  const auto pop(make_debug_population<de::individual>(prob));
+  const auto pop(debug::make_debug_population<de::individual>(prob));
 
   test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 
