@@ -13,6 +13,8 @@
 #if !defined(ULTRA_EVOLUTION_STATUS_H)
 #define      ULTRA_EVOLUTION_STATUS_H
 
+#include <functional>
+
 #include "kernel/scored_individual.h"
 #include "utility/misc.h"
 
