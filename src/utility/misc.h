@@ -180,6 +180,26 @@ private:
   Iterator e_;
 };
 
+///
+/// A utility class for dealing with the "problem" of noncopyable mutexes.
+///
+/// In order to copy objects containing a mutex you have to write a custom
+/// copy constructor and copy assignment operator (breaking the *Rule of Zero*).
+/// Often you don't need to copy the mutex to copy the object because the mutex
+/// isn't part of the object's value, it's just there as a tool to protect
+/// access.
+///
+template<class M>
+requires requires (M m) { m.lock(); m.unlock(); }
+class ignore_copy : public M
+{
+public:
+  ignore_copy() = default;
+  ignore_copy(const ignore_copy &) {}
+
+  const ignore_copy &operator=(const ignore_copy &) const { return *this; }
+};
+
 // *******************************************************************
 // Functions
 // *******************************************************************

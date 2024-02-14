@@ -53,7 +53,7 @@ evolution_status<I, F> summary<I, F>::starting_status()
 template<Individual I, Fitness F>
 void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  std::lock_guard guard(*pmutex_);
+  std::lock_guard guard(mutex_);
 
   if (prg > best_)
     best_ = prg;
@@ -65,7 +65,7 @@ void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 template<Individual I, Fitness F>
 scored_individual<I, F> summary<I, F>::best() const
 {
-  std::lock_guard guard(*pmutex_);
+  std::lock_guard guard(mutex_);
   return best_;
 }
 

@@ -58,8 +58,7 @@ public:
   unsigned generation {0};
 
 private:
-  mutable std::shared_ptr<std::mutex> pmutex_
-  {std::make_shared<std::mutex>()};
+  mutable ignore_copy<std::mutex> mutex_ {};
 
   scored_individual<I, F> best_ {};
 };

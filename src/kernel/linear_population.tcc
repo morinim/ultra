@@ -82,7 +82,7 @@ void linear_population<I>::max_age(unsigned m)
 template<Individual I>
 std::shared_mutex &linear_population<I>::mutex() const
 {
-  return *pmutex_;
+  return mutex_;
 }
 
 ///

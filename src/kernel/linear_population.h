@@ -21,6 +21,8 @@
 #include "kernel/problem.h"
 #include "kernel/random.h"
 
+#include "utility/misc.h"
+
 namespace ultra
 {
 
@@ -79,8 +81,7 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
-  mutable std::shared_ptr<std::shared_mutex> pmutex_
-  {std::make_shared<std::shared_mutex>()};
+  mutable ignore_copy<std::shared_mutex> mutex_ {};
 
   std::vector<I> members_ {};
   std::size_t allowed_ {0};
