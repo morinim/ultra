@@ -14,7 +14,6 @@
 #define      ULTRA_UTILITY_H
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -179,39 +178,6 @@ public:
 private:
   Iterator b_;
   Iterator e_;
-};
-
-///
-/// Drop in replacement for `std::atomic` that provides a copy constructor and
-/// copy assignment operator.
-///
-/// Contrary to normal atomics, these atomics don't prevent the generation of
-/// default constructor and copy operators for classes they are members of.
-///
-/// Copying those atomics is thread safe, but be aware that it doesn't provide
-/// any form of synchronization.
-///
-/// \see
-/// https://codereview.stackexchange.com/q/113439/279888
-///
-template<class T>
-class copyable_atomic : public std::atomic<T>
-{
-public:
-  constexpr copyable_atomic() = default;
-
-  constexpr copyable_atomic(T desired) : std::atomic<T>(desired) {}
-
-  constexpr copyable_atomic(const copyable_atomic &other)
-    : copyable_atomic(other.load(std::memory_order_relaxed))
-  {}
-
-  copyable_atomic &operator=(const copyable_atomic &other)
-  {
-    this->store(other.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-    return *this;
-  }
 };
 
 // *******************************************************************
