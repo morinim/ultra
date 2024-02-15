@@ -207,32 +207,33 @@ void linear_population<I>::inc_age()
 template<Individual I>
 bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
 {
-  linear_population<I> tmp;
-
-  if (unsigned ma; !(in >> ma))
+  unsigned tmp_max_age;
+  if (!(in >> tmp_max_age))
     return false;
-  else
-    tmp.max_age(ma);
 
-  if (std::size_t allowed; !(in >> allowed))
+  std::size_t tmp_allowed;
+  if (!(in >> tmp_allowed))
     return false;
-  else
-    tmp.allowed(allowed);
 
   std::size_t n_elem;
   if (!(in >> n_elem))
     return false;
 
-  if (tmp.allowed() < n_elem)
+  if (tmp_allowed < n_elem)
     return false;
 
+  std::vector<I> tmp_members;
+  tmp_members.reserve(n_elem);
   for (std::size_t i(0); i < n_elem; ++i)
     if (I ind; !ind.load(in, ss))
       return false;
     else
-      tmp.push_back(ind);
+      tmp_members.push_back(ind);
 
-  *this = tmp;
+  max_age(tmp_max_age);
+  allowed(tmp_allowed);
+  members_ = tmp_members;
+
   return true;
 }
 

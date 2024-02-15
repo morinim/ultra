@@ -19,6 +19,8 @@
 #include "kernel/evolution_status.h"
 #include "kernel/model_measurements.h"
 
+#include "utility/mutex_guarded.h"
+
 namespace ultra
 {
 ///
@@ -58,9 +60,7 @@ public:
   unsigned generation {0};
 
 private:
-  mutable ignore_copy<std::mutex> mutex_ {};
-
-  scored_individual<I, F> best_ {};
+  mutex_guarded<scored_individual<I, F>> best_ {};
 };
 
 #include "kernel/evolution_summary.tcc"

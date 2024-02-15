@@ -53,10 +53,11 @@ evolution_status<I, F> summary<I, F>::starting_status()
 template<Individual I, Fitness F>
 void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  std::lock_guard guard(mutex_);
-
-  if (prg > best_)
-    best_ = prg;
+  best_.write([&prg](auto &best)
+  {
+    if (prg > best)
+      best = prg;
+  });
 }
 
 ///
@@ -65,8 +66,7 @@ void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 template<Individual I, Fitness F>
 scored_individual<I, F> summary<I, F>::best() const
 {
-  std::lock_guard guard(mutex_);
-  return best_;
+  return best_.read([](const auto &best) { return best; });
 }
 
 ///
@@ -84,21 +84,29 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
 {
   summary tmp_summary;
 
+  std::chrono::milliseconds tmp_elapsed;
   if (int ms; !(in >> ms))
     return false;
   else
-    tmp_summary.elapsed = std::chrono::milliseconds(ms);
+    tmp_elapsed = std::chrono::milliseconds(ms);
 
-  if (!(in >> tmp_summary.generation))
+  unsigned tmp_generation;
+  if (!(in >> tmp_generation))
     return false;
 
-  if (!tmp_summary.score.load(in))
+  model_measurements<F> tmp_score;
+  if (!tmp_score.load(in))
     return false;
 
-  if (!tmp_summary.best_.load(in, p))
+  scored_individual<I, F> tmp_best;
+  if (!tmp_best.load(in, p))
     return false;
 
-  *this = tmp_summary;
+  score = tmp_score;
+  elapsed = tmp_elapsed;
+  generation = tmp_generation;
+  best_ = tmp_best;
+
   return true;
 }
 
@@ -121,7 +129,7 @@ bool summary<I, F>::save(std::ostream &out) const
   if (!score.save(out))
     return false;
 
-  if (!best_.save(out))
+  if (!best_.read([&out](const auto &best) { return best.save(out); }))
     return false;
 
   return out.good();
