@@ -13,9 +13,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 #include "kernel/evolution_summary.h"
 #include "kernel/gp/individual.h"
+
+#include "utility/misc.h"
 
 #include "test/fixture1.h"
 
@@ -41,6 +44,56 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
   CHECK(s.best().ind == si.ind);
   CHECK(s.best().fit >= si.fit);
   CHECK(s.best().fit <= si.fit);
+}
+
+TEST_CASE_FIXTURE(fixture1, "Concurrency")
+{
+  using namespace ultra;
+
+  const gp::individual dummy(prob);
+  summary<gp::individual, double> sum;
+  auto status1(sum.starting_status());
+  auto status2(sum.starting_status());
+
+  constexpr int MAX(1000);
+
+  const auto work([&](bool odd)
+  {
+    for (int i(1); i <= MAX; ++i)
+    {
+      if (odd)
+      {
+        if (i % 2 == odd)
+        {
+          if (i < 8 * MAX / 10)
+            status1.update_if_better({gp::individual(prob), i});
+          else if (i < 9 * MAX / 10)
+            status1.update_if_better({dummy, i});
+        }
+      }
+      else  // even
+      {
+        if (i % 10)
+          status2.update_if_better({dummy, i});
+      }
+    }
+  });
+
+  {
+    std::jthread t1(work, false);
+    std::jthread t2(work, true);
+  }
+
+  CHECK(sum.best().ind == dummy);
+  CHECK(almost_equal(sum.best().fit, MAX - 1.0));
+
+  const bool fit_exists(almost_equal(sum.best().fit, status1.best().fit)
+                        || almost_equal(sum.best().fit, status2.best().fit));
+  CHECK(fit_exists);
+
+  const bool ind_exists(sum.best().ind == status1.best().ind
+                        || sum.best().ind == status2.best().ind);
+  CHECK(ind_exists);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")

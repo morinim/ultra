@@ -12,7 +12,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <thread>
 #include <sstream>
 
 #include "kernel/evolution_status.h"
@@ -25,6 +24,27 @@
 
 TEST_SUITE("EVOLUTION STATUS")
 {
+
+TEST_CASE_FIXTURE(fixture1, "update_if_better")
+{
+  using namespace ultra;
+
+  unsigned generation(0);
+  evolution_status<gp::individual, int> status(&generation);
+
+  CHECK(status.best().empty());
+  CHECK(status.generation() == generation);
+  CHECK(status.last_improvement() == 0);
+
+  const gp::individual prg(prob);
+
+  generation = 10;
+  status.update_if_better(scored_individual{prg, 10});
+
+  CHECK(status.best().ind == prg);
+  CHECK(status.generation() == generation);
+  CHECK(status.last_improvement() == generation);
+}
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
@@ -70,40 +90,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     CHECK(best.fit <= best1.fit);
     CHECK(best.fit >= best1.fit);
   }
-}
-
-TEST_CASE_FIXTURE(fixture1, "Concurrency")
-{
-  using namespace ultra;
-
-  evolution_status<gp::individual, int> status;
-  const gp::individual dummy(prob);
-
-  constexpr int MAX(1000);
-
-  const auto work([&status, &dummy](bool odd)
-  {
-    for (int i(1); i <= MAX; ++i)
-    {
-      if (odd)
-      {
-        if (i < 9 * MAX / 10 && i % 2 == odd)
-          status.update_if_better({dummy, i});
-      }
-      else  // even
-      {
-        if (i % 100)
-          status.update_if_better({dummy, i});
-      }
-    }
-  });
-
-  {
-    std::jthread t1(work, false);
-    std::jthread t2(work, true);
-  }
-
-  CHECK(status.best().fit == MAX - 1);
 }
 
 }  // TEST_SUITE("EVOLUTION STATUS")
