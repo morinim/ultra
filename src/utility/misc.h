@@ -302,6 +302,11 @@ template<std::ranges::contiguous_range C>
 template<std::floating_point T>
 [[nodiscard]] bool almost_equal(T v1, T v2, T e = 0.00001)
 {
+  // Handles special values of `v1` / `v2 (infinity, Nan...).
+  // `std::equal_to` (usually) avoids warnings with floating point comparison.
+  if (std::equal_to()(v1, v2))
+    return true;
+
   const T diff(std::abs(v1 - v2));
 
   // Check if the numbers are really close -- needed when comparing numbers
@@ -312,11 +317,21 @@ template<std::floating_point T>
   v1 = std::abs(v1);
   v2 = std::abs(v2);
 
+  // Handles the `v1 == +inf` / `v2 == /inf` case.
+  if (std::equal_to()(v1, v2) && std::equal_to()(diff, v1))
+    return false;
+
   // In order to get consistent results, we always compare the difference to
   // the largest of the two numbers.
   const T largest(std::max(v1, v2));
 
   return diff <= largest * e;
+}
+
+template<std::integral T>
+[[nodiscard]] bool almost_equal(T v1, T v2)
+{
+  return v1 == v2;
 }
 
 ///

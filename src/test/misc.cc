@@ -81,6 +81,22 @@ TEST_CASE("almost_equal")
 
   CHECK(almost_equal(2.51, 2.51000001));
   CHECK(!almost_equal(2.51, 2.511));
+  CHECK(almost_equal(std::numeric_limits<double>::infinity(),
+                     std::numeric_limits<double>::infinity()));
+  CHECK(!almost_equal(std::numeric_limits<double>::infinity(),
+                      -std::numeric_limits<double>::infinity()));
+  CHECK(!almost_equal(std::numeric_limits<double>::quiet_NaN(),
+                      std::numeric_limits<double>::quiet_NaN()));
+  CHECK(almost_equal(std::numeric_limits<double>::min(),
+                     std::numeric_limits<double>::min()));
+  CHECK(almost_equal(std::numeric_limits<double>::lowest(),
+                     std::numeric_limits<double>::lowest()));
+  CHECK(almost_equal(std::numeric_limits<double>::max(),
+                     std::numeric_limits<double>::max()));
+  CHECK(almost_equal(std::numeric_limits<double>::epsilon(),
+                     std::numeric_limits<double>::epsilon()));
+  CHECK(almost_equal(std::numeric_limits<double>::denorm_min(),
+                     std::numeric_limits<double>::denorm_min()));
 }
 
 TEST_CASE("save/load float to/from stream")

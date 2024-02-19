@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -67,6 +67,12 @@ TEST_CASE("Comparison")
   CHECK(!dominating(f1, f1));
   CHECK(dominating(f1, f3));
   CHECK(dominating(f2, f3));
+
+  CHECK(almost_equal(f1, f1));
+  CHECK(!almost_equal(f1, f2));
+  CHECK(almost_equal(
+          fitnd{std::numeric_limits<fitnd::value_type>::infinity()},
+          fitnd{std::numeric_limits<fitnd::value_type>::infinity()}));
 }
 
 TEST_CASE("Serialization")

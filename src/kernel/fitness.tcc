@@ -84,6 +84,14 @@ template<MultiDimFitness F>
   return one_better;
 }
 
+template<MultiDimFitness F>
+[[nodiscard]] bool almost_equal(const F &lhs, const F &rhs)
+{
+  return std::ranges::equal(
+    lhs, rhs,
+    [](auto v1, auto v2) { return almost_equal(v1, v2); });
+}
+
 ///
 /// Taxicab distance between two vectors.
 ///
