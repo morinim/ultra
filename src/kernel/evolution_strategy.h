@@ -106,8 +106,8 @@ protected:
 /// \see <https://github.com/ghornby/alps>
 ///
 template<Evaluator E,
-         Individual I = closure_arg_t<E>,
-         Fitness F = closure_return_t<E>>
+         Individual I = evaluator_individual_t<E>,
+         Fitness F = evaluator_fitness_t<E>>
 class alps_es : public evolution_strategy<I, F>
 {
 public:
@@ -132,8 +132,8 @@ private:
 /// Standard evolution strategy.
 ///
 template<Evaluator E,
-         Individual I = closure_arg_t<E>,
-         Fitness F = closure_return_t<E>>
+         Individual I = evaluator_individual_t<E>,
+         Fitness F = evaluator_fitness_t<E>>
 class std_es : public evolution_strategy<I, F>
 {
 public:

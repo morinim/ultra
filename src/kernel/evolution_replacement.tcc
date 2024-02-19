@@ -39,10 +39,12 @@ strategy<E>::strategy(E &eva, const environment &env)
 template<Evaluator E>
 template<Population P>
 void tournament<E>::operator()(
-  P &pop, const closure_arg_t<E> &offspring,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status) const
+  P &pop, const evaluator_individual_t<E> &offspring,
+  evolution_status<evaluator_individual_t<E>,
+                   evaluator_fitness_t<E>> &status) const
 {
-  static_assert(std::is_same_v<closure_arg_t<E>, typename P::value_type>);
+  static_assert(std::is_same_v<evaluator_individual_t<E>,
+                               typename P::value_type>);
 
   Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
 
@@ -184,10 +186,11 @@ template<Evaluator E>
 template<PopulationWithMutex P, Individual I>
 void alps<E>::operator()(
   std::vector<std::reference_wrapper<P>> pops, const I &offspring,
-  evolution_status<closure_arg_t<E>, closure_return_t<E>> &status) const
+  evolution_status<evaluator_individual_t<E>,
+                   evaluator_fitness_t<E>> &status) const
 {
   static_assert(std::is_same_v<I, typename P::value_type>);
-  static_assert(std::is_same_v<I, closure_arg_t<E>>);
+  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
 
   Expects(0 < pops.size() && pops.size() <= 2);
 

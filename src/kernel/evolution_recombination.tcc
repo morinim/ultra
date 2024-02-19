@@ -38,7 +38,7 @@ template<SizedRangeOfIndividuals R>
 [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
 base<E>::operator()(const R &parents) const
 {
-  static_assert(std::is_same_v<closure_arg_t<E>,
+  static_assert(std::is_same_v<evaluator_individual_t<E>,
                                std::ranges::range_value_t<R>>);
 
   const auto p_cross(this->prob_.env.evolution.p_cross);

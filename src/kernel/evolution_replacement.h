@@ -53,8 +53,9 @@ public:
 
   template<Population P>
   void operator()(
-    P &, const closure_arg_t<E> &,
-    evolution_status<closure_arg_t<E>, closure_return_t<E>> &) const;
+    P &, const evaluator_individual_t<E> &,
+    evolution_status<evaluator_individual_t<E>,
+                     evaluator_fitness_t<E>> &) const;
 };
 
 template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
@@ -79,7 +80,8 @@ public:
   template<PopulationWithMutex P, Individual I>
   void operator()(
     std::vector<std::reference_wrapper<P>>, const I &,
-    evolution_status<closure_arg_t<E>, closure_return_t<E>> &) const;
+    evolution_status<evaluator_individual_t<E>,
+                     evaluator_fitness_t<E>> &) const;
 
   template<RandomAccessPopulation P>
   void try_move_up_layer(const P &, P &);

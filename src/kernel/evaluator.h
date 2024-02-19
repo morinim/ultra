@@ -30,6 +30,8 @@ template<class F,
 concept Evaluator =
   Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
 
+template<Evaluator E> using evaluator_individual_t = closure_arg_t<E>;
+template<Evaluator E> using evaluator_fitness_t = closure_return_t<E>;
 
 enum class test_evaluator_type {realistic, fixed, random, age};
 

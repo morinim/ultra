@@ -33,8 +33,8 @@ alps_es<E, I, F>::alps_es(population_t &pop,
     recombine_(eva, pop.problem()),
     replace_(eva, pop.problem().env)
 {
-  static_assert(std::is_same_v<I, closure_arg_t<E>>);
-  static_assert(std::is_same_v<F, closure_return_t<E>>);
+  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
+  static_assert(std::is_same_v<F, evaluator_fitness_t<E>>);
 }
 
 template<Evaluator E, Individual I, Fitness F>
@@ -141,8 +141,8 @@ std_es<E, I, F>::std_es(population_t &pop,
     recombine_(eva, pop.problem()),
     replace_(eva, pop.problem().env)
 {
-  static_assert(std::is_same_v<I, closure_arg_t<E>>);
-  static_assert(std::is_same_v<F, closure_return_t<E>>);
+  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
+  static_assert(std::is_same_v<F, evaluator_fitness_t<E>>);
 }
 
 template<Evaluator E, Individual I, Fitness F>
