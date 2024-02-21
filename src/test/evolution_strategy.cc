@@ -51,6 +51,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
 
       test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
+      const auto initial_best(
+        std::ranges::max(pop,
+                         [&eva](const auto &p1, const auto &p2)
+                         {
+                           return eva(p1) < eva(p2);
+                         }));
+
       summary<gp::individual, double> sum;
 
       alps_es alps(pop, eva, sum.starting_status());
@@ -79,14 +86,32 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
       CHECK(!sum.best().empty());
       CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
-      const auto best(std::ranges::max(pop,
-                                       [&eva](const auto &p1, const auto &p2)
-                                       {
-                                         return eva(p1) < eva(p2);
-                                       }));
+      const auto final_best(std::ranges::max(
+                              pop,
+                              [&eva](const auto &p1, const auto &p2)
+                              {
+                                return eva(p1) < eva(p2);
+                              }));
 
-      //CHECK(eva(best) <= sum.best().fit);
-      //CHECK(std::ranges::find(pop, sum.best().ind) != pop.end());
+      if (eva(final_best) > eva(initial_best))
+      {
+        CHECK(eva(final_best) == doctest::Approx(sum.best().fit));
+
+        // We must check signature since two individuals may differ just for
+        // the introns.
+        CHECK(std::ranges::find_if(
+                pop,
+                [&sum](const auto &prg)
+                {
+                  return prg.signature() == sum.best().ind.signature();
+                }) != pop.end());
+      }
+      // It may happen that the evolution doesn't find and individual fitter
+      // than the best one of the initial population.
+      else
+      {
+        CHECK(eva(final_best) >= sum.best().fit);
+      }
     }
 }
 
@@ -307,7 +332,7 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
 
   std::vector<distribution<double>> previous;
 
-  for (auto iteration(prob.env.population.individuals); iteration; --iteration)
+  for (auto iters(prob.env.population.individuals); iters; --iters)
     evolve();
 
   CHECK(std::ranges::all_of(pop,
@@ -322,7 +347,7 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
                                      return eva(p1) < eva(p2);
                                    }));
 
-  CHECK(best == sum.best().ind);
+  CHECK(best.signature() == sum.best().ind.signature());
   CHECK(eva(best) <= sum.best().fit);
   CHECK(std::ranges::find(pop, sum.best().ind) != pop.end());
 }
