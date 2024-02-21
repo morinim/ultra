@@ -33,6 +33,8 @@ concept Evaluator =
 template<Evaluator E> using evaluator_individual_t = closure_arg_t<E>;
 template<Evaluator E> using evaluator_fitness_t = closure_return_t<E>;
 
+enum class evaluation_type {standard, fast};
+
 enum class test_evaluator_type {realistic, fixed, random, age};
 
 ///
