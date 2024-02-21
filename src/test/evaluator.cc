@@ -29,11 +29,7 @@ TEST_CASE_FIXTURE(fixture1, "Concepts")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 2;
-
-  linear_population<gp::individual> pop(prob);
-
-  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+  test_evaluator<gp::individual> eva;
   static_assert(Evaluator<decltype(eva)>);
 
   auto eva2([&eva](const gp::individual &i) { return eva(i); });
