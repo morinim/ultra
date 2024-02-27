@@ -51,7 +51,7 @@ public:
   mutex_guarded(const mutex_guarded &other)
   {
     if (this != &other)
-      other.read([this](const T &other) { val_ = other; });
+      other.read([this](const T &other_val) { val_ = other_val; });
   }
 
   mutex_guarded &operator=(T in)
