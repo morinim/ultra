@@ -17,34 +17,46 @@
 #if !defined(ULTRA_EVOLUTION_STRATEGY_TCC)
 #define      ULTRA_EVOLUTION_STRATEGY_TCC
 
-template<Individual I, Fitness F>
-evolution_strategy<I, F>::evolution_strategy(
-  population_t &pop, const evolution_status<I, F> &status)
-  : starting_status_(status), pop_(pop)
+template<Evaluator E>
+evolution_strategy<E>::evolution_strategy(const E &eva) : eva_(eva)
 {
 }
 
-template<Evaluator E, Individual I, Fitness F>
-alps_es<E, I, F>::alps_es(population_t &pop,
-                          E &eva,
-                          const evolution_status<I, F> &status)
-  : evolution_strategy<I, F>(pop, status),
-    select_(eva, pop.problem().env),
-    recombine_(eva, pop.problem()),
-    replace_(eva, pop.problem().env)
+template<Evaluator E>
+alps_es<E>::alps_es(const problem &prob, const E &eva)
+  : evolution_strategy<E>(eva),
+    select_(this->eva_, prob.env),
+    recombine_(this->eva_, prob),
+    replace_(this->eva_, prob.env)
 {
-  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
-  static_assert(std::is_same_v<F, evaluator_fitness_t<E>>);
 }
 
-template<Evaluator E, Individual I, Fitness F>
-auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
+///
+/// \param[in] pop             a population. Operations are performed on
+///                            sub-populations of `pop
+/// \param[in] iter            iterator pointing to the main subpopulation
+///                            we're going to work on. Other sub-populations
+///                            involved are `std::next(subpop_iter)` and
+///                            `pop.back()`
+/// \param[in] starting_status the starting status (usually generated via
+///                            `summary::starting_status()`)
+/// \return                    a callable object encaspulating the ALPS
+///                            algorithm
+///
+template<Evaluator E>
+template<Population P>
+auto alps_es<E>::operations(
+  P &pop, typename P::layer_iter iter,
+  const evolution_status<individual_t, fitness_t> &starting_status) const
 {
+  Expects(pop.layers());
+  Expects(iterator_of(iter, pop.range_of_layers()));
+
   return
     [this,
-     sel_pop = alps::selection_layers(this->pop_, l),
-     rep_pop = alps::replacement_layers(this->pop_, l),
-     status = this->starting_status_]() mutable
+     sel_pop = alps::selection_layers(pop, iter),
+     rep_pop = alps::replacement_layers(pop, iter),
+     status = starting_status]() mutable
     {
       Ensures(!sel_pop.empty());
       Ensures(!rep_pop.empty());
@@ -56,19 +68,26 @@ auto alps_es<E, I, F>::operations(typename population_t::layer_iter l) const
     };
 }
 
-template<Evaluator E, Individual I, Fitness F>
-void alps_es<E, I, F>::init()
+///
+/// Sets the initial age of the population members.
+///
+template<Evaluator E>
+template<Population P>
+void alps_es<E>::init(P &pop)
 {
-  alps::set_age(this->pop_);
+  alps::set_age(pop);
 }
 
 ///
 /// Increments population's age and checks if it's time to add a new layer.
 ///
-template<Evaluator E, Individual I, Fitness F>
-void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
+template<Evaluator E>
+template<Population P>
+void alps_es<E>::after_generation(
+  unsigned generation,
+  P &pop,
+  const analyzer<individual_t, fitness_t> &az)
 {
-  auto &pop(this->pop_);
   const auto &env(pop.problem().env);
 
   pop.inc_age();
@@ -103,8 +122,7 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
   }
 
   // Code executed every `age_gap` interval.
-  if (const auto generation(this->starting_status_.generation());
-      generation && generation % env.alps.age_gap == 0)
+  if (generation && generation % env.alps.age_gap == 0)
   {
     if (const auto n_layers(pop.layers());
         n_layers < env.alps.max_layers
@@ -123,36 +141,55 @@ void alps_es<E, I, F>::after_generation(const analyzer<I, F> &az)
 /// \return         a strategy-specific environment
 ///
 /// \remark
-/// ALPS requires more than one layer.
+/// ALPS requires at least two layers.
 ///
-template<Evaluator E, Individual I, Fitness F>
-environment alps_es<E, I, F>::shape(environment env)
+template<Evaluator E>
+environment alps_es<E>::shape(environment env)
 {
   env.alps.max_layers = 8;
   return env;
 }
 
-template<Evaluator E, Individual I, Fitness F>
-std_es<E, I, F>::std_es(population_t &pop,
-                        E &eva,
-                        const evolution_status<I, F> &status)
-  : evolution_strategy<I, F>(pop, status),
-    select_(eva, pop.problem().env),
-    recombine_(eva, pop.problem()),
-    replace_(eva, pop.problem().env)
+template<Evaluator E>
+std_es<E>::std_es(const problem &prob, const E &eva)
+  : evolution_strategy<E>(eva),
+    select_(this->eva_, prob.env),
+    recombine_(this->eva_, prob),
+    replace_(this->eva_, prob.env)
 {
-  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
-  static_assert(std::is_same_v<F, evaluator_fitness_t<E>>);
 }
 
-template<Evaluator E, Individual I, Fitness F>
-auto std_es<E, I, F>::operations(typename population_t::layer_iter l) const
+///
+/// \param[in] pop             a population. Operations are performed on
+///                            sub-populations of `pop
+/// \param[in] iter            iterator pointing to the main subpopulation
+///                            we're going to work on
+/// \param[in] starting_status the starting status (usually generated via
+///                            `summary::starting_status()`)
+/// \return                    a callable object encaspulating the ALPS
+///                            algorithm
+///
+/// The standard evolutionary loop:
+/// - select some individuals via tournament selection;
+/// - create a new offspring individual;
+/// - place the offspring into the original population (steady state)
+///   replacing a bad individual.
+///
+/// This whole process repeats until the termination criteria is satisfied.
+/// With any luck, it will produce an individual that solves the problem at
+/// hand.
+///
+template<Evaluator E>
+template<Population P>
+auto std_es<E>::operations(
+  P &pop, typename P::layer_iter iter,
+  const evolution_status<individual_t, fitness_t> &starting_status) const
 {
-  Expects(this->pop_.layers());
-  Expects(iterator_of(l, this->pop_.range_of_layers()));
+  Expects(pop.layers());
+  Expects(iterator_of(iter, pop.range_of_layers()));
 
   return
-    [this, &pop_layer = *l, status = this->starting_status_]() mutable
+    [this, &pop_layer = *iter, status = starting_status]() mutable
     {
       Ensures(!pop_layer.empty());
 

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of VITA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -129,6 +129,22 @@ void analyzer<I, F>::add(const I &ind, const F &f, unsigned g)
     fit_.add(f);
     group_stat_[g].fitness.add(f);
   }
+}
+
+///
+/// \param[in] pop a population
+/// \param[in] eva an evaluator
+/// \return        compiled analyzer for the given population
+///
+template<Population P, Evaluator E>
+[[nodiscard]] auto analyze(const P &pop, const E &eva)
+{
+  analyzer<evaluator_individual_t<E>, evaluator_fitness_t<E>> az;
+
+  for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
+    az.add(*it, eva(*it), it.layer());
+
+  return az;
 }
 
 #endif  // include guard

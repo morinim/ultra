@@ -18,10 +18,11 @@
 #include "kernel/evolution_recombination.h"
 #include "kernel/evolution_replacement.h"
 #include "kernel/evolution_selection.h"
-#include "kernel/layered_population.h"
+#include "kernel/population.h"
 
 namespace ultra
 {
+
 ///
 /// Defines the skeleton of the evolution, deferring some steps to client
 /// subclasses.
@@ -31,17 +32,18 @@ namespace ultra
 /// them are implemented in Ultra (not every combination is meaningful).
 ///
 /// The user can choose, at compile time, how the evolution class should
-/// work via the evolution strategy class (or one of its specialization).
+/// work via a specialization of `evolution_strategy` class.
 ///
 /// In other words the template method design pattern is used to "inject"
 /// selection, recombination and replacement methods specified by the
-/// evolution_strategy object into an `evolution` object.
+/// `evolution_strategy` object into an `evolution` object.
 ///
-template<Individual I, Fitness F>
+template<Evaluator E>
 class evolution_strategy
 {
 public:
-  using population_t = layered_population<I>;
+  using fitness_t = evaluator_fitness_t<E>;
+  using individual_t = evaluator_individual_t<E>;
 
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified
@@ -50,16 +52,18 @@ public:
   static environment shape(const environment &env) { return env; }
 
   /// Initial setup performed before evolution starts.
-  void init() const {}
+  template<Population P> void init(P &) const {}
 
   /// Work to be done at the end of a generation.
-  void after_generation() const {}
+  template<Population P> void after_generation(
+    unsigned, P &, const analyzer<individual_t, fitness_t> &) const {}
+
+  [[nodiscard]] const E &evaluator() const { return eva_; }
 
 protected:
-  evolution_strategy(population_t &, const evolution_status<I, F> &);
+  explicit evolution_strategy(const E &);
 
-  const evolution_status<I, F> starting_status_;
-  population_t &pop_;
+  E eva_;
 };
 
 ///
@@ -105,20 +109,22 @@ protected:
 ///
 /// \see <https://github.com/ghornby/alps>
 ///
-template<Evaluator E,
-         Individual I = evaluator_individual_t<E>,
-         Fitness F = evaluator_fitness_t<E>>
-class alps_es : public evolution_strategy<I, F>
+template<Evaluator E>
+class alps_es : public evolution_strategy<E>
 {
 public:
-  using typename alps_es::evolution_strategy::population_t;
+  using typename alps_es::evolution_strategy::fitness_t;
+  using typename alps_es::evolution_strategy::individual_t;
 
-  alps_es(population_t &, E &, const evolution_status<I, F> &);
+  alps_es(const problem &, const E &);
 
-  [[nodiscard]] auto operations(typename population_t::layer_iter) const;
+  template<Population P> [[nodiscard]] auto operations(
+    P &, typename P::layer_iter,
+    const evolution_status<individual_t, fitness_t> &) const;
 
-  void init();
-  void after_generation(const analyzer<I, F> &);
+  template<Population P> void init(P &);
+  template<Population P> void after_generation(
+    unsigned, P &, const analyzer<individual_t, fitness_t> &);
 
   static environment shape(environment);
 
@@ -131,17 +137,18 @@ private:
 ///
 /// Standard evolution strategy.
 ///
-template<Evaluator E,
-         Individual I = evaluator_individual_t<E>,
-         Fitness F = evaluator_fitness_t<E>>
-class std_es : public evolution_strategy<I, F>
+template<Evaluator E>
+class std_es : public evolution_strategy<E>
 {
 public:
-  using typename std_es::evolution_strategy::population_t;
+  using typename std_es::evolution_strategy::fitness_t;
+  using typename std_es::evolution_strategy::individual_t;
 
-  std_es(population_t &, E &, const evolution_status<I, F> &);
+  std_es(const problem &, const E &);
 
-  [[nodiscard]] auto operations(typename population_t::layer_iter) const;
+  template<Population P> [[nodiscard]] auto operations(
+    P &, typename P::layer_iter,
+    const evolution_status<individual_t, fitness_t> &) const;
 
 private:
   const selection::tournament<E>   select_;
@@ -156,12 +163,7 @@ concept Strategy = requires(S s)
   // This C++20 template lambda only binds to `S<...>` specialisations,
   // including classes derived from them.
   //
-  []<Individual I, Fitness F>(evolution_strategy<I, F> &){}(s);
-
-  s.operations({});
-  s.operations({})();
-
-  S::shape({});
+  []<Evaluator E>(evolution_strategy<E> &){}(s);
 };
 
 #include "kernel/evolution_strategy.tcc"

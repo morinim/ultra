@@ -10,6 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/evaluator.h"
 #include "kernel/layered_population.h"
 
 #if !defined(ULTRA_DEBUG_SUPPORT_H)
@@ -41,6 +42,22 @@ make_debug_population(const ultra::problem &prob)
     prg.inc_age(inc++);
 
   return pop;
+}
+
+///
+/// \param[in] pop a population
+/// \param[in] eva an evaluator
+/// \return        the best individual of the population according to the
+///                given evaluator
+///
+template<Population P, Evaluator E>
+auto best_individual(const P &pop, E &eva)
+{
+  return std::ranges::max(pop,
+                          [&eva](const auto &p1, const auto &p2)
+                          {
+                            return eva(p1) < eva(p2);
+                          });
 }
 
 }  // namespace ultra::debug

@@ -18,21 +18,12 @@
 #include "kernel/distribution.h"
 #include "kernel/gp/individual.h"
 
+#include "test/debug_support.h"
 #include "test/fixture1.h"
 #include "test/fixture4.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
-
-template<ultra::Population P, ultra::Evaluator E>
-auto best_individual(const P &pop, E &eva)
-{
-  return std::ranges::max(pop,
-                          [&eva](const auto &p1, const auto &p2)
-                          {
-                            return eva(p1) < eva(p2);
-                          });
-}
 
 TEST_SUITE("EVOLUTION STRATEGY")
 {
@@ -61,15 +52,15 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
 
       test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-      const auto initial_best(best_individual(pop, eva));
+      const auto initial_best(debug::best_individual(pop, eva));
 
       summary<gp::individual, double> sum;
 
-      alps_es alps(pop, eva, sum.starting_status());
+      alps_es alps(prob, eva);
       const auto search(
         [&](auto layer_iter)
         {
-          auto evolve(alps.operations(layer_iter));
+          auto evolve(alps.operations(pop, layer_iter, sum.starting_status()));
 
           for (unsigned iterations(prob.env.population.individuals < 50
                                    ? 50 : prob.env.population.individuals);
@@ -91,7 +82,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
       CHECK(!sum.best().empty());
       CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
-      const auto final_best(best_individual(pop, eva));
+      const auto final_best(debug::best_individual(pop, eva));
 
       if (eva(final_best) > eva(initial_best))
       {
@@ -129,11 +120,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
 
   summary<gp::individual, double> sum;
 
-  alps_es alps(pop, eva, sum.starting_status());
+  alps_es alps(prob, eva);
   const auto search(
     [&](auto layer_iter)
     {
-      auto evolve(alps.operations(layer_iter));
+      auto evolve(alps.operations(pop, layer_iter, sum.starting_status()));
 
       for (auto iterations(prob.env.population.individuals);
            iterations; --iterations)
@@ -182,10 +173,9 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init")
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
-  summary<gp::individual, double> sum;
 
-  alps_es alps(pop, eva, sum.starting_status());
-  alps.init();
+  alps_es alps(prob, eva);
+  alps.init(pop);
 
   for (std::size_t l(0); const auto &layer : pop.range_of_layers())
   {
@@ -213,23 +203,16 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
-  summary<gp::individual, double> sum;
 
-  alps_es alps(pop, eva, sum.starting_status());
-  alps.init();
+  alps_es alps(prob, eva);
+  alps.init(pop);
 
   analyzer<gp::individual, double> az;
 
-  const auto analyze_pop([&az, &pop, &eva]
-  {
-    for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
-      az.add(*it, eva(*it), it.layer());
-  });
-
   SUBCASE("Typical")
   {
-    analyze_pop();
-    alps.after_generation(az);
+    az = analyze(pop, eva);
+    alps.after_generation(0, pop, az);
 
     CHECK(std::ranges::all_of(
             pop, [](const auto &prg) { return prg.age() == 1; }));
@@ -247,10 +230,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   {
     pop.front() = pop.layer(1);
 
-    analyze_pop();
+    az = analyze(pop, eva);
     CHECK(almost_equal(az.fit_dist(0).mean(), az.fit_dist(1).mean()));
 
-    alps.after_generation(az);
+    alps.after_generation(0, pop, az);
 
     CHECK(std::ranges::all_of(pop.range_of_layers(),
                               [](const auto &layer)
@@ -268,10 +251,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     for (auto &prg : pop.layer(1))
       prg = clone;
 
-    analyze_pop();
+    az = analyze(pop, eva);
     CHECK(issmall(az.fit_dist(1).standard_deviation()));
 
-    alps.after_generation(az);
+    alps.after_generation(0, pop, az);
 
     CHECK(pop.layer(1).allowed() < pop.layer(1).size());
     CHECK(pop.layers() == prob.env.population.init_layers);
@@ -284,12 +267,13 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     const auto diff(prob.env.alps.max_layers
                     - prob.env.population.init_layers);
 
+    unsigned generation(0);
     for (unsigned i(1); i <= diff; ++i)
     {
-      sum.generation += prob.env.alps.age_gap;
+      generation += prob.env.alps.age_gap;
 
-      analyze_pop();
-      alps.after_generation(az);
+      az = analyze(pop, eva);
+      alps.after_generation(generation, pop, az);
 
       CHECK(pop.layers() == prob.env.population.init_layers + i);
 
@@ -301,10 +285,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
     backup_pop = pop;
 
-    sum.generation += prob.env.alps.age_gap;
+    generation += prob.env.alps.age_gap;
 
-    analyze_pop();
-    alps.after_generation(az);
+    az = analyze(pop, eva);
+    alps.after_generation(generation, pop, az);
 
     CHECK(pop.layers() == prob.env.alps.max_layers);
 
@@ -327,10 +311,11 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   summary<gp::individual, double> sum;
 
-  const auto initial_best(best_individual(pop, eva));
+  const auto initial_best(debug::best_individual(pop, eva));
 
-  std_es standard(pop, eva, sum.starting_status());
-  auto evolve(standard.operations(pop.range_of_layers().begin()));
+  std_es standard(prob, eva);
+  auto evolve(standard.operations(pop, pop.range_of_layers().begin(),
+                                  sum.starting_status()));
 
   std::vector<distribution<double>> previous;
 
@@ -343,7 +328,7 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   CHECK(!sum.best().empty());
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
-  const auto final_best(best_individual(pop, eva));
+  const auto final_best(debug::best_individual(pop, eva));
 
   if (eva(final_best) > eva(initial_best))
   {

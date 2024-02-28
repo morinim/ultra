@@ -61,20 +61,22 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
   {
     for (int i(1); i <= MAX; ++i)
     {
+      const auto di(static_cast<double>(i));
+
       if (odd)
       {
         if (i % 2 == odd)
         {
           if (i < 8 * MAX / 10)
-            status1.update_if_better({gp::individual(prob), i});
+            status1.update_if_better({gp::individual(prob), di});
           else if (i < 9 * MAX / 10)
-            status1.update_if_better({dummy, i});
+            status1.update_if_better({dummy, di});
         }
       }
       else  // even
       {
         if (i % 10)
-          status2.update_if_better({dummy, i});
+          status2.update_if_better({dummy, di});
       }
     }
   });
