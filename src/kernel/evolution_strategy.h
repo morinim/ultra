@@ -59,11 +59,13 @@ public:
     unsigned, P &, const analyzer<individual_t, fitness_t> &) const {}
 
   [[nodiscard]] const E &evaluator() const { return eva_; }
+  [[nodiscard]] const problem &problem() const { return *prob_; }
 
 protected:
-  explicit evolution_strategy(const E &);
+  evolution_strategy(const ultra::problem &, const E &);
 
   E eva_;
+  const ultra::problem *prob_;  // a pointer since the class must be copyable
 };
 
 ///

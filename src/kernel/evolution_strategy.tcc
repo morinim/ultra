@@ -18,13 +18,15 @@
 #define      ULTRA_EVOLUTION_STRATEGY_TCC
 
 template<Evaluator E>
-evolution_strategy<E>::evolution_strategy(const E &eva) : eva_(eva)
+evolution_strategy<E>::evolution_strategy(const ultra::problem &prob,
+                                          const E &eva)
+  : eva_(eva), prob_(&prob)
 {
 }
 
 template<Evaluator E>
 alps_es<E>::alps_es(const problem &prob, const E &eva)
-  : evolution_strategy<E>(eva),
+  : evolution_strategy<E>(prob, eva),
     select_(this->eva_, prob.env),
     recombine_(this->eva_, prob),
     replace_(this->eva_, prob.env)
@@ -152,7 +154,7 @@ environment alps_es<E>::shape(environment env)
 
 template<Evaluator E>
 std_es<E>::std_es(const problem &prob, const E &eva)
-  : evolution_strategy<E>(eva),
+  : evolution_strategy<E>(prob, eva),
     select_(this->eva_, prob.env),
     recombine_(this->eva_, prob),
     replace_(this->eva_, prob.env)
