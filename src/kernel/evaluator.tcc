@@ -44,12 +44,6 @@ double test_evaluator<I>::operator()(const I &prg) const
 
   switch (et_)
   {
-  case test_evaluator_type::realistic:
-  {
-    const auto signature(prg.signature());
-    return static_cast<double>(static_cast<std::uint32_t>(signature.data[0]));
-  }
-
   case test_evaluator_type::fixed:
     return 0.0;
 
@@ -58,6 +52,12 @@ double test_evaluator<I>::operator()(const I &prg) const
 
   case test_evaluator_type::age:
     return static_cast<double>(prg.age());
+
+  default:  // test_evaluator_type::realistic
+  {
+    const auto signature(prg.signature());
+    return static_cast<double>(static_cast<std::uint32_t>(signature.data[0]));
+  }
   }
 }
 
