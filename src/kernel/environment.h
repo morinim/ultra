@@ -101,6 +101,12 @@ struct environment
     /// - values outside the `[0.0;1.0]` range mean auto-tune
     double elitism {-1.0};
 
+    /// Maximun number of generations allowed before terminate a run.
+    ///
+    /// \note
+    /// `0` means auto-tune.
+    unsigned generations {0};
+
     /// This is used for the trivial geography scheme.
     /// The population is viewed as having a 1-dimensional spatial structure -
     /// actually a circle, as we consider the first and last locations to be
