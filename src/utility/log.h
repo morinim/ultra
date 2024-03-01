@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -52,7 +52,7 @@ public:
   static std::unique_ptr<std::ostream> stream;
   static void setup_stream(const std::string &base);
 
-  explicit log();
+  log() = default;
   log(const log &) = delete;
   log &operator=(const log &) = delete;
 
@@ -61,10 +61,10 @@ public:
   std::ostringstream &get(level = lOUTPUT);
 
 protected:
-  std::ostringstream os;
+  std::ostringstream os {};
 
 private:
-  level level_;  // current log level
+  level level_ {lOUTPUT};  // current log level
 };
 
 ///

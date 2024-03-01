@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,13 +20,8 @@
 namespace ultra
 {
 
-log::level log::reporting_level = log::lALL;
+log::level log::reporting_level = log::lOUTPUT;
 std::unique_ptr<std::ostream> log::stream = nullptr;
-
-///
-/// Creates a `log` object.
-///
-log::log() : os(), level_(lOUTPUT) {}
 
 ///
 /// Sets the logging level of a message.
