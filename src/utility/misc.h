@@ -14,6 +14,7 @@
 #define      ULTRA_UTILITY_H
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -248,6 +249,7 @@ template<> [[nodiscard]] inline double lexical_cast(const std::string &s)
 template<> [[nodiscard]] inline std::string lexical_cast(const std::string &s)
 { return s; }
 template<class T> [[nodiscard]] T lexical_cast(const value_t &);
+template<class T> [[nodiscard]] T lexical_cast(std::chrono::milliseconds);
 
 ///
 /// Checks if an iterator is within a range.

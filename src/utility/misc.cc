@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -174,6 +174,40 @@ std::string lexical_cast<std::string>(const ultra::value_t &v)
   case d_nullary: return get_if_nullary(v)->name();
   default:        return {};
   }
+}
+
+template<>
+std::string lexical_cast<std::string>(std::chrono::milliseconds d)
+{
+  using namespace std;
+  using namespace std::chrono_literals;
+
+  const auto ds(chrono::duration_cast<chrono::days>(d));
+  const auto hrs(chrono::duration_cast<chrono::hours>(d - ds));
+  const auto mins(chrono::duration_cast<chrono::minutes>(d - ds - hrs));
+  const auto secs(chrono::duration_cast<chrono::seconds>(d - ds - hrs - mins));
+
+  std::stringstream ss;
+
+  if (ds.count())
+    ss << std::setw(4) << ds.count() << ':';
+  if (ds.count() || hrs.count())
+    ss << std::setw(2) << std::setfill('0') << hrs.count() << ':';
+  if (ds.count() || hrs.count() || mins.count())
+    ss << std::setw(2) << std::setfill('0') << mins.count() << ':';
+  if (ds.count() || hrs.count() || mins.count())
+    ss << std::setw(2);
+
+  ss << std::setfill('0') << secs.count();
+
+  if (ds.count() == 0 && hrs.count() == 0 && mins.count() == 0)
+  {
+    const auto ms(chrono::duration_cast<chrono::milliseconds>(d - ds - hrs
+                                                              - mins - secs));
+    ss << '.' << ms.count();
+  }
+
+  return ss.str();
 }
 
 }  // namespace ultra

@@ -13,9 +13,13 @@
 #if !defined(ULTRA_EVOLUTION_H)
 #define      ULTRA_EVOLUTION_H
 
+#include <future>
+
 #include "kernel/evolution_strategy.h"
 #include "kernel/evolution_summary.h"
 #include "kernel/layered_population.h"
+
+#include "utility/term.h"
 #include "utility/timer.h"
 
 namespace ultra
@@ -43,6 +47,7 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
+  void print(bool, std::chrono::milliseconds, timer *) const;
   [[nodiscard]] bool stop_condition() const;
 
   // *** Data members ***

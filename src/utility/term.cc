@@ -100,7 +100,7 @@ bool user_stop()
 
   if (stop)
   {
-    ultraINFO << "Stopping evolution...";
+    ultraINFO << "User request to stop evolution...";
   }
 
   return stop;

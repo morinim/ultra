@@ -21,8 +21,8 @@
 /// \param[in] strategy evolution strategy to be used
 ///
 template<Strategy S>
-evolution<S>::evolution(const S &strategy)
-  : sum_(), pop_(strategy.problem()), es_(strategy)
+evolution<S>::evolution(const S &strategy) : sum_(), pop_(strategy.problem()),
+                                             es_(strategy)
 {
   Ensures(is_valid());
 }
@@ -33,23 +33,44 @@ evolution<S>::evolution(const S &strategy)
 template<Strategy S>
 bool evolution<S>::stop_condition() const
 {
-  //const auto generations(pop_.problem().env.generations);
-  //Expects(generations);
+  const auto planned_generations(pop_.problem().env.evolution.generations);
+  Expects(planned_generations);
 
   // Check the number of generations.
-  //if (s.gen > generations)
-  //  return true;
+  if (sum_.generation > 100*planned_generations)
+    return true;
 
-  //if (term::user_stop())
-  //  return true;
+  if (term::user_stop())
+    return true;
 
   // Check strategy specific stop conditions.
   //return es_.stop_condition();
 
-  return sum_.generation > 1000;
+  return false;
 }
 
-///
+template<Strategy S>
+void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
+                         timer *from_last_msg) const
+{
+  if (log::reporting_level <= log::lOUTPUT)
+  {
+    if (summary)
+    {
+      std::cout << std::string(50, ' ') << '\r' << std::flush;
+      ultraOUTPUT << std::setw(8) << sum_.generation << ": " << sum_.best().fit;
+    }
+    else
+    {
+      std::cout << std::setw(8) << sum_.generation << ": " << sum_.best().fit
+                << " (" << lexical_cast<std::string>(elapsed) << ")\r"
+                << std::flush;
+    }
+
+    from_last_msg->restart();
+  }
+}
+
 /// The evolutionary core loop.
 ///
 /// \return a partial summary of the search (see notes)
@@ -65,36 +86,80 @@ template<Strategy S>
 summary<typename S::individual_t, typename S::fitness_t>
 evolution<S>::run()
 {
-  timer measure;
+  Expects(sum_.generation == 0);
 
-  const auto evolve_layer(
-    [&](auto layer_iter)
+  using namespace std::chrono_literals;
+
+  timer from_start, from_last_msg;
+
+  std::stop_source source;
+
+  const auto evolve_subpop(
+    [&, stop_token = source.get_token()](auto iter)
     {
-      auto evolve(es_.operations(pop_, layer_iter, sum_.starting_status()));
+      auto evolve(es_.operations(pop_, iter, sum_.starting_status()));
 
-      for (auto cycles(layer_iter->size()); cycles; --cycles)
-        evolve();
+      for (auto cycles(iter->size()); cycles; --cycles)
+        if (!stop_token.stop_requested())
+          evolve();
     });
 
+  const auto task_completed(
+    [](const auto &future)
+    {
+      return future.wait_for(0ms) == std::future_status::ready;
+    });
+
+  scored_individual previous_best(sum_.best());
+
+  term::set();
   es_.init(pop_);
 
-  for (; !stop_condition();  ++sum_.generation)
+  for (bool stop(false); !stop; ++sum_.generation)
   {
+    ultraDEBUG << "Launching tasks for generation " << sum_.generation;
+
     const auto range(pop_.range_of_layers());
 
-    {
-      std::vector<std::jthread> threads;
+    std::vector<std::future<void>> tasks;
+    for (auto l(range.begin()); l != range.end(); ++l)
+      tasks.push_back(std::async(std::launch::async, evolve_subpop, l));
 
-      for (auto l(range.begin()); l != range.end(); ++l)
-        threads.emplace_back(evolve_layer, l);
+    while (!std::ranges::all_of(tasks, task_completed))
+    {
+      if (from_last_msg.elapsed() > 2s)
+      {
+        if (previous_best < sum_.best())
+        {
+          previous_best = sum_.best();
+          print(true, from_start.elapsed(), &from_last_msg);
+        }
+        else
+          print(false, from_start.elapsed(), &from_last_msg);
+
+        if (!stop)
+        {
+          if ((stop = stop_condition()))
+          {
+            source.request_stop();
+            ultraDEBUG << "Sending closing message to tasks";
+          }
+        }
+      }
+
+      std::this_thread::yield();
     }
 
     sum_.az = analyze(pop_, es_.evaluator());
     es_.after_generation(sum_.generation, pop_, sum_.az);
   }
 
-  sum_.elapsed = measure.elapsed();
+  sum_.elapsed = from_start.elapsed();
 
+  ultraINFO << "Elapsed time: "
+            << lexical_cast<std::string>(from_start.elapsed());
+
+  term::reset();
   return sum_;
 }
 
