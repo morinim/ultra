@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -57,7 +57,7 @@ public:
   /// \return time elapsed in milliseconds (as would be measured by a clock
   ///         on the wall. It's NOT the processor time)
   ///
-  std::chrono::milliseconds elapsed() const noexcept
+  [[nodiscard]] std::chrono::milliseconds elapsed() const noexcept
   {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::steady_clock::now() - start_);
