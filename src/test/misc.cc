@@ -73,6 +73,13 @@ TEST_CASE("lexical_cast")
         == doctest::Approx(2.5));
   CHECK(lexical_cast<std::string>(value_t(2)) == "2");
   CHECK(lexical_cast<std::string>(value_t("abc")) == "abc");
+
+  using namespace std::chrono_literals;
+  CHECK(lexical_cast<std::string>(2ms) == "0.002");
+  CHECK(lexical_cast<std::string>(1s) == "1.000");
+  CHECK(lexical_cast<std::string>(12min) == "12:00");
+  CHECK(lexical_cast<std::string>(1h) == "01:00:00");
+  CHECK(lexical_cast<std::string>(26h) == "1:02:00:00");
 }
 
 TEST_CASE("almost_equal")
