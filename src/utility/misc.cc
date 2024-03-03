@@ -190,7 +190,7 @@ std::string lexical_cast<std::string>(std::chrono::milliseconds d)
   std::stringstream ss;
 
   if (ds.count())
-    ss << std::setw(4) << ds.count() << ':';
+    ss << ds.count() << ':';
   if (ds.count() || hrs.count())
     ss << std::setw(2) << std::setfill('0') << hrs.count() << ':';
   if (ds.count() || hrs.count() || mins.count())
@@ -204,7 +204,7 @@ std::string lexical_cast<std::string>(std::chrono::milliseconds d)
   {
     const auto ms(chrono::duration_cast<chrono::milliseconds>(d - ds - hrs
                                                               - mins - secs));
-    ss << '.' << ms.count();
+    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
   }
 
   return ss.str();
