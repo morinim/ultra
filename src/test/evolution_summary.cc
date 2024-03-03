@@ -36,14 +36,22 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
   summary<gp::individual, fitnd> s;
 
   CHECK(s.best().empty());
+  CHECK(s.last_improvement() == 0);
 
-  const scored_individual si(gp::individual(prob), fitnd{1.0, 2.0});
+  const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
+  s.update_if_better(si1);
 
-  s.update_if_better(si);
+  CHECK(s.best().ind == si1.ind);
+  CHECK(almost_equal(s.best().fit, si1.fit));
+  CHECK(s.last_improvement() == 0);
 
-  CHECK(s.best().ind == si.ind);
-  CHECK(s.best().fit >= si.fit);
-  CHECK(s.best().fit <= si.fit);
+  const scored_individual si2(gp::individual(prob), fitnd{2.0, 3.0});
+  s.generation = 2;
+  s.update_if_better(si2);
+
+  CHECK(s.best().ind == si2.ind);
+  CHECK(almost_equal(s.best().fit, si2.fit));
+  CHECK(s.last_improvement() == 2);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Concurrency")
@@ -88,6 +96,7 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
 
   CHECK(sum.best().ind == dummy);
   CHECK(almost_equal(sum.best().fit, MAX - 1.0));
+  CHECK(sum.last_improvement() == sum.generation);
 
   const bool fit_exists(almost_equal(sum.best().fit, status1.best().fit)
                         || almost_equal(sum.best().fit, status2.best().fit));
@@ -121,13 +130,14 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(s.elapsed == s1.elapsed);
     CHECK(s.generation == s1.generation);
-    CHECK(s.score <= s1.score);
-    CHECK(s.score >= s1.score);
+    CHECK(s.last_improvement() == s1.last_improvement());
+    CHECK(almost_equal(s.best().fit, s1.best().fit));
     CHECK(s1.best().empty());
   }
 
   SUBCASE("With best")
   {
+    s.generation = 2;
     s.update_if_better(
       scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
 
@@ -135,9 +145,9 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
     CHECK(s1.load(ss, prob));
 
+    CHECK(s.last_improvement() == s1.last_improvement());
     CHECK(s.best().ind == s1.best().ind);
-    CHECK(s.best() <= s1.best());
-    CHECK(s.best() >= s1.best());
+    CHECK(almost_equal(s.best().fit, s1.best().fit));
   }
 }
 

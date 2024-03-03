@@ -18,6 +18,7 @@
 #include "kernel/evolution_recombination.h"
 #include "kernel/evolution_replacement.h"
 #include "kernel/evolution_selection.h"
+#include "kernel/evolution_summary.h"
 #include "kernel/population.h"
 
 namespace ultra
@@ -56,7 +57,7 @@ public:
 
   /// Work to be done at the end of a generation.
   template<Population P> void after_generation(
-    unsigned, P &, const analyzer<individual_t, fitness_t> &) const {}
+    P &, const summary<individual_t, fitness_t> &) const {}
 
   [[nodiscard]] const E &evaluator() const { return eva_; }
   [[nodiscard]] const problem &problem() const { return *prob_; }
@@ -126,7 +127,7 @@ public:
 
   template<Population P> void init(P &);
   template<Population P> void after_generation(
-    unsigned, P &, const analyzer<individual_t, fitness_t> &);
+    P &, const summary<individual_t, fitness_t> &);
 
   static environment shape(environment);
 

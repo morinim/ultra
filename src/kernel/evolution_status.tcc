@@ -41,9 +41,6 @@ bool evolution_status<I, F>::update_if_better(const scored_individual<I, F> &si)
   {
     best_ = si;
 
-    if (generation_)
-      last_improvement_ = *generation_;
-
     if (update_overall_best_)
       update_overall_best_(best_);
   }
@@ -66,12 +63,6 @@ unsigned evolution_status<I, F>::generation() const
   return generation_ ? *generation_ : std::numeric_limits<unsigned>::max();
 }
 
-template<Individual I, Fitness F>
-unsigned evolution_status<I, F>::last_improvement() const
-{
-  return last_improvement_;
-}
-
 ///
 /// Loads the object from a stream.
 ///
@@ -89,16 +80,7 @@ bool evolution_status<I, F>::load(std::istream &in, const problem &p)
   if (!tmp_si.load(in, p))
     return false;
 
-  unsigned tmp_last_improvement;
-  static_assert(std::is_same_v<decltype(last_improvement_),
-                               decltype(tmp_last_improvement)>);
-  if (!(in >> tmp_last_improvement))
-    return false;
-  if (generation_ && tmp_last_improvement > *generation_)
-    return false;
-
   best_ = tmp_si;
-  last_improvement_ = tmp_last_improvement;
 
   return true;
 }
@@ -114,8 +96,6 @@ bool evolution_status<I, F>::save(std::ostream &out) const
 {
   if (!best_.save(out))
     return false;
-
-  out << last_improvement_ << '\n';
 
   // `generation_` is just a reference, no need to save it.
 

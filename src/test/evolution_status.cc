@@ -34,7 +34,6 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
 
   CHECK(status.best().empty());
   CHECK(status.generation() == generation);
-  CHECK(status.last_improvement() == 0);
 
   const gp::individual prg(prob);
 
@@ -43,7 +42,6 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
 
   CHECK(status.best().ind == prg);
   CHECK(status.generation() == generation);
-  CHECK(status.last_improvement() == generation);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")
@@ -63,7 +61,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     decltype(status) status1;
     CHECK(status1.load(ss, prob));
 
-    CHECK(status.last_improvement()  == status1.last_improvement());
     CHECK(status1.best().empty());
   }
 
@@ -74,8 +71,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     status.update_if_better(scored_individual(gp::individual(prob),
                                               fitnd{1.0, 2.0}));
 
-    CHECK(status.last_improvement() == generation);
-
     CHECK(!status.best().empty());
 
     CHECK(status.save(ss));
@@ -83,12 +78,9 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
     decltype(status) status1;
     CHECK(status1.load(ss, prob));
 
-    CHECK(status1.last_improvement() == generation);
-
     const auto best(status.best()), best1(status1.best());
     CHECK(best.ind == best1.ind);
-    CHECK(best.fit <= best1.fit);
-    CHECK(best.fit >= best1.fit);
+    CHECK(almost_equal(best.fit, best1.fit));
   }
 }
 

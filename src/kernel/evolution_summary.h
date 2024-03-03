@@ -44,6 +44,7 @@ public:
   // --- Concurrency aware functions ---
   void update_if_better(scored_individual<I, F>);
   [[nodiscard]] scored_individual<I, F> best() const;
+  [[nodiscard]] unsigned last_improvement() const;
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);
@@ -57,10 +58,20 @@ public:
   /// Time elapsed from evolution beginning.
   std::chrono::milliseconds elapsed {0};
 
+  /// Current generation. At the end of evolution contains the last generation
+  /// reached.
   unsigned generation {0};
 
 private:
-  mutex_guarded<scored_individual<I, F>> best_ {};
+  struct data
+  {
+    scored_individual<I, F> best {};
+    unsigned last_improvement {0};
+  };
+
+  [[nodiscard]] data data_snapshot() const;
+
+  mutex_guarded<data> data_ {};
 };
 
 #include "kernel/evolution_summary.tcc"

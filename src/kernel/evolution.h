@@ -51,7 +51,7 @@ private:
   [[nodiscard]] bool stop_condition() const;
 
   // *** Data members ***
-  summary<individual_t, fitness_t> sum_;
+  summary<individual_t, fitness_t> sum_ {};
 
   layered_population<individual_t> pop_;
   S es_;

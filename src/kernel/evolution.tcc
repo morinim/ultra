@@ -18,10 +18,10 @@
 #define      ULTRA_EVOLUTION_TCC
 
 ///
-/// \param[in] strategy evolution strategy to be used
+/// \param[in] strategy evolution strategy to be used for evolution
 ///
 template<Strategy S>
-evolution<S>::evolution(const S &strategy) : sum_(), pop_(strategy.problem()),
+evolution<S>::evolution(const S &strategy) : pop_(strategy.problem()),
                                              es_(strategy)
 {
   Ensures(is_valid());
@@ -37,7 +37,7 @@ bool evolution<S>::stop_condition() const
   Expects(planned_generations);
 
   // Check the number of generations.
-  if (sum_.generation > 100*planned_generations)
+  if (sum_.generation > planned_generations)
     return true;
 
   if (term::user_stop())
@@ -137,13 +137,10 @@ evolution<S>::run()
         else
           print(false, from_start.elapsed(), &from_last_msg);
 
-        if (!stop)
+        if (!stop && (stop = stop_condition()))
         {
-          if ((stop = stop_condition()))
-          {
-            source.request_stop();
-            ultraDEBUG << "Sending closing message to tasks";
-          }
+          source.request_stop();
+          ultraDEBUG << "Sending closing message to tasks";
         }
       }
 
@@ -151,7 +148,7 @@ evolution<S>::run()
     }
 
     sum_.az = analyze(pop_, es_.evaluator());
-    es_.after_generation(sum_.generation, pop_, sum_.az);
+    es_.after_generation(pop_, sum_);
   }
 
   sum_.elapsed = from_start.elapsed();

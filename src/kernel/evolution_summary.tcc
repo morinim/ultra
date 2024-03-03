@@ -23,7 +23,7 @@
 template<Individual I, Fitness F>
 void summary<I, F>::clear()
 {
-  *this = summary<I, F>();
+  *this = {};
 }
 
 ///
@@ -45,6 +45,12 @@ evolution_status<I, F> summary<I, F>::starting_status()
                                 });
 }
 
+template<Individual I, Fitness F>
+summary<I, F>::data summary<I, F>::data_snapshot() const
+{
+  return data_.read([](const auto &data) { return data; });
+}
+
 ///
 /// Keeps updated the best individual found so far.
 ///
@@ -53,10 +59,13 @@ evolution_status<I, F> summary<I, F>::starting_status()
 template<Individual I, Fitness F>
 void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  best_.write([&prg](auto &best)
+  data_.write([this, &prg](auto &data)
   {
-    if (prg > best)
-      best = prg;
+    if (prg > data.best)
+    {
+      data.best = prg;
+      data.last_improvement = generation;
+    }
   });
 }
 
@@ -66,7 +75,16 @@ void summary<I, F>::update_if_better(scored_individual<I, F> prg)
 template<Individual I, Fitness F>
 scored_individual<I, F> summary<I, F>::best() const
 {
-  return best_.read([](const auto &best) { return best; });
+  return data_snapshot().best;
+}
+
+///
+/// \return the generation the last improvement occurred in
+///
+template<Individual I, Fitness F>
+unsigned summary<I, F>::last_improvement() const
+{
+  return data_snapshot().last_improvement;
 }
 
 ///
@@ -94,18 +112,22 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
   if (!(in >> tmp_generation))
     return false;
 
+  struct data tmp_data;
+
+  if (!(in >> tmp_data.last_improvement))
+    return false;
+
   model_measurements<F> tmp_score;
   if (!tmp_score.load(in))
     return false;
 
-  scored_individual<I, F> tmp_best;
-  if (!tmp_best.load(in, p))
+  if (!tmp_data.best.load(in, p))
     return false;
 
   score = tmp_score;
   elapsed = tmp_elapsed;
   generation = tmp_generation;
-  best_ = tmp_best;
+  data_ = tmp_data;
 
   return true;
 }
@@ -119,9 +141,12 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
 template<Individual I, Fitness F>
 bool summary<I, F>::save(std::ostream &out) const
 {
+  const auto data(data_snapshot());
+
   // Since `status` depends on `generaiton`, saving `generation` before
   // `status` is very important.
-  out << elapsed.count() << ' ' << generation << '\n';
+  out << elapsed.count() << ' ' << generation << ' ' << data.last_improvement
+      << '\n';
 
   // analyzer `az` doesn't need to be saved: it'll be recalculated at the
   // beginning of evolution.
@@ -129,7 +154,7 @@ bool summary<I, F>::save(std::ostream &out) const
   if (!score.save(out))
     return false;
 
-  if (!best_.read([&out](const auto &best) { return best.save(out); }))
+  if (!data.best.save(out))
     return false;
 
   return out.good();

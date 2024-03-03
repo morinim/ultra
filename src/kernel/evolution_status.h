@@ -40,7 +40,6 @@ public:
   // --- Misc ---
   [[nodiscard]] scored_individual<I, F> best() const;
   [[nodiscard]] unsigned generation() const;
-  [[nodiscard]] unsigned last_improvement() const;
   bool update_if_better(const scored_individual<I, F> &);
 
   // --- Serialization ---
@@ -54,9 +53,6 @@ private:
 
   // Current generation.
   const unsigned *generation_ {nullptr};
-
-  // This is the generation the last improvement occurred in.
-  unsigned last_improvement_ {0};
 };
 
 #include "kernel/evolution_status.tcc"

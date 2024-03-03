@@ -207,12 +207,12 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   alps_es alps(prob, eva);
   alps.init(pop);
 
-  analyzer<gp::individual, double> az;
+  summary<gp::individual, double> sum;
 
   SUBCASE("Typical")
   {
-    az = analyze(pop, eva);
-    alps.after_generation(0, pop, az);
+    sum.az = analyze(pop, eva);
+    alps.after_generation(pop, sum);
 
     CHECK(std::ranges::all_of(
             pop, [](const auto &prg) { return prg.age() == 1; }));
@@ -230,10 +230,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   {
     pop.front() = pop.layer(1);
 
-    az = analyze(pop, eva);
-    CHECK(almost_equal(az.fit_dist(0).mean(), az.fit_dist(1).mean()));
+    sum.az = analyze(pop, eva);
+    CHECK(almost_equal(sum.az.fit_dist(0).mean(), sum.az.fit_dist(1).mean()));
 
-    alps.after_generation(0, pop, az);
+    alps.after_generation(pop, sum);
 
     CHECK(std::ranges::all_of(pop.range_of_layers(),
                               [](const auto &layer)
@@ -251,10 +251,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     for (auto &prg : pop.layer(1))
       prg = clone;
 
-    az = analyze(pop, eva);
-    CHECK(issmall(az.fit_dist(1).standard_deviation()));
+    sum.az = analyze(pop, eva);
+    CHECK(issmall(sum.az.fit_dist(1).standard_deviation()));
 
-    alps.after_generation(0, pop, az);
+    alps.after_generation(pop, sum);
 
     CHECK(pop.layer(1).allowed() < pop.layer(1).size());
     CHECK(pop.layers() == prob.env.population.init_layers);
@@ -267,13 +267,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     const auto diff(prob.env.alps.max_layers
                     - prob.env.population.init_layers);
 
-    unsigned generation(0);
     for (unsigned i(1); i <= diff; ++i)
     {
-      generation += prob.env.alps.age_gap;
-
-      az = analyze(pop, eva);
-      alps.after_generation(generation, pop, az);
+      sum.generation += prob.env.alps.age_gap;
+      sum.az = analyze(pop, eva);
+      alps.after_generation(pop, sum);
 
       CHECK(pop.layers() == prob.env.population.init_layers + i);
 
@@ -285,10 +283,9 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
     backup_pop = pop;
 
-    generation += prob.env.alps.age_gap;
-
-    az = analyze(pop, eva);
-    alps.after_generation(generation, pop, az);
+    sum.generation += prob.env.alps.age_gap;
+    sum.az = analyze(pop, eva);
+    alps.after_generation(pop, sum);
 
     CHECK(pop.layers() == prob.env.alps.max_layers);
 

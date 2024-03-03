@@ -85,10 +85,8 @@ void alps_es<E>::init(P &pop)
 ///
 template<Evaluator E>
 template<Population P>
-void alps_es<E>::after_generation(
-  unsigned generation,
-  P &pop,
-  const analyzer<individual_t, fitness_t> &az)
+void alps_es<E>::after_generation(P &pop,
+                                  const summary<individual_t, fitness_t> &sum)
 {
   const auto &env(pop.problem().env);
 
@@ -104,12 +102,12 @@ void alps_es<E>::after_generation(
          layer != layers.end();
          ++l_index)
     {
-      if (almost_equal(az.fit_dist(l_index - 1).mean(),
-                       az.fit_dist(l_index).mean()))
+      if (almost_equal(sum.az.fit_dist(l_index - 1).mean(),
+                       sum.az.fit_dist(l_index).mean()))
         layer = pop.erase(layer);
       else
       {
-        const auto sd(az.fit_dist(l_index).standard_deviation());
+        const auto sd(sum.az.fit_dist(l_index).standard_deviation());
         const bool converged(issmall(sd));
 
         if (converged)
@@ -124,11 +122,11 @@ void alps_es<E>::after_generation(
   }
 
   // Code executed every `age_gap` interval.
-  if (generation && generation % env.alps.age_gap == 0)
+  if (sum.generation && sum.generation % env.alps.age_gap == 0)
   {
     if (const auto n_layers(pop.layers());
         n_layers < env.alps.max_layers
-        || az.age_dist(n_layers - 1).mean() > env.alps.max_age(n_layers))
+        || sum.az.age_dist(n_layers - 1).mean() > env.alps.max_age(n_layers))
       pop.add_layer();
     else
     {
@@ -200,5 +198,30 @@ auto std_es<E>::operations(
       this->replace_(pop_layer, offspring, status);
     };
 }
+
+///
+/// We use an accelerated stop condition when:
+/// - after `max_stuck_time` generations the situation doesn't change;
+/// - all the individuals have the same fitness.
+///
+/*template<Evaluator E>
+template<Population P>
+bool std_es<E>::stop_condition(const P &pop) const
+{
+  const auto &env(pop.problem().env);
+  Expects(env.max_stuck_time.has_value());
+
+  const auto &sum(this->sum_);
+  Expects(sum->gen >= sum->last_imp);
+
+  // Pay attention to `env.max_stuck_time`: it can be a large number and cause
+  // overflow. E.g. `sum->gen > sum->last_imp + *env.max_stuck_time`
+
+  if (sum->gen - sum->last_imp > *env.max_stuck_time
+      && issmall(sum->az.fit_dist().variance()))
+    return true;
+
+  return false;
+  }*/
 
 #endif  // include guard
