@@ -143,7 +143,7 @@ bool summary<I, F>::save(std::ostream &out) const
 {
   const auto data(data_snapshot());
 
-  // Since `status` depends on `generaiton`, saving `generation` before
+  // Since `data_` depends on `generation`, saving `generation` before
   // `status` is very important.
   out << elapsed.count() << ' ' << generation << ' ' << data.last_improvement
       << '\n';
