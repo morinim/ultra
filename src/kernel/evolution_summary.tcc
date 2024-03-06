@@ -46,7 +46,7 @@ evolution_status<I, F> summary<I, F>::starting_status()
 }
 
 template<Individual I, Fitness F>
-summary<I, F>::data summary<I, F>::data_snapshot() const
+typename summary<I, F>::data summary<I, F>::data_snapshot() const
 {
   return data_.read([](const auto &data) { return data; });
 }
