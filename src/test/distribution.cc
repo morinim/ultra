@@ -57,6 +57,7 @@ TEST_CASE("Base")
   CHECK(d.variance() == doctest::Approx(4.0));
   CHECK(d.standard_deviation() == doctest::Approx(2.0));
 
+
   for (const auto &e : elems)
   {
     const auto it(d.seen().find(e.first));
@@ -64,6 +65,8 @@ TEST_CASE("Base")
 
     CHECK(it->second == e.second);
   }
+
+  const auto e1(d.entropy());
 
   for (const auto &e : elems)
   {
@@ -75,8 +78,16 @@ TEST_CASE("Base")
     CHECK(it->second == e.second + 1);
   }
 
+  const auto e2(d.entropy());
+
   CHECK(d.size() == added + elems.size());
 
+  CHECK(e1 < e2);
+
+  d.add(7.0);
+  d.add(9.0);
+
+  CHECK(e2 < d.entropy());
 }
 
 TEST_CASE("Serialization")

@@ -39,6 +39,7 @@ public:
   void add(T);
 
   [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] double entropy() const;
   [[nodiscard]] T max() const;
   [[nodiscard]] T mean() const;
   [[nodiscard]] T min() const;

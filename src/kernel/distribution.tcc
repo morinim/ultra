@@ -110,6 +110,30 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 }
 
 ///
+/// \return the entropy of the distribution
+///
+/// \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
+///
+/// We use an offline algorithm
+/// (http://en.wikipedia.org/wiki/Online_algorithm).
+///
+template<ArithmeticFloatingType T>
+double distribution<T>::entropy() const
+{
+  const double c(1.0 / std::log(2.0));
+
+  double h(0.0);
+  for (const auto &f : seen())  // f.first: fitness, f.second: sightings
+  {
+    const auto p(static_cast<double>(f.second) / static_cast<double>(size()));
+
+    h -= p * std::log(p) * c;
+  }
+
+  return h;
+}
+
+///
 /// \param[in] val new value upon which statistics are recalculated
 ///
 /// Calculate running variance and cumulative average of a set. The
@@ -118,8 +142,8 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 /// Addison-Wesley).
 ///
 /// \see
-/// * https://en.wikipedia.org/wiki/Online_algorithm
-/// * https://en.wikipedia.org/wiki/Moving_average#Cumulative_average
+/// - https://en.wikipedia.org/wiki/Online_algorithm
+/// - https://en.wikipedia.org/wiki/Moving_average#Cumulative_average
 ///
 template<ArithmeticFloatingType T>
 void distribution<T>::update_variance(T val)
