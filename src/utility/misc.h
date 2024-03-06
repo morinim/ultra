@@ -50,6 +50,11 @@ template<class A> concept ArithmeticType = requires(A x, A y)
 template<class A> concept OrderedArithmeticType =
   ArithmeticType<A> && std::totally_ordered<A>;
 
+template<class A> concept ArithmeticFloatingType =
+  OrderedArithmeticType<A>
+  && (std::is_floating_point_v<A>
+      || std::is_floating_point_v<typename A::value_type>);
+
 // *******************************************************************
 // Classes
 // *******************************************************************
@@ -232,6 +237,20 @@ requires std::is_arithmetic_v<T>
 [[nodiscard]] bool isnonnegative(T v)
 {
   return v >= static_cast<T>(0);
+}
+
+///
+/// \param[in] val a value to be rounded
+/// \return        `val` rounded to a fixed, ultra-specific, number of decimals
+///
+template<ArithmeticFloatingType T>
+[[nodiscard]] T round_to(T val, T float_epsilon = 0.0001)
+{
+  val /= float_epsilon;
+  val = std::round(val);
+  val *= float_epsilon;
+
+  return val;
 }
 
 ///

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -29,24 +29,54 @@ TEST_CASE("Base")
 
   CHECK(d.size() == 0);
 
-  d.add(2.0);
-  d.add(4.0);
-  d.add(4.0);
-  d.add(4.0);
-  d.add(5.0);
-  d.add(5.0);
-  d.add(7.0);
-  d.add(9.0);
-  CHECK(d.size() == 8);
+  const std::vector<std::pair<double, unsigned>> elems =
+  {
+    {2.0, 1},
+    {4.0, 3},
+    {5.0, 2},
+    {7.0, 1},
+    {9.0, 1}
+  };
+
+  for (const auto &e : elems)
+    for (unsigned n(e.second); n; --n)
+      d.add(e.first);
+
+  const auto added(std::accumulate(
+                     elems.begin(), elems.end(),0,
+                     [](auto sum, const auto &v) { return sum + v.second; }));
+
+  CHECK(d.size() == added);
 
   d.add(std::numeric_limits<double>::quiet_NaN());
-  CHECK(d.size() == 8);
+  CHECK(d.size() == added);
 
   CHECK(d.min() == doctest::Approx(2.0));
   CHECK(d.max() == doctest::Approx(9.0));
   CHECK(d.mean() == doctest::Approx(5.0));
   CHECK(d.variance() == doctest::Approx(4.0));
   CHECK(d.standard_deviation() == doctest::Approx(2.0));
+
+  for (const auto &e : elems)
+  {
+    const auto it(d.seen().find(e.first));
+    CHECK(it != d.seen().end());
+
+    CHECK(it->second == e.second);
+  }
+
+  for (const auto &e : elems)
+  {
+    d.add(e.first + 0.000001);
+
+    const auto it(d.seen().find(e.first));
+    CHECK(it != d.seen().end());
+
+    CHECK(it->second == e.second + 1);
+  }
+
+  CHECK(d.size() == added + elems.size());
+
 }
 
 TEST_CASE("Serialization")
@@ -68,13 +98,14 @@ TEST_CASE("Serialization")
   std::stringstream s;
   CHECK(d.save(s));
 
-  distribution<double> d1;
+  decltype(d) d1;
   CHECK(d1.load(s));
 
   CHECK(rif_min == doctest::Approx(d.min()));
   CHECK(rif_max == doctest::Approx(d.max()));
   CHECK(rif_mean == doctest::Approx(d.mean()));
   CHECK(rif_variance == doctest::Approx(d.variance()));
+  CHECK(d.seen() == d1.seen());
 }
 
 }  // TEST_SUITE("FUNCTION")

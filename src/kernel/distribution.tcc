@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -99,7 +99,14 @@ void distribution<T>::add(T val)
 
   ++size_;
 
+  ++seen_[round_to(val)];
   update_variance(val);
+}
+
+template<ArithmeticFloatingType T>
+const std::map<T, std::uintmax_t> &distribution<T>::seen() const
+{
+  return seen_;
 }
 
 ///
@@ -164,6 +171,10 @@ bool distribution<T>::save(std::ostream &out) const
       << max() << '\n'
       << m2_ << '\n';
 
+  out << seen().size() << '\n';
+  for (const auto &elem : seen())
+    out << elem.first << ' ' << elem.second << '\n';
+
   return out.good();
 }
 
@@ -204,11 +215,27 @@ bool distribution<T>::load(std::istream &in)
   if (!(in >> m2__))
     return false;
 
+  typename decltype(seen_)::size_type n;
+  if (!(in >> n))
+    return false;
+
+  decltype(seen_) s;
+  for (decltype(n) i(0); i < n; ++i)
+  {
+    typename decltype(seen_)::key_type key;
+    typename decltype(seen_)::mapped_type val;
+    if (!(in >> key >> val))
+      return false;
+
+    s[key] = val;
+  }
+
   size_ = c;
   mean_ = m;
   min_ = mn;
   max_ = mx;
   m2_ = m2__;
+  seen_ = s;
 
   return true;
 }

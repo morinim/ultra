@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -24,14 +24,9 @@
 namespace ultra
 {
 
-template<class A> concept ArithmeticFloatingType =
-  OrderedArithmeticType<A>
-  && (std::is_floating_point_v<A>
-      || std::is_floating_point_v<typename A::value_type>);
-
 ///
 /// Simplifies the calculation of statistics regarding a sequence (mean,
-/// variance, standard deviation, entropy, min and max).
+/// variance, standard deviation, min and max).
 ///
 template<ArithmeticFloatingType T>
 class distribution
@@ -47,6 +42,7 @@ public:
   [[nodiscard]] T max() const;
   [[nodiscard]] T mean() const;
   [[nodiscard]] T min() const;
+  [[nodiscard]] const std::map<T, std::uintmax_t> &seen() const;
   [[nodiscard]] T standard_deviation() const;
   [[nodiscard]] T variance() const;
 
@@ -59,6 +55,8 @@ public:   // Serialization
 private:
   // Private methods.
   void update_variance(T);
+
+  std::map<T, std::uintmax_t> seen_ {};
 
   T m2_ {};
   T max_ {};
