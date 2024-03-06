@@ -198,6 +198,27 @@ bool environment::is_valid(bool force_defined) const
     return false;
   }
 
+  if (stat.dir.has_filename())
+  {
+    ultraERROR << "`stat.dir` must contain a directory, not a file ("
+               << stat.dir << ")";
+    return false;
+  }
+
+  if (!stat.dynamic_file.empty() && !stat.dynamic_file.has_filename())
+  {
+    ultraERROR << "`stat.dynamic_file` must specify a file ("
+               << stat.dynamic_file << ")";
+    return false;
+  }
+
+  if (!stat.population_file.empty() && !stat.population_file.has_filename())
+  {
+    ultraERROR << "`stat.population_file` must specify a file ("
+               << stat.population_file << ")";
+    return false;
+  }
+
   return true;
 }
 

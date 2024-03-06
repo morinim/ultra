@@ -72,8 +72,8 @@ private:
 /// as fast as the code with no logging at all.
 ///
 /// Logging will have a cost only if it actually produces output; otherwise,
-/// the cost is low (and actually immeasurable in most cases). This lets you
-/// control the trade-off between fast execution and detailed logging.
+/// the cost is low (and immeasurable in most cases). This lets you control the
+/// trade-off between fast execution and detailed logging.
 ///
 /// Macro-related dangers should be avoided: we shouldn't forget that the
 /// logging code might not be executed at all, subject to the logging level in

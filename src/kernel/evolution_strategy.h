@@ -46,6 +46,10 @@ public:
   using fitness_t = evaluator_fitness_t<E>;
   using individual_t = evaluator_individual_t<E>;
 
+  /// Evolution strategy specific log function (it's called by the
+  /// `evolution::log` method).
+  void log_strategy() const {}
+
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified
   /// environment. Some evolution strategies force parameters to
@@ -55,7 +59,7 @@ public:
   /// Initial setup performed before evolution starts.
   template<Population P> void init(P &) const {}
 
-  /// Work to be done at the end of a generation.
+  /// Work to be done at the end of every generation.
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &) const {}
 

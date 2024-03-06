@@ -13,6 +13,8 @@
 #if !defined(ULTRA_ENVIRONMENT_H)
 #define      ULTRA_ENVIRONMENT_H
 
+#include <filesystem>
+
 #include "kernel/alps.h"
 #include "kernel/interval.h"
 #include "kernel/symbol.h"
@@ -171,6 +173,26 @@ struct environment
     /// \see https://github.com/morinim/ultra/wiki/bibliography#5
     interval_t<double> weight {0.5, 1.0};
   } de;
+
+  struct statistics
+  {
+    /// A base common path for the log files.
+    /// \note
+    /// A single log file can overwrite this path specifying an absolute path.
+    std::filesystem::path dir {};
+
+    /// Name of the log file used to save "real-time" information.
+    /// \note
+    /// An empty string disable logging.
+    std::filesystem::path dynamic_file {};
+
+    /// Name of the log file used to save population-specific information.
+    /// \note
+    /// An empty string disable logging.
+    /// \warning
+    /// Enabling this log with large populations has a big performance impact.
+    std::filesystem::path population_file {};
+  } stat;
 
   environment &init();
   [[nodiscard]] bool is_valid(bool) const;

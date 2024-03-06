@@ -47,6 +47,7 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
+  void log_evolution() const;
   void print(bool, std::chrono::milliseconds, timer *) const;
   [[nodiscard]] bool stop_condition() const;
 

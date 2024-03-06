@@ -49,6 +49,84 @@ bool evolution<S>::stop_condition() const
   return false;
 }
 
+///
+/// Saves working / statistical informations in a log file.
+///
+/// Data are written in a CSV-like fashion and are partitioned in blocks
+/// separated by two blank lines:
+///
+///     [BLOCK_1]\n\n
+///     [BLOCK_2]\n\n
+///     ...
+///     [BLOCK_x]
+///
+/// where each block is a set of line like this:
+///
+///     data_1 [space] data_2 [space] ... [space] data_n
+///
+/// We use this format, instead of XML, because statistics are produced
+/// incrementally and so it's simple and fast to append new data to a
+/// CSV-like file. Note also that it's simple to extract and plot data with
+/// GNU Plot.
+///
+template<Strategy S>
+void evolution<S>::log_evolution() const
+{
+  static unsigned run_count(-1);
+
+  if (sum_.generation == 0)
+    ++run_count;
+
+  const auto &env(pop_.problem().env);
+
+  const auto fullpath([env](const std::filesystem::path &f)
+                      {
+                        return env.stat.dir / f;
+                      });
+
+  if (!env.stat.dynamic_file.empty())
+    if (std::ofstream f_dyn(fullpath(env.stat.dynamic_file),
+                            std::ios_base::app);
+        f_dyn.good())
+    {
+      if (sum_.generation == 0)
+        f_dyn << "\n\n";
+
+      f_dyn << run_count << ' ' << sum_.generation;
+
+      if (const auto best(sum_.best()); best.ind.empty())
+        f_dyn << " ? ?";
+      else
+        f_dyn << ' ' << best.fit << " \"" << out::in_line << best.ind << '"';
+
+      f_dyn << ' ' << sum_.az.fit_dist().mean()
+            << ' ' << sum_.az.fit_dist().standard_deviation()
+            << ' ' << sum_.az.fit_dist().entropy()
+            << ' ' << sum_.az.fit_dist().min()
+            << ' ' << static_cast<unsigned>(sum_.az.length_dist().mean())
+            << ' ' << sum_.az.length_dist().standard_deviation()
+            << ' ' << static_cast<unsigned>(sum_.az.length_dist().max())
+            << '\n';
+    }
+
+  if (!env.stat.population_file.empty())
+    if (std::ofstream f_pop(fullpath(env.stat.population_file),
+                            std::ios_base::app);
+        f_pop.good())
+    {
+      if (sum_.generation == 0)
+        f_pop << "\n\n";
+
+      for (const auto &f : sum_.az.fit_dist().seen())
+        // f.first: value, f.second: frequency
+        f_pop << run_count << ' ' << sum_.generation << ' '
+              << std::fixed << std::scientific
+              << f.first << ' ' << f.second << '\n';
+    }
+
+  es_.log_strategy();
+}
+
 template<Strategy S>
 void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
                          timer *from_last_msg) const
@@ -113,7 +191,7 @@ evolution<S>::run()
   scored_individual previous_best(sum_.best());
 
   term::set();
-  es_.init(pop_);
+  es_.init(pop_);  // customizatin point for strategy-specific initialization
 
   for (bool stop(false); !stop; ++sum_.generation)
   {
@@ -148,6 +226,7 @@ evolution<S>::run()
     }
 
     sum_.az = analyze(pop_, es_.evaluator());
+    log_evolution();
     es_.after_generation(pop_, sum_);
   }
 
