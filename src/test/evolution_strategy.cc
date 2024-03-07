@@ -44,8 +44,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
   for (unsigned ni(2); ni <= 20; ++ni)
     for (unsigned nl(2); nl <= 5; ++nl)
     {
-      prob.env.population.individuals = ni;
-      prob.env.population.init_layers = nl;
+      prob.params.population.individuals = ni;
+      prob.params.population.init_layers = nl;
 
       layered_population<gp::individual> pop(prob);
       const auto range(pop.range_of_layers());
@@ -62,8 +62,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
         {
           auto evolve(alps.operations(pop, layer_iter, sum.starting_status()));
 
-          for (unsigned iterations(prob.env.population.individuals < 50
-                                   ? 50 : prob.env.population.individuals);
+          for (unsigned iterations(prob.params.population.individuals < 50
+                                   ? 50 : prob.params.population.individuals);
                iterations; --iterations)
             evolve();
         });
@@ -110,8 +110,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 100;
-  prob.env.population.init_layers =   5;
+  prob.params.population.individuals = 100;
+  prob.params.population.init_layers =   5;
 
   layered_population<gp::individual> pop(prob);
   const auto range(pop.range_of_layers());
@@ -126,7 +126,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
     {
       auto evolve(alps.operations(pop, layer_iter, sum.starting_status()));
 
-      for (auto iterations(prob.env.population.individuals);
+      for (auto iterations(prob.params.population.individuals);
            iterations; --iterations)
         evolve();
     });
@@ -168,8 +168,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 100;
-  prob.env.population.init_layers =   5;
+  prob.params.population.individuals = 100;
+  prob.params.population.init_layers =   5;
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
@@ -180,7 +180,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init")
   for (std::size_t l(0); const auto &layer : pop.range_of_layers())
   {
     if (l < pop.layers() - 1)
-      CHECK(layer.max_age() == prob.env.alps.max_age(l));
+      CHECK(layer.max_age() == prob.params.alps.max_age(l));
     else
     {
       using age_t = decltype(pop.back().max_age());
@@ -198,8 +198,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 100;
-  prob.env.population.init_layers =   5;
+  prob.params.population.individuals = 100;
+  prob.params.population.init_layers =   5;
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
@@ -223,7 +223,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
                                 return layer.allowed() == layer.size();
                               }));
 
-    CHECK(pop.layers() == prob.env.population.init_layers);
+    CHECK(pop.layers() == prob.params.population.init_layers);
   }
 
   SUBCASE("Two identical layers")
@@ -241,7 +241,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
                                 return layer.allowed() == layer.size();
                               }));
 
-    CHECK(pop.layers() == prob.env.population.init_layers - 1);
+    CHECK(pop.layers() == prob.params.population.init_layers - 1);
   }
 
   SUBCASE("Converged layer")
@@ -257,37 +257,37 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     alps.after_generation(pop, sum);
 
     CHECK(pop.layer(1).allowed() < pop.layer(1).size());
-    CHECK(pop.layers() == prob.env.population.init_layers);
+    CHECK(pop.layers() == prob.params.population.init_layers);
   }
 
   SUBCASE("Age gap")
   {
     auto backup_pop(pop);
 
-    const auto diff(prob.env.alps.max_layers
-                    - prob.env.population.init_layers);
+    const auto diff(prob.params.alps.max_layers
+                    - prob.params.population.init_layers);
 
     for (unsigned i(1); i <= diff; ++i)
     {
-      sum.generation += prob.env.alps.age_gap;
+      sum.generation += prob.params.alps.age_gap;
       sum.az = analyze(pop, eva);
       alps.after_generation(pop, sum);
 
-      CHECK(pop.layers() == prob.env.population.init_layers + i);
+      CHECK(pop.layers() == prob.params.population.init_layers + i);
 
       for (std::size_t l(0); l < backup_pop.layers(); ++l)
         CHECK(std::ranges::equal(pop.layer(l + i), backup_pop.layer(l)));
     }
 
-    CHECK(pop.layers() == prob.env.alps.max_layers);
+    CHECK(pop.layers() == prob.params.alps.max_layers);
 
     backup_pop = pop;
 
-    sum.generation += prob.env.alps.age_gap;
+    sum.generation += prob.params.alps.age_gap;
     sum.az = analyze(pop, eva);
     alps.after_generation(pop, sum);
 
-    CHECK(pop.layers() == prob.env.alps.max_layers);
+    CHECK(pop.layers() == prob.params.alps.max_layers);
 
     CHECK(!std::ranges::equal(pop.front(), backup_pop.front()));
     CHECK(!std::ranges::equal(pop.layer(1), backup_pop.layer(1)));
@@ -301,8 +301,8 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 200;
-  prob.env.population.init_layers =   1;
+  prob.params.population.individuals = 200;
+  prob.params.population.init_layers =   1;
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
@@ -316,7 +316,7 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
 
   std::vector<distribution<double>> previous;
 
-  for (auto iters(prob.env.population.individuals); iters; --iters)
+  for (auto iters(prob.params.population.individuals); iters; --iters)
     evolve();
 
   CHECK(std::ranges::all_of(pop,

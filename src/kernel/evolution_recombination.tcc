@@ -41,8 +41,9 @@ base<E>::operator()(const R &parents) const
   static_assert(std::is_same_v<evaluator_individual_t<E>,
                                std::ranges::range_value_t<R>>);
 
-  const auto p_cross(this->prob_.env.evolution.p_cross);
-  const auto brood_recombination(this->prob_.env.evolution.brood_recombination);
+  const auto p_cross(this->prob_.params.evolution.p_cross);
+  const auto brood_recombination(
+    this->prob_.params.evolution.brood_recombination);
 
   Expects(0.0 <= p_cross && p_cross <= 1.0);
   Expects(brood_recombination);
@@ -55,7 +56,7 @@ base<E>::operator()(const R &parents) const
       {
         auto ret(crossover(p1, p2));
 
-        if (this->prob_.env.evolution.p_mutation > 0.0)
+        if (this->prob_.params.evolution.p_mutation > 0.0)
         {
           // This could be an original contribution of Vita (now ported to
           // Ultra) but it's hard to be sure.

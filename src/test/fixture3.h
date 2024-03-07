@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -35,7 +35,7 @@ struct fixture3
 
   fixture3()
   {
-    prob.env.init().slp.code_length = 32;
+    prob.params.init().slp.code_length = 32;
   }
 
   ultra::problem prob {};

@@ -39,8 +39,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
   SUBCASE("No crossover and no mutation")
   {
-    prob.env.evolution.p_cross = 0.0;
-    prob.env.evolution.p_mutation = 0.0;
+    prob.params.evolution.p_cross = 0.0;
+    prob.params.evolution.p_mutation = 0.0;
 
     for (unsigned i(0); i < 100; ++i)
     {
@@ -54,8 +54,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
   SUBCASE("No mutation")
   {
-    prob.env.evolution.p_cross = 1.0;
-    prob.env.evolution.p_mutation = 0.0;
+    prob.params.evolution.p_cross = 1.0;
+    prob.params.evolution.p_mutation = 0.0;
 
     std::vector same_parents = {parents[0], parents[0] };
 
@@ -82,7 +82,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
         ++distinct;
     }
 
-    CHECK(static_cast<double>(distinct) / N > prob.env.evolution.p_cross - 0.1);
+    CHECK(static_cast<double>(distinct) / N
+          > prob.params.evolution.p_cross - 0.1);
   }
 }
 

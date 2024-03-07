@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,7 +20,7 @@ struct fixture4
 {
   fixture4(unsigned n = 4) : prob()
   {
-    prob.env.init();
+    prob.params.init();
 
     double v(10.0);
     for (unsigned i(0); i < n; ++i)

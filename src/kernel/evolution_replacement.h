@@ -28,11 +28,11 @@ template<Evaluator E>
 class strategy
 {
 public:
-  strategy(E &, const environment &);
+  strategy(E &, const parameters &);
 
 protected:
   E &eva_;
-  const environment &env_;
+  const parameters &params_;
 };
 
 ///
@@ -58,7 +58,7 @@ public:
                      evaluator_fitness_t<E>> &) const;
 };
 
-template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
+template<Evaluator E> tournament(E &, const parameters &) -> tournament<E>;
 
 ///
 /// ALPS based replacement scheme.
@@ -92,7 +92,7 @@ private:
                         const I &) const;
 };
 
-template<Evaluator E> alps(E &, const environment &) -> alps<E>;
+template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
 
 #include "kernel/evolution_replacement.tcc"
 

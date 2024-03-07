@@ -30,7 +30,7 @@ namespace ultra::gp
 /// of the type system's constraints.
 ///
 individual::individual(const problem &p)
-  : ultra::individual(), genome_(p.env.slp.code_length, p.sset.categories())
+  : ultra::individual(), genome_(p.params.slp.code_length, p.sset.categories())
 {
   Expects(size());
   Expects(categories());
@@ -480,7 +480,7 @@ individual crossover(const individual &lhs, const individual &rhs)
 ///
 unsigned individual::mutation(const problem &prb)
 {
-  const double pgm(prb.env.evolution.p_mutation);
+  const double pgm(prb.params.evolution.p_mutation);
   Expects(0.0 <= pgm && pgm <= 1.0);
 
   unsigned n(0);

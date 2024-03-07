@@ -10,8 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_ENVIRONMENT_H)
-#define      ULTRA_ENVIRONMENT_H
+#if !defined(ULTRA_PARAMETERS_H)
+#define      ULTRA_PARAMETERS_H
 
 #include <filesystem>
 
@@ -22,7 +22,7 @@
 namespace ultra
 {
 
-struct environment
+struct parameters
 {
   struct slp_parameters
   {
@@ -174,7 +174,7 @@ struct environment
     interval_t<double> weight {0.5, 1.0};
   } de;
 
-  struct statistics
+  struct statistics_parameters
   {
     /// A base common path for the log files.
     /// \note
@@ -194,9 +194,9 @@ struct environment
     std::filesystem::path population_file {};
   } stat;
 
-  environment &init();
+  parameters &init();
   [[nodiscard]] bool is_valid(bool) const;
-};  // environment
+};  // parameters
 
 }  // namespace ultra
 

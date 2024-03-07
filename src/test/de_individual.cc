@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -107,20 +107,21 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
     b.inc_age(random::sup(100u));
     c.inc_age(random::sup(100u));
 
-    auto off(p.crossover(prob.env.evolution.p_cross, prob.env.de.weight,
+    auto off(p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
                          a, a, p));
     CHECK(off.is_valid());
 
     for (unsigned i(0); i < p.parameters(); ++i)
       CHECK(off[i] == doctest::Approx(p[i]));
 
-    off = p.crossover(prob.env.evolution.p_cross, prob.env.de.weight, a, b, p);
+    off = p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
+                      a, b, p);
     CHECK(off.is_valid());
     CHECK(off.age() == std::max({p.age(), a.age(), b.age()}));
 
     for (unsigned i(0); i < p.parameters(); ++i)
     {
-      const auto delta(prob.env.de.weight.second * std::abs(a[i] - b[i]));
+      const auto delta(prob.params.de.weight.second * std::abs(a[i] - b[i]));
 
       CHECK(off[i] > p[i] - delta);
       CHECK(off[i] < p[i] + delta);
@@ -129,12 +130,13 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
         ++diff;
     }
 
-    off = p.crossover(prob.env.evolution.p_cross, prob.env.de.weight, a, b, c);
+    off = p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
+                      a, b, c);
     CHECK(off.is_valid());
     CHECK(off.age() == std::max({p.age(), a.age(), b.age(), c.age()}));
     for (unsigned i(0); i < p.parameters(); ++i)
     {
-      const auto delta(prob.env.de.weight.second * std::abs(a[i] - b[i]));
+      const auto delta(prob.params.de.weight.second * std::abs(a[i] - b[i]));
 
       if (!almost_equal(p[i], off[i]))
       {
@@ -146,8 +148,8 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
     length += p.parameters();
   }
 
-  CHECK(diff / length < prob.env.evolution.p_cross + 2.0);
-  CHECK(diff / length > prob.env.evolution.p_cross - 2.0);
+  CHECK(diff / length < prob.params.evolution.p_cross + 2.0);
+  CHECK(diff / length > prob.params.evolution.p_cross - 2.0);
 }
 
 TEST_CASE_FIXTURE(fixture4, "Serialization")

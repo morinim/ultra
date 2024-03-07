@@ -28,8 +28,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 30;
-  prob.env.population.init_layers =  4;
+  prob.params.population.individuals = 30;
+  prob.params.population.init_layers =  4;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 

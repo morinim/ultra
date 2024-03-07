@@ -31,11 +31,11 @@ TEST_CASE_FIXTURE(fixture1, "Creation")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(1, 100);
+    prob.params.population.individuals = random::between(1, 100);
 
     linear_population<gp::individual> pop(prob);
 
-    CHECK(pop.size() == prob.env.population.individuals);
+    CHECK(pop.size() == prob.params.population.individuals);
     CHECK(pop.is_valid());
   }
 }
@@ -44,7 +44,7 @@ TEST_CASE_FIXTURE(fixture1, "Age")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 10;
+  prob.params.population.individuals = 10;
 
   linear_population<gp::individual> pop(prob);
 
@@ -61,7 +61,7 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
 
   for (unsigned i(0); i < 10; ++i)
   {
-    prob.env.population.individuals = random::between(30, 200);
+    prob.params.population.individuals = random::between(30, 200);
 
     linear_population<gp::individual> pop(prob);
 
@@ -75,7 +75,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(10, 50);
+    prob.params.population.individuals = random::between(10, 50);
 
     linear_population<gp::individual> pop1(prob);
     pop1.max_age(1234);
@@ -97,7 +97,7 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 30;
+  prob.params.population.individuals = 30;
 
   linear_population<gp::individual> pop(prob);
 

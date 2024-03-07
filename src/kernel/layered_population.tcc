@@ -21,7 +21,7 @@
 /// Creates a random population.
 ///
 /// \param[in] p           current problem
-/// \param[in] init_layers builds `p.env.population.layers` layers
+/// \param[in] init_layers builds `p.params.population.layers` layers
 ///
 template<Individual I>
 layered_population<I>::layered_population(const ultra::problem &p,
@@ -30,10 +30,10 @@ layered_population<I>::layered_population(const ultra::problem &p,
 {
   if (init_layers)
   {
-    for (std::size_t l(0); l < p.env.population.init_layers; ++l)
+    for (std::size_t l(0); l < p.params.population.init_layers; ++l)
       layers_.emplace_back(p);
 
-    assert(layers() == p.env.population.init_layers);
+    assert(layers() == p.params.population.init_layers);
   }
 
   Ensures(is_valid());
@@ -128,7 +128,7 @@ template<Individual I>
 void layered_population<I>::init(layer_t &l)
 {
   l.clear();
-  l.allowed(problem().env.population.individuals);
+  l.allowed(problem().params.population.individuals);
 
   std::generate_n(std::back_inserter(l), l.allowed(),
                   [this] {return I(problem()); });

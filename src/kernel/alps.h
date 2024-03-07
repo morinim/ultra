@@ -63,10 +63,10 @@ void set_age(P &pop)
   if (!pop.layers())
     return;
 
-  const auto &env(pop.problem().env);
+  const auto &params(pop.problem().params);
 
   for (std::size_t l(0); l < pop.layers(); ++l)
-    pop.layer(l).max_age(env.alps.max_age(l));
+    pop.layer(l).max_age(params.alps.max_age(l));
 
   pop.back().max_age(std::numeric_limits<unsigned>::max());
 }

@@ -33,7 +33,7 @@ evolution<S>::evolution(const S &strategy) : pop_(strategy.problem()),
 template<Strategy S>
 bool evolution<S>::stop_condition() const
 {
-  const auto planned_generations(pop_.problem().env.evolution.generations);
+  const auto planned_generations(pop_.problem().params.evolution.generations);
   Expects(planned_generations);
 
   // Check the number of generations.
@@ -77,17 +77,17 @@ void evolution<S>::log_evolution() const
   if (sum_.generation == 0)
     ++run_count;
 
-  const auto &env(pop_.problem().env);
+  const auto &params(pop_.problem().params);
 
-  const auto fullpath([env](const std::filesystem::path &f)
-                      {
-                        return env.stat.dir / f;
-                      });
+  const auto stat_stream([&params](const std::filesystem::path &f)
+                         {
+                           return std::ofstream(params.stat.dir / f,
+                                                std::ios_base::app);
+                         });
 
-  if (!env.stat.dynamic_file.empty())
-    if (std::ofstream f_dyn(fullpath(env.stat.dynamic_file),
-                            std::ios_base::app);
-        f_dyn.good())
+  if (!params.stat.dynamic_file.empty())
+  {
+    if (auto f_dyn(stat_stream(params.stat.dynamic_file)); f_dyn.good())
     {
       if (sum_.generation == 0)
         f_dyn << "\n\n";
@@ -108,11 +108,15 @@ void evolution<S>::log_evolution() const
             << ' ' << static_cast<unsigned>(sum_.az.length_dist().max())
             << '\n';
     }
+    else
+    {
+      ultraWARNING << "Cannot open dynamic file " << params.stat.dynamic_file;
+    }
+  }
 
-  if (!env.stat.population_file.empty())
-    if (std::ofstream f_pop(fullpath(env.stat.population_file),
-                            std::ios_base::app);
-        f_pop.good())
+  if (!params.stat.population_file.empty())
+  {
+    if (auto f_pop(stat_stream(params.stat.population_file)); f_pop.good())
     {
       if (sum_.generation == 0)
         f_pop << "\n\n";
@@ -123,6 +127,12 @@ void evolution<S>::log_evolution() const
               << std::fixed << std::scientific
               << f.first << ' ' << f.second << '\n';
     }
+    else
+    {
+      ultraWARNING << "Cannot open population file "
+                   << params.stat.population_file;
+    }
+  }
 
   es_.log_strategy();
 }

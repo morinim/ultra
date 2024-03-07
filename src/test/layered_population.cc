@@ -30,16 +30,17 @@ TEST_CASE_FIXTURE(fixture1, "Creation")
 {
   using namespace ultra;
 
-  prob.env.population.init_layers = 3;
+  prob.params.population.init_layers = 3;
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(1, 100);
+    prob.params.population.individuals = random::between(1, 100);
 
     layered_population<gp::individual> pop(prob);
 
     CHECK(pop.size()
-          == prob.env.population.init_layers * prob.env.population.individuals);
+          == prob.params.population.init_layers
+             * prob.params.population.individuals);
     CHECK(pop.is_valid());
   }
 }
@@ -50,8 +51,8 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(30, 150);
-    prob.env.population.init_layers = random::between(1, 8);
+    prob.params.population.individuals = random::between(30, 150);
+    prob.params.population.init_layers = random::between(1, 8);
 
     layered_population<gp::individual> pop(prob);
 
@@ -80,14 +81,14 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
     for (unsigned j(0); j < added_layers; ++j)
     {
       pop.add_layer();
-      CHECK(pop.layers() == prob.env.population.init_layers + j + 1);
+      CHECK(pop.layers() == prob.params.population.init_layers + j + 1);
     }
 
     for (unsigned j(0); j < added_layers; ++j)
     {
       pop.erase(pop.layer(random::sup(pop.layers())));
       CHECK(pop.layers()
-            == prob.env.population.init_layers + added_layers - j - 1);
+            == prob.params.population.init_layers + added_layers - j - 1);
     }
 
     if (pop.layers() > 1)
@@ -106,7 +107,8 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
       }
 
       const auto remaining(
-        static_cast<unsigned>(std::round(prob.env.population.init_layers/2.0)));
+        static_cast<unsigned>(std::round(prob.params.population.init_layers
+                                         / 2.0)));
       CHECK(pop.layers() == remaining);
     }
   }
@@ -116,7 +118,7 @@ TEST_CASE_FIXTURE(fixture1, "Age")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 10;
+  prob.params.population.individuals = 10;
 
   layered_population<gp::individual> pop(prob);
 
@@ -133,8 +135,8 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
 
   for (unsigned i(0); i < 10; ++i)
   {
-    prob.env.population.individuals = random::between(30, 200);
-    prob.env.population.init_layers = random::between(1, 10);
+    prob.params.population.individuals = random::between(30, 200);
+    prob.params.population.init_layers = random::between(1, 10);
 
     layered_population<gp::individual> pop(prob);
 
@@ -148,8 +150,8 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
   for (unsigned i(0); i < 100; ++i)
   {
-    prob.env.population.individuals = random::between(10, 50);
-    prob.env.population.init_layers = random::between(1, 4);
+    prob.params.population.individuals = random::between(10, 50);
+    prob.params.population.init_layers = random::between(1, 4);
 
     std::stringstream ss;
     layered_population<gp::individual> pop1(prob);
@@ -171,8 +173,8 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 20;
-  prob.env.population.init_layers =  1;
+  prob.params.population.individuals = 20;
+  prob.params.population.init_layers =  1;
 
   layered_population<gp::individual> pop(prob);
 
@@ -204,7 +206,7 @@ TEST_CASE_FIXTURE(fixture1, "range_of_layers")
 
   SUBCASE("One layer")
   {
-    prob.env.population.init_layers = 1;
+    prob.params.population.init_layers = 1;
     layered_population<gp::individual> pop(prob);
 
     const auto range(pop.range_of_layers());
@@ -213,7 +215,7 @@ TEST_CASE_FIXTURE(fixture1, "range_of_layers")
 
   SUBCASE("Multiple layer")
   {
-    prob.env.population.init_layers = 4;
+    prob.params.population.init_layers = 4;
     layered_population<gp::individual> pop(prob);
 
     const auto range(pop.range_of_layers());

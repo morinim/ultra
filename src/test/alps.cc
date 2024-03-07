@@ -29,8 +29,8 @@ TEST_CASE_FIXTURE(fixture1, "Set age")
 {
   using namespace ultra;
 
-  prob.env.population.init_layers = 10;
-  prob.env.population.individuals = random::between(10, 20);
+  prob.params.population.init_layers = 10;
+  prob.params.population.individuals = random::between(10, 20);
   layered_population<gp::individual> pop(prob);
 
   alps::set_age(pop);
@@ -38,7 +38,7 @@ TEST_CASE_FIXTURE(fixture1, "Set age")
   for (std::size_t l(1); l < pop.layers(); ++l)
   {
     CHECK(pop.layer(l).max_age() > pop.layer(l - 1).max_age());
-    CHECK(pop.layer(l - 1).max_age() == prob.env.alps.max_age(l - 1));
+    CHECK(pop.layer(l - 1).max_age() == prob.params.alps.max_age(l - 1));
   }
 
   using age_t = decltype(pop.back().max_age());

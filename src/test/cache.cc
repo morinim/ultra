@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -17,6 +17,7 @@
 #include "third_party/doctest/doctest.h"
 
 #include "kernel/cache.h"
+#include "kernel/parameters.h"
 #include "kernel/gp/interpreter.h"
 
 #include "test/fixture1.h"
@@ -38,7 +39,7 @@ TEST_CASE_FIXTURE(fixture1, "Insert/Find cycle")
   using namespace ultra;
 
   cache<double> cache(16);
-  prob.env.slp.code_length = 64;
+  prob.params.slp.code_length = 64;
 
   const unsigned n(6000);
 
@@ -60,7 +61,7 @@ TEST_CASE_FIXTURE(fixture1, "Collision detection")
   using namespace ultra;
 
   cache<double> cache(14);
-  prob.env.slp.code_length = 64;
+  prob.params.slp.code_length = 64;
 
   const unsigned n(1000);
 
@@ -90,7 +91,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   using namespace ultra;
 
   cache<double> cache1(14), cache2(14);
-  prob.env.slp.code_length = 64;
+  prob.params.slp.code_length = 64;
 
   const unsigned n(1000);
   std::vector<gp::individual> vi;

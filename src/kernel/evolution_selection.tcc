@@ -18,11 +18,12 @@
 #define      ULTRA_EVOLUTION_SELECTION_TCC
 
 ///
-/// \param[in] eva current evaluator
-/// \param[in] env environment (for selection specific parameters)
+/// \param[in] eva    current evaluator
+/// \param[in] params access to selection specific parameters
 ///
 template<Evaluator E>
-strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
+strategy<E>::strategy(E &eva, const parameters &params)
+  : eva_(eva), params_(params)
 {
 }
 
@@ -35,7 +36,7 @@ strategy<E>::strategy(E &eva, const environment &env) : eva_(eva), env_(env)
 /// those individuals.
 /// Recall that better individuals have higher fitness.
 ///
-/// Parameters from the environment: `mate_zone`, `tournament_size`.
+/// Used parameters: `mate_zone`, `tournament_size`.
 ///
 /// \remark
 /// Different compilers may optimize the code producing slightly different
@@ -51,8 +52,8 @@ template<RandomAccessPopulation P>
 std::vector<typename P::value_type>
 tournament<E>::operator()(const P &pop) const
 {
-  const auto mate_zone(this->env_.evolution.mate_zone);
-  const auto rounds(this->env_.evolution.tournament_size);
+  const auto mate_zone(this->params_.evolution.mate_zone);
+  const auto rounds(this->params_.evolution.tournament_size);
   assert(rounds);
 
   const auto target(random::coord(pop));
@@ -96,7 +97,7 @@ tournament<E>::operator()(const P &pop) const
 ///                 lower level layer
 /// \return         picked up individuals
 ///
-/// Parameters from the environment:
+/// Used parameters:
 /// - `tournament_size` to control number of selected individuals.
 /// - `p_main_layer`
 ///
@@ -105,7 +106,7 @@ template<PopulationWithMutex P>
 std::vector<typename P::value_type>
 alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 {
-  Expects(this->env_.evolution.tournament_size);
+  Expects(this->params_.evolution.tournament_size);
   Expects(pops.size() && pops.size() <= 2);
 
   const auto young([](const auto &sub_pop, const auto &prg)
@@ -130,9 +131,10 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 
   assert(fit0 >= fit1);
 
-  const auto p(1.0 - this->env_.alps.p_main_layer);
+  const auto p(1.0 - this->params_.alps.p_main_layer);
 
-  for (auto rounds(this->env_.evolution.tournament_size - 1); rounds; --rounds)
+  for (auto rounds(this->params_.evolution.tournament_size - 1);
+       rounds; --rounds)
   {
     const auto &sub_pop(pops[pops.size() > 1 ? random::boolean(p) : 0].get());
     const auto tmp(random::individual(sub_pop));
@@ -165,13 +167,13 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 /// \param[in] pop a population
 /// \return        a collection of four individuals suited for DE recombination
 ///
-/// Parameters from the environment: `mate_zone`.
+/// Used parameters: `mate_zone`.
 ///
 template<Evaluator E>
 template<RandomAccessPopulation P>
 std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
 {
-  const auto mate_zone(this->env_.evolution.mate_zone);
+  const auto mate_zone(this->params_.evolution.mate_zone);
 
   const auto c1(random::coord(pop));
   const auto c2(random::coord(pop));

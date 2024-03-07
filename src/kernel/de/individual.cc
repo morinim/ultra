@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -121,7 +121,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 /// Differential evolution crossover.
 ///
 /// \param[in] p crossover probability
-/// \param[in] f scaling factor interval (`environment.de.weight`)
+/// \param[in] f scaling factor interval (`parameters.de.weight`)
 /// \param[in] a first parent
 /// \param[in] b second parent
 /// \param[in] c third parent (base vector)

@@ -30,8 +30,8 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 20;
-  prob.env.population.init_layers =  1;
+  prob.params.population.individuals = 20;
+  prob.params.population.init_layers =  1;
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
@@ -47,17 +47,17 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   const scored_individual best(*best_it, eva(*best_it));
 
   evolution_status<gp::individual, double> status;
-  replacement::tournament replace(eva, prob.env);
+  replacement::tournament replace(eva, prob.params);
 
   SUBCASE("No elitism")
   {
-    prob.env.evolution.elitism = 0.0;
+    prob.params.evolution.elitism = 0.0;
 
     // This is very important: a value greater than `1` will make the selection
     // of the best element extremely hard.
-    prob.env.evolution.tournament_size = 1;
+    prob.params.evolution.tournament_size = 1;
 
-    for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
+    for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
       replace(pop.front(), worst.ind, status);
 
     for (const auto &prg : pop.front())
@@ -68,11 +68,11 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
 
   SUBCASE("Elitism")
   {
-    prob.env.evolution.elitism = 1.0;
+    prob.params.evolution.elitism = 1.0;
 
     const auto backup(pop);
 
-    for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
+    for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
       replace(pop.front(), worst.ind, status);
 
     CHECK(std::ranges::equal(pop, backup));
@@ -81,7 +81,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     replace(pop.front(), best.ind, status);
     CHECK(status.best().ind == best.ind);
 
-    for (unsigned i(0); i < prob.env.population.individuals * 100; ++i)
+    for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
       replace(pop.front(), best.ind, status);
 
     for (const auto &prg : pop.front())
@@ -94,8 +94,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 25;
-  prob.env.population.init_layers =  4;
+  prob.params.population.individuals = 25;
+  prob.params.population.init_layers =  4;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
@@ -122,7 +122,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
   CHECK(std::ranges::find(pop, best.ind) == pop.end());
 
   evolution_status<gp::individual, double> status;
-  replacement::alps replace(eva, prob.env);
+  replacement::alps replace(eva, prob.params);
 
   const unsigned big_age(10000);
 
@@ -194,15 +194,15 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
 {
   using namespace ultra;
 
-  prob.env.population.individuals    = 30;
-  prob.env.population.init_layers    = 10;
-  prob.env.evolution.tournament_size = 10;
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_layers    = 10;
+  prob.params.evolution.tournament_size = 10;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-  replacement::alps replace(eva, prob.env);
+  replacement::alps replace(eva, prob.params);
 
   const auto search([&](auto to_layers)
   {
@@ -232,15 +232,15 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
 {
   using namespace ultra;
 
-  prob.env.population.individuals = 30;
-  prob.env.population.init_layers = 10;
+  prob.params.population.individuals = 30;
+  prob.params.population.init_layers = 10;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
   test_evaluator<gp::individual> eva(test_evaluator_type::random);
   evolution_status<gp::individual, double> status;
-  replacement::alps replace(eva, prob.env);
+  replacement::alps replace(eva, prob.params);
 
   const auto range(pop.range_of_layers());
   for (auto l(std::prev(range.end())); l != range.begin(); --l)

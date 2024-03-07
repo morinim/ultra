@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/environment.h"
+#include "kernel/parameters.h"
 #include "utility/log.h"
 
 namespace ultra
@@ -19,7 +19,7 @@ namespace ultra
 ///
 /// Initialises the undefined parameters with "common" values.
 ///
-/// \return a reference to the "filled" environment
+/// \return a reference to the "filled" `struct parameters`
 ///
 /// Usually:
 /// - the undefined parameters are tuned before the start of the search
@@ -33,7 +33,7 @@ namespace ultra
 ///
 /// \see search::tune_parameters
 ///
-environment &environment::init()
+parameters &parameters::init()
 {
   slp.code_length = 100;
 
@@ -59,7 +59,7 @@ environment &environment::init()
 /// \return                  `true` if the object passes the internal
 ///                          consistency check
 ///
-bool environment::is_valid(bool force_defined) const
+bool parameters::is_valid(bool force_defined) const
 {
   if (force_defined)
   {

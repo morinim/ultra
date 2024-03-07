@@ -31,7 +31,7 @@ TEST_CASE_FIXTURE(fixture1, "Random creation")
   // Variable length random creation.
   for (auto l(1); l < 100; ++l)
   {
-    prob.env.slp.code_length = l;
+    prob.params.slp.code_length = l;
     gp::individual ind(prob);
 
     CHECK(ind.is_valid());
@@ -58,7 +58,7 @@ TEST_CASE_FIXTURE(fixture2, "Random creation multicategories")
   // Variable length random creation.
   for (auto l(1); l < 100; ++l)
   {
-    prob.env.slp.code_length = l;
+    prob.params.slp.code_length = l;
     gp::individual ind(prob);
 
     CHECK(ind.is_valid());
@@ -86,7 +86,7 @@ TEST_CASE_FIXTURE(fixture3, "Random creation full-multicategories")
   // Variable length random creation.
   for (auto l(1); l < 100; ++l)
   {
-    prob.env.slp.code_length = l;
+    prob.params.slp.code_length = l;
     gp::individual ind(prob);
 
     CHECK(ind.is_valid());
@@ -140,7 +140,7 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
   // Variable length random creation.
   for (auto l(1); l < 100; ++l)
   {
-    prob.env.slp.code_length = l;
+    prob.params.slp.code_length = l;
     gp::individual ind(prob);
 
     SUBCASE("Exons")
@@ -232,7 +232,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
 {
   using namespace ultra;
 
-  prob.env.slp.code_length = 100;
+  prob.params.slp.code_length = 100;
 
   gp::individual ind(prob);
   const gp::individual orig(ind);
@@ -241,7 +241,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
 
   SUBCASE("Zero probability mutation")
   {
-    prob.env.evolution.p_mutation = 0.0;
+    prob.params.evolution.p_mutation = 0.0;
 
     for (unsigned i(0); i < n; ++i)
     {
@@ -254,7 +254,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
   {
     for (unsigned j(0); j < 10; ++j)
     {
-      prob.env.evolution.p_mutation = random::between(0.1, 0.9);
+      prob.params.evolution.p_mutation = random::between(0.1, 0.9);
       unsigned total_length(0), total_mut(0);
 
       for (unsigned i(0); i < n; ++i)
@@ -277,8 +277,8 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
       }
 
       const double perc(100.0 * total_mut / total_length);
-      CHECK(perc > prob.env.evolution.p_mutation * 100.0 - 5.0);
-      CHECK(perc < prob.env.evolution.p_mutation * 100.0 + 5.0);
+      CHECK(perc > prob.params.evolution.p_mutation * 100.0 - 5.0);
+      CHECK(perc < prob.params.evolution.p_mutation * 100.0 + 5.0);
     }
   }
 }
@@ -287,7 +287,7 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
 {
   using namespace ultra;
 
-  prob.env.slp.code_length = 100;
+  prob.params.slp.code_length = 100;
 
   unsigned different(0);
   const unsigned n(2000);

@@ -16,8 +16,8 @@
 #include <set>
 
 #include "kernel/evaluator.h"
-#include "kernel/environment.h"
 #include "kernel/linear_population.h"
+#include "kernel/parameters.h"
 
 namespace ultra::selection
 {
@@ -29,11 +29,11 @@ template<Evaluator E>
 class strategy
 {
 public:
-  explicit strategy(E &, const environment &);
+  explicit strategy(E &, const parameters &);
 
 protected:
   E &eva_;
-  const environment &env_;
+  const parameters &params_;
 };
 
 ///
@@ -67,7 +67,7 @@ public:
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
-template<Evaluator E> tournament(E &, const environment &) -> tournament<E>;
+template<Evaluator E> tournament(E &, const parameters &) -> tournament<E>;
 
 ///
 /// Alps selection as described in <https://github.com/ghornby/alps>.
@@ -83,7 +83,7 @@ public:
     std::vector<std::reference_wrapper<const P>>) const;
 };
 
-template<Evaluator E> alps(E &, const environment &) -> alps<E>;
+template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
 
 ///
 /// Pick a set of four individuals suited for DE recombination.
@@ -98,7 +98,7 @@ public:
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
-template<Evaluator E> de(E &, const environment &) -> de<E>;
+template<Evaluator E> de(E &, const parameters &) -> de<E>;
 
 #include "kernel/evolution_selection.tcc"
 

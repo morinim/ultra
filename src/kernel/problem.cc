@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,7 +20,7 @@ namespace ultra
 ///
 bool problem::is_valid() const
 {
-  return env.is_valid(false) && sset.is_valid();
+  return params.is_valid(false) && sset.is_valid();
 }
 
 }  // namespace ultra

@@ -24,7 +24,7 @@
 ///
 template<Individual I>
 linear_population<I>::linear_population(const ultra::problem &p)
-  : allowed_(p.env.population.individuals)
+  : allowed_(p.params.population.individuals)
 {
   std::generate_n(std::back_inserter(members_), allowed(),
                   [&p] {return I(p); });

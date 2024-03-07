@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -13,7 +13,7 @@
 #if !defined(ULTRA_PROBLEM_H)
 #define      ULTRA_PROBLEM_H
 
-#include "kernel/environment.h"
+#include "kernel/parameters.h"
 #include "kernel/symbol_set.h"
 
 namespace ultra
@@ -30,7 +30,7 @@ struct problem
 
   [[nodiscard]] virtual bool is_valid() const;
 
-  environment env {};
+  parameters params {};
   symbol_set sset {};
 };
 

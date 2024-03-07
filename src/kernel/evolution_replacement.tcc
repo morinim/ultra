@@ -18,12 +18,12 @@
 #define      ULTRA_EVOLUTION_REPLACEMENT_TCC
 
 ///
-/// \param[in]  eva    current evaluator
-/// \param[in]  env    environment (for replacement specific parameters)
+/// \param[in] eva    current evaluator
+/// \param[in] params access to replacement specific parameters
 ///
 template<Evaluator E>
-strategy<E>::strategy(E &eva, const environment &env)
-  : eva_(eva), env_(env)
+strategy<E>::strategy(E &eva, const parameters &params)
+  : eva_(eva), params_(params)
 {
 }
 
@@ -32,7 +32,7 @@ strategy<E>::strategy(E &eva, const environment &env)
 /// \param[in]  offspring collection of "children"
 /// \param[out] status    current evolution status
 ///
-/// Parameters from the environment:
+/// Used parameters:
 /// - `evolution.elitism`;
 /// - `evolution.tournament_size`;
 ///
@@ -46,9 +46,10 @@ void tournament<E>::operator()(
   static_assert(std::is_same_v<evaluator_individual_t<E>,
                                typename P::value_type>);
 
-  Expects(0<= this->env_.evolution.elitism && this->env_.evolution.elitism<= 1);
+  Expects(0 <= this->params_.evolution.elitism
+          && this->params_.evolution.elitism <= 1);
 
-  const auto rounds(this->env_.evolution.tournament_size);
+  const auto rounds(this->params_.evolution.tournament_size);
   assert(rounds);
 
   auto worst_coord(random::coord(pop));
@@ -70,7 +71,8 @@ void tournament<E>::operator()(
 
   status.update_if_better(scored_individual(offspring, off_fit));
 
-  if (off_fit > worst_fitness || !random::boolean(this->env_.evolution.elitism))
+  if (off_fit > worst_fitness
+      || !random::boolean(this->params_.evolution.elitism))
     pop[worst_coord] = offspring;
 }
 
@@ -134,7 +136,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
     auto worst_fit(this->eva_(pop[worst_coord]));
     auto worst_age(pop[worst_coord].age());
 
-    auto rounds(this->env_.evolution.tournament_size);
+    auto rounds(this->params_.evolution.tournament_size);
     assert(rounds);
 
     while (rounds--)
@@ -179,7 +181,7 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 /// \param[in]  offspring the "incoming" individual
 /// \param[out] status    current evolution status
 ///
-/// Parameters from the environment:
+/// Used parameters:
 /// - `evolution.tournament_size`.
 ///
 template<Evaluator E>

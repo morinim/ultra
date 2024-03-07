@@ -16,7 +16,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-#include "kernel/environment.h"
 #include "kernel/fitness.h"
 #include "kernel/hash_t.h"
 

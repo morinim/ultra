@@ -27,9 +27,9 @@ evolution_strategy<E>::evolution_strategy(const ultra::problem &prob,
 template<Evaluator E>
 alps_es<E>::alps_es(const problem &prob, const E &eva)
   : evolution_strategy<E>(prob, eva),
-    select_(this->eva_, prob.env),
+    select_(this->eva_, prob.params),
     recombine_(this->eva_, prob),
-    replace_(this->eva_, prob.env)
+    replace_(this->eva_, prob.params)
 {
 }
 
@@ -88,7 +88,7 @@ template<Population P>
 void alps_es<E>::after_generation(P &pop,
                                   const summary<individual_t, fitness_t> &sum)
 {
-  const auto &env(pop.problem().env);
+  const auto &params(pop.problem().params);
 
   pop.inc_age();
 
@@ -111,10 +111,10 @@ void alps_es<E>::after_generation(P &pop,
         const bool converged(issmall(sd));
 
         if (converged)
-          layer->allowed(std::max(env.population.min_individuals,
+          layer->allowed(std::max(params.population.min_individuals,
                                   layer->size() / 2));
         else
-          layer->allowed(env.population.individuals);
+          layer->allowed(params.population.individuals);
 
         ++layer;
       }
@@ -122,11 +122,11 @@ void alps_es<E>::after_generation(P &pop,
   }
 
   // Code executed every `age_gap` interval.
-  if (sum.generation && sum.generation % env.alps.age_gap == 0)
+  if (sum.generation && sum.generation % params.alps.age_gap == 0)
   {
     if (const auto n_layers(pop.layers());
-        n_layers < env.alps.max_layers
-        || sum.az.age_dist(n_layers - 1).mean() > env.alps.max_age(n_layers))
+        n_layers < params.alps.max_layers
+        || sum.az.age_dist(n_layers - 1).mean() > params.alps.max_age(n_layers))
       pop.add_layer();
     else
     {
@@ -137,25 +137,25 @@ void alps_es<E>::after_generation(P &pop,
 }
 
 ///
-/// \param[out] env environemnt
-/// \return         a strategy-specific environment
+/// \param[out] params generic parameters
+/// \return            strategy specific parameters
 ///
 /// \remark
 /// ALPS requires at least two layers.
 ///
 template<Evaluator E>
-environment alps_es<E>::shape(environment env)
+parameters alps_es<E>::shape(parameters params)
 {
-  env.alps.max_layers = 8;
-  return env;
+  params.alps.max_layers = 8;
+  return params;
 }
 
 template<Evaluator E>
 std_es<E>::std_es(const problem &prob, const E &eva)
   : evolution_strategy<E>(prob, eva),
-    select_(this->eva_, prob.env),
+    select_(this->eva_, prob.params),
     recombine_(this->eva_, prob),
-    replace_(this->eva_, prob.env)
+    replace_(this->eva_, prob.params)
 {
 }
 
@@ -208,16 +208,16 @@ auto std_es<E>::operations(
 template<Population P>
 bool std_es<E>::stop_condition(const P &pop) const
 {
-  const auto &env(pop.problem().env);
-  Expects(env.max_stuck_time.has_value());
+  const auto &params(pop.problem().params);
+  Expects(params.max_stuck_time.has_value());
 
   const auto &sum(this->sum_);
   Expects(sum->gen >= sum->last_imp);
 
-  // Pay attention to `env.max_stuck_time`: it can be a large number and cause
-  // overflow. E.g. `sum->gen > sum->last_imp + *env.max_stuck_time`
+  // Pay attention to `params.max_stuck_time`: it can be a large number and
+  // cause overflow. E.g. `sum->gen > sum->last_imp + *params.max_stuck_time`
 
-  if (sum->gen - sum->last_imp > *env.max_stuck_time
+  if (sum->gen - sum->last_imp > *params.max_stuck_time
       && issmall(sum->az.fit_dist().variance()))
     return true;
 

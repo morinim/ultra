@@ -51,10 +51,9 @@ public:
   void log_strategy() const {}
 
   /// Sets strategy-specific parameters.
-  /// The default implementation doesn't change the user-specified
-  /// environment. Some evolution strategies force parameters to
-  /// specific values.
-  static environment shape(const environment &env) { return env; }
+  /// The default implementation doesn't change the user-specified parameters.
+  /// Some evolution strategies force parameters to specific values.
+  static parameters shape(const parameters &params) { return params; }
 
   /// Initial setup performed before evolution starts.
   template<Population P> void init(P &) const {}
@@ -133,7 +132,7 @@ public:
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
-  static environment shape(environment);
+  static parameters shape(parameters);
 
 private:
   const selection::alps<E>     select_;
