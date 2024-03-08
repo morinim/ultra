@@ -212,6 +212,13 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
+  if (!stat.layers_file.empty() && !stat.layers_file.has_filename())
+  {
+    ultraERROR << "`stat.layers_file` must specify a file ("
+               << stat.layers_file << ")";
+    return false;
+  }
+
   if (!stat.population_file.empty() && !stat.population_file.has_filename())
   {
     ultraERROR << "`stat.population_file` must specify a file ("

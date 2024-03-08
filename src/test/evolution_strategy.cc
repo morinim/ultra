@@ -179,13 +179,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init")
 
   for (std::size_t l(0); const auto &layer : pop.range_of_layers())
   {
-    if (l < pop.layers() - 1)
-      CHECK(layer.max_age() == prob.params.alps.max_age(l));
-    else
-    {
-      using age_t = decltype(pop.back().max_age());
-      CHECK(layer.max_age() == std::numeric_limits<age_t>::max());
-    }
+    CHECK(layer.max_age() == prob.params.alps.max_age(l, pop.layers()));
 
     ++l;
   }
@@ -201,17 +195,23 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   prob.params.population.individuals = 100;
   prob.params.population.init_layers =   5;
 
+  CHECK(prob.params.population.min_individuals > 0);
+
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   alps_es alps(prob, eva);
   alps.init(pop);
 
+  CHECK(std::ranges::all_of(
+          pop, [](const auto &prg) { return prg.age() == 0; }));
+
   summary<gp::individual, double> sum;
 
   SUBCASE("Typical")
   {
     sum.az = analyze(pop, eva);
+
     alps.after_generation(pop, sum);
 
     CHECK(std::ranges::all_of(

@@ -30,6 +30,7 @@ namespace ultra::alps
 struct parameters
 {
   [[nodiscard]] unsigned max_age(std::size_t) const;
+  [[nodiscard]] unsigned max_age(std::size_t, std::size_t) const;
 
   /// The maximum ages for age layers is monotonically increasing and
   /// different methods can be used for setting these values. Since there is
@@ -60,15 +61,14 @@ struct parameters
 template<LayeredPopulation P>
 void set_age(P &pop)
 {
-  if (!pop.layers())
+  const auto layers(pop.layers());
+  if (!layers)
     return;
 
   const auto &params(pop.problem().params);
 
-  for (std::size_t l(0); l < pop.layers(); ++l)
-    pop.layer(l).max_age(params.alps.max_age(l));
-
-  pop.back().max_age(std::numeric_limits<unsigned>::max());
+  for (std::size_t l(0); l < layers; ++l)
+    pop.layer(l).max_age(params.alps.max_age(l, layers));
 }
 
 template<LayeredPopulation P>

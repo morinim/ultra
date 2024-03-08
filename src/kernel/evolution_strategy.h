@@ -48,7 +48,9 @@ public:
 
   /// Evolution strategy specific log function (it's called by the
   /// `evolution::log` method).
-  void log_strategy() const {}
+  template<Population P> void log_strategy(
+    const P &, const summary<individual_t, fitness_t> &) const
+  {}
 
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified parameters.
@@ -131,6 +133,9 @@ public:
   template<Population P> void init(P &);
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
+
+  template<Population P> void log_strategy(
+    const P &, const summary<individual_t, fitness_t> &) const;
 
   static parameters shape(parameters);
 

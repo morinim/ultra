@@ -74,4 +74,18 @@ unsigned parameters::max_age(std::size_t l) const
   // return num2;
 }
 
+///
+/// \param[in] l      a specific layer
+/// \param[in] layers total number of layers the population is structured on
+/// \return           the maximum allowed age for an individual in layer `l`.
+///                   For individuals in the last layer there isn't a age limit
+///
+unsigned parameters::max_age(std::size_t l, std::size_t layers) const
+{
+  Expects(l < layers);
+
+  return l + 1 == layers ? std::numeric_limits<unsigned>::max()
+                         : max_age(l);
+}
+
 }  // namespace ultra::alps

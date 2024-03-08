@@ -186,6 +186,11 @@ struct parameters
     /// An empty string disable logging.
     std::filesystem::path dynamic_file {};
 
+    /// Name of the log file used to save layer-specific information.
+    /// \note
+    /// An empty string disable logging.
+    std::filesystem::path layers_file {};
+
     /// Name of the log file used to save population-specific information.
     /// \note
     /// An empty string disable logging.

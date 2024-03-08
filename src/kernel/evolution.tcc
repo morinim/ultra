@@ -134,7 +134,7 @@ void evolution<S>::log_evolution() const
     }
   }
 
-  es_.log_strategy();
+  es_.log_strategy(pop_, sum_);
 }
 
 template<Strategy S>
