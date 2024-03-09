@@ -174,7 +174,7 @@ struct parameters
     interval_t<double> weight {0.5, 1.0};
   } de;
 
-  struct statistics_parameters
+  struct statistics
   {
     /// A base common path for the log files.
     /// \note

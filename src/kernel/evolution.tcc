@@ -159,6 +159,21 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
   }
 }
 
+///
+/// Sets the shake function.
+///
+/// \param[in] f the shaking function
+///
+/// The shake function is called every new generation and is used to alter
+/// the environment of the evolution (i.e. it could change the points for a
+/// symbolic regression problem, the examples for a classification task...).
+///
+template<Strategy S>
+void evolution<S>::set_shake_function(const std::function<bool(unsigned)> &f)
+{
+  shake_ = f;
+}
+
 /// The evolutionary core loop.
 ///
 /// \return a partial summary of the search (see notes)
@@ -205,6 +220,9 @@ evolution<S>::run()
 
   for (bool stop(false); !stop; ++sum_.generation)
   {
+    if (shake_)
+      shake_(sum_.generation);
+
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
 
     const auto range(pop_.range_of_layers());

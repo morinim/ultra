@@ -44,6 +44,8 @@ public:
 
   summary<individual_t, fitness_t> run();
 
+  void set_shake_function(const std::function<bool(unsigned)> &);
+
   [[nodiscard]] bool is_valid() const;
 
 private:
@@ -56,6 +58,7 @@ private:
 
   layered_population<individual_t> pop_;
   S es_;
+  std::function<bool(unsigned)> shake_ {};
 };
 
 #include "kernel/evolution.tcc"

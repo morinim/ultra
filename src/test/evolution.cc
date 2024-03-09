@@ -41,4 +41,24 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 }
 
+TEST_CASE_FIXTURE(fixture1, "Shake function")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 30;
+  prob.params.population.init_layers =  4;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  evolution evo(std_es(prob, eva));
+  evo.set_shake_function([i = 0](unsigned gen) mutable
+                         {
+                           CHECK(gen == i);
+                           ++i;
+                           return true;
+                         });
+
+  evo.run();
+}
+
 }  // TEST_SUITE("EVOLUTION")
