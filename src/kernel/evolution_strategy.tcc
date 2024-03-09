@@ -254,30 +254,36 @@ auto std_es<E>::operations(
     };
 }
 
-///
+/*///
 /// We use an accelerated stop condition when:
-/// - after `max_stuck_time` generations the situation doesn't change;
+/// - after `max_stuck_gen` generations the situation doesn't change;
 /// - all the individuals have the same fitness.
 ///
-/*template<Evaluator E>
+template<Evaluator E>
 template<Population P>
-bool std_es<E>::stop_condition(const P &pop) const
+void std_es<E>::after_generation(P &pop,
+                                 const summary<individual_t, fitness_t> &sum)
 {
   Expects(&pop.problem() == &this->problem());
   const auto &params(pop.problem().params);
-  Expects(params.max_stuck_time.has_value());
+  Expects(params.max_stuck_gen.has_value());
 
-  const auto &sum(this->sum_);
-  Expects(sum->gen >= sum->last_imp);
+  std::size_t l_index(0);
 
-  // Pay attention to `params.max_stuck_time`: it can be a large number and
-  // cause overflow. E.g. `sum->gen > sum->last_imp + *params.max_stuck_time`
+  pop.inc_age();
 
-  if (sum->gen - sum->last_imp > *params.max_stuck_time
-      && issmall(sum->az.fit_dist().variance()))
-    return true;
+  const auto layers(pop.range_of_layers());
+  for (auto &layer : layers)
+  {
+    // Pay attention to `params.max_stuck_gen`: it's often a large number and
+    // can cause overflow. E.g.
+    // `sum.generation > sum.last_improvement + params.max_stuck_gen`
+    if (sum.generation - sum.last_improvement() > params.max_stuck_gen
+        && issmall(sum.az.fit_dist(l_index).variance()))
+      layer.reset(pop.problem());
 
-  return false;
+    ++l_index;
+  }
   }*/
 
 #endif  // include guard

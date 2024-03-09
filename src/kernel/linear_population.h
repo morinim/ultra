@@ -70,6 +70,7 @@ public:
   [[nodiscard]] iterator end();
 
   // Misc.
+  void reset(const ultra::problem &);
   void inc_age();
 
   [[nodiscard]] std::shared_mutex &mutex() const;

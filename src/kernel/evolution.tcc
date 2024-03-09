@@ -270,7 +270,7 @@ evolution<S>::run()
 template<Strategy S>
 bool evolution<S>::is_valid() const
 {
-  return true;
+  return pop_.is_valid();
 }
 
 #endif  // include guard

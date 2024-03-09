@@ -26,6 +26,18 @@ template<Individual I>
 linear_population<I>::linear_population(const ultra::problem &p)
   : allowed_(p.params.population.individuals)
 {
+  reset(p);
+}
+
+///
+/// Clear the current population and creates a new random one.
+///
+/// \param[in] p current problem
+///
+template<Individual I>
+void linear_population<I>::reset(const ultra::problem &p)
+{
+  members_.clear();
   std::generate_n(std::back_inserter(members_), allowed(),
                   [&p] {return I(p); });
 }
