@@ -45,6 +45,7 @@ parameters &parameters::init()
   evolution.elitism = 1.0;
   evolution.generations = 100;
   evolution.mate_zone = 20;
+  evolution.max_stuck_gen = std::numeric_limits<unsigned>::max();
   evolution.p_cross = 0.9;
   evolution.p_mutation = 0.04;
   evolution.tournament_size = 5;
@@ -96,6 +97,12 @@ bool parameters::is_valid(bool force_defined) const
     if (!evolution.mate_zone)
     {
       ultraERROR << "Undefined `evolution.mate_zone` data member";
+      return false;
+    }
+
+    if (!evolution.max_stuck_gen)
+    {
+      ultraERROR << "Undefined `evolution.max_stuck_gen` data member";
       return false;
     }
 

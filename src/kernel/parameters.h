@@ -125,6 +125,12 @@ struct parameters
     /// \see https://github.com/morinim/ultra/wiki/bibliography#3
     std::size_t mate_zone {0};
 
+    /// Used by some evolution strategies to stop evolution when there aren't
+    /// improvements within the given number of generations.
+    ///
+    /// `0` means auto-tune.
+    unsigned max_stuck_gen = {0};
+
     /// Crossover probability.
     ///
     /// \note

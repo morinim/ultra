@@ -254,7 +254,7 @@ auto std_es<E>::operations(
     };
 }
 
-/*///
+///
 /// We use an accelerated stop condition when:
 /// - after `max_stuck_gen` generations the situation doesn't change;
 /// - all the individuals have the same fitness.
@@ -266,7 +266,7 @@ void std_es<E>::after_generation(P &pop,
 {
   Expects(&pop.problem() == &this->problem());
   const auto &params(pop.problem().params);
-  Expects(params.max_stuck_gen.has_value());
+  Expects(params.evolution.max_stuck_gen);
 
   std::size_t l_index(0);
 
@@ -278,12 +278,12 @@ void std_es<E>::after_generation(P &pop,
     // Pay attention to `params.max_stuck_gen`: it's often a large number and
     // can cause overflow. E.g.
     // `sum.generation > sum.last_improvement + params.max_stuck_gen`
-    if (sum.generation - sum.last_improvement() > params.max_stuck_gen
+    if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
         && issmall(sum.az.fit_dist(l_index).variance()))
       layer.reset(pop.problem());
 
     ++l_index;
   }
-  }*/
+}
 
 #endif  // include guard

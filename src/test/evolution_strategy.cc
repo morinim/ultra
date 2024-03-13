@@ -348,4 +348,51 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "Standard init / after_generation")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 100;
+  prob.params.population.init_layers =   1;
+
+  layered_population<gp::individual> pop(prob);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  std_es es(prob, eva);
+
+  CHECK(std::ranges::all_of(
+          pop, [](const auto &prg) { return prg.age() == 0; }));
+
+  summary<gp::individual, double> sum;
+
+  SUBCASE("Typical")
+  {
+    sum.az = analyze(pop, eva);
+
+    const auto before(pop);
+    es.after_generation(pop, sum);
+    CHECK(std::ranges::equal(pop, before));
+
+    CHECK(std::ranges::all_of(
+            pop, [](const auto &prg) { return prg.age() == 1; }));
+  }
+
+  SUBCASE("Converged")
+  {
+    gp::individual dummy(prob);
+    std::ranges::fill(pop, dummy);
+
+    prob.params.evolution.max_stuck_gen = 10;
+    sum.az = analyze(pop, eva);
+    sum.generation = prob.params.evolution.max_stuck_gen + 1;
+
+    const auto before(pop);
+    es.after_generation(pop, sum);
+    CHECK(!std::ranges::equal(pop, before));
+
+    CHECK(std::ranges::all_of(
+            pop, [](const auto &prg) { return prg.age() == 0; }));
+  }
+}
+
 }  // TEST_SUITE("EVOLUTION STRATEGY")

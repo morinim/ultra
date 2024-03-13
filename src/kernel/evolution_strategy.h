@@ -161,8 +161,8 @@ public:
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 
-  //template<Population P> void after_generation(
-  //  P &, const summary<individual_t, fitness_t> &);
+  template<Population P> void after_generation(
+    P &, const summary<individual_t, fitness_t> &);
 
 private:
   const selection::tournament<E>   select_;
