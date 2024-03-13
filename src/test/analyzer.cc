@@ -29,7 +29,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   using namespace ultra;
 
   constexpr double sup_fit(10.0);
-  const auto eva([](const auto &) { return random::sup(sup_fit); });
+  const auto eva([](const gp::individual &) { return random::sup(sup_fit); });
 
   for (std::size_t l(1); l < 3; ++l)
     for (std::size_t i(1); i < 50; ++i)
@@ -42,29 +42,29 @@ TEST_CASE_FIXTURE(fixture1, "Base")
         layered_population<gp::individual> pop(prob);
 
         analyzer<gp::individual, double> az;
-
         for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
-          az.add(*it, eva(*it) / l, it.layer());
+          az.add(*it, eva(*it) / l, it.uid());
 
         const auto n(l * i);
         CHECK(az.age_dist().size() == n);
         CHECK(az.fit_dist().size() == n);
         CHECK(az.length_dist().size() == n);
 
-        for (std::size_t j(0); j < l; ++j)
+        for (const auto range = pop.range_of_layers();
+             const auto &layer : range)
         {
-          CHECK(az.age_dist(j).size() == i);
-          CHECK(az.fit_dist(j).size() == i);
-          CHECK(az.length_dist(j).size() == i);
+          CHECK(az.age_dist(layer).size() == i);
+          CHECK(az.fit_dist(layer).size() == i);
+          CHECK(az.length_dist(layer).size() == i);
 
-          CHECK(az.age_dist(j).min() >= az.age_dist().min());
-          CHECK(az.age_dist(j).max() <= az.age_dist().max());
+          CHECK(az.age_dist(layer).min() >= az.age_dist().min());
+          CHECK(az.age_dist(layer).max() <= az.age_dist().max());
 
-          CHECK(az.fit_dist(j).min() >= az.fit_dist().min());
-          CHECK(az.fit_dist(j).max() <= az.fit_dist().max());
+          CHECK(az.fit_dist(layer).min() >= az.fit_dist().min());
+          CHECK(az.fit_dist(layer).max() <= az.fit_dist().max());
 
-          CHECK(az.length_dist(j).min() >= az.length_dist().min());
-          CHECK(az.length_dist(j).max() <= az.length_dist().max());
+          CHECK(az.length_dist(layer).min() >= az.length_dist().min());
+          CHECK(az.length_dist(layer).max() <= az.length_dist().max());
         }
 
         CHECK(az.age_dist().min() == doctest::Approx(az.age_dist().max()));
@@ -75,4 +75,4 @@ TEST_CASE_FIXTURE(fixture1, "Base")
       }
 }
 
-}  // TEST_SUITE("FUNCTION")
+}  // TEST_SUITE("ANALYZER")

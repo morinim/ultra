@@ -265,6 +265,12 @@ bool linear_population<I>::save(std::ostream &out) const
   return out.good();
 }
 
+template<Individual I>
+app_level_uid linear_population<I>::uid() const noexcept
+{
+  return uid_;
+}
+
 ///
 /// \return `true` if the object passes the internal consistency check
 ///

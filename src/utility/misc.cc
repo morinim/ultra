@@ -10,6 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <atomic>
+
 #include "utility/misc.h"
 #include "kernel/nullary.h"
 
@@ -208,6 +210,21 @@ std::string lexical_cast<std::string>(std::chrono::milliseconds d)
   }
 
   return ss.str();
+}
+
+app_level_uid::operator unsigned() const noexcept
+{
+  return val_;
+}
+
+unsigned app_level_uid::next_id() noexcept
+{
+  // The initialisation is thread-safe because it's static and C++11 guarantees
+  // that static initialisation will be thread-safe. Subsequent access will be
+  // thread-safe because it's an atomic.
+  static std::atomic<unsigned> count(0);
+
+  return count++;
 }
 
 }  // namespace ultra

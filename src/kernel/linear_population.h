@@ -50,15 +50,17 @@ public:
   [[nodiscard]] const I &operator[](std::size_t) const;
 
   [[nodiscard]] std::size_t size() const;
-
   [[nodiscard]] bool empty() const;
-  void clear();
 
   [[nodiscard]] std::size_t allowed() const;
   void allowed(std::size_t);
 
   [[nodiscard]] unsigned max_age() const;
   void max_age(unsigned);
+
+  [[nodiscard]] app_level_uid uid() const noexcept;
+
+  void clear();
 
   void push_back(const I &);
   void pop_back();
@@ -88,6 +90,8 @@ private:
   std::size_t allowed_ {0};
 
   unsigned max_age_ {std::numeric_limits<unsigned>::max()};
+
+  ignore_copy<app_level_uid> uid_ {};
 };
 
 namespace random

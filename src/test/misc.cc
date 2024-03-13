@@ -205,4 +205,14 @@ TEST_CASE("get_index")
     CHECK(get_index(v[i], v) == i);
 }
 
-}  // TEST_SUITE("BASE")
+TEST_CASE("app_level_uid")
+{
+  using namespace ultra;
+
+  const app_level_uid id1;
+  const app_level_uid id2;
+
+  CHECK(id1 + 1 == id2);
+}
+
+}  // TEST_SUITE("MISC")

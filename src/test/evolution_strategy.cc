@@ -231,7 +231,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     pop.front() = pop.layer(1);
 
     sum.az = analyze(pop, eva);
-    CHECK(almost_equal(sum.az.fit_dist(0).mean(), sum.az.fit_dist(1).mean()));
+    CHECK(almost_equal(sum.az.fit_dist(pop.front()).mean(),
+                       sum.az.fit_dist(pop.layer(1)).mean()));
 
     alps.after_generation(pop, sum);
 
@@ -248,15 +249,15 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   {
     const gp::individual clone(prob);
 
-    for (auto &prg : pop.layer(1))
-      prg = clone;
+    auto &layer1(pop.layer(1));
+    std::ranges::fill(layer1, clone);
 
     sum.az = analyze(pop, eva);
-    CHECK(issmall(sum.az.fit_dist(1).standard_deviation()));
+    CHECK(issmall(sum.az.fit_dist(layer1).standard_deviation()));
 
     alps.after_generation(pop, sum);
 
-    CHECK(pop.layer(1).allowed() < pop.layer(1).size());
+    CHECK(layer1.allowed() < layer1.size());
     CHECK(pop.layers() == prob.params.population.init_layers);
   }
 
@@ -379,8 +380,8 @@ TEST_CASE_FIXTURE(fixture1, "Standard init / after_generation")
 
   SUBCASE("Converged")
   {
-    gp::individual dummy(prob);
-    std::ranges::fill(pop, dummy);
+    gp::individual clone(prob);
+    std::ranges::fill(pop, clone);
 
     prob.params.evolution.max_stuck_gen = 10;
     sum.az = analyze(pop, eva);

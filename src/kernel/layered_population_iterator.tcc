@@ -88,9 +88,9 @@ public:
   /// \return        `true` if iterators point to correspondant individuals
   [[nodiscard]] bool operator==(const base_iterator &) const noexcept = default;
 
-  [[nodiscard]] std::size_t layer() const noexcept
+  [[nodiscard]] std::size_t uid() const noexcept
   {
-    return std::distance(begin_, layer_);
+    return layer_->uid();
   }
 
   /// \return reference to the current individual
@@ -107,7 +107,7 @@ public:
 
   friend std::ostream &operator<<(std::ostream &out, const base_iterator &i)
   {
-    out << '[' << i.layer() << ',' << i.index_ << ']';
+    out << '[' << i.uid() << ',' << i.index_ << ']';
     return out;
   }
 

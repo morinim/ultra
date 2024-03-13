@@ -48,9 +48,12 @@ public:
   [[nodiscard]] const distribution<F> &fit_dist() const;
   [[nodiscard]] const distribution<double> &length_dist() const;
 
-  [[nodiscard]] const distribution<double> &age_dist(unsigned) const;
-  [[nodiscard]] const distribution<F> &fit_dist(unsigned) const;
-  [[nodiscard]] const distribution<double> &length_dist(unsigned) const;
+  template<Population P> [[nodiscard]] const distribution<double> &age_dist(
+    const P &) const;
+  template<Population P> [[nodiscard]] const distribution<F> &fit_dist(
+    const P &) const;
+  template<Population P> [[nodiscard]] const distribution<double> &length_dist(
+    const P &) const;
 
   [[nodiscard]] bool is_valid() const;
 

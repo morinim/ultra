@@ -97,18 +97,14 @@ void alps_es<E>::after_generation(P &pop,
 
   if (pop.layers() > 1)
   {
-    std::size_t l_index(1);
-
-    for (auto layer(std::next(layers.begin()));
-         layer != layers.end();
-         ++l_index)
+    for (auto layer(std::next(layers.begin())); layer != layers.end();)
     {
-      if (almost_equal(sum.az.fit_dist(l_index - 1).mean(),
-                       sum.az.fit_dist(l_index).mean()))
+      if (almost_equal(sum.az.fit_dist(*std::prev(layer)).mean(),
+                       sum.az.fit_dist(*layer).mean()))
         layer = pop.erase(layer);
       else
       {
-        const auto sd(sum.az.fit_dist(l_index).standard_deviation());
+        const auto sd(sum.az.fit_dist(*layer).standard_deviation());
         const bool converged(issmall(sd));
 
         if (converged)
@@ -127,7 +123,7 @@ void alps_es<E>::after_generation(P &pop,
   {
     if (const auto n_layers(pop.layers());
         n_layers < params.alps.max_layers
-        || sum.az.age_dist(n_layers - 1).mean() > params.alps.max_age(n_layers))
+        || sum.az.age_dist(pop.back()).mean() > params.alps.max_age(n_layers))
       pop.add_layer();
     else
     {
@@ -190,8 +186,10 @@ void alps_es<E>::log_strategy(
     else
       f_lys << ma + 1;
 
-    const auto &age_dist(sum.az.age_dist(l));
-    const auto &fit_dist(sum.az.fit_dist(l));
+    const auto &current_layer(pop.layer(l));
+
+    const auto &age_dist(sum.az.age_dist(current_layer));
+    const auto &fit_dist(sum.az.fit_dist(current_layer));
 
     f_lys << ' ' << age_dist.mean()
           << ' ' << age_dist.standard_deviation()
@@ -201,7 +199,7 @@ void alps_es<E>::log_strategy(
           << ' ' << fit_dist.standard_deviation()
           << ' ' << fit_dist.min()
           << '-' << fit_dist.max()
-          << ' ' << pop.layer(l).size() << '\n';
+          << ' ' << current_layer.size() << '\n';
   }
 }
 
@@ -268,21 +266,16 @@ void std_es<E>::after_generation(P &pop,
   const auto &params(pop.problem().params);
   Expects(params.evolution.max_stuck_gen);
 
-  std::size_t l_index(0);
-
   pop.inc_age();
 
-  const auto layers(pop.range_of_layers());
-  for (auto &layer : layers)
+  for (const auto layers(pop.range_of_layers()); auto &layer : layers)
   {
     // Pay attention to `params.max_stuck_gen`: it's often a large number and
     // can cause overflow. E.g.
     // `sum.generation > sum.last_improvement + params.max_stuck_gen`
     if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
-        && issmall(sum.az.fit_dist(l_index).variance()))
+        && issmall(sum.az.fit_dist(layer).variance()))
       layer.reset(pop.problem());
-
-    ++l_index;
   }
 }
 

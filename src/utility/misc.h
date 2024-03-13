@@ -26,14 +26,6 @@
 namespace ultra
 {
 
-[[nodiscard]] bool is_number(std::string);
-[[nodiscard]] bool iequals(const std::string &, const std::string &);
-[[nodiscard]] std::string replace(std::string, const std::string &,
-                                  const std::string &);
-[[nodiscard]] std::string replace_all(std::string, const std::string &,
-                                      const std::string &);
-[[nodiscard]] std::string trim(const std::string &);
-
 // *******************************************************************
 // Concepts
 // *******************************************************************
@@ -187,28 +179,54 @@ private:
 };
 
 ///
-/// A utility class for dealing with the "problem" of noncopyable mutexes.
+/// A utility class for dealing with the "problem" of noncopyable objects.
 ///
-/// In order to copy objects containing a mutex you have to write a custom
+/// Typical use cases are classes containing a mutex or an unique id.
+///
+/// E.g. in order to copy objects containing a mutex you have to write a custom
 /// copy constructor and copy assignment operator (breaking the *Rule of Zero*).
 /// Often you don't need to copy the mutex to copy the object because the mutex
 /// isn't part of the object's value, it's just there as a tool to protect
 /// access.
 ///
 template<class M>
-requires requires (M m) { m.lock(); m.unlock(); }
 class ignore_copy : public M
 {
 public:
   ignore_copy() = default;
-  ignore_copy(const ignore_copy &) {}
+  ignore_copy(const ignore_copy &) noexcept {}
 
-  const ignore_copy &operator=(const ignore_copy &) const { return *this; }
+  const ignore_copy &operator=(const ignore_copy &) const noexcept
+  { return *this; }
+};
+
+///
+/// An application-level numerical unique id.
+///
+class app_level_uid
+{
+public:
+  app_level_uid() noexcept = default;
+
+  [[nodiscard]] operator unsigned() const noexcept;
+
+private:
+  [[nodiscard]] static unsigned next_id() noexcept;
+
+  const unsigned val_ {next_id()};
 };
 
 // *******************************************************************
 // Functions
 // *******************************************************************
+[[nodiscard]] bool is_number(std::string);
+[[nodiscard]] bool iequals(const std::string &, const std::string &);
+[[nodiscard]] std::string replace(std::string, const std::string &,
+                                  const std::string &);
+[[nodiscard]] std::string replace_all(std::string, const std::string &,
+                                      const std::string &);
+[[nodiscard]] std::string trim(const std::string &);
+
 ///
 /// Check if a value is almost equal to zero.
 ///

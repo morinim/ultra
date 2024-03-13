@@ -23,7 +23,7 @@
 template<Individual I, Fitness F>
 void analyzer<I, F>::clear()
 {
-  *this = analyzer<I, F>();
+  *this = {};
 }
 
 ///
@@ -36,14 +36,15 @@ const distribution<double> &analyzer<I, F>::age_dist() const
 }
 
 ///
-/// \param[in] g a group
+/// \param[in] g a population / subpopulation
 /// \return      statistics about the age distribution of individuals in group
 ///              `g`
 ///
 template<Individual I, Fitness F>
-const distribution<double> &analyzer<I, F>::age_dist(unsigned g) const
+template<Population P>
+const distribution<double> &analyzer<I, F>::age_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g));
+  const auto gi(group_stat_.find(g.uid()));
   assert(gi != group_stat_.end());
 
   return gi->second.age;
@@ -59,14 +60,15 @@ const distribution<F> &analyzer<I, F>::fit_dist() const
 }
 
 ///
-/// \param[in] g a group
+/// \param[in] g a population / subpopulation
 /// \return      statistics about the fitness distribution of individuals in
 ///              group `g`
 ///
 template<Individual I, Fitness F>
-const distribution<F> &analyzer<I, F>::fit_dist(unsigned g) const
+template<Population P>
+const distribution<F> &analyzer<I, F>::fit_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g));
+  const auto gi(group_stat_.find(g.uid()));
   assert(gi != group_stat_.end());
 
   return gi->second.fitness;
@@ -82,14 +84,15 @@ const distribution<double> &analyzer<I, F>::length_dist() const
 }
 
 ///
-/// \param[in] g a group
+/// \param[in] g a population / subpopulation
 /// \return      statistics about the length distribution of individuals in
 ///              group `g`
 ///
 template<Individual I, Fitness F>
-const distribution<double> &analyzer<I, F>::length_dist(unsigned g) const
+template<Population P>
+const distribution<double> &analyzer<I, F>::length_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g));
+  const auto gi(group_stat_.find(g.uid()));
   assert(gi != group_stat_.end());
 
   return gi->second.length;
@@ -142,7 +145,7 @@ template<Population P, Evaluator E>
   analyzer<evaluator_individual_t<E>, evaluator_fitness_t<E>> az;
 
   for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
-    az.add(*it, eva(*it), it.layer());
+    az.add(*it, eva(*it), it.uid());
 
   return az;
 }
