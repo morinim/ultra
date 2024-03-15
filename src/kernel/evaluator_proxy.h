@@ -30,7 +30,10 @@ template<Evaluator E>
 class evaluator_proxy
 {
 public:
-  evaluator_proxy(E, unsigned);
+  using bits = typename cache<evaluator_fitness_t<E>>::bits;
+
+  explicit evaluator_proxy(E);
+  evaluator_proxy(E, bits);
 
   // Serialization.
   bool load(std::istream &);
@@ -39,7 +42,7 @@ public:
   void clear();
 
   [[nodiscard]] evaluator_fitness_t<E> operator()(
-    const evaluator_individual_t<E> &);
+    const evaluator_individual_t<E> &) const;
 
   [[nodiscard]] evaluator_fitness_t<E> fast(const evaluator_individual_t<E> &);
 
@@ -48,7 +51,7 @@ private:
   E eva_;
 
   // Hash table cache.
-  cache<evaluator_fitness_t<E>> cache_;
+  static cache<evaluator_fitness_t<E>> cache_;
 };
 
 #include "kernel/evaluator_proxy.tcc"

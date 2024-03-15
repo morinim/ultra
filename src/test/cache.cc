@@ -23,16 +23,22 @@
 #include "test/fixture1.h"
 
 
-[[nodiscard]] bool approx_equal(double v1, double v2)
-{
-  if (std::isinf(v1) && std::isinf(v2) && std::signbit(v1) == std::signbit(v2))
-    return true;
-
-  return v1 == doctest::Approx(v2);
-}
-
 TEST_SUITE("CACHE")
 {
+
+TEST_CASE_FIXTURE(fixture1, "Constructor")
+{
+  using namespace ultra;
+
+  cache<double> cache;
+  CHECK(!cache.get_bits());
+
+  for (unsigned i(1); i < 8; ++i)
+  {
+    cache.resize(i);
+    CHECK(cache.get_bits() == i);
+  }
+}
 
 TEST_CASE_FIXTURE(fixture1, "Insert/Find cycle")
 {
@@ -52,7 +58,7 @@ TEST_CASE_FIXTURE(fixture1, "Insert/Find cycle")
 
     const auto *sf(cache.find(i1.signature()));
     CHECK(sf);
-    CHECK(approx_equal(*sf, f));
+    CHECK(almost_equal(*sf, f));
   }
 }
 
@@ -82,7 +88,7 @@ TEST_CASE_FIXTURE(fixture1, "Collision detection")
       const auto val(run(vi[i]));
 
       const auto f1{has_value(val) ? std::get<D_DOUBLE>(val) : 0.0};
-      CHECK(approx_equal(*f, f1));
+      CHECK(almost_equal(*f, f1));
     }
 }
 
@@ -124,7 +130,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
       const auto *f(cache2.find(vi[i].signature()));
       CHECK(f);
-      CHECK(approx_equal(*f, f1));
+      CHECK(almost_equal(*f, f1));
     }
 }
 

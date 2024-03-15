@@ -25,8 +25,7 @@
 namespace ultra
 {
 
-template<class F,
-         class I = closure_arg_t<F>>
+template<class F, class I = closure_arg_t<F>>
 concept Evaluator =
   Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
 

@@ -18,15 +18,32 @@
 #define      ULTRA_CACHE_TCC
 
 ///
-/// Creates a new hash table.
+/// Creates a new, not empty, hash table.
 ///
-/// \param[in] bits `2^bits` is the number of elements of the table
+/// \param[in] n `2^n` is the number of elements of the table
 ///
 template<Fitness F>
-cache<F>::cache(unsigned bits) : k_mask((1ull << bits) - 1),
-                                 table_(1ull << bits)
+cache<F>::cache(bits n) : table_(1ull << n), k_mask((1ull << n) - 1)
 {
-  Expects(bits);
+  Expects(n);
+  Ensures(is_valid());
+}
+
+///
+/// Resize the cache.
+///
+/// \param[in] n `2^n` is the new number of elements of the table
+///
+/// \warning
+/// This is a destructive operation: content of the cache will be lost.
+///
+template<Fitness F>
+void cache<F>::resize(bits n)
+{
+  Expects(n);
+
+  *this = cache(n);
+
   Ensures(is_valid());
 }
 
@@ -35,8 +52,9 @@ cache<F>::cache(unsigned bits) : k_mask((1ull << bits) - 1),
 /// \return      an index in the hash table
 ///
 template<Fitness F>
-inline std::size_t cache<F>::index(const hash_t &h) const
+inline std::size_t cache<F>::index(const hash_t &h) const noexcept
 {
+  Expects(k_mask);
   return h.data[0] & k_mask;
 }
 
@@ -118,7 +136,7 @@ bool cache<F>::load(std::istream &in)
   if (!(in >> n))
     return false;
 
-  for (std::size_t i(0); i < n; ++i)
+  while (n)
   {
     slot s;
     s.seal = t_seal;
@@ -129,6 +147,8 @@ bool cache<F>::load(std::istream &in)
       return false;
 
     table_[index(s.hash)] = s;
+
+    --n;
   }
 
   seal_ = t_seal;
@@ -166,12 +186,31 @@ bool cache<F>::save(std::ostream &out) const
 }
 
 ///
+/// \return number of bits used for hash table initialization
+///
+template<Fitness F>
+cache<F>::bits cache<F>::get_bits() const
+{
+  std::shared_lock lock(mutex_);
+
+  return std::bit_width(k_mask);
+}
+
+///
 /// \return `true` if the object passes the internal consistency check
 ///
 template<Fitness F>
 bool cache<F>::is_valid() const
 {
-  return seal_ > 0;
+  std::shared_lock lock(mutex_);
+
+  if (seal_ == 0)
+    return false;
+
+  if (table_.empty())
+    return k_mask == 0;
+
+  return std::has_single_bit(table_.size()) && table_.size() - 1 == k_mask;
 }
 
 #endif  // include guard

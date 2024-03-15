@@ -33,7 +33,13 @@ template<Fitness F>
 class cache
 {
 public:
-  explicit cache(unsigned);
+  using bits = unsigned;
+
+  cache() = default;  // empty cache
+  explicit cache(bits);
+
+  void resize(bits);
+  [[nodiscard]] bits get_bits() const;
 
   void clear();
   void clear(const hash_t &);
@@ -50,7 +56,7 @@ public:
 
 private:
   // Private support methods.
-  [[nodiscard]] std::size_t index(const hash_t &) const;
+  [[nodiscard]] std::size_t index(const hash_t &) const noexcept;
 
   // Private data members.
   struct slot
@@ -60,13 +66,13 @@ private:
     /// The stored fitness of an individual.
     F     fitness;
     /// Valid slots are recognized comparing their seal with the current one.
-    unsigned seal;
+    unsigned seal {0};
   };
 
-  mutable std::shared_mutex mutex_ {};
+  mutable ignore_copy<std::shared_mutex> mutex_ {};
 
-  const std::uint64_t k_mask {};
-  std::vector<slot>   table_ {};
+  std::vector<slot> table_ {};
+  std::uint64_t k_mask {0};
   decltype(slot::seal) seal_ {1};
 };
 

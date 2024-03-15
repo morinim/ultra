@@ -335,7 +335,8 @@ template<std::ranges::contiguous_range C>
 /// \return       `true` if the difference between `v1` and `v2` is *small*
 ///               compared to their magnitude
 ///
-/// \note Code from Bruce Dawson:
+/// \note
+/// Code from Bruce Dawson (modified considering Pavel Celba's comment):
 /// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 ///
 template<std::floating_point T>
@@ -356,7 +357,7 @@ template<std::floating_point T>
   v1 = std::abs(v1);
   v2 = std::abs(v2);
 
-  // Handles the `v1 == +inf` / `v2 == /inf` case.
+  // Handles the `v1 == +inf` / `v2 == -inf` case.
   if (std::equal_to()(v1, v2) && std::equal_to()(diff, v1))
     return false;
 

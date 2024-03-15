@@ -17,15 +17,27 @@
 #if !defined(ULTRA_EVALUATOR_PROXY_TCC)
 #define      ULTRA_EVALUATOR_PROXY_TCC
 
+template<Evaluator E>
+cache<evaluator_fitness_t<E>> evaluator_proxy<E>::cache_ {};
+
 ///
-/// \param[in] eva pointer that lets the proxy access the real evaluator
+/// \param[in] eva the "real" evaluator
 /// \param[in] ts  `2^ts` is the number of elements of the cache
 ///
 template<Evaluator E>
-evaluator_proxy<E>::evaluator_proxy(E eva, unsigned ts)
-  : eva_(std::move(eva)), cache_(ts)
+evaluator_proxy<E>::evaluator_proxy(E eva, bits ts) : eva_(std::move(eva))
 {
-  Expects(ts > 6);
+  Expects(ts);
+  cache_.resize(ts);
+}
+
+///
+/// \param[in] eva the "real" evaluator
+///
+template<Evaluator E>
+evaluator_proxy<E>::evaluator_proxy(E eva) : eva_(std::move(eva))
+{
+  Expects(cache_.get_bits());
 }
 
 ///
@@ -34,8 +46,10 @@ evaluator_proxy<E>::evaluator_proxy(E eva, unsigned ts)
 ///
 template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
-  const evaluator_individual_t<E> &prg)
+  const evaluator_individual_t<E> &prg) const
 {
+  Expects(cache_.get_bits());
+
   auto *cached_fit(cache_.find(prg.signature()));
 
   if (cached_fit)
