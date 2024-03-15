@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -43,7 +43,7 @@ int main()
   volatile std::size_t out(0);
   const unsigned sup(100000000);
 
-  const std::vector<detail::w_symbol::weight_t> weights =
+  const std::vector<internal::w_symbol::weight_t> weights =
   {
     100, 200, 50, 50, 70, 50, 50, 50, 50, 50, 70, 100, 200, 50, 50, 200
   };
@@ -52,22 +52,22 @@ int main()
 
   const std::vector syms =
   {
-    detail::w_symbol( &ultra_abs, weights[ 0]),
-    detail::w_symbol( &ultra_add, weights[ 1]),
-    detail::w_symbol(  &ultra_aq, weights[ 2]),
-    detail::w_symbol( &ultra_cos, weights[ 3]),
-    detail::w_symbol( &ultra_div, weights[ 4]),
-    detail::w_symbol( &ultra_ife, weights[ 5]),
-    detail::w_symbol( &ultra_ifl, weights[ 6]),
-    detail::w_symbol( &ultra_ifz, weights[ 7]),
-    detail::w_symbol(  &ultra_ln, weights[ 8]),
-    detail::w_symbol( &ultra_max, weights[ 9]),
-    detail::w_symbol( &ultra_mod, weights[10]),
-    detail::w_symbol( &ultra_mul, weights[11]),
-    detail::w_symbol(&ultra_real, weights[12]),
-    detail::w_symbol( &ultra_sin, weights[13]),
-    detail::w_symbol(&ultra_sqrt, weights[14]),
-    detail::w_symbol( &ultra_sub, weights[15])
+    internal::w_symbol( &ultra_abs, weights[ 0]),
+    internal::w_symbol( &ultra_add, weights[ 1]),
+    internal::w_symbol(  &ultra_aq, weights[ 2]),
+    internal::w_symbol( &ultra_cos, weights[ 3]),
+    internal::w_symbol( &ultra_div, weights[ 4]),
+    internal::w_symbol( &ultra_ife, weights[ 5]),
+    internal::w_symbol( &ultra_ifl, weights[ 6]),
+    internal::w_symbol( &ultra_ifz, weights[ 7]),
+    internal::w_symbol(  &ultra_ln, weights[ 8]),
+    internal::w_symbol( &ultra_max, weights[ 9]),
+    internal::w_symbol( &ultra_mod, weights[10]),
+    internal::w_symbol( &ultra_mul, weights[11]),
+    internal::w_symbol(&ultra_real, weights[12]),
+    internal::w_symbol( &ultra_sin, weights[13]),
+    internal::w_symbol(&ultra_sqrt, weights[14]),
+    internal::w_symbol( &ultra_sub, weights[15])
   };
 
   // -------------------------------------------------------------------------
@@ -164,7 +164,7 @@ int main()
   // a computer is to create a big table where each outcome `i` is inserted a
   // number of times proportional to `P(X=i)`.
 
-  std::vector<detail::w_symbol> big_syms;
+  std::vector<internal::w_symbol> big_syms;
   for (const auto &ws : syms)
     for (unsigned i(0); i < ws.weight; ++i)
       big_syms.push_back(ws);

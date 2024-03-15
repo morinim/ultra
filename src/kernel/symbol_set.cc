@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,7 +20,7 @@
 namespace ultra
 {
 
-namespace detail
+namespace internal
 {
 
 // ****************************** w_symbol ******************************
@@ -180,10 +180,10 @@ bool collection::is_valid() const
     return false;
   }
 
-  if (std::ranges::any_of(functions, detail::is_function))
+  if (std::ranges::any_of(functions, internal::is_function))
     return false;
 
-  if (std::ranges::any_of(terminals, detail::is_terminal))
+  if (std::ranges::any_of(terminals, internal::is_terminal))
     return false;
 
   for (const auto &s : all)
@@ -237,7 +237,7 @@ bool collection::is_valid() const
   return ssize == functions.size() + terminals.size();
 }
 
-}  // namespace detail
+}  // namespace internal
 
 ///
 /// Clears the current symbol set.
@@ -280,7 +280,7 @@ symbol *symbol_set::insert(std::unique_ptr<symbol> new_sym, weight_t w)
     views_.emplace_back("Collection " + std::to_string(i));
   assert(category < views_.size());
 
-  const detail::w_symbol ws(s, w);
+  const internal::w_symbol ws(s, w);
   views_[category].insert(ws);
 
   return s;

@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -22,7 +22,7 @@
 namespace ultra
 {
 
-namespace detail
+namespace internal
 {
 
 struct w_symbol
@@ -96,7 +96,7 @@ private:
   std::string name_;
 };
 
-}  // namespace detail
+}  // namespace internal
 
 ///
 /// A container for the symbols used by the engine.
@@ -112,8 +112,8 @@ private:
 class symbol_set
 {
 public:
-  using weight_t = detail::w_symbol::weight_t;
-  static constexpr weight_t default_weight = detail::w_symbol::base_weight;
+  using weight_t = internal::w_symbol::weight_t;
+  static constexpr weight_t default_weight = internal::w_symbol::base_weight;
 
   symbol_set() = default;
 
@@ -158,7 +158,7 @@ private:
   // symbols:
   // - `views_.back().all.size()` is equal to the total number of symbols
   // - `views_[0].all.size()` is the number of symbols in category `0`
-  std::vector<detail::collection> views_ {};
+  std::vector<internal::collection> views_ {};
 };
 
 ///
