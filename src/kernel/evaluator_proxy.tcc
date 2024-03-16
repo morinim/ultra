@@ -37,7 +37,6 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva))
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva) : eva_(std::move(eva))
 {
-  Expects(cache_.bits());
 }
 
 ///
@@ -48,7 +47,8 @@ template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
   const evaluator_individual_t<E> &prg) const
 {
-  Expects(cache_.bits());
+  if (!cache_.bits())
+    return eva_(prg);
 
   auto *cached_fit(cache_.find(prg.signature()));
 
