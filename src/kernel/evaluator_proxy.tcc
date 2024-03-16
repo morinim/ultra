@@ -25,7 +25,7 @@ cache<evaluator_fitness_t<E>> evaluator_proxy<E>::cache_ {};
 /// \param[in] ts  `2^ts` is the number of elements of the cache
 ///
 template<Evaluator E>
-evaluator_proxy<E>::evaluator_proxy(E eva, bits ts) : eva_(std::move(eva))
+evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva))
 {
   Expects(ts);
   cache_.resize(ts);
@@ -37,7 +37,7 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bits ts) : eva_(std::move(eva))
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva) : eva_(std::move(eva))
 {
-  Expects(cache_.get_bits());
+  Expects(cache_.bits());
 }
 
 ///
@@ -48,7 +48,7 @@ template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
   const evaluator_individual_t<E> &prg) const
 {
-  Expects(cache_.get_bits());
+  Expects(cache_.bits());
 
   auto *cached_fit(cache_.find(prg.signature()));
 

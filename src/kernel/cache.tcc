@@ -23,7 +23,7 @@
 /// \param[in] n `2^n` is the number of elements of the table
 ///
 template<Fitness F>
-cache<F>::cache(bits n) : table_(1ull << n), k_mask((1ull << n) - 1)
+cache<F>::cache(bitwidth n) : table_(1ull << n), k_mask((1ull << n) - 1)
 {
   Expects(n);
   Ensures(is_valid());
@@ -38,7 +38,7 @@ cache<F>::cache(bits n) : table_(1ull << n), k_mask((1ull << n) - 1)
 /// This is a destructive operation: content of the cache will be lost.
 ///
 template<Fitness F>
-void cache<F>::resize(bits n)
+void cache<F>::resize(bitwidth n)
 {
   Expects(n);
 
@@ -189,7 +189,7 @@ bool cache<F>::save(std::ostream &out) const
 /// \return number of bits used for hash table initialization
 ///
 template<Fitness F>
-cache<F>::bits cache<F>::get_bits() const
+bitwidth cache<F>::bits() const
 {
   std::shared_lock lock(mutex_);
 

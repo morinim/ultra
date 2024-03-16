@@ -31,12 +31,12 @@ TEST_CASE_FIXTURE(fixture1, "Constructor")
   using namespace ultra;
 
   cache<double> cache;
-  CHECK(!cache.get_bits());
+  CHECK(!cache.bits());
 
   for (unsigned i(1); i < 8; ++i)
   {
     cache.resize(i);
-    CHECK(cache.get_bits() == i);
+    CHECK(cache.bits() == i);
   }
 }
 

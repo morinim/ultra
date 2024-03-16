@@ -30,10 +30,8 @@ template<Evaluator E>
 class evaluator_proxy
 {
 public:
-  using bits = typename cache<evaluator_fitness_t<E>>::bits;
-
   explicit evaluator_proxy(E);
-  evaluator_proxy(E, bits);
+  evaluator_proxy(E, bitwidth);
 
   // Serialization.
   bool load(std::istream &);

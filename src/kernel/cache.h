@@ -21,6 +21,10 @@
 
 namespace ultra
 {
+
+/// Type alias for the number of bits.
+using bitwidth = unsigned;
+
 ///
 /// Implements a hash table that links individuals' signature to fitness
 /// (mainly used by the evaluator_proxy class).
@@ -33,13 +37,11 @@ template<Fitness F>
 class cache
 {
 public:
-  using bits = unsigned;
-
   cache() = default;  // empty cache
-  explicit cache(bits);
+  explicit cache(bitwidth);
 
-  void resize(bits);
-  [[nodiscard]] bits get_bits() const;
+  void resize(bitwidth);
+  [[nodiscard]] bitwidth bits() const;
 
   void clear();
   void clear(const hash_t &);
