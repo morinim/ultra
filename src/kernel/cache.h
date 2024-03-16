@@ -71,7 +71,7 @@ private:
     unsigned seal {0};
   };
 
-  mutable ignore_copy<std::shared_mutex> mutex_ {};
+  mutable std::shared_mutex mutex_ {};
 
   std::vector<slot> table_ {};
   std::uint64_t k_mask {0};

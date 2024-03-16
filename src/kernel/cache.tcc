@@ -42,7 +42,8 @@ void cache<F>::resize(bitwidth n)
 {
   Expects(n);
 
-  *this = cache(n);
+  table_ = decltype(table_)(1ull << n);
+  k_mask = (1ull << n) - 1;
 
   Ensures(is_valid());
 }
