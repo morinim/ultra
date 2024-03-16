@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -25,6 +25,15 @@ model_measurements<F>::model_measurements(const F &f, double a)
 }
 
 ///
+/// \return `true` if all the fields are empty
+///
+template<Fitness F>
+bool model_measurements<F>::empty() const noexcept
+{
+  return !fitness.has_value() && !accuracy.has_value();
+}
+
+///
 /// Loads the object from a stream.
 ///
 /// \param[in] is input stream
@@ -38,11 +47,27 @@ bool model_measurements<F>::load(std::istream &is)
 {
   model_measurements tmp;
 
-  if (!ultra::load(is, &tmp.fitness))
+  unsigned has_fitness;
+  if (!(is >> has_fitness))
     return false;
+  if (has_fitness)
+  {
+    if (F tmp_fitness; !ultra::load(is, &tmp_fitness))
+      return false;
+    else
+      tmp.fitness = tmp_fitness;
+  }
 
-  if (!load_float_from_stream(is, &tmp.accuracy))
+  unsigned has_accuracy;
+  if (!(is >> has_accuracy))
     return false;
+  if (has_accuracy)
+  {
+    if (double tmp_accuracy; !load_float_from_stream(is, &tmp_accuracy))
+      return false;
+    else
+      tmp.accuracy = tmp_accuracy;
+  }
 
   *this = tmp;
 
@@ -58,10 +83,25 @@ bool model_measurements<F>::load(std::istream &is)
 template<Fitness F>
 bool model_measurements<F>::save(std::ostream &os) const
 {
-  if (!ultra::save(os, fitness))
-    return false;
-  if (!save_float_to_stream(os, accuracy))
-    return false;
+  if (fitness.has_value())
+  {
+    os << "1 ";
+    if (!ultra::save(os, *fitness))
+      return false;
+  }
+  else
+    os << "0";
+
+  os << '\n';
+
+  if (accuracy.has_value())
+  {
+    os << "1 ";
+    if (!save_float_to_stream(os, *accuracy))
+      return false;
+  }
+  else
+    os << "0";
 
   os << '\n';
 
