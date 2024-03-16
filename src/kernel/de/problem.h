@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -36,7 +36,7 @@ public:
 
   template<symbol_set::weight_t = symbol_set::default_weight,
            class ...Args>
-  terminal *insert(Args &&...);
+  real *insert(Args &&...);
 };
 
 ///
@@ -47,12 +47,11 @@ public:
 ///                 case of error)
 ///
 template<symbol_set::weight_t W, class ...Args>
-terminal *problem::insert(Args &&... args)
+real *problem::insert(Args &&... args)
 {
-  return static_cast<terminal *>(
-    sset.insert<de::real, W>(std::forward<Args>(args)...));
+  return sset.insert<real, W>(std::forward<Args>(args)...);
 }
 
-}  // namespace ultra::gp
+}  // namespace ultra::de
 
 #endif  // include guard
