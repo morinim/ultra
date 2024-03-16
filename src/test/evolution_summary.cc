@@ -39,7 +39,8 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
   CHECK(s.last_improvement() == 0);
 
   const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
-  s.update_if_better(si1);
+  CHECK(s.update_if_better(si1));
+  CHECK(!s.update_if_better(si1));
 
   CHECK(s.best().ind == si1.ind);
   CHECK(almost_equal(s.best().fit, si1.fit));
@@ -47,7 +48,7 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
 
   const scored_individual si2(gp::individual(prob), fitnd{2.0, 3.0});
   s.generation = 2;
-  s.update_if_better(si2);
+  CHECK(s.update_if_better(si2));
 
   CHECK(s.best().ind == si2.ind);
   CHECK(almost_equal(s.best().fit, si2.fit));
@@ -138,8 +139,8 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   SUBCASE("With best")
   {
     s.generation = 2;
-    s.update_if_better(
-      scored_individual(gp::individual(prob), fitnd{1.0, 2.0}));
+    CHECK(s.update_if_better(
+            scored_individual(gp::individual(prob), fitnd{1.0, 2.0})));
 
     CHECK(s.save(ss));
 
