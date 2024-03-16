@@ -205,6 +205,10 @@ struct parameters
     std::filesystem::path population_file {};
   } stat;
 
+  /// `2^cache_size` is the number of elements of the cache. `0` disables
+  /// caching.
+  unsigned cache_size {16};
+
   parameters &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // parameters
