@@ -115,6 +115,18 @@ evaluator_fitness_t<E> evaluator_proxy<E>::fast(
 }
 
 ///
+/// \warning
+/// If the load operation isn't successful the current object COULD BE changed.
+/// The temporary object needed to holds values from the stream conceivably is
+/// too big to justify the "no change" warranty.
+///
+template<Evaluator E>
+bool evaluator_proxy<E>::load_cache(std::istream &in) const
+{
+  return cache_.load(in);
+}
+
+///
 /// \param[in] in input stream
 /// \return       `true` if the object loaded correctly
 ///
@@ -126,7 +138,17 @@ evaluator_fitness_t<E> evaluator_proxy<E>::fast(
 template<Evaluator E>
 bool evaluator_proxy<E>::load(std::istream &in)
 {
-  return load(in, eva_) && cache_.load(in);
+  return load_eva(in, &eva_) && load_cache(in);
+}
+
+///
+/// \param[out] out output stream
+/// \return         `true` if the object was saved correctly
+///
+template<Evaluator E>
+bool evaluator_proxy<E>::save_cache(std::ostream &out) const
+{
+  return cache_.save(out);
 }
 
 ///
@@ -136,7 +158,7 @@ bool evaluator_proxy<E>::load(std::istream &in)
 template<Evaluator E>
 bool evaluator_proxy<E>::save(std::ostream &out) const
 {
-  return save(out, eva_) && cache_.save(out);
+  return save_eva(out, eva_) && save_cache(out);
 }
 
 ///

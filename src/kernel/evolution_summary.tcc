@@ -57,15 +57,18 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 /// \param[in] prg candidate new best scored individual
 ///
 template<Individual I, Fitness F>
-void summary<I, F>::update_if_better(scored_individual<I, F> prg)
+bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  data_.write([this, &prg](auto &data)
+  return data_.write([this, &prg](auto &data)
   {
     if (prg > data.best)
     {
       data.best = prg;
       data.last_improvement = generation;
+      return true;
     }
+
+    return false;
   });
 }
 

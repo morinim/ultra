@@ -37,6 +37,9 @@ public:
   bool load(std::istream &);
   bool save(std::ostream &) const;
 
+  bool load_cache(std::istream &) const;
+  bool save_cache(std::ostream &) const;
+
   void clear();
 
   [[nodiscard]] evaluator_fitness_t<E> operator()(

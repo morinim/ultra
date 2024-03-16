@@ -42,7 +42,7 @@ public:
   [[nodiscard]] evolution_status<I, F> starting_status();
 
   // --- Concurrency aware functions ---
-  void update_if_better(scored_individual<I, F>);
+  bool update_if_better(scored_individual<I, F>);
   [[nodiscard]] scored_individual<I, F> best() const;
   [[nodiscard]] unsigned last_improvement() const;
 

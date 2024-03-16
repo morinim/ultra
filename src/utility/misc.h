@@ -107,7 +107,7 @@ namespace internal
 
 template<class> struct closure_info;
 
-template<class F>  // overloaded operator () (e.g. std::function)
+template<class F>  // overloaded operator() (e.g. std::function)
 struct closure_info
   : closure_info<decltype(&std::remove_reference_t<F>::operator())>
 {
