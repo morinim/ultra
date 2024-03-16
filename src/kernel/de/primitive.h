@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -46,8 +46,8 @@ public:
     Expects(i.first < i.second);
   }
 
-  [[nodiscard]] double min() const { return interval_.first; }
-  [[nodiscard]] double sup() const { return interval_.second; }
+  [[nodiscard]] double min() const noexcept { return interval_.first; }
+  [[nodiscard]] double sup() const noexcept { return interval_.second; }
 
   [[nodiscard]] value_t instance() const final
   { return random::element(interval_); }
