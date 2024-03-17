@@ -17,7 +17,6 @@
 
 #include "kernel/analyzer.h"
 #include "kernel/evolution_status.h"
-#include "kernel/model_measurements.h"
 
 #include "utility/mutex_guarded.h"
 
@@ -52,8 +51,6 @@ public:
 
   // --- Data members ---
   analyzer<I, F> az {};
-
-  model_measurements<F> score {};
 
   /// Time elapsed from evolution beginning.
   std::chrono::milliseconds elapsed {0};

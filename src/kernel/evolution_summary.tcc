@@ -120,14 +120,9 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
   if (!(in >> tmp_data.last_improvement))
     return false;
 
-  model_measurements<F> tmp_score;
-  if (!tmp_score.load(in))
-    return false;
-
   if (!tmp_data.best.load(in, p))
     return false;
 
-  score = tmp_score;
   elapsed = tmp_elapsed;
   generation = tmp_generation;
   data_ = tmp_data;
@@ -153,9 +148,6 @@ bool summary<I, F>::save(std::ostream &out) const
 
   // analyzer `az` doesn't need to be saved: it'll be recalculated at the
   // beginning of evolution.
-
-  if (!score.save(out))
-    return false;
 
   if (!data.best.save(out))
     return false;
