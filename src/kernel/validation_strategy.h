@@ -25,13 +25,13 @@ class validation_strategy
 public:
   virtual ~validation_strategy() = default;
 
-  /// Initializes the data structures needed for the validation strategy.
+  /// Prepares the data structures / environment needed for training.
   ///
   /// \note
   /// Called at the beginning of the evolution (one time per run).
-  virtual void init(unsigned /* run */) = 0;
+  virtual void training_setup(unsigned /* run */) = 0;
 
-  /// Changes the training environment.
+  /// Changes the training environment during evolution.
   ///
   /// \return `true` if the training environment has changed
   ///
@@ -40,12 +40,12 @@ public:
   /// \note
   /// Called at the beginning of every generation (multiple times per run).
   ///
-  virtual bool shake(unsigned /* generation */)  { return false; }
+  virtual bool shake(unsigned /* generation */) = 0;
 
-  /// De-initializes the data structures needed for the validation strategy.
+  /// Prepares the data structures / environment needed for validation
   ///
   /// \note Called at the end of the evolution (one time per run).
-  virtual void close(unsigned /* run */) {}
+  virtual void validation_setup(unsigned /* run */) = 0;
 };
 
 ///
@@ -59,7 +59,9 @@ public:
 class as_is_validation final : public validation_strategy
 {
 public:
-  void init(unsigned) override {}
+  void training_setup(unsigned) override {}
+  bool shake(unsigned) override { return false; }
+  void validation_setup(unsigned) override {}
 };
 
 }  // namespace ultra

@@ -35,10 +35,11 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
 
   alps_search s(prob, eva);
 
-  const auto sum(s.run(1));
+  const auto stats(s.run(1));
 
-  CHECK(!sum.best().empty());
-  CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
+  CHECK(!stats.best_individual.empty());
+  CHECK(eva(stats.best_individual)
+        == doctest::Approx(*stats.measurements.fitness));
 }
 
 }  // TEST_SUITE("EVOLUTION")

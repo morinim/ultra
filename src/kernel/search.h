@@ -15,6 +15,7 @@
 
 #include "kernel/evaluator_proxy.h"
 #include "kernel/evolution.h"
+#include "kernel/model_measurements.h"
 #include "kernel/problem.h"
 #include "kernel/validation_strategy.h"
 
@@ -24,9 +25,11 @@ namespace ultra
 template<Individual I, Fitness F>
 struct search_stats
 {
-  void update(const summary<I, F> &);
+  void update(const I &, const model_measurements<F> &);
 
-  summary<I, F> overall {};
+  I best_individual {};
+  model_measurements<F> measurements {};
+
   distribution<F> fd {};
   std::set<unsigned> good_runs {};
 
@@ -48,17 +51,13 @@ public:
 
   search(problem &, E);
 
-  summary<individual_t, fitness_t> run(unsigned = 1);
+  search_stats<individual_t, fitness_t> run(unsigned = 1);
 
   template<class V, class... Args> search &validation_strategy(Args && ...);
 
   [[nodiscard]] virtual bool is_valid() const;
 
 protected:
-  // Template method of the `search::run` member function called exactly one
-  // time just before the first run.
-  virtual void init();
-
   virtual void tune_parameters();
 
   // *** Data members ***
@@ -68,6 +67,15 @@ protected:
   problem &prob_;    // problem we're working on
 
 private:
+  // Template method of the `search::run` member function called exactly one
+  // time just before the first run.
+  virtual void init();
+
+  // Template method of the `search::run` member function called exactly one
+  // time after every evolution run..
+  [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
+    const individual_t &) const;
+
   //void log_stats(const search_stats<T> &) const;
   bool load();
   //bool save() const;

@@ -117,7 +117,6 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 
   s.elapsed = 10000ms;
   s.generation = 10;
-  s.score = model_measurements(fitnd{1.0, 2.0}, 0.5);
 
   std::stringstream ss;
 

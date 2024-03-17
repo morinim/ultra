@@ -112,7 +112,8 @@ void search<ES, E>::tune_parameters()
 /// \return      a summary of the search
 ///
 template<template<Evaluator> class ES, Evaluator E>
-summary<typename search<ES, E>::individual_t, typename search<ES, E>::fitness_t>
+search_stats<typename search<ES, E>::individual_t,
+             typename search<ES, E>::fitness_t>
 search<ES, E>::run(unsigned n)
 {
   init();
@@ -122,21 +123,46 @@ search<ES, E>::run(unsigned n)
 
   for (unsigned r(0); r < n; ++r)
   {
-    vs_->init(r);
+    vs_->training_setup(r);
 
     evolution evo(es_);
     evo.set_shake_function(shake);
-
     const auto run_summary(evo.run());
-    vs_->close(r);
 
-    // Possibly calculates additional metrics.
-    //calculate_metrics(&run_summary);
+    vs_->validation_setup(r);
 
-    stats.update(run_summary);
+    // Update the search statistics (possibly using the validation setup).
+    if (const auto prg = run_summary.best().ind; !prg.empty())
+    {
+      const auto measurements(calculate_metrics(prg));
+      stats.update(prg, measurements);
+    }
   }
 
-  return stats.overall;
+  return stats;
+}
+
+///
+/// Calculates and stores the fitness of the best individual so far.
+///
+/// \param[in] prg best individual from the evolution run just finished
+/// \return        measurements about the individual
+///
+/// Specializations of this method can calculate further / distinct
+/// problem-specific metrics regarding the candidate solution.
+///
+/// If a validation set / simulation is available, it's used for the
+/// calculations.
+///
+template<template<Evaluator> class ES, Evaluator E>
+model_measurements<typename search<ES, E>::fitness_t>
+search<ES, E>::calculate_metrics(const individual_t &prg) const
+{
+  model_measurements<fitness_t> ret;
+
+  ret.fitness = es_.evaluator()(prg);
+
+  return ret;
 }
 
 ///
@@ -189,23 +215,35 @@ bool search<ES, E>::is_valid() const
   return true;
 }
 
+///
+/// Updates the search statistics with data from the latest run.
+///
+/// \param[in] prg      best individual from the evolution run just finished
+/// \param[in] last_run model measurements from the last run
+///
 template<Individual I, Fitness F>
-void search_stats<I, F>::update(const summary<I, F> &r)
+void search_stats<I, F>::update(const I &prg,
+                                const model_measurements<F> &last_run)
 {
-  if (overall.update_if_better(r.best()))
+  if (last_run > measurements)
+  {
+    best_individual = prg;
+    measurements = last_run;;
     best_run = runs;
+  }
 
-  //if (r.best.score.is_solution)
+  //if (last_run.best.score.is_solution)
   //{
-  //  overall.last_imp += r.last_imp;
+  //  overall.last_imp += lst_run.last_imp;
   //  good_runs.insert(good_runs.end(), runs);
   //}
 
-  if (const auto fit(r.best().fit); isfinite(fit))
+  using std::isfinite;
+  if (const auto fit(*last_run.fitness); isfinite(fit))
     fd.add(fit);
 
-  overall.elapsed += r.elapsed;
-  overall.generation += r.generation;
+  //overall.elapsed += lst_run.elapsed;
+  //overall.generation += lst_run.generation;
 
   ++runs;
 
