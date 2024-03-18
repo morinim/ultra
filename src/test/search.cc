@@ -39,7 +39,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
 
   CHECK(!stats.best_individual.empty());
   CHECK(eva(stats.best_individual)
-        == doctest::Approx(*stats.measurements.fitness));
+        == doctest::Approx(*stats.best_measurements.fitness));
 }
 
 }  // TEST_SUITE("EVOLUTION")

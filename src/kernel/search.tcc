@@ -133,10 +133,7 @@ search<ES, E>::run(unsigned n)
 
     // Update the search statistics (possibly using the validation setup).
     if (const auto prg = run_summary.best().ind; !prg.empty())
-    {
-      const auto measurements(calculate_metrics(prg));
-      stats.update(prg, measurements);
-    }
+      stats.update(prg, calculate_metrics(prg), run_summary.elapsed);
   }
 
   return stats;
@@ -218,17 +215,20 @@ bool search<ES, E>::is_valid() const
 ///
 /// Updates the search statistics with data from the latest run.
 ///
-/// \param[in] prg      best individual from the evolution run just finished
-/// \param[in] last_run model measurements from the last run
+/// \param[in] lr_best_prg     best individual from the evolution run just
+///                            finished
+/// \param[in] lr_measurements measurements from the last run
+/// \param[in] lr_elapsed      time taken for the last evolutionary run
 ///
 template<Individual I, Fitness F>
-void search_stats<I, F>::update(const I &prg,
-                                const model_measurements<F> &last_run)
+void search_stats<I, F>::update(const I &lr_best_prg,
+                                const model_measurements<F> &lr_measurements,
+                                std::chrono::milliseconds lr_elapsed)
 {
-  if (last_run > measurements)
+  if (lr_measurements > best_measurements)
   {
-    best_individual = prg;
-    measurements = last_run;;
+    best_individual = lr_best_prg;
+    best_measurements = lr_measurements;
     best_run = runs;
   }
 
@@ -239,11 +239,10 @@ void search_stats<I, F>::update(const I &prg,
   //}
 
   using std::isfinite;
-  if (const auto fit(*last_run.fitness); isfinite(fit))
-    fd.add(fit);
+  if (const auto fit(*lr_measurements.fitness); isfinite(fit))
+    fitness_distribution.add(fit);
 
-  //overall.elapsed += lst_run.elapsed;
-  //overall.generation += lst_run.generation;
+  elapsed += lr_elapsed;
 
   ++runs;
 

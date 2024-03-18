@@ -25,13 +25,17 @@ namespace ultra
 template<Individual I, Fitness F>
 struct search_stats
 {
-  void update(const I &, const model_measurements<F> &);
+  void update(const I &, const model_measurements<F> &,
+              std::chrono::milliseconds);
 
   I best_individual {};
-  model_measurements<F> measurements {};
+  model_measurements<F> best_measurements {};
 
-  distribution<F> fd {};
+  distribution<F> fitness_distribution {};
   std::set<unsigned> good_runs {};
+
+  /// Time elapsed from search beginning.
+  std::chrono::milliseconds elapsed {0};
 
   unsigned best_run {0};  /// index of the run giving the best solution
   unsigned runs     {0};  /// number of runs performed so far
