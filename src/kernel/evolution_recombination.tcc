@@ -35,7 +35,7 @@ strategy<E>::strategy(E &eva, const problem &prob)
 ///
 template<Evaluator E>
 template<RandomAccessIndividuals R>
-[[nodiscard]] std::vector<std::ranges::range_value_t<R>>
+[[nodiscard]] std::ranges::range_value_t<R>
 base<E>::operator()(const R &parents) const
 {
   static_assert(std::is_same_v<evaluator_individual_t<E>,
@@ -96,7 +96,7 @@ base<E>::operator()(const R &parents) const
   // !crossover
   auto off(parents[random::boolean()]);
   off.mutation(this->prob_);
-  return {off};
+  return off;
 }
 
 de::de(const problem &prob) : prob_(prob)

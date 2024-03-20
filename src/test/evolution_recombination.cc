@@ -44,7 +44,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     for (unsigned i(0); i < 100; ++i)
     {
-      const auto off(recombine(parents).front());
+      const auto off(recombine(parents));
 
       CHECK(off.is_valid());
       const bool one_or_the_other(off == parents[0] || off == parents[1]);
@@ -61,7 +61,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     for (unsigned i(0); i < 100; ++i)
     {
-      const auto off(recombine(same_parents).front());
+      const auto off(recombine(same_parents));
 
       CHECK(off.is_valid());
       CHECK(off == same_parents[0]);
@@ -75,7 +75,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     for (unsigned repetitions(N); repetitions; --repetitions)
     {
-      const auto off(recombine(parents).front());
+      const auto off(recombine(parents));
       CHECK(off.is_valid());
 
       if (off != parents[0] && off != parents[1])

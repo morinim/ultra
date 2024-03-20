@@ -65,7 +65,7 @@ auto alps_es<E>::operations(
       Ensures(&sel_pop.front().get() == &rep_pop.front().get());
 
       const auto parents(this->select_(sel_pop));
-      const auto offspring(this->recombine_(parents).front());
+      const auto offspring(this->recombine_(parents));
       this->replace_(rep_pop, offspring, status);
     };
 }
@@ -247,7 +247,7 @@ auto std_es<E>::operations(
       Ensures(!pop_layer.empty());
 
       const auto parents(this->select_(pop_layer));
-      const auto offspring(this->recombine_(parents).front());
+      const auto offspring(this->recombine_(parents));
       this->replace_(pop_layer, offspring, status);
     };
 }

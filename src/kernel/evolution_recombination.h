@@ -68,8 +68,7 @@ public:
   using base::strategy::strategy;
 
   template<RandomAccessIndividuals R>
-  [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
-  operator()(const R &) const;
+  [[nodiscard]] std::ranges::range_value_t<R> operator()(const R &) const;
 };
 
 template<Evaluator E> base(E &, const problem &) -> base<E>;
