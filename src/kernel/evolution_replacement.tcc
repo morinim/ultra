@@ -84,7 +84,7 @@ void tournament<E>::operator()(
 /// `try_add_to_layer` for each individual).
 ///
 template<Evaluator E>
-template<RandomAccessPopulation P>
+template<SizedRandomAccessPopulation P>
 void alps<E>::try_move_up_layer(const P &from, P &to)
 {
   for (const auto &prg : from)

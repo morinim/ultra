@@ -34,7 +34,7 @@ strategy<E>::strategy(E &eva, const problem &prob)
 /// \return            the offspring (single child)
 ///
 template<Evaluator E>
-template<SizedRangeOfIndividuals R>
+template<RandomAccessIndividuals R>
 [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
 base<E>::operator()(const R &parents) const
 {
@@ -97,6 +97,32 @@ base<E>::operator()(const R &parents) const
   auto off(parents[random::boolean()]);
   off.mutation(this->prob_);
   return {off};
+}
+
+de::de(const problem &prob) : prob_(prob)
+{
+}
+
+///
+/// This is strictly based on the DE crossover operator.
+///
+/// \param[in] parents a vector of ordered parents (target, base, parent1,
+///                    parent2)
+/// \return            the offspring
+///
+/// Used parameters: `evolution.p_cross`, `de.weight`.
+///
+template<RandomAccessIndividuals R>
+[[nodiscard]] std::ranges::range_value_t<R>
+de::operator()(const R &parents) const
+{
+  Expects(parents.size() == 4);
+
+  const auto &params(prob_.params);
+  Expects(0.0 < params.evolution.p_cross && params.evolution.p_cross <= 1.0);
+
+  return {parents[0].crossover(params.evolution.p_cross, params.de.weight,
+                               parents[1], parents[2], parents[3])};
 }
 
 #endif  // include guard

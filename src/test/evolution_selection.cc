@@ -260,16 +260,13 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 
   selection::de select(eva, prob.params);
 
-  auto max(std::ranges::max(pop, [&eva](const auto &p1, const auto &p2)
-                                 {
-                                   return eva(p1) < eva(p2);
-                                 }));
+  auto max(debug::best_individual(pop, eva));
 
   const unsigned n(prob.params.population.individuals * 100);
   unsigned found(0);
   for (unsigned i(0); i < n; ++i)
   {
-    auto parents(select(pop.layer(0)));
+    auto parents(select(pop.front()));
     CHECK(parents.size() == 4);
 
     if (std::ranges::find_if(parents,

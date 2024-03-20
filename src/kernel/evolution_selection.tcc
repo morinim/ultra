@@ -36,7 +36,7 @@ strategy<E>::strategy(E &eva, const parameters &params)
 /// those individuals.
 /// Recall that better individuals have higher fitness.
 ///
-/// Used parameters: `mate_zone`, `tournament_size`.
+/// Used parameters: `evolution.mate_zone`, `evolution.tournament_size`.
 ///
 /// \remark
 /// Different compilers may optimize the code producing slightly different
@@ -47,14 +47,19 @@ strategy<E>::strategy(E &eva, const parameters &params)
 /// - for debugging purposes *compiler-stability* is enough (and we have faith
 ///   in the test suite).
 ///
+/// \warning
+/// This function assumes exclusive access to the population. If other threads
+/// can change the individuals, race conditions may happen.
+///
 template<Evaluator E>
-template<RandomAccessPopulation P>
+template<SizedRandomAccessPopulation P>
 std::vector<typename P::value_type>
 tournament<E>::operator()(const P &pop) const
 {
   const auto mate_zone(this->params_.evolution.mate_zone);
+  Expects(mate_zone);
   const auto rounds(this->params_.evolution.tournament_size);
-  assert(rounds);
+  Expects(rounds);
 
   const auto target(random::coord(pop));
   std::vector<typename P::coord> ret(rounds);
@@ -100,6 +105,9 @@ tournament<E>::operator()(const P &pop) const
 /// Used parameters:
 /// - `tournament_size` to control number of selected individuals.
 /// - `p_main_layer`
+///
+/// \note
+/// This function can work in a multithread environment.
 ///
 template<Evaluator E>
 template<PopulationWithMutex P>
@@ -165,25 +173,33 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 
 ///
 /// \param[in] pop a population
-/// \return        a collection of four individuals suited for DE recombination
+/// \return        collection of four individual suited for DE recombination.
+///                The first individual is the target, the others are the
+///                parents.
 ///
-/// Used parameters: `mate_zone`.
+/// Used parameters: `evolution.mate_zone`.
+///
+/// \note
+/// This function can work in a multithread environment.
 ///
 template<Evaluator E>
-template<RandomAccessPopulation P>
+template<PopulationWithMutex P>
 std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
 {
   const auto mate_zone(this->params_.evolution.mate_zone);
+  Expects(mate_zone > 1);
 
-  const auto c1(random::coord(pop));
-  const auto c2(random::coord(pop));
+  const auto target(random::coord(pop));
+  const auto base(random::coord(pop));
 
-  auto a(random::coord(pop, c1, mate_zone));
+  typename P::coord a;
+  do a = random::coord(pop, target, mate_zone); while (a == target);
 
-  decltype(a) b;
-  do b = random::coord(pop, c1, mate_zone); while (a == b);
+  typename P::coord b;
+  do b = random::coord(pop, target, mate_zone); while (b == target || b == a);
 
-  return {pop[c1], pop[c2], pop[a], pop[b]};
+  std::shared_lock lock(pop.mutex());
+  return {pop[target], pop[base], pop[a], pop[b]};
 }
 
 #endif  // include guard

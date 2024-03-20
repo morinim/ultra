@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -32,7 +32,7 @@ problem::problem(std::size_t nparam, const interval_t<double> &interval)
 {
   Expects(parameters() == 0);
 
-  for (symbol::category_t c(0); c < nparam; ++c)
+  while (nparam--)
     insert(interval);
 }
 
@@ -55,7 +55,7 @@ problem::problem(const std::vector<interval_t<double>> &intervals)
     insert(interval);
 }
 
-std::size_t problem::parameters() const
+std::size_t problem::parameters() const noexcept
 {
   return sset.categories();
 }

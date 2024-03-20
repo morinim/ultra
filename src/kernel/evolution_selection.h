@@ -63,7 +63,7 @@ class tournament : public strategy<E>
 public:
   using tournament::strategy::strategy;
 
-  template<RandomAccessPopulation P>
+  template<SizedRandomAccessPopulation P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 
@@ -94,7 +94,7 @@ class de : public strategy<E>
 public:
   using de::strategy::strategy;
 
-  template<RandomAccessPopulation P>
+  template<PopulationWithMutex P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
 };
 

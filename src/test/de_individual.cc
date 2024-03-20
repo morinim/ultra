@@ -108,16 +108,16 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
     c.inc_age(random::sup(100u));
 
     auto off(p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
-                         a, a, p));
+                         p, a, a));
     CHECK(off.is_valid());
 
     for (unsigned i(0); i < p.parameters(); ++i)
       CHECK(off[i] == doctest::Approx(p[i]));
 
     off = p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
-                      a, b, p);
+                      p, a, b);
     CHECK(off.is_valid());
-    CHECK(off.age() == std::max({p.age(), a.age(), b.age()}));
+    CHECK(off.age() == p.age());
 
     for (unsigned i(0); i < p.parameters(); ++i)
     {
@@ -131,9 +131,9 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
     }
 
     off = p.crossover(prob.params.evolution.p_cross, prob.params.de.weight,
-                      a, b, c);
+                      c, a, b);
     CHECK(off.is_valid());
-    CHECK(off.age() == std::max({p.age(), a.age(), b.age(), c.age()}));
+    CHECK(off.age() == std::max({p.age(), c.age()}));
     for (unsigned i(0); i < p.parameters(); ++i)
     {
       const auto delta(prob.params.de.weight.second * std::abs(a[i] - b[i]));

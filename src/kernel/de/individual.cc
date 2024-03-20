@@ -97,7 +97,7 @@ individual::value_type &individual::operator[](std::size_t i)
 ///
 /// \return a vector of real values
 ///
-individual::operator std::vector<individual::value_type>() const
+individual::operator std::vector<individual::value_type>() const noexcept
 {
   return genome_;
 }
@@ -122,14 +122,14 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 ///
 /// \param[in] p crossover probability
 /// \param[in] f scaling factor interval (`parameters.de.weight`)
-/// \param[in] a first parent
+/// \param[in] a first parent (base vector)
 /// \param[in] b second parent
-/// \param[in] c third parent (base vector)
+/// \param[in] c third parent
 /// \return      the offspring (trial vector)
 ///
 /// The offspring, also called trial vector, is generated as follows:
 ///
-///     offspring = crossover(this, c + F * (a - b))
+///     offspring = crossover(this, a + F * (b - c))
 ///
 /// first the search direction is defined by calculating a *difference vector*
 /// between the pair of vectors `a` and `b` (usually choosen at random from the
@@ -162,16 +162,18 @@ individual individual::crossover(double p, const interval_t<double> &f,
   // behaviour significantly, especially for noisy objective functions.
   const auto rf(random::element(f));
 
-  auto ret(c);
+  auto ret(a);
 
   for (std::size_t i(0); i < ps - 1; ++i)
     if (random::boolean(p))
-      ret[i] += rf * (a[i] - b[i]);
+      ret[i] += rf * (b[i] - c[i]);
     else
       ret[i] = operator[](i);
-  ret[ps - 1] += rf * (a[ps - 1] - b[ps - 1]);
 
-  ret.set_if_older_age(std::max({age(), a.age(), b.age()}));
+  // Last element is replaced for certain.
+  ret[ps - 1] += rf * (b[ps - 1] - c[ps - 1]);
+
+  ret.set_if_older_age(std::max({age(), a.age()}));
 
   ret.signature_.clear();
   Ensures(ret.is_valid());
@@ -181,7 +183,7 @@ individual individual::crossover(double p, const interval_t<double> &f,
 ///
 /// \return `true` if the individual is empty, `false` otherwise
 ///
-bool individual::empty() const
+bool individual::empty() const noexcept
 {
   return !parameters();
 }
@@ -189,7 +191,7 @@ bool individual::empty() const
 ///
 /// \return the number of parameters stored in the individual
 ///
-std::size_t individual::parameters() const
+std::size_t individual::parameters() const noexcept
 {
   return genome_.size();
 }

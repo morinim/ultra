@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -46,15 +46,15 @@ public:
   [[nodiscard]] value_type operator[](std::size_t) const;
   [[nodiscard]] value_type &operator[](std::size_t);
 
-  [[nodiscard]] operator std::vector<value_type>() const;
+  [[nodiscard]] operator std::vector<value_type>() const noexcept;
   individual &operator=(const std::vector<value_type> &);
 
   [[nodiscard]] individual crossover(double, const interval_t<double> &,
                                      const individual &, const individual &,
                                      const individual &) const;
 
-  [[nodiscard]] bool empty() const;
-  [[nodiscard]] std::size_t parameters() const;
+  [[nodiscard]] bool empty() const noexcept;
+  [[nodiscard]] std::size_t parameters() const noexcept;
 
   [[nodiscard]] hash_t signature() const;
 

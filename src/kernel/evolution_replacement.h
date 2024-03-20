@@ -83,7 +83,7 @@ public:
     evolution_status<evaluator_individual_t<E>,
                      evaluator_fitness_t<E>> &) const;
 
-  template<RandomAccessPopulation P>
+  template<SizedRandomAccessPopulation P>
   void try_move_up_layer(const P &, P &);
 
 private:

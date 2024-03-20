@@ -67,12 +67,27 @@ class base : public strategy<E>
 public:
   using base::strategy::strategy;
 
-  template<SizedRangeOfIndividuals R>
+  template<RandomAccessIndividuals R>
   [[nodiscard]] std::vector<std::ranges::range_value_t<R>>
   operator()(const R &) const;
 };
 
 template<Evaluator E> base(E &, const problem &) -> base<E>;
+
+///
+/// This is based on the differential evolution four members crossover.
+///
+class de
+{
+public:
+  explicit de(const problem &);
+
+  template<RandomAccessIndividuals R>
+  [[nodiscard]] std::ranges::range_value_t<R> operator()(const R &) const;
+
+private:
+  const problem &prob_;
+};
 
 #include "kernel/evolution_recombination.tcc"
 

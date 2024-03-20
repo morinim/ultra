@@ -87,4 +87,32 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   }
 }
 
+TEST_CASE_FIXTURE(fixture4, "DE")
+{
+  using namespace ultra;
+
+  recombination::de recombine(prob);
+
+  prob.params.evolution.p_cross = 0;
+  SUBCASE("zero p_cross")
+  {
+    prob.params.evolution.p_cross = 0;
+
+    for (unsigned iterations(100); iterations; --iterations)
+    {
+      const de::individual p(prob);
+      de::individual a(prob), b(prob), c(prob);
+
+      const auto x(p.crossover(prob.params.evolution.p_cross,
+                               prob.params.de.weight,
+                               a, b, c));
+
+      for (std::size_t i(0); i < x.parameters() - 1; ++i)
+        CHECK(p[i] == doctest::Approx(x[i]));
+
+      CHECK(p[p.parameters() - 1] != doctest::Approx(x[x.parameters() - 1]));
+    }
+  }
+}
+
 }  // TEST_SUITE("EVOLUTION RECOMBINATION")

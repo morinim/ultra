@@ -123,7 +123,7 @@ public:
   template<Symbol S, weight_t = default_weight, class ...Args>
   std::add_pointer_t<S> insert(Args &&...);
 
-  [[nodiscard]] symbol::category_t categories() const;
+  [[nodiscard]] symbol::category_t categories() const noexcept;
   [[nodiscard]] std::size_t functions(
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] std::size_t terminals(

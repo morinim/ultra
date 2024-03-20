@@ -32,7 +32,7 @@ public:
   problem(std::size_t, const interval_t<double> &);
   explicit problem(const std::vector<interval_t<double>> &);
 
-  [[nodiscard]] std::size_t parameters() const;
+  [[nodiscard]] std::size_t parameters() const noexcept;
 
   template<symbol_set::weight_t = symbol_set::default_weight,
            class ...Args>

@@ -94,14 +94,6 @@ private:
   ignore_copy<app_level_uid> uid_ {};
 };
 
-namespace random
-{
-
-template<PopulationWithMutex P>
-[[nodiscard]] typename P::value_type individual(const P &);
-
-}  // namespace random
-
 #include "kernel/linear_population.tcc"
 
 }  // namespace ultra

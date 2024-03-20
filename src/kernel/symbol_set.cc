@@ -289,7 +289,7 @@ symbol *symbol_set::insert(std::unique_ptr<symbol> new_sym, weight_t w)
 ///
 /// \return number of categories in the symbol set (`>= 1`)
 ///
-symbol::category_t symbol_set::categories() const
+symbol::category_t symbol_set::categories() const noexcept
 {
   return static_cast<symbol::category_t>(views_.size());
 }
