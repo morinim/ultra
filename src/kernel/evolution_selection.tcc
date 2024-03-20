@@ -174,8 +174,8 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 ///
 /// \param[in] pop a population
 /// \return        collection of four individual suited for DE recombination.
-///                The first individual is the target, the others are the
-///                parents.
+///                First and second element are parents, the remaining ones are
+///                used for scaling.
 ///
 /// Used parameters: `evolution.mate_zone`.
 ///
@@ -189,17 +189,18 @@ std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
   const auto mate_zone(this->params_.evolution.mate_zone);
   Expects(mate_zone > 1);
 
-  const auto target(random::coord(pop));
-  const auto base(random::coord(pop));
+  const auto parent(random::coord(pop));
 
-  typename P::coord a;
-  do a = random::coord(pop, target, mate_zone); while (a == target);
+  typename P::coord base;
+  do base = random::coord(pop, parent, mate_zone); while (base == parent);
+
+  const auto a(random::coord(pop));
 
   typename P::coord b;
-  do b = random::coord(pop, target, mate_zone); while (b == target || b == a);
+  do b = random::coord(pop); while (b == a);
 
   std::shared_lock lock(pop.mutex());
-  return {pop[target], pop[base], pop[a], pop[b]};
+  return {pop[parent], pop[base], pop[a], pop[b]};
 }
 
 #endif  // include guard

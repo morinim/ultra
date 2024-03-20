@@ -106,23 +106,23 @@ de::de(const problem &prob) : prob_(prob)
 ///
 /// This is strictly based on the DE crossover operator.
 ///
-/// \param[in] parents a vector of ordered parents (target, base, parent1,
-///                    parent2)
+/// \param[in] engaged a vector of ordered individuals (parent1, parent2/base,
+///                    random1, random2)
 /// \return            the offspring
 ///
 /// Used parameters: `evolution.p_cross`, `de.weight`.
 ///
 template<RandomAccessIndividuals R>
 [[nodiscard]] std::ranges::range_value_t<R>
-de::operator()(const R &parents) const
+de::operator()(const R &engaged) const
 {
-  Expects(parents.size() == 4);
+  Expects(engaged.size() == 4);
 
   const auto &params(prob_.params);
-  Expects(0.0 < params.evolution.p_cross && params.evolution.p_cross <= 1.0);
+  Expects(0.0 <= params.evolution.p_cross && params.evolution.p_cross <= 1.0);
 
-  return {parents[0].crossover(params.evolution.p_cross, params.de.weight,
-                               parents[1], parents[2], parents[3])};
+  return {engaged[0].crossover(params.evolution.p_cross, params.de.weight,
+                               engaged[1], engaged[2], engaged[3])};
 }
 
 #endif  // include guard

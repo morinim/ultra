@@ -164,14 +164,15 @@ individual individual::crossover(double p, const interval_t<double> &f,
 
   auto ret(a);
 
-  for (std::size_t i(0); i < ps - 1; ++i)
+  const auto last(ps - 1);
+  for (std::size_t i(0); i < last; ++i)
     if (random::boolean(p))
       ret[i] += rf * (b[i] - c[i]);
     else
       ret[i] = operator[](i);
 
   // Last element is replaced for certain.
-  ret[ps - 1] += rf * (b[ps - 1] - c[ps - 1]);
+  ret[last] += rf * (b[last] - c[last]);
 
   ret.set_if_older_age(std::max({age(), a.age()}));
 
