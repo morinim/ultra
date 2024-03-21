@@ -29,7 +29,7 @@ template<Evaluator E>
 class strategy
 {
 public:
-  explicit strategy(E &, const parameters &);
+  strategy(E &, const parameters &);
 
 protected:
   E &eva_;
@@ -88,17 +88,17 @@ template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
 ///
 /// Pick a set of four individuals suited for DE recombination.
 ///
-template<Evaluator E>
-class de : public strategy<E>
+class de
 {
 public:
-  using de::strategy::strategy;
+  explicit de(const parameters &);
 
-  template<PopulationWithMutex P>
+  template<SizedRandomAccessPopulation P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
-};
 
-template<Evaluator E> de(E &, const parameters &) -> de<E>;
+private:
+  const parameters &params_;
+};
 
 #include "kernel/evolution_selection.tcc"
 

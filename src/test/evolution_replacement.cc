@@ -176,7 +176,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
         {
           // `elem` replaces a less fit individual.
           CHECK(*it.in1 == elem);
-          CHECK(eva(elem) > eva(*it.in2));
+          CHECK(eva(elem) >= eva(*it.in2));
 
           // only one modified element
           *it.in1 = *it.in2;

@@ -62,7 +62,7 @@ public:
 
   /// Work to be done at the end of every generation.
   template<Population P> void after_generation(
-    P &, const summary<individual_t, fitness_t> &) const {}
+    P &, const summary<individual_t, fitness_t> &);
 
   [[nodiscard]] const E &evaluator() const { return eva_; }
   [[nodiscard]] const problem &problem() const { return *prob_; }
@@ -143,7 +143,7 @@ private:
   const selection::alps<E>     select_;
   const recombination::base<E> recombine_;
   replacement::alps<E>         replace_;
-};
+};  // class alps_es
 
 ///
 /// Standard evolution strategy.
@@ -161,14 +161,33 @@ public:
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 
-  template<Population P> void after_generation(
-    P &, const summary<individual_t, fitness_t> &);
-
 private:
   const selection::tournament<E>   select_;
   const recombination::base<E>     recombine_;
   const replacement::tournament<E> replace_;
-};
+};  // class std_es
+
+///
+/// Differential evolution strategy.
+///
+template<Evaluator E>
+class de_es : public evolution_strategy<E>
+{
+public:
+  using typename de_es::evolution_strategy::fitness_t;
+  using typename de_es::evolution_strategy::individual_t;
+
+  de_es(const problem &, const E &);
+
+  template<Population P> [[nodiscard]] auto operations(
+    P &, typename P::layer_iter,
+    const evolution_status<individual_t, fitness_t> &) const;
+
+private:
+  const selection::de               select_;
+  const recombination::de        recombine_;
+  const replacement::tournament<E> replace_;
+};  // class de_es
 
 template<class S>
 concept Strategy = requires(S s)

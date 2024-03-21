@@ -24,6 +24,33 @@ evolution_strategy<E>::evolution_strategy(const ultra::problem &prob,
 {
 }
 
+///
+/// We use an accelerated stop condition when:
+/// - after `max_stuck_gen` generations the situation doesn't change;
+/// - all the individuals have the same fitness.
+///
+template<Evaluator E>
+template<Population P>
+void evolution_strategy<E>::after_generation(
+  P &pop, const summary<individual_t, fitness_t> &sum)
+{
+  Expects(&pop.problem() == &this->problem());
+  const auto &params(pop.problem().params);
+  Expects(params.evolution.max_stuck_gen);
+
+  pop.inc_age();
+
+  for (const auto layers(pop.range_of_layers()); auto &layer : layers)
+  {
+    // Pay attention to `params.max_stuck_gen`: it's often a large number and
+    // can cause overflow. E.g.
+    // `sum.generation > sum.last_improvement + params.max_stuck_gen`
+    if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
+        && issmall(sum.az.fit_dist(layer).variance()))
+      layer.reset(pop.problem());
+  }
+}
+
 template<Evaluator E>
 alps_es<E>::alps_es(const problem &prob, const E &eva)
   : evolution_strategy<E>(prob, eva),
@@ -252,31 +279,53 @@ auto std_es<E>::operations(
     };
 }
 
+template<Evaluator E>
+de_es<E>::de_es(const problem &prob, const E &eva)
+  : evolution_strategy<E>(prob, eva),
+    select_(prob.params),
+    recombine_(prob),
+    replace_(this->eva_, prob.params)
+{
+}
+
 ///
-/// We use an accelerated stop condition when:
-/// - after `max_stuck_gen` generations the situation doesn't change;
-/// - all the individuals have the same fitness.
+/// \param[in] pop             a population. Operations are performed on
+///                            sub-populations of `pop
+/// \param[in] iter            iterator pointing to the main subpopulation
+///                            we're going to work on
+/// \param[in] starting_status the starting status (usually generated via
+///                            `summary::starting_status()`)
+/// \return                    a callable object encaspulating the ALPS
+///                            algorithm
+///
+/// The standard evolutionary loop:
+/// - select some individuals via tournament selection;
+/// - create a new offspring individual;
+/// - place the offspring into the original population (steady state)
+///   replacing a bad individual.
+///
+/// This whole process repeats until the termination criteria is satisfied.
+/// With any luck, it will produce an individual that solves the problem at
+/// hand.
 ///
 template<Evaluator E>
 template<Population P>
-void std_es<E>::after_generation(P &pop,
-                                 const summary<individual_t, fitness_t> &sum)
+auto de_es<E>::operations(
+  P &pop, typename P::layer_iter iter,
+  const evolution_status<individual_t, fitness_t> &starting_status) const
 {
-  Expects(&pop.problem() == &this->problem());
-  const auto &params(pop.problem().params);
-  Expects(params.evolution.max_stuck_gen);
+  Expects(pop.layers());
+  Expects(iterator_of(iter, pop.range_of_layers()));
 
-  pop.inc_age();
+  return
+    [this, &pop_layer = *iter, status = starting_status]() mutable
+    {
+      Ensures(!pop_layer.empty());
 
-  for (const auto layers(pop.range_of_layers()); auto &layer : layers)
-  {
-    // Pay attention to `params.max_stuck_gen`: it's often a large number and
-    // can cause overflow. E.g.
-    // `sum.generation > sum.last_improvement + params.max_stuck_gen`
-    if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
-        && issmall(sum.az.fit_dist(layer).variance()))
-      layer.reset(pop.problem());
-  }
+      const auto parents(this->select_(pop_layer));
+      const auto offspring(this->recombine_(parents));
+      this->replace_(pop_layer, offspring, status);
+    };
 }
 
 #endif  // include guard

@@ -172,6 +172,13 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 }
 
 ///
+/// \param[in] params access to selection specific parameters
+///
+de::de(const parameters &params) : params_(params)
+{
+}
+
+///
 /// \param[in] pop a population
 /// \return        collection of four individual suited for DE recombination.
 ///                First and second element are parents, the remaining ones are
@@ -179,12 +186,12 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 ///
 /// Used parameters: `evolution.mate_zone`.
 ///
-/// \note
-/// This function can work in a multithread environment.
+/// \warning
+/// This function assumes exclusive access to the population. If other threads
+/// can change the individuals, race conditions may happen.
 ///
-template<Evaluator E>
-template<PopulationWithMutex P>
-std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
+template<SizedRandomAccessPopulation P>
+std::vector<typename P::value_type> de::operator()(const P &pop) const
 {
   const auto mate_zone(this->params_.evolution.mate_zone);
   Expects(mate_zone > 1);
@@ -199,7 +206,6 @@ std::vector<typename P::value_type> de<E>::operator()(const P &pop) const
   typename P::coord b;
   do b = random::coord(pop); while (b == a);
 
-  std::shared_lock lock(pop.mutex());
   return {pop[parent], pop[base], pop[a], pop[b]};
 }
 

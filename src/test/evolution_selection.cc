@@ -258,7 +258,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 
   test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 
-  selection::de select(eva, prob.params);
+  selection::de select(prob.params);
 
   auto max(debug::best_individual(pop, eva));
 
