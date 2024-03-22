@@ -121,8 +121,8 @@ de::operator()(const R &engaged) const
   const auto &params(prob_.params);
   Expects(0.0 <= params.evolution.p_cross && params.evolution.p_cross <= 1.0);
 
-  return {engaged[0].crossover(params.evolution.p_cross, params.de.weight,
-                               engaged[1], engaged[2], engaged[3])};
+  return engaged[0].crossover(params.evolution.p_cross, params.de.weight,
+                              engaged[1], engaged[2], engaged[3]);
 }
 
 #endif  // include guard
