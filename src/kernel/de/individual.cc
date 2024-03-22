@@ -167,12 +167,12 @@ individual individual::crossover(double p, const interval_t<double> &f,
   const auto last(ps - 1);
   for (std::size_t i(0); i < last; ++i)
     if (random::boolean(p))
-      ret[i] += rf * (b[i] - c[i]);
+      ret.genome_[i] += rf * (b[i] - c[i]);
     else
-      ret[i] = operator[](i);
+      ret.genome_[i] = operator[](i);
 
   // Last element is replaced for certain.
-  ret[last] += rf * (b[last] - c[last]);
+  ret.genome_[last] += rf * (b[last] - c[last]);
 
   ret.set_if_older_age(std::max({age(), a.age()}));
 
@@ -378,20 +378,6 @@ std::ostream &operator<<(std::ostream &s, const individual &ind)
 bool operator==(const individual &lhs, const individual &rhs)
 {
   return std::ranges::equal(lhs, rhs);
-}
-
-///
-/// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparison
-/// \return        `true` if the first individual is less than the second one
-///
-/// \note
-/// Age is not checked.
-///
-bool operator<(const individual &lhs, const individual &rhs)
-{
-  return std::vector<individual::value_type>(lhs)
-         < std::vector<individual::value_type>(rhs);
 }
 
 }  // namespace ultra::de

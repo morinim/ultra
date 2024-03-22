@@ -76,7 +76,6 @@ private:
 };  // class individual
 
 [[nodiscard]] bool operator==(const individual &, const individual &);
-[[nodiscard]] bool operator<(const individual &, const individual &);
 [[nodiscard]] double distance(const individual &, const individual &);
 
 // Visualization/output functions.
