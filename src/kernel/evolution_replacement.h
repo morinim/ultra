@@ -52,7 +52,7 @@ public:
   using tournament::strategy::strategy;
 
   template<Population P>
-  void operator()(
+  bool operator()(
     P &, const evaluator_individual_t<E> &,
     evolution_status<evaluator_individual_t<E>,
                      evaluator_fitness_t<E>> &) const;

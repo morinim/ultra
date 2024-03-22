@@ -38,7 +38,7 @@ strategy<E>::strategy(E &eva, const parameters &params)
 ///
 template<Evaluator E>
 template<Population P>
-void tournament<E>::operator()(
+bool tournament<E>::operator()(
   P &pop, const evaluator_individual_t<E> &offspring,
   evolution_status<evaluator_individual_t<E>,
                    evaluator_fitness_t<E>> &status) const
@@ -71,9 +71,12 @@ void tournament<E>::operator()(
 
   status.update_if_better(scored_individual(offspring, off_fit));
 
-  if (off_fit > worst_fitness
-      || !random::boolean(this->params_.evolution.elitism))
+  const bool replace(off_fit > worst_fitness
+                     || !random::boolean(this->params_.evolution.elitism));
+  if (replace)
     pop[worst_coord] = offspring;
+
+  return replace;
 }
 
 ///
