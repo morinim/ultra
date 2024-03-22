@@ -94,10 +94,11 @@ void evolution<S>::log_evolution() const
 
       f_dyn << run_count << ' ' << sum_.generation;
 
-      if (const auto best(sum_.best()); best.ind.empty())
-        f_dyn << " ? ?";
+      const auto best(sum_.best());
+      if (best.ind.empty())
+        f_dyn << " ?";
       else
-        f_dyn << ' ' << best.fit << " \"" << out::in_line << best.ind << '"';
+        f_dyn << ' ' << best.fit;
 
       f_dyn << ' ' << sum_.az.fit_dist().mean()
             << ' ' << sum_.az.fit_dist().standard_deviation()
@@ -105,8 +106,14 @@ void evolution<S>::log_evolution() const
             << ' ' << sum_.az.fit_dist().min()
             << ' ' << static_cast<unsigned>(sum_.az.length_dist().mean())
             << ' ' << sum_.az.length_dist().standard_deviation()
-            << ' ' << static_cast<unsigned>(sum_.az.length_dist().max())
-            << '\n';
+            << ' ' << static_cast<unsigned>(sum_.az.length_dist().max());
+
+      if (best.ind.empty())
+        f_dyn << " ?";
+      else
+        f_dyn << " \"" << out::in_line << best.ind << '"';
+
+      f_dyn << '\n';
     }
     else
     {
@@ -151,8 +158,8 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
     else
     {
       std::cout << std::setw(8) << sum_.generation << ": " << sum_.best().fit
-                << " (" << lexical_cast<std::string>(elapsed) << ")\r"
-                << std::flush;
+                << " (" << std::setw(8) << lexical_cast<std::string>(elapsed)
+                << ")\r" << std::flush;
     }
 
     from_last_msg->restart();
