@@ -47,7 +47,10 @@ void evolution_strategy<E>::after_generation(
     // `sum.generation > sum.last_improvement + params.max_stuck_gen`
     if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
         && issmall(sum.az.fit_dist(layer).variance()))
+    {
       layer.reset(pop.problem());
+      ultraINFO << "Resetting layer " << layer.uid();
+    }
   }
 }
 
