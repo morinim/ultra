@@ -86,9 +86,9 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
     const auto effective_fit(eva_(prg));
 
     cache_.insert(prg.signature(), effective_fit);
+    cached_fit = cache_.find(prg.signature());
 
 #if !defined(NDEBUG)
-    cached_fit = cache_.find(prg.signature());
     assert(cached_fit);
     assert(almost_equal(*cached_fit, effective_fit));
 #endif
