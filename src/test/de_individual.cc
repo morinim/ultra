@@ -11,6 +11,7 @@
  */
 
 #include <cstdlib>
+#include <set>
 #include <sstream>
 
 #include "kernel/de/individual.h"
@@ -150,6 +151,21 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
 
   CHECK(diff / length < prob.params.evolution.p_cross + 2.0);
   CHECK(diff / length > prob.params.evolution.p_cross - 2.0);
+}
+
+TEST_CASE_FIXTURE(fixture4, "Signature")
+{
+  using namespace ultra;
+
+  std::set<de::individual> sample;
+  std::generate_n(std::inserter(sample, sample.begin()), 200,
+                  [this] { return de::individual(prob); });
+
+  std::set<hash_t> samplehash;
+  std::ranges::transform(sample, std::inserter(samplehash, samplehash.begin()),
+                         [](const auto &prg) { return prg.signature(); });
+
+  CHECK(sample.size() == samplehash.size());
 }
 
 TEST_CASE_FIXTURE(fixture4, "Serialization")
