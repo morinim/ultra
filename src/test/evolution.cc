@@ -14,9 +14,11 @@
 #include <iostream>
 
 #include "kernel/evolution.h"
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
+#include "test/fixture4.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -59,6 +61,23 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
                          });
 
   evo.run();
+}
+
+TEST_CASE_FIXTURE(fixture4, "DE evolution")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 200;
+  prob.params.population.init_layers =   1;
+
+  test_evaluator<de::individual> eva(test_evaluator_type::realistic);
+
+  evolution evo(de_es(prob, eva));
+
+  const auto sum(evo.run());
+
+  CHECK(!sum.best().empty());
+  CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 }
 
 }  // TEST_SUITE("EVOLUTION")

@@ -16,6 +16,7 @@
 #include "kernel/evolution_strategy.h"
 #include "kernel/evolution_summary.h"
 #include "kernel/distribution.h"
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 
 #include "test/debug_support.h"
@@ -97,7 +98,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
                   return prg.signature() == sum.best().ind.signature();
                 }) != pop.end());
       }
-      // It may happen that the evolution doesn't find and individual fitter
+      // It may happen that the evolution doesn't find an individual fitter
       // than the best one of the initial population.
       else
       {
@@ -315,10 +316,21 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   auto evolve(standard.operations(pop, pop.range_of_layers().begin(),
                                   sum.starting_status()));
 
-  std::vector<distribution<double>> previous;
+  distribution<double> previous;
 
   for (auto iters(prob.params.population.individuals); iters; --iters)
+  {
     evolve();
+
+    distribution<double> current;
+    for (const auto &prg : pop)
+      current.add(eva(prg));
+
+    if (previous.size())
+      CHECK(previous.mean() <= current.mean());
+
+    previous = current;
+  }
 
   CHECK(std::ranges::all_of(pop,
                             [](const auto &prg) { return prg.is_valid(); }));
@@ -341,7 +353,7 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
               return prg.signature() == sum.best().ind.signature();
             }) != pop.end());
   }
-  // It may happen that the evolution doesn't find and individual fitter
+  // It may happen that the evolution doesn't find an individual fitter
   // than the best one of the initial population.
   else
   {
@@ -349,7 +361,69 @@ TEST_CASE_FIXTURE(fixture1, "Standard strategy")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Standard init / after_generation")
+TEST_CASE_FIXTURE(fixture4, "DE strategy")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 200;
+  prob.params.population.init_layers =   1;
+
+  layered_population<de::individual> pop(prob);
+  test_evaluator<de::individual> eva(test_evaluator_type::realistic);
+  summary<de::individual, double> sum;
+
+  const auto initial_best(debug::best_individual(pop, eva));
+
+  de_es de(prob, eva);
+  auto evolve(de.operations(pop, pop.range_of_layers().begin(),
+                            sum.starting_status()));
+
+  distribution<double> previous;
+
+  for (auto iters(prob.params.population.individuals); iters; --iters)
+  {
+    evolve();
+
+    distribution<double> current;
+    for (const auto &prg : pop)
+      current.add(eva(prg));
+
+    if (previous.size())
+      CHECK(previous.mean() <= current.mean());
+
+    previous = current;
+  }
+
+  CHECK(std::ranges::all_of(pop,
+                            [](const auto &prg) { return prg.is_valid(); }));
+
+  CHECK(!sum.best().empty());
+  CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
+
+  const auto final_best(debug::best_individual(pop, eva));
+
+  if (eva(final_best) > eva(initial_best))
+  {
+    CHECK(eva(final_best) == doctest::Approx(sum.best().fit));
+
+    // We must check signature since two individuals may differ just for
+    // the introns.
+    CHECK(std::ranges::find_if(
+            pop,
+            [&sum](const auto &prg)
+            {
+              return prg.signature() == sum.best().ind.signature();
+            }) != pop.end());
+  }
+  // It may happen that the evolution doesn't find an individual fitter
+  // than the best one of the initial population.
+  else
+  {
+    CHECK(eva(final_best) >= sum.best().fit);
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Default init / after_generation")
 {
   using namespace ultra;
 

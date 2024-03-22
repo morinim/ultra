@@ -1,6 +1,7 @@
+# Creates the tests.
+
 find_package(Threads)
 
-# Creates the tests.
 enable_testing()
 
 file(GLOB TESTS_SRC CONFIGURE_DEPENDS *.cc)
