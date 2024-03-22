@@ -157,7 +157,14 @@ TEST_CASE_FIXTURE(fixture4, "Signature")
 {
   using namespace ultra;
 
-  std::set<de::individual> sample;
+  const auto cmp([](const de::individual &lhs, const de::individual &rhs)
+  {
+    using value_type = de::individual::value_type;
+
+    return std::vector<value_type>(lhs) < std::vector<value_type>(rhs);
+  });
+
+  std::set<de::individual, decltype(cmp)> sample;
   std::generate_n(std::inserter(sample, sample.begin()), 200,
                   [this] { return de::individual(prob); });
 
