@@ -62,7 +62,7 @@ public:
 
 private:
   // *** Private support methods ***
-  hash_t hash() const;
+  [[nodiscard]] hash_t hash() const;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
@@ -76,6 +76,7 @@ private:
 };  // class individual
 
 [[nodiscard]] bool operator==(const individual &, const individual &);
+[[nodiscard]] bool operator<(const individual &, const individual &);
 [[nodiscard]] double distance(const individual &, const individual &);
 
 // Visualization/output functions.

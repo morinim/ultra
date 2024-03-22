@@ -10,8 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_GA_PROBLEM_H)
-#define      ULTRA_GA_PROBLEM_H
+#if !defined(ULTRA_DE_PROBLEM_H)
+#define      ULTRA_DE_PROBLEM_H
 
 #include "kernel/problem.h"
 #include "kernel/de/primitive.h"

@@ -120,7 +120,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 ///
 /// Differential evolution crossover.
 ///
-/// \param[in] p crossover probability
+/// \param[in] p crossover probability (`parameters.evolution.p_cross`)
 /// \param[in] f scaling factor interval (`parameters.de.weight`)
 /// \param[in] a first parent (base vector)
 /// \param[in] b second parent
@@ -132,9 +132,9 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 ///     offspring = crossover(this, a + F * (b - c))
 ///
 /// first the search direction is defined by calculating a *difference vector*
-/// between the pair of vectors `a` and `b` (usually choosen at random from the
+/// between the pair of vectors `b` and `c` (usually choosen at random from the
 /// population). This difference vector is scaled by using the *scale factor*
-/// `f`. This scaled difference vector is then added to a third vector `c`,
+/// `F`. This scaled difference vector is then added to a third vector `a`,
 /// called the *base vector*. As a result a new vector is obtained, known as
 /// the *mutant vector*. The mutant vector is recombined, based on a used
 /// defined parameter, called *crossover probability*, with the target vector
@@ -143,7 +143,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 /// This way no separate probability distribution has to be used which makes
 /// the scheme completely self-organizing.
 ///
-/// `a` and `b` are used for mutation, `this` and `c` for crossover.
+/// `b` and `c` are used for mutation, `this` and `a` for crossover.
 ///
 individual individual::crossover(double p, const interval_t<double> &f,
                                  const individual &a,
@@ -378,6 +378,20 @@ std::ostream &operator<<(std::ostream &s, const individual &ind)
 bool operator==(const individual &lhs, const individual &rhs)
 {
   return std::ranges::equal(lhs, rhs);
+}
+
+///
+/// \param[in] lhs first term of comparison
+/// \param[in] rhs second term of comparison
+/// \return        `true` if the first individual is less than the second one
+///
+/// \note
+/// Age is not checked.
+///
+bool operator<(const individual &lhs, const individual &rhs)
+{
+  return std::vector<individual::value_type>(lhs)
+         < std::vector<individual::value_type>(rhs);
 }
 
 }  // namespace ultra::de
