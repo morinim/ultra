@@ -65,7 +65,7 @@ alps_es<E>::alps_es(const problem &prob, const E &eva)
 
 ///
 /// \param[in] pop             a population. Operations are performed on
-///                            sub-populations of `pop
+///                            sub-populations of `pop`
 /// \param[in] iter            iterator pointing to the main subpopulation
 ///                            we're going to work on. Other sub-populations
 ///                            involved are `std::next(subpop_iter)` and
@@ -244,7 +244,7 @@ std_es<E>::std_es(const problem &prob, const E &eva)
 
 ///
 /// \param[in] pop             a population. Operations are performed on
-///                            sub-populations of `pop
+///                            sub-populations of `pop`
 /// \param[in] iter            iterator pointing to the main subpopulation
 ///                            we're going to work on
 /// \param[in] starting_status the starting status (usually generated via
@@ -265,7 +265,7 @@ std_es<E>::std_es(const problem &prob, const E &eva)
 template<Evaluator E>
 template<Population P>
 auto std_es<E>::operations(
-  P &pop, typename P::layer_iter iter,
+  [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(pop.layers());
@@ -293,7 +293,7 @@ de_es<E>::de_es(const problem &prob, const E &eva)
 
 ///
 /// \param[in] pop             a population. Operations are performed on
-///                            sub-populations of `pop
+///                            sub-populations of `pop`
 /// \param[in] iter            iterator pointing to the main subpopulation
 ///                            we're going to work on
 /// \param[in] starting_status the starting status (usually generated via
@@ -314,7 +314,7 @@ de_es<E>::de_es(const problem &prob, const E &eva)
 template<Evaluator E>
 template<Population P>
 auto de_es<E>::operations(
-  P &pop, typename P::layer_iter iter,
+  [[maybe_unused]]  P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(pop.layers());
