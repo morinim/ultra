@@ -13,11 +13,13 @@
 #if !defined(ULTRA_ANALYZER_H)
 #define      ULTRA_ANALYZER_H
 
+#include <concepts>
 #include <map>
 
 #include "kernel/distribution.h"
 #include "kernel/evaluator.h"
 #include "kernel/population.h"
+#include "kernel/gp/individual.h"
 
 namespace ultra
 {
