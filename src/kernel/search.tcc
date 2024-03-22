@@ -96,7 +96,8 @@ void search<ES, E>::tune_parameters()
     prob_.params.evolution.tournament_size = dflt.evolution.tournament_size;
 
   if (!constrained.evolution.mate_zone)
-    prob_.params.evolution.mate_zone = dflt.evolution.mate_zone;
+    prob_.params.evolution.mate_zone =
+      std::max<std::size_t>(prob_.params.population.individuals / 5, 4);
 
   if (!constrained.evolution.generations)
     prob_.params.evolution.generations = dflt.evolution.generations;
