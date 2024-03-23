@@ -260,6 +260,12 @@ evolution<S>::run()
       std::this_thread::yield();
     }
 
+    if (previous_best < sum_.best())
+    {
+      previous_best = sum_.best();
+      print(true, from_start.elapsed(), &from_last_msg);
+    }
+
     sum_.az = analyze(pop_, es_.evaluator());
     log_evolution();
     es_.after_generation(pop_, sum_);
