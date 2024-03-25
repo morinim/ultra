@@ -153,7 +153,7 @@ int main()
   // std::discrete_distribution
   for (unsigned i(0); i < sup; ++i)
   {
-    out = dd(random::engine);
+    out = dd(random::engine());
   }
 
   std::cout << "Discrete dist - Elapsed: " << t.elapsed().count() << "ms\n";

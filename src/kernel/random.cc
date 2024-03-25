@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,45 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <atomic>
+
 #include "kernel/random.h"
 
 namespace ultra::random
 {
-
-///
-/// The shared random engine generator.
-///
-/// Every thread has its own generator.
-/// The numbers produced will be the same every time the program is run.
-///
-thread_local engine_t engine;
-
-///
-/// Initalizes the random number generator.
-///
-/// \param[in] s the seed for the random number generator
-///
-/// The seed is used to initalize the random number generator. With the same
-/// seed the numbers produced will be the same every time the program is run.
-///
-/// \note
-/// A common method to seed a PRNG is using the current time (`std::time(0)`).
-/// It works... but the preferred way in Ultra is the `randomize` method (which
-/// is based on `std::random_device`).
-///
-void seed(unsigned s)
-{
-  engine.seed(s);
-}
-
-///
-/// Sets the shared engine to an unpredictable state.
-///
-void randomize()
-{
-  std::random_device rd;
-  seed(rd());
-}
 
 ///
 /// Returns a random number in a modular arithmetic system.
@@ -71,6 +38,40 @@ std::size_t ring(std::size_t base, std::size_t radius, std::size_t n)
   const auto min_val(base + n - radius);
 
   return (min_val + random::sup(2 * radius)) % n;
+}
+
+namespace
+{
+
+// See:
+// - https://stackoverflow.com/a/77510422/3235496
+// - https://www.johndcook.com/blog/2016/01/29/random-number-generator-seed-mistakes/
+[[nodiscard]] engine_t::result_type next_seed(bool unpredictable = false)
+{
+  static std::atomic<engine_t::result_type> process_seed(
+    unpredictable ? std::random_device{}() : 1);
+
+  return process_seed.fetch_add(1, std::memory_order_relaxed);
+}
+
+}  // namespace
+
+///
+/// Every thread has its own generator initialized with a different seed.
+///
+engine_t &engine()
+{
+  thread_local engine_t prng(next_seed());
+
+  return prng;
+}
+
+///
+/// Sets the shared engine to an unpredictable state.
+///
+void randomize()
+{
+  [[maybe_unused]] auto _(next_seed(true));
 }
 
 }  // namespace ultra::random

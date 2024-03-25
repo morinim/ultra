@@ -305,7 +305,7 @@ typename std::size_t layer(const P &p)
     s[i] = p.layer(i).size();
 
   std::discrete_distribution<std::size_t> dd(s.begin(), s.end());
-  return dd(random::engine);
+  return dd(random::engine());
 }
 
 }  // namespace random

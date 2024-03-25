@@ -35,11 +35,8 @@ enum class distribution {uniform, normal};
 ///
 using engine_t = vigna::xoshiro256ss;
 
-extern thread_local engine_t engine;
-
+[[nodiscard]] engine_t &engine();
 [[nodiscard]] std::size_t ring(std::size_t, std::size_t, std::size_t);
-
-void seed(unsigned);
 void randomize();
 
 ///
@@ -62,7 +59,7 @@ template<std::floating_point T>
   Expects(min < sup);
 
   std::uniform_real_distribution<T> d(min, sup);
-  return d(engine);
+  return d(engine());
 }
 
 ///
@@ -84,7 +81,7 @@ template<std::integral T>
   Expects(min < sup);
 
   std::uniform_int_distribution<T> d(min, sup - 1);
-  return d(engine);
+  return d(engine());
 }
 
 template<class T>
@@ -160,7 +157,7 @@ template<std::ranges::sized_range C>
   Expects(p <= 1.0);
 
   std::bernoulli_distribution d(p);
-  return d(engine);
+  return d(engine());
 }
 
 ///
@@ -187,7 +184,8 @@ requires std::is_arithmetic_v<T>
   switch (d)
   {
   case distribution::normal:
-    return std::normal_distribution<T>(std::midpoint(p1, p2), p2 - p1)(engine);
+    return std::normal_distribution<T>(std::midpoint(p1, p2),
+                                       p2 - p1)(engine());
   default:
     return between(p1, p2);
   }
