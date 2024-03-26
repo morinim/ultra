@@ -99,19 +99,22 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 
     for (unsigned iterations(100); iterations; --iterations)
     {
-      const std::vector parents =
+      std::vector<de::individual> pop =
       {
         de::individual(prob), de::individual(prob),
         de::individual(prob), de::individual(prob)
       };
 
+      const selection::de::parents<de::individual> parents{pop[0], pop[1],
+                                                           pop[2], pop[3]};
+
       const auto x(recombine(parents));
 
       const auto last(x.parameters() - 1);
       for (std::size_t i(0); i < last; ++i)
-        CHECK(parents[0][i] == doctest::Approx(x[i]));
+        CHECK(parents.parent[i] == doctest::Approx(x[i]));
 
-      CHECK(parents[0][last] != doctest::Approx(x[last]));
+      CHECK(parents.parent[last] != doctest::Approx(x[last]));
     }
   }
 
@@ -121,26 +124,28 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 
     for (unsigned iterations(100); iterations; --iterations)
     {
-      const std::vector parents =
+      std::vector pop =
       {
         de::individual(prob), de::individual(prob),
         de::individual(prob), de::individual(prob)
       };
+      const selection::de::parents<de::individual> parents{pop[0], pop[1],
+                                                           pop[2], pop[3]};
 
       const auto x(recombine(parents));
 
       const auto last(x.parameters() - 1);
       for (std::size_t i(0); i < last; ++i)
       {
-        const bool no_cross(parents[0][i] == doctest::Approx(x[i]));
-        const bool cross(parents[1][i] + parents[2][i] - parents[3][i]
+        const bool no_cross(parents.parent[i] == doctest::Approx(x[i]));
+        const bool cross(parents.base[i] + parents.a[i] - parents.b[i]
                          == doctest::Approx(x[i]));
         const bool valid(no_cross || cross);
         CHECK(valid);
       }
 
-      CHECK(parents[1][last] + parents[2][last] - parents[3][last]
-                         == doctest::Approx(x[last]));
+      CHECK(parents.base[last] + parents.a[last] - parents.b[last]
+            == doctest::Approx(x[last]));
     }
   }
 }

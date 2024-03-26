@@ -327,7 +327,7 @@ auto de_es<E>::operations(
 
       const auto parents(this->select_(pop_layer));
       const auto offspring(this->recombine_(parents));
-      this->replace_(pop_layer, offspring, status);
+      this->replace_(parents, offspring, status);
     };
 }
 

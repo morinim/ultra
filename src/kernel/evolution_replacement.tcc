@@ -209,4 +209,28 @@ void alps<E>::operator()(
   }
 }
 
+template<Evaluator E>
+bool de<E>::operator()(
+  const ultra::selection::de::parents<evaluator_individual_t<E>> &parents,
+  const evaluator_individual_t<E> &offspring,
+  evolution_status<evaluator_individual_t<E>,
+                   evaluator_fitness_t<E>> &status) const
+{
+  const auto elitism(this->params_.evolution.elitism);
+  Expects(0 <= elitism && elitism <= 1);
+
+  const auto off_fit(this->eva_(offspring));
+
+  status.update_if_better(scored_individual(offspring, off_fit));
+
+  if (const auto parent_fit(this->eva_(parents.parent));
+      off_fit > parent_fit || !random::boolean(elitism))
+  {
+    parents.parent = offspring;
+    return true;
+  }
+
+  return false;
+}
+
 #endif  // include guard

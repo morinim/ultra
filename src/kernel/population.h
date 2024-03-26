@@ -70,6 +70,7 @@ template<SizedRandomAccessPopulation P>
 [[nodiscard]] std::size_t
 coord(const P &l, std::size_t i, std::size_t mate_zone)
 {
+  Expects(i < l.size());
   return random::ring(i, mate_zone, l.size());
 }
 

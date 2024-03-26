@@ -91,10 +91,19 @@ template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
 class de
 {
 public:
+  template<Individual I>
+  struct parents
+  {
+    I &parent;
+    I &base;
+    I &a;
+    I &b;
+  };
+
   explicit de(const parameters &);
 
   template<SizedRandomAccessPopulation P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
+  [[nodiscard]] parents<typename P::value_type> operator()(P &) const;
 
 private:
   const parameters &params_;

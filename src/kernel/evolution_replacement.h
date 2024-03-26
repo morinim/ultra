@@ -15,6 +15,7 @@
 
 #include "kernel/alps.h"
 #include "kernel/evaluator.h"
+#include "kernel/evolution_selection.h"
 #include "kernel/evolution_status.h"
 #include "kernel/linear_population.h"
 
@@ -93,6 +94,19 @@ private:
 };
 
 template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
+
+template<Evaluator E>
+class de : public strategy<E>
+{
+public:
+  using de::strategy::strategy;
+
+  bool operator()(
+    const ultra::selection::de::parents<evaluator_individual_t<E>> &,
+    const evaluator_individual_t<E> &,
+    evolution_status<evaluator_individual_t<E>,
+                     evaluator_fitness_t<E>> &) const;
+};
 
 #include "kernel/evolution_replacement.tcc"
 

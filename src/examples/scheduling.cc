@@ -65,6 +65,8 @@ int main()
   using namespace ultra;
   using namespace std::chrono_literals;
 
+  log::reporting_level = log::lINFO;
+
   std::ranges::generate(job_duration,
                         []
                         {
@@ -80,8 +82,8 @@ int main()
   // `[-0.5, 23.5[` interval.
   de::problem prob(n_jobs, {-0.5, 23.5});
 
-  prob.params.population.individuals =  250;
-  prob.params.evolution.generations  = 2000;
+  prob.params.population.individuals =   50;
+  prob.params.evolution.generations  = 3000;
   //prob.params.evolution.tournament_size   = 40;
 
   prob.params.stat.dynamic_file = "dyn.txt";

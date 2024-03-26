@@ -43,9 +43,6 @@ bool evolution<S>::stop_condition() const
   if (term::user_stop())
     return true;
 
-  // Check strategy specific stop conditions.
-  //return es_.stop_condition();
-
   return false;
 }
 
@@ -153,7 +150,10 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
     if (summary)
     {
       std::cout << std::string(50, ' ') << '\r' << std::flush;
-      ultraOUTPUT << std::setw(8) << sum_.generation << ": " << sum_.best().fit;
+      ultraOUTPUT << std::setw(8) << sum_.generation << ": "
+                  << std::setw(12) << sum_.best().fit
+                  << " (" << std::setw(8) << lexical_cast<std::string>(elapsed)
+                  << ")";
     }
     else
     {
@@ -222,6 +222,19 @@ evolution<S>::run()
 
   scored_individual previous_best(sum_.best());
 
+  const auto print_and_update_if_better(
+    [&](const auto &candidate)
+    {
+      if (previous_best < candidate)
+      {
+        previous_best = candidate;
+        print(true, from_start.elapsed(), &from_last_msg);
+        return true;
+      }
+
+      return false;
+    });
+
   term::set();
   es_.init(pop_);  // customizatin point for strategy-specific initialization
 
@@ -242,12 +255,7 @@ evolution<S>::run()
     {
       if (from_last_msg.elapsed() > 2s)
       {
-        if (previous_best < sum_.best())
-        {
-          previous_best = sum_.best();
-          print(true, from_start.elapsed(), &from_last_msg);
-        }
-        else
+        if (!print_and_update_if_better(sum_.best()))
           print(false, from_start.elapsed(), &from_last_msg);
 
         if (!stop && (stop = stop_condition()))
@@ -260,11 +268,7 @@ evolution<S>::run()
       std::this_thread::yield();
     }
 
-    if (previous_best < sum_.best())
-    {
-      previous_best = sum_.best();
-      print(true, from_start.elapsed(), &from_last_msg);
-    }
+    print_and_update_if_better(sum_.best());
 
     sum_.az = analyze(pop_, es_.evaluator());
     log_evolution();
@@ -273,7 +277,8 @@ evolution<S>::run()
 
   sum_.elapsed = from_start.elapsed();
 
-  ultraINFO << "Elapsed time: "
+  ultraINFO << "Evolution completed at generation: " << sum_.generation
+            << ". Elapsed time: "
             << lexical_cast<std::string>(from_start.elapsed());
 
   term::reset();

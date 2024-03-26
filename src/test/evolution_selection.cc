@@ -254,31 +254,28 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   distribution<double> dist;
 
   // Individuals have distinct ages.
-  const auto pop(debug::make_debug_population<de::individual>(prob));
+  auto pop(debug::make_debug_population<de::individual>(prob));
 
   test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 
   selection::de select(prob.params);
 
-  auto max(debug::best_individual(pop, eva));
+  auto max_age(debug::best_individual(pop, eva).age());
 
   const unsigned n(prob.params.population.individuals * 100);
   unsigned found(0);
   for (unsigned i(0); i < n; ++i)
   {
     auto parents(select(pop.front()));
-    CHECK(parents.size() == 4);
 
-    if (std::ranges::find_if(parents,
-                             [ma = max.age()](const auto &prg)
-                             {
-                               return prg.age() == ma;
-                             })
-        != parents.end())
+    if (parents.parent.age() == max_age || parents.base.age() == max_age
+        || parents.a.age() == max_age || parents.b.age() == max_age)
       ++found;
 
-    for (const auto &prg : parents)
-      dist.add(prg.age());
+    dist.add(parents.parent.age());
+    dist.add(parents.base.age());
+    dist.add(parents.a.age());
+    dist.add(parents.b.age());
   }
 
   const double frequency(static_cast<double>(found) / n);

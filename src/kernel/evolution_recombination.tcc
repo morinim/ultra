@@ -21,9 +21,11 @@
 /// \param[in]  eva    a fitness function
 /// \param[in]  prob   the current problem
 ///
+/// \warning
+/// The lifetime of `eva` must exceed lifetime of `this` class.
+///
 template<Evaluator E>
-strategy<E>::strategy(E &eva, const problem &prob)
-  : eva_(eva), prob_(prob)
+strategy<E>::strategy(E &eva, const problem &prob) : eva_(eva), prob_(prob)
 {
 }
 
@@ -112,17 +114,14 @@ de::de(const problem &prob) : prob_(prob)
 ///
 /// Used parameters: `evolution.p_cross`, `de.weight`.
 ///
-template<RandomAccessIndividuals R>
-[[nodiscard]] std::ranges::range_value_t<R>
-de::operator()(const R &engaged) const
+template<Individual I>
+I de::operator()(const ultra::selection::de::parents<I> &engaged) const
 {
-  Expects(engaged.size() == 4);
-
   const auto &params(prob_.params);
   Expects(0.0 <= params.evolution.p_cross && params.evolution.p_cross <= 1.0);
 
-  return engaged[0].crossover(params.evolution.p_cross, params.de.weight,
-                              engaged[1], engaged[2], engaged[3]);
+  return engaged.parent.crossover(params.evolution.p_cross, params.de.weight,
+                                  engaged.base, engaged.a, engaged.b);
 }
 
 #endif  // include guard

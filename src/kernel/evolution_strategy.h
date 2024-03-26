@@ -184,9 +184,9 @@ public:
     const evolution_status<individual_t, fitness_t> &) const;
 
 private:
-  const selection::de               select_;
-  const recombination::de        recombine_;
-  const replacement::tournament<E> replace_;
+  const selection::de        select_;
+  const recombination::de recombine_;
+  const replacement::de<E>  replace_;
 };  // class de_es
 
 template<class S>

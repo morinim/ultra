@@ -21,6 +21,9 @@
 /// \param[in] eva    current evaluator
 /// \param[in] params access to selection specific parameters
 ///
+/// \warning
+/// The lifetime of `eva` must exceed lifetime of `this` class.
+///
 template<Evaluator E>
 strategy<E>::strategy(E &eva, const parameters &params)
   : eva_(eva), params_(params)
@@ -180,31 +183,26 @@ de::de(const parameters &params) : params_(params)
 
 ///
 /// \param[in] pop a population
-/// \return        collection of four individual suited for DE recombination.
-///                First and second element are parents, the remaining ones are
-///                used for scaling.
-///
-/// Used parameters: `evolution.mate_zone`.
+/// \return        references of four individuals suited for DE recombination.
+///                First and second elements are parents, the remaining ones
+///                are used for scaling.
 ///
 /// \warning
 /// This function assumes exclusive access to the population. If other threads
 /// can change the individuals, race conditions may happen.
 ///
 template<SizedRandomAccessPopulation P>
-std::vector<typename P::value_type> de::operator()(const P &pop) const
+de::parents<typename P::value_type>
+de::operator()(P &pop) const
 {
-  const auto mate_zone(this->params_.evolution.mate_zone);
-  Expects(mate_zone > 1);
-
   const auto parent(random::coord(pop));
 
   typename P::coord base;
-  do base = random::coord(pop, parent, mate_zone); while (base == parent);
+  do base = random::coord(pop); while(base == parent);
+    //const auto base(random::coord(pop));
 
   const auto a(random::coord(pop));
-
-  typename P::coord b;
-  do b = random::coord(pop); while (b == a);
+  const auto b(random::coord(pop));
 
   return {pop[parent], pop[base], pop[a], pop[b]};
 }

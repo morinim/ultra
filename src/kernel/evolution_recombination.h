@@ -14,6 +14,7 @@
 #define      ULTRA_EVOLUTION_RECOMBINATION_H
 
 #include "kernel/evaluator.h"
+#include "kernel/evolution_selection.h"
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
 #include "kernel/population.h"
@@ -81,8 +82,8 @@ class de
 public:
   explicit de(const problem &);
 
-  template<RandomAccessIndividuals R>
-  [[nodiscard]] std::ranges::range_value_t<R> operator()(const R &) const;
+  template<Individual I>
+  [[nodiscard]] I operator()(const selection::de::parents<I> &) const;
 
 private:
   const problem &prob_;
