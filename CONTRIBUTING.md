@@ -16,7 +16,7 @@ There are several ways you can help the development:
 
 * **Triage tickets that have been created by other users**. If a ticket is unreviewed and reports a bug, try and reproduce it. If you can reproduce it and it seems valid, make a note that you confirmed the bug and accept the ticket. Make sure the ticket is filed under the correct component area. Consider writing a patch that adds a test for the bug’s behavior, even if you don't fix the bug itself.
 
-* **Submit patches for new and/or fixed behavior** (requires to sign a [CLA][cla]).
+* **Submit patches for new and/or fixed behavior** (see next section for further details).
     * if you're looking for an easy way to start contributing to Ultra, have a look at the easy pickings tickets. If you're going to engage in a big task, make sure that your idea has support first. This means getting someone else to confirm that a bug is real before you fix the issue and ensuring that the core team supports a proposed feature before you go implementing it;
     * browse the [development cycle][development_cycle] to find out how to give your code patches the best chances to be included in Ultra core.
 
@@ -25,6 +25,28 @@ There are several ways you can help the development:
 * **Artwork**. Do you have artistic talent? Then you could work on the art assets of the project like icons or logos. Not just the software itself but also its website and promotional material can certainly benefit from your skills.
 
 ...and many more ways! Really, ANYONE can do something to help make Ultra better.
+
+## License and Developer Certificate of Origin
+
+Ultra is an open source framework licensed under MPL v2.0. By contributing to Ultra, you accept and agree to the terms and conditions for your present and future contributions submitted to Ultra.
+
+The project also uses a mechanism known as a [Developer Certificate of Origin][dco] (DCO) to manage the process of ensuring that we are legally allowed to distribute all the code and assets for the project. A DCO is a legally binding statement that asserts that you are the creator of your contribution, and that you wish to allow Ultra to use your work.
+
+Contributors sign-off that they adhere to these requirements by adding a `Signed-off-by` line to commit messages. All commits of all repositories of the Ultra community have to be signed-off like this:
+
+```
+This is my commit message.
+
+Signed-off-by: John Doe <john.doe@server.com>
+```
+
+You can write it manually but Git even has a `-s` command line option to append this automatically to your commit message:
+
+```
+$ git commit -s -m 'This is my commit message'
+```
+
+Note that most IDEs can be configured in order to add a Signed-off-by line at the end of the commit message.
 
 ## Project governance
 
@@ -48,6 +70,6 @@ Contributors are community members who either have no desire to become committer
 
 Anyone can become a contributor. There is no expectation of commitment to the project, no specific skill requirements and no selection process. To become a contributor, a community member simply has to perform one or more actions that are beneficial to the project.
 
-[cla]: https://github.com/morinim/ultra/wiki/cla
+[dco]: https://developercertificate.org/
 [development_cycle]: https://github.com/morinim/ultra/wiki/development_cycle
 [security_label]: https://github.com/morinim/ultra/labels/security
