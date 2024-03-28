@@ -170,6 +170,9 @@ private:
 ///
 /// Differential evolution strategy.
 ///
+/// Implemented as described in
+/// https://github.com/morinim/ultra/wiki/bibliography#5.
+///
 template<Evaluator E>
 class de_es : public evolution_strategy<E>
 {

@@ -42,7 +42,7 @@ namespace ultra::recombination
 /// of existing ones is obtained implementing recombination::strategy.
 ///
 /// \see
-/// * <http://en.wikipedia.org/wiki/Strategy_pattern>
+/// - https://en.wikipedia.org/wiki/Strategy_pattern
 ///
 template<Evaluator E>
 class strategy

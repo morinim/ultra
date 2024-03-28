@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -46,7 +46,7 @@ struct locus
 /// \param[in] l1 first locus
 /// \param[in] l2 second locus
 /// \return       `true` if `l1` precedes `l2` in lexicographic order
-///               (http://en.wikipedia.org/wiki/Lexicographical_order)
+///               (https://en.wikipedia.org/wiki/Lexicographical_order)
 ///
 [[nodiscard]] inline bool operator<(const locus &l1, const locus &l2)
 {
@@ -58,7 +58,7 @@ struct locus
 /// \param[in] l1 first locus
 /// \param[in] l2 second locus
 /// \return       `true` if `l2` precedes `l1` in lexicographic order
-///               (http://en.wikipedia.org/wiki/Lexicographical_order)
+///               (https://en.wikipedia.org/wiki/Lexicographical_order)
 ///
 [[nodiscard]] inline bool operator>(const locus &l1, const locus &l2)
 {

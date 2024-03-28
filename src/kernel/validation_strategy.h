@@ -54,7 +54,7 @@ public:
 /// Implements the interface of a `validation_strategy` with empty body
 /// methods (it's very predictable and has no side effects: it does nothing).
 ///
-/// \see <https://en.wikipedia.org/wiki/Null_Object_pattern>
+/// \see https://en.wikipedia.org/wiki/Null_Object_pattern
 ///
 class as_is_validation final : public validation_strategy
 {

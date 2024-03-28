@@ -66,9 +66,9 @@ ultra/
     CMakeLists.txt
     examples/ .............Various examples
     kernel/ ...............Ultra kernel (core library)
-    misc/ .................Support libraries / files
     test/ .................Test-suite
     third_party/ ..........Third party libraries
+    utility/ ..............Support libraries / files
   tools/ ..................Various tools related to development
   CONTRIBUTING.md
   LICENSE

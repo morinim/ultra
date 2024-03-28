@@ -115,7 +115,7 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 /// \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
 ///
 /// We use an offline algorithm
-/// (http://en.wikipedia.org/wiki/Online_algorithm).
+/// (https://en.wikipedia.org/wiki/Online_algorithm).
 ///
 template<ArithmeticFloatingType T>
 double distribution<T>::entropy() const
@@ -142,7 +142,6 @@ double distribution<T>::entropy() const
 /// Addison-Wesley).
 ///
 /// \see
-/// - https://en.wikipedia.org/wiki/Online_algorithm
 /// - https://en.wikipedia.org/wiki/Moving_average#Cumulative_average
 ///
 template<ArithmeticFloatingType T>

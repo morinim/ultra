@@ -84,7 +84,6 @@ struct parameters
     /// \see
     /// - https://github.com/morinim/vita/wiki/bibliography#6
     /// - https://github.com/morinim/vita/wiki/bibliography#7
-    /// - https://github.com/morinim/vita/wiki/bibliography#8
     ///
     /// \note
     /// - `0` means auto-tune;
