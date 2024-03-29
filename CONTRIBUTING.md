@@ -34,7 +34,7 @@ If a ticket is unreviewed and reports a bug, try and reproduce it. If you can re
 
 #### Make a donation
 
-[![Static Badge](https://img.shields.io/badge/sponsor-ultra-pink?logo=githubsponsors&labelColor=green)][donation] you our my gratitude and the great feeling of knowing you are helping keep Ultra going.
+[![Static Badge](https://img.shields.io/badge/sponsor-ultra-pink?logo=githubsponsors&labelColor=green)][donation] help keep Ultra going.
 
 ## Project governance
 
