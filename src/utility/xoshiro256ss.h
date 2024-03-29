@@ -1,7 +1,3 @@
-// Original and permanent links:
-// - http://xoroshiro.di.unimi.it/
-// - http://xoshiro.di.unimi.it/
-//
 // Written in 2016-2018 by David Blackman and Sebastiano Vigna (vigna@acm.org)
 //
 // To the extent possible under law, the author has dedicated all copyright
@@ -13,14 +9,14 @@
 /**
  *  \file
  *
- *  \copyright Copyright (C) 2018 Manlio Morini.
+ *  \copyright Copyright (C) 2018-2024 Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
- *  \see http://xoshiro.di.unimi.it/
+ *  \see https://prng.di.unimi.it/
  */
 
 #if !defined(PRNG_XOSHIRO_H)
@@ -30,6 +26,10 @@
 #include <iostream>
 #include <limits>
 #include <random>
+
+#if __cplusplus >= 202002L  // C++20 (and later) code
+#  include <bit>
+#endif
 
 ///
 /// The main 64-bit proposal for an all-purpose, rock-solid generator is
@@ -50,12 +50,16 @@
 namespace vigna
 {
 
+#if __cplusplus < 202002L
 // Most compilers will turn this simulated rotate operation into a single
 // instruction.
 constexpr std::uint64_t rotl(std::uint64_t x, int k) noexcept
 {
   return (x << k) | (x >> (64 - k));
 }
+#else
+using std::rotl;
+#endif
 
 ///
 /// xoshiro256** v1.0, an all-purpose, rock-solid generator.
@@ -71,14 +75,16 @@ constexpr std::uint64_t rotl(std::uint64_t x, int k) noexcept
 /// must be performed with a generator radically different in nature from the
 /// one initialized to avoid correlation on similar seeds).
 ///
+/// \warning
+/// Not cryptographically secure generator.
+///
 class xoshiro256ss
 {
 public:
   using result_type = std::uint64_t;
 
-  // If one doesn't specify a seed for the PRNG, it uses a default one.
-  explicit xoshiro256ss(result_type s = def_seed) noexcept : state()
-  { seed(s); }
+  xoshiro256ss() noexcept = default;
+  explicit xoshiro256ss(result_type s) noexcept { seed(s); }
 
   /// \return the smallest value that `operator()` may return. The value is
   ///         strictly less than `max()`
@@ -108,13 +114,19 @@ public:
 	return result_starstar;
   }
 
-  void seed() noexcept ;
-  void seed(result_type) noexcept;
+  void discard(unsigned long long) noexcept;
+  void seed(result_type = def_seed) noexcept;
+  void seed(const std::array<std::uint64_t, 4> &) noexcept;
 
+#if __cplusplus >= 202002L
+  [[nodiscard]] bool operator==(const xoshiro256ss &) const noexcept = default;
+  [[nodiscard]] bool operator!=(const xoshiro256ss &) const noexcept = default;
+#else
   bool operator==(const xoshiro256ss &rhs) const noexcept
   { return state == rhs.state; }
   bool operator!=(const xoshiro256ss &rhs) const noexcept
   { return !(*this == rhs); }
+#endif
 
   friend std::ostream &operator<<(std::ostream &, const xoshiro256ss &);
   friend std::istream &operator>>(std::istream &, xoshiro256ss &);
@@ -122,7 +134,7 @@ public:
 private:
   static constexpr result_type def_seed = 0xcced1fc561884152;
 
-  std::array<std::uint64_t, 4> state;
+  std::array<std::uint64_t, 4> state {def_seed};
 };  // class xoshiro256ss
 
 
@@ -139,19 +151,21 @@ private:
 /// generate 64-bit outputs, too; moreover, this generator has a very mild
 /// Hamming-weight dependency making our test (http://prng.di.unimi.it/hwd.php)
 /// fail after 8 TB of output; we believe this slight bias cannot affect any
-/// application. If you are concerned, use xoroshiro128** or xoshiro256+.
+/// application.
 ///
 /// We suggest to use a sign test to extract a random `bool` value and right
 /// shifts to extract subsets of bits.
+///
+/// \warning
+/// Not cryptographically secure generator.
 ///
 class xoroshiro128p
 {
 public:
   using result_type = std::uint64_t;
 
-  // If one doesn't specify a seed for the PRNG, it uses a default one.
-  explicit xoroshiro128p(result_type s = def_seed) noexcept : state()
-  { seed(s); }
+  xoroshiro128p() noexcept = default;
+  explicit xoroshiro128p(result_type s) noexcept { seed(s); }
 
   /// \return the smallest value that `operator()` may return. The value is
   ///         strictly less than `max()`
@@ -177,13 +191,18 @@ public:
     return result;
   }
 
-  void seed() noexcept ;
-  void seed(result_type) noexcept;
+  void discard(unsigned long long) noexcept;
+  void seed(result_type = def_seed) noexcept;
 
+#if __cplusplus >= 202002L
+  [[nodiscard]] bool operator==(const xoroshiro128p &) const noexcept = default;
+  [[nodiscard]] bool operator!=(const xoroshiro128p &) const noexcept = default;
+#else
   bool operator==(const xoroshiro128p &rhs) const noexcept
   { return state == rhs.state; }
   bool operator!=(const xoroshiro128p &rhs) const noexcept
   { return !(*this == rhs); }
+#endif
 
   friend std::ostream &operator<<(std::ostream &, const xoroshiro128p &);
   friend std::istream &operator>>(std::istream &, xoroshiro128p &);
@@ -191,7 +210,7 @@ public:
 private:
   static constexpr result_type def_seed = 0xcced1fc561884152;
 
-  std::array<std::uint64_t, 2> state;
+  std::array<std::uint64_t, 2> state {};
 };  // class xoroshiro128p
 
 }  // namespace vigna

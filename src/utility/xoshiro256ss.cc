@@ -1,7 +1,7 @@
 /**
  *  \file
  *
- *  \copyright Copyright (C) 2018 Manlio Morini.
+ *  \copyright Copyright (C) 2018-2024 Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -28,7 +28,7 @@ namespace
 /// to seed the xoroshiro / xoroshift1024* PRNGs (i.e. fill their initial
 /// state).
 ///
-/// \see http://dx.doi.org/10.1145/2714064.2660195
+/// \see https://dx.doi.org/10.1145/2714064.2660195
 ///
 class splitmix64
 {
@@ -56,7 +56,7 @@ void seed_with_sm64(std::uint64_t seed, T &state)
   std::generate(state.begin(), state.end(), [&sm]{ return sm.next(); });
 }
 
-}  // unnamed namespace
+}  // namespace
 
 
 
@@ -77,6 +77,29 @@ void xoshiro256ss::seed(xoshiro256ss::result_type s) noexcept
     s = def_seed;
 
   seed_with_sm64(s, state);
+}
+
+///
+/// Seeds the engine with a specific state.
+///
+/// \param[in] s an initial state
+///
+void xoshiro256ss::seed(const std::array<std::uint64_t, 4> &s) noexcept
+{
+  state = s;
+}
+
+///
+/// Advances the internal state of the engine.
+///
+/// \param[in] z magnitute in the change of the internal state
+///
+/// By any means equivalent to `z` consecutive calls of `operator()`.
+///
+void xoshiro256ss::discard(unsigned long long z) noexcept
+{
+  while (z--)
+    operator()();
 }
 
 ///
@@ -125,6 +148,19 @@ void xoroshiro128p::seed(xoroshiro128p::result_type s) noexcept
     s = def_seed;
 
   seed_with_sm64(s, state);
+}
+
+///
+/// Advances the internal state of the engine.
+///
+/// \param[in] z magnitute in the change of the internal state
+///
+/// By any means equivalent to `z` consecutive calls of `operator()`.
+///
+void xoroshiro128p::discard(unsigned long long z) noexcept
+{
+  while (z--)
+    operator()();
 }
 
 ///
