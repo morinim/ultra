@@ -38,8 +38,6 @@ If a ticket is unreviewed and reports a bug, try and reproduce it. If you can re
 
 ## Project governance
 
-### Project lead / project owner
-
 The general strategic line is drawn by the project owner (currently Manlio Morini).
 
 It's his job to resolve disputes within the community and to ensure that the project is able to progress in a coordinated way.
@@ -47,16 +45,6 @@ It's his job to resolve disputes within the community and to ensure that the pro
 The lead’s job is then to ensure that the committers (see below) make the right decisions on behalf of the project. Generally speaking, as long as the committers are aligned with the project’s strategy, the project lead will allow them to proceed as they desire.
 
 In turn, it is the community’s job to guide the decisions of the project owner through active engagement and contribution.
-
-### Commiters
-
-Committers are contributors who have made several valuable contributions to the project and are now relied upon to both write code directly to the repository and screen the contributions of others. In many cases they are programmers but it is also possible that they contribute in a different role. Typically, a committer will focus on a specific aspect of the project, and will bring a level of expertise and understanding that earns them the respect of the community and the project lead. The role of committer is not an official one, it is simply a position that influential members of the community will find themselves in as the project lead looks to them for guidance and support.
-
-### Contributors
-
-Contributors are community members who either have no desire to become committers, or have not yet been given the opportunity.
-
-Anyone can become a contributor. There is no expectation of commitment to the project, no specific skill requirements and no selection process. To become a contributor, a community member simply has to perform one or more actions that are beneficial to the project.
 
 [development_cycle]: https://github.com/morinim/ultra/wiki/development_cycle
 [donation]: https://github.com/sponsors/morinim
