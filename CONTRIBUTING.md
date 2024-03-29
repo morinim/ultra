@@ -4,49 +4,37 @@ We are very grateful to everyone who is showing interest in the project and to a
 
 There are several ways you can help the development:
 
-* **Blog about Ultra**.
-* **Report bugs and request features in the issue tracker**. Before reporting a bug or requesting a new feature please consider these general points:
-  1. check that someone hasn't already filed the bug or feature request by searching or running custom queries in the issue tracker;
-  2. we will try to respond in a timely manner, but understand that Ultra is provided as-is, i.e. with no promise of support. Most people give support in their spare time, so it may take some time before you get an answer;
-  3. don't reopen issues that have been marked *wontfix* by a core developer. This mark means that the decision has been made that we won't fix this particular issue;
-  4. well-written bug reports are incredibly helpful. Please do write complete, reproducible, specific bug reports. Include as much information as you possibly can, complete with code snippets, test cases... This means including a clear, concise description of the problem and a clear set of instructions for replicating the problem. A minimal example that illustrates the bug in a nice small test case is the best possible bug report;
-  5. report **security issues** marking them with the *[security][security_label]* label. Different people support different ways of disclosure of security issues. At the moment [full disclosure](https://en.wikipedia.org/wiki/Full_disclosure_(computer_security)) seems a valid choice *for this project*. We take security seriously and try to investigate all reported vulnerabilities as soon as possible. Anyway addressing a valid reported vulnerability can take time (this will vary based on the severity of the vulnerability and the affected systems).
+#### Improve the documentation
 
-* **Improve the documentation**. Did you find a typo? Do you think that something should be clarified? Go ahead and suggest a documentation patch! *Your help in this area is much much appreciated since English is not our mother tongue*.
+Did you find a typo? Do you think that something should be clarified? Go ahead and suggest a documentation patch! *Your help in this area is much much appreciated since English is not our mother tongue*.
 
-* **Triage tickets that have been created by other users**. If a ticket is unreviewed and reports a bug, try and reproduce it. If you can reproduce it and it seems valid, make a note that you confirmed the bug and accept the ticket. Make sure the ticket is filed under the correct component area. Consider writing a patch that adds a test for the bug’s behavior, even if you don't fix the bug itself.
+#### Blog about Ultra
 
-* **Submit patches for new and/or fixed behavior** (see next section for further details).
-    * if you're looking for an easy way to start contributing to Ultra, have a look at the easy pickings tickets. If you're going to engage in a big task, make sure that your idea has support first. This means getting someone else to confirm that a bug is real before you fix the issue and ensuring that the core team supports a proposed feature before you go implementing it;
-    * browse the [development cycle][development_cycle] to find out how to give your code patches the best chances to be included in Ultra core.
+#### Report bugs and request features in the issue tracker
 
-* **Write unit tests**.
+Before reporting a bug or requesting a new feature please consider these general points:
 
-* **Artwork**. Do you have artistic talent? Then you could work on the art assets of the project like icons or logos. Not just the software itself but also its website and promotional material can certainly benefit from your skills.
+1. check that someone hasn't already filed the bug or feature request by searching or running custom queries in the issue tracker;
+2. we will try to respond in a timely manner, but understand that Ultra is provided as-is, i.e. with no promise of support. Most people give support in their spare time, so it may take some time before you get an answer;
+3. don't reopen issues that have been marked *wontfix* by a core developer. This mark means that the decision has been made that we won't fix this particular issue;
+4. well-written bug reports are incredibly helpful. Please do write complete, reproducible, specific bug reports. Include as much information as you possibly can, complete with code snippets, test cases... This means including a clear, concise description of the problem and a clear set of instructions for replicating the problem. A minimal example that illustrates the bug in a nice small test case is the best possible bug report;
+5. report **security issues** marking them with the *[security][security_label]* label. Different people support different ways of disclosure of security issues. At the moment [full disclosure](https://en.wikipedia.org/wiki/Full_disclosure_(computer_security)) seems a valid choice *for this project*. We take security seriously and try to investigate all reported vulnerabilities as soon as possible. Anyway addressing a valid reported vulnerability can take time (this will vary based on the severity of the vulnerability and the affected systems).
 
-...and many more ways! Really, ANYONE can do something to help make Ultra better.
+#### Triage tickets that have been created by other users
 
-## License and Developer Certificate of Origin
+If a ticket is unreviewed and reports a bug, try and reproduce it. If you can reproduce it and it seems valid, make a note that you confirmed the bug and accept the ticket. Make sure the ticket is filed under the correct component area. Consider writing a patch that adds a test for the bug’s behavior, even if you don't fix the bug itself.
 
-Ultra is an open source framework licensed under MPL v2.0. By contributing to Ultra, you accept and agree to the terms and conditions for your present and future contributions submitted to Ultra.
+#### Submit patches for new and/or fixed behavior
+(requires to sign a [CLA](https://github.com/morinim/ultra/wiki/cla))
 
-The project also uses a mechanism known as a [Developer Certificate of Origin][dco] (DCO) to manage the process of ensuring that we are legally allowed to distribute all the code and assets for the project. A DCO is a legally binding statement that asserts that you are the creator of your contribution, and that you wish to allow Ultra to use your work.
+- If you're looking for an easy way to start contributing to Ultra, have a look at the easy pickings tickets. If you're going to engage in a big task, make sure that your idea has support first. This means getting someone else to confirm that a bug is real before you fix the issue and ensuring that the core team supports a proposed feature before you go implementing it;
+- browse the [development cycle][development_cycle] to find out how to give your code patches the best chances to be included in Ultra core.
 
-Contributors sign-off that they adhere to these requirements by adding a `Signed-off-by` line to commit messages. All commits of all repositories of the Ultra community have to be signed-off like this:
+#### Write unit tests
 
-```
-This is my commit message.
+#### Make a donation
 
-Signed-off-by: John Doe <john.doe@server.com>
-```
-
-You can write it manually but Git even has a `-s` command line option to append this automatically to your commit message:
-
-```
-$ git commit -s -m 'This is my commit message'
-```
-
-Note that most IDEs can be configured in order to add a Signed-off-by line at the end of the commit message.
+[![Static Badge](https://img.shields.io/badge/sponsor-ultra-pink?logo=githubsponsors&labelColor=green)][donation] you our my gratitude and the great feeling of knowing you are helping keep Ultra going.
 
 ## Project governance
 
@@ -70,6 +58,6 @@ Contributors are community members who either have no desire to become committer
 
 Anyone can become a contributor. There is no expectation of commitment to the project, no specific skill requirements and no selection process. To become a contributor, a community member simply has to perform one or more actions that are beneficial to the project.
 
-[dco]: https://developercertificate.org/
 [development_cycle]: https://github.com/morinim/ultra/wiki/development_cycle
+[donation]: https://github.com/sponsors/morinim
 [security_label]: https://github.com/morinim/ultra/labels/security
