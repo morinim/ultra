@@ -50,7 +50,7 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
   if (!cache_.bits())
     return eva_(prg);
 
-  auto *cached_fit(cache_.find(prg.signature()));
+  auto cached_fit(cache_.find(prg.signature()));
 
   if (cached_fit)
   {

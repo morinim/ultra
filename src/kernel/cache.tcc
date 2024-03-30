@@ -90,15 +90,17 @@ void cache<F>::clear(const hash_t &h)
 ///
 /// \param[in] h individual's signature to look for
 /// \return      the fitness of the individual. If the individuals isn't
-///              present returns `nullptr`
+///              present returns an empty `std::optional`
 ///
 template<Fitness F>
-const F *cache<F>::find(const hash_t &h) const
+std::optional<F> cache<F>::find(const hash_t &h) const
 {
   std::shared_lock lock(mutex_);
 
-  const slot &s(table_[index(h)]);
-  return s.seal == seal_ && s.hash == h ? &s.fitness : nullptr;
+  if (const slot &s(table_[index(h)]); s.seal == seal_ && s.hash == h)
+    return s.fitness;
+
+  return std::nullopt;
 }
 
 ///

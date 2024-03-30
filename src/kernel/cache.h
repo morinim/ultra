@@ -14,6 +14,7 @@
 #define      ULTRA_CACHE_H
 
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 
 #include "kernel/fitness.h"
@@ -48,7 +49,7 @@ public:
 
   void insert(const hash_t &, const F &);
 
-  [[nodiscard]] const F *find(const hash_t &) const;
+  [[nodiscard]] std::optional<F> find(const hash_t &) const;
 
   [[nodiscard]] bool is_valid() const;
 

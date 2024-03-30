@@ -56,7 +56,7 @@ TEST_CASE_FIXTURE(fixture1, "Insert/Find cycle")
 
     cache.insert(i1.signature(), f);
 
-    const auto *sf(cache.find(i1.signature()));
+    const auto sf(cache.find(i1.signature()));
     CHECK(sf);
     CHECK(almost_equal(*sf, f));
   }
@@ -83,7 +83,7 @@ TEST_CASE_FIXTURE(fixture1, "Collision detection")
   }
 
   for (unsigned i(0); i < n; ++i)
-    if (const auto *f = cache.find(vi[i].signature()))
+    if (const auto f = cache.find(vi[i].signature()))
     {
       const auto val(run(vi[i]));
 
@@ -115,7 +115,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   std::ranges::transform(vi, present.begin(),
                          [&cache1](const auto &i)
                          {
-                           return cache1.find(i.signature()) != nullptr;
+                           return cache1.find(i.signature()).has_value();
                          });
 
   std::stringstream ss;
@@ -128,7 +128,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
       const auto val(run(vi[i]));
       const auto f1{has_value(val) ? std::get<D_DOUBLE>(val) : 0.0};
 
-      const auto *f(cache2.find(vi[i].signature()));
+      const auto f(cache2.find(vi[i].signature()));
       CHECK(f);
       CHECK(almost_equal(*f, f1));
     }
