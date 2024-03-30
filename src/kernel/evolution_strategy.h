@@ -65,7 +65,7 @@ public:
     P &, const summary<individual_t, fitness_t> &);
 
   [[nodiscard]] const E &evaluator() const { return eva_; }
-  [[nodiscard]] const problem &problem() const { return *prob_; }
+  [[nodiscard]] const problem &get_problem() const { return *prob_; }
 
 protected:
   evolution_strategy(const ultra::problem &, const E &);
