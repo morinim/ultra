@@ -83,8 +83,8 @@ void search<ES, E>::tune_parameters()
     prob_.params.evolution.brood_recombination =
       dflt.evolution.brood_recombination;
 
-  if (!constrained.population.init_layers)
-    prob_.params.population.init_layers = dflt.population.init_layers;
+  if (!constrained.population.init_subgroups)
+    prob_.params.population.init_subgroups = dflt.population.init_subgroups;
 
   if (!constrained.population.individuals)
     prob_.params.population.individuals = dflt.population.individuals;

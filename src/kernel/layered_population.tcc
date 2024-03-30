@@ -20,20 +20,21 @@
 ///
 /// Creates a random population.
 ///
-/// \param[in] p           current problem
-/// \param[in] init_layers builds `p.params.population.layers` layers
+/// \param[in] p              current problem
+/// \param[in] init_subgroups builds `p.params.population.init_subgroups`
+///                           layers
 ///
 template<Individual I>
 layered_population<I>::layered_population(const ultra::problem &p,
-                                          bool init_layers)
+                                          bool init_subgroups)
   : prob_(&p)
 {
-  if (init_layers)
+  if (init_subgroups)
   {
-    for (std::size_t l(0); l < p.params.population.init_layers; ++l)
+    for (std::size_t l(0); l < p.params.population.init_subgroups; ++l)
       layers_.emplace_back(p);
 
-    assert(layers() == p.params.population.init_layers);
+    assert(layers() == p.params.population.init_subgroups);
   }
 
   Ensures(is_valid());

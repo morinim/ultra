@@ -38,7 +38,7 @@ parameters &parameters::init()
   slp.code_length = 100;
 
   population.individuals = 100;
-  population.init_layers = 1;
+  population.init_subgroups = 1;
   population.min_individuals = 2;
 
   evolution.brood_recombination = 1;
@@ -130,9 +130,9 @@ bool parameters::is_valid(bool force_defined) const
       return false;
     }
 
-    if (!population.init_layers)
+    if (!population.init_subgroups)
     {
-      ultraERROR << "Undefined `population.init_layers` data member";
+      ultraERROR << "Undefined `population.init_subgroups` data member";
       return false;
     }
 

@@ -30,8 +30,8 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 20;
-  prob.params.population.init_layers =  1;
+  prob.params.population.individuals    = 20;
+  prob.params.population.init_subgroups =  1;
 
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
@@ -94,8 +94,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 25;
-  prob.params.population.init_layers =  4;
+  prob.params.population.individuals    = 25;
+  prob.params.population.init_subgroups =  4;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
@@ -195,7 +195,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   using namespace ultra;
 
   prob.params.population.individuals    = 30;
-  prob.params.population.init_layers    = 10;
+  prob.params.population.init_subgroups = 10;
   prob.params.evolution.tournament_size = 10;
 
   layered_population<gp::individual> pop(prob);
@@ -232,8 +232,8 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 30;
-  prob.params.population.init_layers = 10;
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_subgroups = 10;
 
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);

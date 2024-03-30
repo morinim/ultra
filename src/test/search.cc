@@ -28,8 +28,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 30;
-  prob.params.population.init_layers =  4;
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_subgroups =  4;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 

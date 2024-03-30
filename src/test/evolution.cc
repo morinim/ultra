@@ -30,8 +30,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 30;
-  prob.params.population.init_layers =  4;
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_subgroups =  4;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
@@ -47,8 +47,8 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 30;
-  prob.params.population.init_layers =  4;
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_subgroups =  4;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
@@ -67,8 +67,8 @@ TEST_CASE_FIXTURE(fixture4, "DE evolution")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 200;
-  prob.params.population.init_layers =   1;
+  prob.params.population.individuals    = 200;
+  prob.params.population.init_subgroups =   1;
 
   test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 

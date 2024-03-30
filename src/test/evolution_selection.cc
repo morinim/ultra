@@ -33,8 +33,8 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 20;
-  prob.params.population.init_layers =  1;
+  prob.params.population.individuals    = 20;
+  prob.params.population.init_subgroups =  1;
 
   // The test assumes independent draws.
   prob.params.evolution.mate_zone = std::numeric_limits<std::size_t>::max();
@@ -99,7 +99,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     [this](unsigned tournament)
     {
       prob.params.population.individuals    =         50;
-      prob.params.population.init_layers    =          2;
+      prob.params.population.init_subgroups =          2;
       prob.params.evolution.tournament_size = tournament;
 
       layered_population<gp::individual> pop(prob);
@@ -213,7 +213,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   using namespace ultra;
 
   prob.params.population.individuals    = 30;
-  prob.params.population.init_layers    =  4;
+  prob.params.population.init_subgroups =  4;
   prob.params.evolution.tournament_size = 10;
   prob.params.alps.p_main_layer         = .5;
 
@@ -245,8 +245,8 @@ TEST_CASE_FIXTURE(fixture4, "DE")
 {
   using namespace ultra;
 
-  prob.params.population.individuals = 100;
-  prob.params.population.init_layers =   1;
+  prob.params.population.individuals    = 100;
+  prob.params.population.init_subgroups =   1;
 
   // The test assumes independent draws.
   prob.params.evolution.mate_zone = std::numeric_limits<std::size_t>::max();

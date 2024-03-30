@@ -45,18 +45,19 @@ struct parameters
     /// `0` means auto-tune.
     std::size_t individuals {0};
 
-    /// Initial number of layers the population is structured on.
+    /// Initial number of subgroups the population is structured on.
     ///
     /// \warning
-    /// Setting `init_layers > 1` with the standard evolution strategy is like
-    /// running multiple populations autonomously (there isn't any direct
-    /// interaction among layers; fitness values could be shared via cache).
-    /// A value greater than one is required for ALPS or other strategies
-    /// that allow migrants.
+    /// Setting `init_subgroups > 1` with the standard evolution strategy is
+    /// like running multiple concurrent populations autonomously (there isn't
+    /// any direct interaction among subgroups; fitness values could be shared
+    /// via cache).
+    /// For ALPS or other strategies that allow migrants the situation is more
+    /// complex.
     ///
     /// \note
     /// `0` means auto-tune.
-    std::size_t init_layers {1};
+    std::size_t init_subgroups {1};
 
     /// Minimum number of individuals in a layer of the population.
     ///
