@@ -166,6 +166,7 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 [releases]: https://github.com/morinim/ultra/releases
 [sr]: https://github.com/morinim/ultra
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
+[twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
 [wiki]: https://github.com/morinim/ultra/wiki
 [windows]: https://github.com/morinim/ultra/wiki/win_build
