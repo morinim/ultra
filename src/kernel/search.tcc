@@ -21,7 +21,7 @@
 /// \param[in] prob the problem we're working on. The lifetime of `prob` must
 ///                 exceed lifetime of `this` class
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 search<ES, E>::search(problem &prob, E eva)
   : es_(ES<evaluator_proxy<E>>(prob,
                                evaluator_proxy(eva, prob.params.cache.size))),
@@ -48,7 +48,7 @@ alps_search<E>::alps_search(problem &prob, E eva)
 /// Called at the beginning of the first run (i.e. only one time even for a
 /// multiple-run search).
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 void search<ES, E>::init()
 {
   tune_parameters();
@@ -59,7 +59,7 @@ void search<ES, E>::init()
 ///
 /// Tries to tune search parameters for the current problem.
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 void search<ES, E>::tune_parameters()
 {
   // The `shape` function modifies the default parameters with
@@ -112,7 +112,7 @@ void search<ES, E>::tune_parameters()
 /// \param[in] n number of runs
 /// \return      a summary of the search
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 search_stats<typename search<ES, E>::individual_t,
              typename search<ES, E>::fitness_t>
 search<ES, E>::run(unsigned n)
@@ -152,7 +152,7 @@ search<ES, E>::run(unsigned n)
 /// If a validation set / simulation is available, it's used for the
 /// calculations.
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 model_measurements<typename search<ES, E>::fitness_t>
 search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
@@ -169,7 +169,7 @@ search<ES, E>::calculate_metrics(const individual_t &prg) const
 /// \param[in] args parameters for the validation strategy
 /// \return         a reference to the search class (used for method chaining)
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 template<class V, class... Args>
 search<ES, E> &search<ES, E>::validation_strategy(Args && ...args)
 {
@@ -182,7 +182,7 @@ search<ES, E> &search<ES, E>::validation_strategy(Args && ...args)
 ///
 /// \return `true` if the object is correctly loaded
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 bool search<ES, E>::load()
 {
   if (prob_.params.cache.serialization_file.empty())
@@ -207,7 +207,7 @@ bool search<ES, E>::load()
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 bool search<ES, E>::is_valid() const
 {
   return true;

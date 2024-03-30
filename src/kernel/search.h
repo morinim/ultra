@@ -46,7 +46,7 @@ struct search_stats
 ///
 /// The class offers a general / customizable search strategy.
 ///
-template<template<Evaluator> class ES, Evaluator E>
+template<template<class> class ES, Evaluator E>
 class search
 {
 public:
