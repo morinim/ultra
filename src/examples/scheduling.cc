@@ -18,6 +18,7 @@
 
 // Examples taken from "Differential Evolution in Discrete Optimization" by
 // Daniel Lichtblau.
+// See https://github.com/morinim/vita/wiki/bibliography#8
 
 //`n_machines` homogeneous machines (i.e. each job time is independent of the
 // machine used.
@@ -83,15 +84,11 @@ int main()
   de::problem prob(n_jobs, {-0.5, 23.5});
 
   prob.params.population.individuals =   50;
-  prob.params.evolution.generations  = 3000;
-  //prob.params.evolution.tournament_size   = 40;
+  prob.params.evolution.generations  = 2000;
 
-  prob.params.stat.dynamic_file = "dyn.txt";
-  prob.params.stat.population_file = "pop.txt";
+  de::search search(prob, f);
 
-  de::search src(prob, f);
-
-  const auto res(src.run(10).best_individual);
+  const auto res(search.run().best_individual);
 
   for (unsigned i(0); i < n_jobs; ++i)
     std::cout << i << ' ' << std::round(res[i]) << ' '
@@ -102,7 +99,7 @@ int main()
   // A simple script for GnuPlot:
   // set xtics 1
   // set ytics 2
-  // grid xtics ytics
+  // set grid xtics ytics
   // plot [x=0:24][y=-0.5:50.5] "test.dat" using 2:1:3:(0)
   //      w vectors head filled lw 2 notitle
 }
