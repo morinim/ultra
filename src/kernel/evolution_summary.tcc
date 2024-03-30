@@ -48,7 +48,7 @@ evolution_status<I, F> summary<I, F>::starting_status()
 template<Individual I, Fitness F>
 typename summary<I, F>::data summary<I, F>::data_snapshot() const
 {
-  return data_.read([](const auto &data) { return data; });
+  return data_.read([](const auto &snapshot) { return snapshot; });
 }
 
 ///
@@ -59,12 +59,12 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 template<Individual I, Fitness F>
 bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  return data_.write([this, &prg](auto &data)
+  return data_.write([this, &prg](auto &dt)
   {
-    if (prg > data.best)
+    if (prg > dt.best)
     {
-      data.best = prg;
-      data.last_improvement = generation;
+      dt.best = prg;
+      dt.last_improvement = generation;
       return true;
     }
 
@@ -139,17 +139,17 @@ bool summary<I, F>::load(std::istream &in, const problem &p)
 template<Individual I, Fitness F>
 bool summary<I, F>::save(std::ostream &out) const
 {
-  const auto data(data_snapshot());
+  const auto snapshot(data_snapshot());
 
   // Since `data_` depends on `generation`, saving `generation` before
   // `status` is very important.
-  out << elapsed.count() << ' ' << generation << ' ' << data.last_improvement
-      << '\n';
+  out << elapsed.count() << ' ' << generation << ' '
+      << snapshot.last_improvement << '\n';
 
   // analyzer `az` doesn't need to be saved: it'll be recalculated at the
   // beginning of evolution.
 
-  if (!data.best.save(out))
+  if (!snapshot.best.save(out))
     return false;
 
   return out.good();
