@@ -2,6 +2,7 @@
 [![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
 
 ![C++20](https://img.shields.io/badge/c%2B%2B-20-blue.svg)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][cii]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
@@ -148,11 +149,12 @@ This allows folks, immediately upon hearing about a new release, to get a rough 
 Avoiding any change to the API and waiting for a *MAJOR* release to be ready would be a terrific impediment to progress. The alternative of frequently incrementing the *MAJOR* version number is incredibly unhelpful.
 
 ---
-*USQUE AD FINEM ET ULTRA*
----
+
+*USQUE AD FINEM ET **ULTRA***
+
 
 [agent]: https://github.com/morinim/ultra
-[cii]: https://bestpractices.coreinfrastructure.org/projects/1012
+[cii]: https://www.bestpractices.dev/projects/8725
 [classification]: https://github.com/morinim/ultra
 [cmake]: https://cmake.org/
 [download]: https://github.com/morinim/ultra/archive/master.zip
