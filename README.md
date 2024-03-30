@@ -1,4 +1,11 @@
-## This software is being actively developed ##
+[![Ultra](https://github.com/morinim/ultra/wiki/img/logo.png)][homepage]
+[![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
+
+![C++20](https://img.shields.io/badge/c%2B%2B-20-blue.svg)
+[![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
+[![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
+
+## This software is under developed ##
 There is still an ongoing transferring process from Vita and many features aren't available or don't completely work.
 
 This framework will be a major breakthrough but at the moment is far from being production ready.
@@ -128,20 +135,21 @@ As a side note, the command to build the global header is:
 
 ## Versioning ##
 
-Ultra does **not** use [semantic versioning][semver]. Releases are tagged.
+Ultra does **not** use semantic versioning. Releases are tagged.
 
-Given that the project is almost all surface area and very little internals, almost any given change (patch, pull request) breaks backwards-compatibility in some small way... even if only for the folks relying on previously undefined behavior.
+Given a version number `MAJOR.MINOR.PATCH`, increment the:
 
-Given a version number MAJOR.MINOR.PATCH, increment the:
+- `MAJOR` version when there is a new major release or a significant update and/or API stabilization;
+- `MINOR` version when minor features are added;
+- `PATCH` version when we make tiny changes, likely to go unnoticed by most.
 
-- MAJOR version when you make a major new release, or significantly update and/or stabilize the API.
-- MINOR version when you add minor new features.
-- PATCH version when you make tiny changes, likely to go unnoticed by most.
+This allows folks, immediately upon hearing about a new release, to get a rough sense of its scope. As to backwards compatibility — ideally every release, even major ones, are backwards-compatible... and when they cannot be, because an API is changing, it should be done in a way that it's not too difficult to upgrade.
 
-This allows folks, immediately upon hearing about a new release, to get a rough sense of its scope. As to backwards compatibility — ideally every release, even major ones, are backwards-compatible. And when they cannot be, because an API is changing, it should be done in a way that isn't too difficult to upgrade.
+Avoiding any change to the API and waiting for a *MAJOR* release to be ready would be a terrific impediment to progress. The alternative of frequently incrementing the *MAJOR* version number is incredibly unhelpful.
 
-But avoiding any change to the API, and waiting for a "MAJOR" release to be ready would be a terrific impediment to progress. And the alternative of frequently incrementing the MAJOR version number is incredibly unhelpful.
-
+---
+*USQUE AD FINEM ET ULTRA*
+---
 
 [agent]: https://github.com/morinim/ultra
 [cii]: https://bestpractices.coreinfrastructure.org/projects/1012
@@ -155,12 +163,9 @@ But avoiding any change to the API, and waiting for a "MAJOR" release to be read
 [license]: https://github.com/morinim/ultra/blob/master/LICENSE
 [mpl2]: https://www.mozilla.org/MPL/2.0/
 [python]: https://www.python.org/
-[semver]: https://semver.org/
+[releases]: https://github.com/morinim/ultra/releases
 [sr]: https://github.com/morinim/ultra
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
 [vita]: https://github.com/morinim/vita
 [wiki]: https://github.com/morinim/ultra/wiki
 [windows]: https://github.com/morinim/ultra/wiki/win_build
-
-
-USQUE AD FINEM ET ULTRA
