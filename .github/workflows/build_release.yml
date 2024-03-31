@@ -1,7 +1,10 @@
 name: Build and test all platforms
 
 on:
+  pull_request:
   push:
+    branches:
+      - main
     paths-ignore:
       - '**.md'
       - .gitignore
@@ -29,7 +32,7 @@ jobs:
             cxx: msvc
 
     steps:
-      - uses: actions/checkout@4
+      - uses: actions/checkout@v4
 
       - name: Configure CMake
         env:
