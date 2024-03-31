@@ -1,8 +1,11 @@
-name: build-release
+name: Build and test all platforms
 
 on:
-  release:
-    types: [published]
+  push:
+    paths-ignore:
+      - '**.md'
+      - .gitignore
+  workflow_dispatch:
 
 jobs:
   build-release:
