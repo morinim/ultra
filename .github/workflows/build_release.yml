@@ -20,8 +20,8 @@ jobs:
           - platform_name: linux
             os: ubuntu-latest
             cxx: g++
-          - platform_name: macos
-            os: macos-13
+          - platform_name: linux
+            os: ubuntu-latest
             cxx: clang++
           - platform_name: windows
             os: windows-latest
@@ -29,7 +29,7 @@ jobs:
             cxx: msvc
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@4
 
       - name: Configure CMake
         env:
