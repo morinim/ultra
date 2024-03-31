@@ -20,12 +20,12 @@ jobs:
           - platform_name: linux
             os: ubuntu-latest
             cxx: g++
-          #- platform_name: macos
-          #  os: macos-13
-          #  cxx: clang++
-          # NOTE: CXX seems to be ignored on Windows, but specify it anyway for consistency
+          - platform_name: macos
+            os: macos-13
+            cxx: clang++
           - platform_name: windows
             os: windows-latest
+            # CXX seems to be ignored on Windows, but specify it anyway for consistency
             cxx: msvc
 
     steps:
