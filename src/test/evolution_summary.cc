@@ -74,7 +74,7 @@ TEST_CASE_FIXTURE(fixture1, "Concurrency")
 
       if (odd)
       {
-        if (i % 2 == odd)
+        if (static_cast<bool>(i % 2) == odd)
         {
           if (i < 8 * MAX / 10)
             status1.update_if_better({gp::individual(prob), di});
