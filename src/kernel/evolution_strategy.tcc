@@ -34,7 +34,7 @@ template<Population P>
 void evolution_strategy<E>::after_generation(
   P &pop, const summary<individual_t, fitness_t> &sum)
 {
-  Expects(&pop.problem() == &get_problem());
+  Expects(&pop.problem() == &this->get_problem());
   const auto &params(pop.problem().params);
   Expects(params.evolution.max_stuck_gen);
 
@@ -118,7 +118,7 @@ template<Population P>
 void alps_es<E>::after_generation(P &pop,
                                   const summary<individual_t, fitness_t> &sum)
 {
-  Expects(&pop.problem() == &get_problem());
+  Expects(&pop.problem() == &this->get_problem());
   const auto &params(pop.problem().params);
 
   pop.inc_age();
@@ -191,7 +191,7 @@ template<Population P>
 void alps_es<E>::log_strategy(
   const P &pop, const summary<individual_t, fitness_t> &sum) const
 {
-  Expects(&pop.problem() == &get_problem());
+  Expects(&pop.problem() == &this->get_problem());
   const auto &params(pop.problem().params);
 
   if (!params.stat.layers_file.empty())
