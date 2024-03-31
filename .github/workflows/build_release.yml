@@ -19,10 +19,10 @@ jobs:
         include:
           - platform_name: linux
             os: ubuntu-latest
-            cxx: g++-10
-          - platform_name: macos
-            os: macos-latest
-            cxx: clang++
+            cxx: g++
+          #- platform_name: macos
+          #  os: macos-13
+          #  cxx: clang++
           # NOTE: CXX seems to be ignored on Windows, but specify it anyway for consistency
           - platform_name: windows
             os: windows-latest
