@@ -307,7 +307,7 @@ const auto &subgroup(const P &p)
   std::ranges::transform(p.range_of_layers(), s.begin(),
                          [](const auto &layer) { return layer.size(); });
 
-  std::discrete_distribution<std::size_t> dd(s.begin(), s.end());
+  std::discrete_distribution dd(s.begin(), s.end());
   return p.layer(dd(random::engine()));
 }
 
