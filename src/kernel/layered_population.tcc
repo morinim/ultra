@@ -284,13 +284,15 @@ namespace random
 {
 
 ///
-/// \return the coordinates of a random individual of the population
+/// \return a const reference to a random subgroup of the layered population
+///
+/// Probability of extracting a subgroup is proportional to subgroup size.
 ///
 /// \related
-/// population
+/// layered_population
 ///
 template<LayeredPopulation P>
-typename std::size_t layer(const P &p)
+const auto &subgroup(const P &p)
 {
   const auto n_layers(p.layers());
 
@@ -302,11 +304,11 @@ typename std::size_t layer(const P &p)
   // isn't appropriate.
 
   std::vector<std::size_t> s(n_layers);
-  for (std::size_t i(0); i < n_layers; ++i)
-    s[i] = p.layer(i).size();
+  std::ranges::transform(p.range_of_layers(), s.begin(),
+                         [](const auto &layer) { return layer.size(); });
 
   std::discrete_distribution<std::size_t> dd(s.begin(), s.end());
-  return dd(random::engine());
+  return p.layer(dd(random::engine()));
 }
 
 }  // namespace random

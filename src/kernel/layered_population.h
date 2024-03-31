@@ -99,7 +99,7 @@ namespace random
 {
 
 template<LayeredPopulation P>
-[[nodiscard]] typename std::size_t layer(const P &);
+[[nodiscard]] const auto &subgroup(const P &);
 
 }  // namespace random
 

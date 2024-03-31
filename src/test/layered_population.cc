@@ -186,8 +186,8 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
     const int draws(1000 * pop.size());
     for (int j(0); j < draws; ++j)
     {
-      const auto layer(random::layer(pop));
-      ++frequency[{layer, random::coord(pop.layer(layer))}];
+      const auto &subgroup(random::subgroup(pop));
+      ++frequency[{subgroup.uid(), random::coord(subgroup)}];
     }
 
     const int expected(draws / pop.size());
