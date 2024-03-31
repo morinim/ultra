@@ -19,7 +19,7 @@ jobs:
         include:
           - platform_name: linux
             os: ubuntu-latest
-            cxx: g++
+            cxx: g++12
           #- platform_name: macos
           #  os: macos-13
           #  cxx: clang++
