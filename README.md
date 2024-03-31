@@ -2,7 +2,8 @@
 [![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
 
 ![C++20](https://img.shields.io/badge/c%2B%2B-20-blue.svg)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][cii]
+[![Build and test all platforms](https://github.com/morinim/ultra/actions/workflows/build_release.yml/badge.svg)][build_status]
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
@@ -154,7 +155,8 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 
 
 [agent]: https://github.com/morinim/ultra
-[cii]: https://www.bestpractices.dev/projects/8725
+[best_practices]: https://www.bestpractices.dev/projects/8725
+[build_status]: https://github.com/morinim/ultra/actions/workflows/build_release.yml
 [classification]: https://github.com/morinim/ultra
 [cmake]: https://cmake.org/
 [download]: https://github.com/morinim/ultra/archive/master.zip
