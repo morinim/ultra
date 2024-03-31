@@ -38,14 +38,14 @@ jobs:
         # access regardless of the host operating system
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake -DCMAKE_BUILD_TYPE=${{ BUILD_TYPE }} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake --config ${{ BUILD_TYPE }} --build build/
+        run: cmake --config ${{ env.BUILD_TYPE }} --build build/
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
         shell: bash
-        run: ctest -C ${{ BUILD_TYPE }}
+        run: ctest -C ${{ env.BUILD_TYPE }}
