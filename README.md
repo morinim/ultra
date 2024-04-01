@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
-## This software is under developed ##
+## UNDER DEVELOPMENT
 There is still an ongoing transferring process from Vita and many features aren't available or don't completely work.
 
 This framework will be a major breakthrough but at the moment is far from being production ready.
@@ -16,7 +16,7 @@ It's made available for people / companies:
 - already using [Vita][vita] to be able to experience the new library;
 - who would like to sponsor the project.
 
-## Overview ##
+## Overview
 
 Ultra is a scalable, high performance evolutionary algorithms framework.
 
@@ -30,29 +30,50 @@ It's suitable for [classification][classification], [symbolic regression][sr], c
 - modern, standard ISO C++20 source code
 - [more][features]
 
-This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**.
+This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**. If you're coming from Vita take a look at the migration notes][migrating].
 
+## Examples
 
-## Documentation ##
+### Mathematical optimization
+
+The core of the operation is:
+
+```C++
+de::problem prob(dimensions, {-5.12, 5.12});
+
+prob.params.population.individuals =   50;
+prob.params.evolution.generations  = 1000;
+
+de::search search(prob, rastrigin_func);
+
+auto res(search.run());
+
+auto solution(res.best_individual);
+auto value(res.best_measurements.fitness);
+```
+
+Further details in the [specific tutorial][rastrigin]).
+
+## Documentation
 
 There is a [comprehensive wiki][wiki]. You should probably start with the [tutorials][tutorials].
 
-## Build requirements ##
+## Build requirements
 
 Ultra is designed to have fairly minimal requirements to build and use with your projects, but there are some. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
 However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the
 [issue tracking system][issue]; patches for fixing them are even more welcome!
 
-### Mandatory ###
+### Mandatory
 
 * A C++20-standard-compliant compiler
 * [CMake][cmake]
 
-### Optional ###
+### Optional
 
 * [Python v3][python] for additional functionalities
 
-## Getting the source ##
+## Getting the source
 
 There are two ways of getting Ultra's source code: you can [download][download] a stable source release in your preferred archive format or directly clone the source from a repository.
 
@@ -64,7 +85,7 @@ Run the following command:
 git clone https://github.com/morinim/ultra.git
 ```
 
-## The Ultra distribution ##
+## The Ultra distribution
 
 This is a sketch of the resulting directory structure:
 ```
@@ -84,7 +105,7 @@ ultra/
   README.md
 ```
 
-## Setting up the build ##
+## Setting up the build
 
 ```shell
 cd ultra
@@ -110,7 +131,7 @@ The output files are stored in subdirectories of `build/` (out of source build).
 
 Windows may need various expedients about which you can read in the [Windows walkthrough][windows].
 
-## Installing Ultra ##
+## Installing Ultra
 
 To install Ultra use the command:
 
@@ -131,19 +152,19 @@ As a side note, the command to build the global header is:
 ```
 (must be executed from the repository main directory)
 
-## License ##
+## License
 
 [Mozilla Public License v2.0][mpl2] (also available in the accompanying [LICENSE][license] file).
 
-## Versioning ##
+## Versioning
 
 Ultra does **not** use semantic versioning. Releases are tagged.
 
-Given a version number `MAJOR.MINOR.PATCH`, increment the:
+Given a version number `MAJOR.MINOR.PATCH`, increment when:
 
-- `MAJOR` version when there is a new major release or a significant update and/or API stabilization;
-- `MINOR` version when minor features are added;
-- `PATCH` version when we make tiny changes, likely to go unnoticed by most.
+- `MAJOR`. New major release or a significant update and/or API stabilization;
+- `MINOR`. Minor features are added;
+- `PATCH`. Tiny changes, likely to go unnoticed by most.
 
 This allows folks, immediately upon hearing about a new release, to get a rough sense of its scope. As to backwards compatibility — ideally every release, even major ones, are backwards-compatible... and when they cannot be, because an API is changing, it should be done in a way that it's not too difficult to upgrade.
 
@@ -165,8 +186,10 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 [homepage]: https://github.com/morinim/ultra
 [issue]: https://github.com/morinim/ultra/issues
 [license]: https://github.com/morinim/ultra/blob/master/LICENSE
+[migrating]: migrating
 [mpl2]: https://www.mozilla.org/MPL/2.0/
 [python]: https://www.python.org/
+[rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
 [sr]: https://github.com/morinim/ultra
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
