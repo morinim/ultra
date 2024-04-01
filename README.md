@@ -12,7 +12,7 @@ There is still an ongoing transferring process from Vita and many features aren'
 
 This framework will be a major breakthrough but at the moment is far from being production ready.
 
-It's made available for people / companies:
+Source has been made available for people / companies:
 - already using [Vita][vita] to be able to experience the new library;
 - who would like to sponsor the project.
 
@@ -52,7 +52,7 @@ auto solution(res.best_individual);
 auto value(res.best_measurements.fitness);
 ```
 
-Further details in the [specific tutorial][rastrigin]).
+Further details in the [specific tutorial][rastrigin].
 
 ## Documentation
 
