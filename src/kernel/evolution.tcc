@@ -257,12 +257,12 @@ evolution<S>::run()
       {
         if (!print_and_update_if_better(sum_.best()))
           print(false, from_start.elapsed(), &from_last_msg);
+      }
 
-        if (!stop && (stop = stop_condition()))
-        {
-          source.request_stop();
-          ultraDEBUG << "Sending closing message to tasks";
-        }
+      if (!stop && (stop = stop_condition()))
+      {
+        source.request_stop();
+        ultraDEBUG << "Sending closing message to tasks";
       }
 
       std::this_thread::yield();
