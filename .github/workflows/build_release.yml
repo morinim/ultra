@@ -18,16 +18,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_type: [Debug, Release]
         # specify a compiler to build with each OS separately
         include:
           - platform_name: linux
             os: ubuntu-latest
             cxx: g++
+            build_type: [Debug, Release]
           - platform_name: windows
             os: windows-latest
             # CXX seems to be ignored on Windows, but specify it anyway for consistency
             cxx: msvc
+            build_type: [Debug, Release]
 
     steps:
       - uses: actions/checkout@v4
