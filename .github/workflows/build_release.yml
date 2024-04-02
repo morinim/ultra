@@ -11,13 +11,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-release:
+  build-test:
     runs-on: ${{ matrix.os }}
     env:
       BUILD_TYPE: Release
     strategy:
       fail-fast: false
       matrix:
+        build_type: [Debug, Release]
         # specify a compiler to build with each OS separately
         include:
           - platform_name: linux
@@ -43,9 +44,9 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake --build build/ --config ${{ env.BUILD_TYPE }}
+        run: cmake --build build/ --config ${{ matrix.build_type }}
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
         shell: bash
-        run: ctest -C ${{ env.BUILD_TYPE }}
+        run: ctest -C ${{ matrix.build_type }}
