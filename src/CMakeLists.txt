@@ -45,7 +45,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(${ULTRA_SOURCE_DIR})
-# include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party/)
+include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party)
 
 # Recurse into the following subdirectories (this does not actually cause
 # another cmake executable to run. The same process will walk through the
