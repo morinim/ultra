@@ -18,17 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # specify a compiler to build with each OS separately
-        include:
-          - platform_name: linux
-            os: ubuntu-latest
-            cxx: g++
-            build_type: [Debug, Release]
-          - platform_name: windows
-            os: windows-latest
-            # CXX seems to be ignored on Windows, but specify it anyway for consistency
-            cxx: msvc
-            build_type: [Debug, Release]
+       cxx: [g++, msvc]
+       os: [ubuntu-latest, windows-latest]
+       build_type: [Debug, Release]
+       exclude:
+         - os: ubuntu-latest
+           cxx: msvc
+         - os: windows-latest
+           cxx: g++
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +37,7 @@ jobs:
         # access regardless of the host operating system
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
