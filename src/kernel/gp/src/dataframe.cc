@@ -45,6 +45,24 @@ value_t convert(const std::string &s, domain_t d)
 }  // namespace
 
 ///
+/// Gets the `class_t` ID (aka label) for a given example.
+///
+/// \param[in] e an example
+/// \return      the label of the example
+///
+/// \warning
+/// Used only in classification tasks.
+///
+/// \related
+/// src::example
+///
+[[nodiscard]] class_t src::label(const src::example &e)
+{
+  Expects(std::holds_alternative<D_INT>(e.output));
+  return std::get<D_INT>(e.output);
+}
+
+///
 /// \param[in] n the name of a weka domain
 /// \return      the internal id corresponding to  the weka-domain `n`
 ///              (`D_VOID` if unknown / not managed)
@@ -78,7 +96,7 @@ domain_t from_weka(const std::string &n)
 ///
 /// \param[in] v information about the new column
 ///
-void columns_info::push_back(const column_info &v)
+void src::columns_info::push_back(const column_info &v)
 {
   cols_.push_back(v);
 }
@@ -88,7 +106,7 @@ void columns_info::push_back(const column_info &v)
 ///
 /// \param[in] v information about the new column
 ///
-void columns_info::push_front(const column_info &v)
+void src::columns_info::push_front(const column_info &v)
 {
   cols_.insert(begin(), v);
 }
@@ -109,7 +127,8 @@ void columns_info::push_front(const column_info &v)
 /// \remark
 /// The function assumes columns `0` as the output column.
 ///
-void columns_info::build(const std::vector<std::string> &r, bool header_first)
+void src::columns_info::build(const std::vector<std::string> &r,
+                              bool header_first)
 {
   Expects(r.size());
 
@@ -160,7 +179,7 @@ void columns_info::build(const std::vector<std::string> &r, bool header_first)
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-bool columns_info::is_valid() const
+bool src::columns_info::is_valid() const
 {
   return std::none_of(begin(), end(),
                       [](const auto &c)
@@ -315,7 +334,7 @@ unsigned dataframe::variables() const
 ///
 /// \param[in] e the value of the element to append
 ///
-void dataframe::push_back(const example &e)
+void dataframe::push_back(const src::example &e)
 {
   dataset_.push_back(e);
 }
@@ -342,12 +361,12 @@ class_t dataframe::encode(const std::string &label)
 /// When `add_instance` is `true` the function can have side-effects (changing
 /// the set of admissible instances associated with a text-feature).
 ///
-dataframe::example dataframe::to_example(const record_t &v, bool add_instance)
+src::example dataframe::to_example(const record_t &v, bool add_instance)
 {
   Expects(v.size());
   Expects(v.size() == columns.size());
 
-  example ret;
+  src::example ret;
 
   for (std::size_t i(0); i < v.size(); ++i)
     if (const auto domain(columns[i].domain); domain != d_void)
@@ -495,7 +514,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
        attribute;
        attribute = attribute->NextSiblingElement("attribute"), ++index)
   {
-    columns_info::column_info a;
+    src::columns_info::column_info a;
 
     const char *s(attribute->Attribute("name"));
     if (s)

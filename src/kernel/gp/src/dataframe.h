@@ -29,9 +29,32 @@ namespace tinyxml2 { class XMLDocument; }
 
 namespace ultra
 {
+
 /// The type used as class ID in classification tasks.
 using class_t = std::size_t;
 
+namespace src
+{
+///
+/// Stores a single element (row) of the dataset.
+///
+/// The `struct` consists of an input vector (`input`) and an answer value
+/// (`output`). Depending on the kind of problem, `output` stores:
+/// - a numeric value (symbolic regression problem);
+/// - a categorical value (classification problem).
+///
+struct example
+{
+  /// The thing about which we want to make a prediction (aka instance). The
+  /// elements of the vector are features.
+  std::vector<value_t> input {};
+  /// The answer for the prediction task either the answer produced by the
+  /// machine learning system, or the right answer supplied in the training
+  /// data.
+  value_t output {};
+};
+
+[[nodiscard]] class_t label(const src::example &);
 
 ///
 /// Information about the collection of columns (type, name, output index).
@@ -84,6 +107,8 @@ private:
   std::vector<column_info> cols_ {};
 };
 
+}  // namespace src
+
 ///
 /// A 2-dimensional labeled data structure with columns of potentially
 /// different types.
@@ -102,11 +127,10 @@ class dataframe
 {
 public:
   // ---- Structures ----
-  struct example;
   class params;
 
   // ---- Aliases ----
-  using examples_t = std::vector<example>;
+  using examples_t = std::vector<src::example>;
   using value_type = examples_t::value_type;
 
   /// Raw input record.
@@ -151,7 +175,7 @@ public:
   std::size_t read_xrff(std::istream &, const params &);
   [[nodiscard]] bool operator!() const noexcept;
 
-  void push_back(const example &);
+  void push_back(const src::example &);
 
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
@@ -163,11 +187,11 @@ public:
 
   [[nodiscard]] bool is_valid() const;
 
-  columns_info columns {};
+  src::columns_info columns {};
 
 private:
   bool read_record(const record_t &, bool);
-  [[nodiscard]] example to_example(const record_t &, bool);
+  [[nodiscard]] src::example to_example(const record_t &, bool);
 
   [[nodiscard]] class_t encode(const std::string &);
 
@@ -187,25 +211,6 @@ private:
 [[nodiscard]] domain_t from_weka(const std::string &);
 
 ///
-/// Stores a single element (row) of the dataset.
-///
-/// The `struct` consists of an input vector (`input`) and an answer value
-/// (`output`). Depending on the kind of problem, `output` stores:
-/// - a numeric value (symbolic regression problem);
-/// - a categorical value (classification problem).
-///
-struct dataframe::example
-{
-  /// The thing about which we want to make a prediction (aka instance). The
-  /// elements of the vector are features.
-  std::vector<value_t> input {};
-  /// The answer for the prediction task either the answer produced by the
-  /// machine learning system, or the right answer supplied in the training
-  /// data.
-  value_t output {};
-};
-
-///
 /// Get the output value for a given example.
 ///
 /// \tparam    T the result is casted to type `T`
@@ -214,24 +219,9 @@ struct dataframe::example
 ///
 ///
 template<class T>
-[[nodiscard]] T label_as(const dataframe::example &e)
+[[nodiscard]] T label_as(const src::example &e)
 {
   return lexical_cast<T>(e.output);
-}
-
-///
-/// Gets the `class_t` ID (aka label) for a given example.
-///
-/// \param[in] e an example
-/// \return      the label of the example
-///
-/// \warning
-/// Used only in classification tasks.
-///
-[[nodiscard]] inline class_t label(const dataframe::example &e)
-{
-  Expects(std::holds_alternative<D_INT>(e.output));
-  return std::get<D_INT>(e.output);
 }
 
 class dataframe::params
