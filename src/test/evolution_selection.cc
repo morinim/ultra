@@ -266,16 +266,16 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   unsigned found(0);
   for (unsigned i(0); i < n; ++i)
   {
-    auto parents(select(pop.front()));
+    auto selected(select(pop.front()));
 
-    if (parents.parent.age() == max_age || parents.base.age() == max_age
-        || parents.a.age() == max_age || parents.b.age() == max_age)
+    if (selected.target.age() == max_age || selected.base.age() == max_age
+        || selected.a.age() == max_age || selected.b.age() == max_age)
       ++found;
 
-    dist.add(parents.parent.age());
-    dist.add(parents.base.age());
-    dist.add(parents.a.age());
-    dist.add(parents.b.age());
+    dist.add(selected.target.age());
+    dist.add(selected.base.age());
+    dist.add(selected.a.age());
+    dist.add(selected.b.age());
   }
 
   const double frequency(static_cast<double>(found) / n);

@@ -92,18 +92,23 @@ class de
 {
 public:
   template<Individual I>
-  struct parents
+  struct selected_refs
   {
-    I &parent;
-    I &base;
-    I &a;
-    I &b;
+    I &target;      // also called parent
+    const I &base;
+    const I &a;
+    const I &b;
+
+    // Due to reference aliasing all the data members could possibly point to
+    // the same individual.
+    // So the const-ness of `base`, `a` and `b` is only partial. Anyway it
+    // prevents some kinds of programming errors.
   };
 
   explicit de(const parameters &);
 
   template<SizedRandomAccessPopulation P>
-  [[nodiscard]] parents<typename P::value_type> operator()(P &) const;
+  [[nodiscard]] selected_refs<typename P::value_type> operator()(P &) const;
 
 private:
   const parameters &params_;

@@ -192,19 +192,17 @@ de::de(const parameters &params) : params_(params)
 /// can change the individuals, race conditions may happen.
 ///
 template<SizedRandomAccessPopulation P>
-de::parents<typename P::value_type>
+de::selected_refs<typename P::value_type>
 de::operator()(P &pop) const
 {
-  const auto parent(random::coord(pop));
-
-  typename P::coord base;
-  do base = random::coord(pop); while(base == parent);
-    //const auto base(random::coord(pop));
-
+  const auto target(random::coord(pop));
+  const auto base(random::coord(pop));
   const auto a(random::coord(pop));
   const auto b(random::coord(pop));
 
-  return {pop[parent], pop[base], pop[a], pop[b]};
+  // We don't force constraints on indices.
+
+  return {pop[target], pop[base], pop[a], pop[b]};
 }
 
 #endif  // include guard
