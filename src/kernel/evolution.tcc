@@ -209,6 +209,11 @@ evolution<S>::run()
     {
       auto evolve(es_.operations(pop_, iter, sum_.starting_status()));
 
+      // Asynchronous population update: each newly generate offspring can
+      // replace an individual of the current population (aka steady state
+      // population).
+      // Asynchronous update permits new individual to contribute to the
+      // evolution immediately and can speed up the convergence.
       for (auto cycles(iter->size()); cycles; --cycles)
         if (!stop_token.stop_requested())
           evolve();

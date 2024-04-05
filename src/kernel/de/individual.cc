@@ -122,28 +122,36 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 ///
 /// \param[in] p crossover probability (`parameters.evolution.p_cross`)
 /// \param[in] f scaling factor interval (`parameters.de.weight`)
-/// \param[in] a first parent (base vector)
-/// \param[in] b second parent
-/// \param[in] c third parent
-/// \return      the offspring (trial vector)
+/// \param[in] a base vector
+/// \param[in] b first vector used for calculating the difference vector
+/// \param[in] c seconfo vector used for calculating the difference vector
+/// \return      the offspring / trial vector
 ///
-/// The offspring, also called trial vector, is generated as follows:
-///
-///     offspring = crossover(this, a + F * (b - c))
-///
-/// first the search direction is defined by calculating a *difference vector*
+/// First the search direction is defined by calculating a *difference vector*
 /// between the pair of vectors `b` and `c` (usually choosen at random from the
 /// population). This difference vector is scaled by using the *scale factor*
-/// `F`. This scaled difference vector is then added to a third vector `a`,
-/// called the *base vector*. As a result a new vector is obtained, known as
-/// the *mutant vector*. The mutant vector is recombined, based on a used
-/// defined parameter, called *crossover probability*, with the target vector
-/// `this` (also called *parent vector*).
-///
+/// `F`.
 /// This way no separate probability distribution has to be used which makes
 /// the scheme completely self-organizing.
 ///
-/// `b` and `c` are used for mutation, `this` and `a` for crossover.
+/// The scaled difference vector is then added to a third vector `a`, called
+/// the *base* vector. As a result a new vector is obtained, known as the
+/// *mutant* or *donor* vector:
+///
+///     m = a + F * (b - c)
+///
+/// The mutation strategy used is named `DE/rand/1`.
+/// Now the *offspring*, also called *trial*, vector is generated as follows:
+///
+///     offspring = crossover(this, m)
+///
+/// The mutant vector is recombined, based on a user defined parameter, called
+/// *crossover probability*, with `this` (the *target* / *parent* vector).
+/// The offspring gets **at least** one component of the mutant vector (the
+/// last).
+/// This scheme is called *binomial*.
+///
+/// `b` and `c` are used for mutation, `this` and `m` for crossover.
 ///
 individual individual::crossover(double p, const interval_t<double> &f,
                                  const individual &a,
@@ -166,7 +174,7 @@ individual individual::crossover(double p, const interval_t<double> &f,
 
   const auto last(ps - 1);
   for (std::size_t i(0); i < last; ++i)
-    if (random::boolean(p))
+    if (random::boolean(p))  // binomial scheme
       ret.genome_[i] += rf * (b[i] - c[i]);
     else
       ret.genome_[i] = operator[](i);
