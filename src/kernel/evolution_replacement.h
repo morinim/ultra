@@ -101,11 +101,10 @@ class de : public strategy<E>
 public:
   using de::strategy::strategy;
 
-  bool operator()(
-    const ultra::selection::de::parents<evaluator_individual_t<E>> &,
-    const evaluator_individual_t<E> &,
-    evolution_status<evaluator_individual_t<E>,
-                     evaluator_fitness_t<E>> &) const;
+  bool operator()(evaluator_individual_t<E> &,
+                  const evaluator_individual_t<E> &,
+                  evolution_status<evaluator_individual_t<E>,
+                                   evaluator_fitness_t<E>> &) const;
 };
 
 #include "kernel/evolution_replacement.tcc"

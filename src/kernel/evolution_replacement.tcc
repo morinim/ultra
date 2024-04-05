@@ -210,11 +210,10 @@ void alps<E>::operator()(
 }
 
 template<Evaluator E>
-bool de<E>::operator()(
-  const ultra::selection::de::parents<evaluator_individual_t<E>> &parents,
-  const evaluator_individual_t<E> &offspring,
-  evolution_status<evaluator_individual_t<E>,
-                   evaluator_fitness_t<E>> &status) const
+bool de<E>::operator()(evaluator_individual_t<E> &target,
+                       const evaluator_individual_t<E> &offspring,
+                       evolution_status<evaluator_individual_t<E>,
+                                        evaluator_fitness_t<E>> &status) const
 {
   const auto elitism(this->params_.evolution.elitism);
   Expects(0 <= elitism && elitism <= 1);
@@ -223,10 +222,13 @@ bool de<E>::operator()(
 
   status.update_if_better(scored_individual(offspring, off_fit));
 
-  if (const auto parent_fit(this->eva_(parents.parent));
-      off_fit > parent_fit || !random::boolean(elitism))
+  // The equality in `>=` helps the DE population to navigate the flat portion
+  // of a fitness landscape and to reduce the possibility of population
+  // becoming stagnated.
+  if (const auto target_fit(this->eva_(target));
+      off_fit >= target_fit || !random::boolean(elitism))
   {
-    parents.parent = offspring;
+    target = offspring;
     return true;
   }
 

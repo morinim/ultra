@@ -105,16 +105,16 @@ TEST_CASE_FIXTURE(fixture4, "DE")
         de::individual(prob), de::individual(prob)
       };
 
-      const selection::de::parents<de::individual> parents{pop[0], pop[1],
-                                                           pop[2], pop[3]};
+      const selection::de::selected_refs<de::individual> parents
+        {pop[0], pop[1], pop[2], pop[3]};
 
       const auto x(recombine(parents));
 
       const auto last(x.parameters() - 1);
       for (std::size_t i(0); i < last; ++i)
-        CHECK(parents.parent[i] == doctest::Approx(x[i]));
+        CHECK(parents.target[i] == doctest::Approx(x[i]));
 
-      CHECK(parents.parent[last] != doctest::Approx(x[last]));
+      CHECK(parents.target[last] != doctest::Approx(x[last]));
     }
   }
 
@@ -129,15 +129,15 @@ TEST_CASE_FIXTURE(fixture4, "DE")
         de::individual(prob), de::individual(prob),
         de::individual(prob), de::individual(prob)
       };
-      const selection::de::parents<de::individual> parents{pop[0], pop[1],
-                                                           pop[2], pop[3]};
+      const selection::de::selected_refs<de::individual> parents
+        {pop[0], pop[1], pop[2], pop[3]};
 
       const auto x(recombine(parents));
 
       const auto last(x.parameters() - 1);
       for (std::size_t i(0); i < last; ++i)
       {
-        const bool no_cross(parents.parent[i] == doctest::Approx(x[i]));
+        const bool no_cross(parents.target[i] == doctest::Approx(x[i]));
         const bool cross(parents.base[i] + parents.a[i] - parents.b[i]
                          == doctest::Approx(x[i]));
         const bool valid(no_cross || cross);

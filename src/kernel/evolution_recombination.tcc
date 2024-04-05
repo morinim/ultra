@@ -110,17 +110,17 @@ de::de(const problem &prob) : prob_(prob)
 ///
 /// \param[in] engaged a vector of ordered individuals (parent1, parent2/base,
 ///                    random1, random2)
-/// \return            the offspring
+/// \return            the offspring / trial vector
 ///
 /// Used parameters: `evolution.p_cross`, `de.weight`.
 ///
 template<Individual I>
-I de::operator()(const ultra::selection::de::parents<I> &engaged) const
+I de::operator()(const ultra::selection::de::selected_refs<I> &engaged) const
 {
   const auto &params(prob_.params);
   Expects(0.0 <= params.evolution.p_cross && params.evolution.p_cross <= 1.0);
 
-  return engaged.parent.crossover(params.evolution.p_cross, params.de.weight,
+  return engaged.target.crossover(params.evolution.p_cross, params.de.weight,
                                   engaged.base, engaged.a, engaged.b);
 }
 

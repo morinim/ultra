@@ -325,9 +325,9 @@ auto de_es<E>::operations(
     {
       Ensures(!pop_layer.empty());
 
-      const auto parents(this->select_(pop_layer));
-      const auto offspring(this->recombine_(parents));
-      this->replace_(parents, offspring, status);
+      const auto selected(this->select_(pop_layer));
+      const auto offspring(this->recombine_(selected));
+      this->replace_(selected.target, offspring, status);
     };
 }
 

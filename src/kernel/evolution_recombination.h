@@ -83,7 +83,7 @@ public:
   explicit de(const problem &);
 
   template<Individual I>
-  [[nodiscard]] I operator()(const selection::de::parents<I> &) const;
+  [[nodiscard]] I operator()(const selection::de::selected_refs<I> &) const;
 
 private:
   const problem &prob_;
