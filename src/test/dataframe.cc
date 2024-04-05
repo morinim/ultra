@@ -18,72 +18,82 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-std::istringstream iris_xrff(R"(
-<dataset name="iris">
-  <header>
-    <attributes>
-      <attribute class="yes" name="class" type="nominal">
-        <labels>
-          <label>Iris-setosa</label>
-          <label>Iris-versicolor</label>
-          <label>Iris-virginica</label>
-        </labels>
-      </attribute>
-      <attribute name="sepallength" type="numeric" />
-      <attribute name="sepalwidth" type="numeric" />
-      <attribute name="petallength" type="numeric" />
-      <attribute name="petalwidth" type="numeric" />
-    </attributes>
-  </header>
-  <body>
-    <instances>
-      <instance><value>Iris-setosa</value><value>5.1</value><value>3.5</value><value>1.4</value><value>0.2</value></instance>
-      <instance><value>Iris-setosa</value><value>4.9</value><value>3</value><value>1.4</value><value>0.2</value></instance>
-      <instance><value>Iris-setosa</value><value>4.7</value><value>3.2</value><value>1.3</value><value>0.2</value></instance>
-      <instance><value>Iris-versicolor</value><value>7</value><value>3.2</value><value>4.7</value><value>1.4</value></instance>
-      <instance><value>Iris-versicolor</value><value>6.4</value><value>3.2</value><value>4.5</value><value>1.5</value></instance>
-      <instance><value>Iris-versicolor</value><value>6.9</value><value>3.1</value><value>4.9</value><value>1.5</value></instance>
-      <instance><value>Iris-virginica</value><value>6.3</value><value>3.3</value><value>6</value><value>2.5</value></instance>
-      <instance><value>Iris-virginica</value><value>5.8</value><value>2.7</value><value>5.1</value><value>1.9</value></instance>
-      <instance><value>Iris-virginica</value><value>7.1</value><value>3</value><value>5.9</value><value>2.1</value></instance>
-      <instance><value>Iris-virginica</value><value>6.3</value><value>2.9</value><value>5.6</value><value>1.8</value></instance>
-    </instances>
-  </body>
-</dataset>)");
+class random_csv_line
+{
+public:
+  explicit random_csv_line(const std::vector<ultra::domain_t> &format)
+    : head_(format.front()),
+      tail_(std::next(format.begin()), format.end())
+  {
+    Expects(format.size());
+  }
+
+  [[nodiscard]] std::string get() const
+  {
+    using namespace ultra;
+
+    const auto random_field([](domain_t d)
+    {
+      switch (d)
+      {
+      case d_int:
+        return std::to_string(random::between(0, 100000000));
+      case d_double:
+        return std::to_string(random::between(0.0, 1000.0));
+      default:
+      {
+        const auto random_char([]
+        {
+          return random::element(std::string(
+                                   "0123456789"
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                   "abcdefghijklmnopqrstuvwxyz"));
+        });
+
+        std::string s;
+        std::generate_n(std::back_inserter(s),
+                        random::between(1, 40),
+                        random_char);
+
+        return "\"" + s + "\"";
+      }
+      }
+    });
+
+    std::string line(random_field(head_));
+
+    for (auto d : tail_)
+      line += "," + random_field(d);
+
+    return line;
+  }
+
+private:
+  const ultra::domain_t head_;
+  const std::vector<ultra::domain_t> tail_;
+};
 
 TEST_SUITE("DATAFRAME")
 {
-/*
-TEST_CASE("Read and filter")
+
+TEST_CASE("Filtering")
 {
   using namespace ultra;
 
-  SUBCASE("iris.csv")
-  {
-    dataframe d1;
-    constexpr std::size_t n1(150);
-    CHECK(d1.read(iris_csv) == n1);
-    CHECK(d1.size() == n1);
-  }
+  constexpr std::size_t LINES(1000);
+  std::string random_csv;
+  random_csv_line line({d_int, d_string, d_int, d_double, d_double, d_string});
 
-  std::ostringstream ss;
+  for (std::size_t lines(LINES); lines; --lines)
+    random_csv += line.get() + "\n";
 
-  dataframe d2;
-  constexpr std::size_t n2(400);
-  std::generate_n(std::back_inserter(d2), n2,
-                  []()
-                  {
-                    return example
-                    {
-                      {random::between(0, 9), random::between(0, 9)},
-                      random::between(0, 1)
-                    };
-                  });
+  std::istringstream ss(random_csv);
 
   SUBCASE("Random dataframe")
   {
-    CHECK(d2.read("./test_resources/ionosphere.csv") == n2);
-    CHECK(d2.size() == n2);
+    dataframe d;
+    CHECK(d.read_csv(ss));
+    CHECK(d.size() == LINES);
   }
 
   SUBCASE("Random dataframe / random filtering")
@@ -91,18 +101,13 @@ TEST_CASE("Read and filter")
     dataframe::params p;
     p.filter = [](dataframe::record_t &) { return random::boolean(); };
 
-    std::size_t n(0), sup(10);
-    for (unsigned i(0); i < sup; ++i)
-    {
-      dataframe d3;
+    dataframe d;
+    d.read_csv(ss, p);
 
-      d3.read("./test_resources/ionosphere.csv", p);
-      n += d3f.size();
-    }
-
-  const auto half(n3 * sup / 2);
-  CHECK(9 * half <= 10 * n);
-  CHECK(10 * n <= 11 * half);
+    const auto half(LINES / 2);
+    CHECK(10 * d.size() <= 11 * half);
+    CHECK(9 * half <= 10 * d.size());
+  }
 }
 
 TEST_CASE("load_csv headers")
@@ -122,7 +127,7 @@ TEST_CASE("load_csv headers")
      7.8,0.58,0.02,2,  0.073, 9, 18,0.9968,3.36,0.57, 9.5,7
      7.5,0.5, 0.36,6.1,0.071,17,102,0.9978,3.35,0.8, 10.5,5)");
 
-constexpr std::size_t ncol(12);
+  constexpr std::size_t ncol(12);
 
   dataframe d;
   dataframe::params p;
@@ -229,7 +234,7 @@ TEST_CASE("load_csv output_index")
   CHECK(std::holds_alternative<D_STRING>(d.front().input[0]));
   CHECK(std::holds_alternative<D_DOUBLE>(d.front().input[1]));
 }
-*/
+
 TEST_CASE("load_csv_no_output_index")
 {
   using namespace ultra;
@@ -313,7 +318,7 @@ TEST_CASE("load_csv_classification")
     6.2,3.4,5.4,2.3,Iris-virginica
     5.9,3,5.1,1.8,Iris-virginica)");
 
-constexpr std::size_t ncol(5);
+  constexpr std::size_t ncol(5);
 
   dataframe d;
   dataframe::params p;
@@ -357,6 +362,39 @@ constexpr std::size_t ncol(5);
 TEST_CASE("load_xrff_classification")
 {
   using namespace ultra;
+
+std::istringstream iris_xrff(R"(
+<dataset name="iris">
+  <header>
+    <attributes>
+      <attribute class="yes" name="class" type="nominal">
+        <labels>
+          <label>Iris-setosa</label>
+          <label>Iris-versicolor</label>
+          <label>Iris-virginica</label>
+        </labels>
+      </attribute>
+      <attribute name="sepallength" type="numeric" />
+      <attribute name="sepalwidth" type="numeric" />
+      <attribute name="petallength" type="numeric" />
+      <attribute name="petalwidth" type="numeric" />
+    </attributes>
+  </header>
+  <body>
+    <instances>
+      <instance><value>Iris-setosa</value><value>5.1</value><value>3.5</value><value>1.4</value><value>0.2</value></instance>
+      <instance><value>Iris-setosa</value><value>4.9</value><value>3</value><value>1.4</value><value>0.2</value></instance>
+      <instance><value>Iris-setosa</value><value>4.7</value><value>3.2</value><value>1.3</value><value>0.2</value></instance>
+      <instance><value>Iris-versicolor</value><value>7</value><value>3.2</value><value>4.7</value><value>1.4</value></instance>
+      <instance><value>Iris-versicolor</value><value>6.4</value><value>3.2</value><value>4.5</value><value>1.5</value></instance>
+      <instance><value>Iris-versicolor</value><value>6.9</value><value>3.1</value><value>4.9</value><value>1.5</value></instance>
+      <instance><value>Iris-virginica</value><value>6.3</value><value>3.3</value><value>6</value><value>2.5</value></instance>
+      <instance><value>Iris-virginica</value><value>5.8</value><value>2.7</value><value>5.1</value><value>1.9</value></instance>
+      <instance><value>Iris-virginica</value><value>7.1</value><value>3</value><value>5.9</value><value>2.1</value></instance>
+      <instance><value>Iris-virginica</value><value>6.3</value><value>2.9</value><value>5.6</value><value>1.8</value></instance>
+    </instances>
+  </body>
+</dataset>)");
 
   constexpr std::size_t ncol(5);
 
