@@ -20,17 +20,17 @@ Source has been made available for people / companies:
 
 Ultra is a scalable, high performance evolutionary algorithms framework.
 
-It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agent][agent] implementation. Main features:
+It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control. Main features:
 
 - concurrency support
+- modern, standard ISO C++20 source code
 - flexible and fast
 - easy integration with other systems
 - simple addition of features and modules
 - fast experimentation with detailed run-log
-- modern, standard ISO C++20 source code
 - [more][features]
 
-This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**. If you're coming from Vita take a look at the migration notes][migrating].
+This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**. If you're coming from Vita take a look at the [migration notes][migrating].
 
 ## Examples
 
