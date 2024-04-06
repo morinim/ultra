@@ -186,7 +186,7 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 [homepage]: https://github.com/morinim/ultra
 [issue]: https://github.com/morinim/ultra/issues
 [license]: https://github.com/morinim/ultra/blob/master/LICENSE
-[migrating]: migrating
+[migrating]: https://github.com/morinim/ultra/wiki/migrating
 [mpl2]: https://www.mozilla.org/MPL/2.0/
 [python]: https://www.python.org/
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
