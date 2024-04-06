@@ -45,3 +45,4 @@
 #include "test/symbol_set.cc"
 #include "test/terminal.cc"
 #include "test/value.cc"
+#include "test/wiki.cc"
