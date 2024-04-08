@@ -44,6 +44,15 @@
  *  \namespace alps
  *  Contains support functions for the ALPS algorithm.
  *
+ *  \namespace de
+ *  Contains classes used for Differential Evolution.
+ *
+ *  \namespace gp
+ *  Contains classes used for Genetic Programming.
+ *
+ *  \namespace src
+ *  Contains classes used for symbolic regression and classification tasks.
+ *
  *  \namespace out
  *  Contains flags and manipulators to control the output format of individuals.
  *

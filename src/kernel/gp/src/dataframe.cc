@@ -19,7 +19,7 @@
 
 #include "tinyxml2/tinyxml2.h"
 
-namespace ultra
+namespace ultra::src
 {
 
 namespace
@@ -54,9 +54,9 @@ value_t convert(const std::string &s, domain_t d)
 /// Used only in classification tasks.
 ///
 /// \related
-/// src::example
+/// example
 ///
-[[nodiscard]] class_t src::label(const src::example &e)
+[[nodiscard]] class_t label(const example &e)
 {
   Expects(std::holds_alternative<D_INT>(e.output));
   return std::get<D_INT>(e.output);
@@ -96,7 +96,7 @@ domain_t from_weka(const std::string &n)
 ///
 /// \param[in] v information about the new column
 ///
-void src::columns_info::push_back(const column_info &v)
+void columns_info::push_back(const column_info &v)
 {
   cols_.push_back(v);
 }
@@ -106,7 +106,7 @@ void src::columns_info::push_back(const column_info &v)
 ///
 /// \param[in] v information about the new column
 ///
-void src::columns_info::push_front(const column_info &v)
+void columns_info::push_front(const column_info &v)
 {
   cols_.insert(begin(), v);
 }
@@ -127,8 +127,7 @@ void src::columns_info::push_front(const column_info &v)
 /// \remark
 /// The function assumes columns `0` as the output column.
 ///
-void src::columns_info::build(const std::vector<std::string> &r,
-                              bool header_first)
+void columns_info::build(const std::vector<std::string> &r, bool header_first)
 {
   Expects(r.size());
 
@@ -179,7 +178,7 @@ void src::columns_info::build(const std::vector<std::string> &r,
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-bool src::columns_info::is_valid() const
+bool columns_info::is_valid() const
 {
   return std::none_of(begin(), end(),
                       [](const auto &c)
@@ -334,7 +333,7 @@ unsigned dataframe::variables() const
 ///
 /// \param[in] e the value of the element to append
 ///
-void dataframe::push_back(const src::example &e)
+void dataframe::push_back(const example &e)
 {
   dataset_.push_back(e);
 }
@@ -361,12 +360,12 @@ class_t dataframe::encode(const std::string &label)
 /// When `add_instance` is `true` the function can have side-effects (changing
 /// the set of admissible instances associated with a text-feature).
 ///
-src::example dataframe::to_example(const record_t &v, bool add_instance)
+example dataframe::to_example(const record_t &v, bool add_instance)
 {
   Expects(v.size());
   Expects(v.size() == columns.size());
 
-  src::example ret;
+  example ret;
 
   for (std::size_t i(0); i < v.size(); ++i)
     if (const auto domain(columns[i].domain); domain != d_void)
@@ -514,7 +513,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
        attribute;
        attribute = attribute->NextSiblingElement("attribute"), ++index)
   {
-    src::columns_info::column_info a;
+    columns_info::column_info a;
 
     const char *s(attribute->Attribute("name"));
     if (s)

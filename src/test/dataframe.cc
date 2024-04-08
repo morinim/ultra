@@ -79,6 +79,7 @@ TEST_SUITE("DATAFRAME")
 TEST_CASE("Filtering")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
   constexpr std::size_t LINES(1000);
   std::string random_csv;
@@ -113,6 +114,7 @@ TEST_CASE("Filtering")
 TEST_CASE("load_csv headers")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
   std::istringstream wine(R"(
     fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur dioxide,total sulfur dioxide,density,pH,sulphates,alcohol,quality
@@ -181,6 +183,7 @@ TEST_CASE("load_csv headers")
 TEST_CASE("load_csv output_index")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
   std::istringstream abalone(R"(
     sex,length,diameter,height,whole weight,shucked weight,viscera weight,shell weight,rings
@@ -238,6 +241,7 @@ TEST_CASE("load_csv output_index")
 TEST_CASE("load_csv_no_output_index")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
   std::istringstream ecoli(R"(
     sequence name, mcg,  gvh,  lip,  chg,  aac, alm1, alm2, localization
@@ -304,6 +308,7 @@ TEST_CASE("load_csv_no_output_index")
 TEST_CASE("load_csv_classification")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
   std::istringstream iris(R"(
     sepal length,sepal width,petal length,petal width,class
@@ -362,6 +367,7 @@ TEST_CASE("load_csv_classification")
 TEST_CASE("load_xrff_classification")
 {
   using namespace ultra;
+  using ultra::src::dataframe;
 
 std::istringstream iris_xrff(R"(
 <dataset name="iris">

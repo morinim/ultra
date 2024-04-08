@@ -27,14 +27,12 @@
 
 namespace tinyxml2 { class XMLDocument; }
 
-namespace ultra
+namespace ultra::src
 {
 
 /// The type used as class ID in classification tasks.
 using class_t = std::size_t;
 
-namespace src
-{
 ///
 /// Stores a single element (row) of the dataset.
 ///
@@ -106,8 +104,6 @@ public:
 private:
   std::vector<column_info> cols_ {};
 };
-
-}  // namespace src
 
 ///
 /// A 2-dimensional labeled data structure with columns of potentially
@@ -250,6 +246,6 @@ public:
   std::optional<std::size_t> output_index {0};
 };
 
-}  // namespace ultra
+}  // namespace ultra::src
 
 #endif  // include guard

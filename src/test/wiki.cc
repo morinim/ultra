@@ -24,7 +24,7 @@ struct fixture1
                                  a0, 0.0, 0, d0
                                  a1, 0.1, 1, d1
                                  a2, 0.2, 2, d2)"};
-  ultra::dataframe d {};
+  ultra::src::dataframe d {};
 };
 
 TEST_CASE_FIXTURE(fixture1, "dataframe import data 1")
@@ -41,7 +41,7 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 1")
 
 TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
 {
-  using namespace ultra;
+  using namespace ultra::src;
 
   d.read_csv(dataset, dataframe::params().output(2));
 
@@ -60,7 +60,7 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
 
 TEST_CASE_FIXTURE(fixture1, "dataframe import data 3")
 {
-  using namespace ultra;
+  using namespace ultra::src;
 
   d.read_csv(dataset, dataframe::params().no_output());
 
@@ -75,7 +75,7 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 3")
 
 TEST_CASE_FIXTURE(fixture1, "dataframe columns")
 {
-  using namespace ultra;
+  using namespace ultra::src;
 
   d.read_csv(dataset, dataframe::params().header());
 
