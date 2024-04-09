@@ -23,6 +23,7 @@
 
 #include "kernel/distribution.h"
 #include "kernel/problem.h"
+#include "kernel/gp/src/columns_info.h"
 #include "utility/pocket_csv.h"
 
 namespace tinyxml2 { class XMLDocument; }
@@ -55,57 +56,6 @@ struct example
 [[nodiscard]] class_t label(const src::example &);
 
 ///
-/// Information about the collection of columns (type, name, output index).
-///
-/// \related dataframe
-///
-class columns_info
-{
-public:
-  /// Information about a single column of the dataset.
-  struct column_info
-  {
-    std::string         name {};
-    domain_t          domain {d_void};
-    std::set<value_t> states {};
-  };
-
-  using size_type = std::size_t;
-
-  columns_info() = default;
-
-  [[nodiscard]] const column_info &operator[](size_type i) const
-  { return cols_[i]; }
-  [[nodiscard]] column_info &operator[](size_type i)
-  { return cols_[i]; }
-
-  [[nodiscard]] size_type size() const noexcept { return cols_.size(); }
-  [[nodiscard]] bool empty() const noexcept { return cols_.empty(); }
-
-  [[nodiscard]] auto begin() const noexcept { return cols_.begin(); }
-  [[nodiscard]] auto begin() noexcept { return cols_.begin(); }
-  [[nodiscard]] auto end() const noexcept { return cols_.end(); }
-  [[nodiscard]] auto end() noexcept { return cols_.end(); }
-
-  [[nodiscard]] const auto &front() const { return cols_.front(); }
-  [[nodiscard]] auto &front() { return cols_.front(); }
-
-  [[nodiscard]] const auto &back() const { return cols_.back(); }
-  [[nodiscard]] auto &back() { return cols_.back(); }
-
-  void pop_back() { cols_.pop_back(); }
-  void push_back(const column_info &);
-  void push_front(const column_info &);
-
-  void build(const std::vector<std::string> &, bool);
-
-  [[nodiscard]] bool is_valid() const;
-
-private:
-  std::vector<column_info> cols_ {};
-};
-
-///
 /// A 2-dimensional labeled data structure with columns of potentially
 /// different types.
 ///
@@ -123,7 +73,7 @@ class dataframe
 {
 public:
   // ---- Structures ----
-  class params;
+  struct params;
 
   // ---- Aliases ----
   using examples_t = std::vector<src::example>;
@@ -220,18 +170,10 @@ template<class T>
   return lexical_cast<T>(e.output);
 }
 
-class dataframe::params
+struct dataframe::params
 {
-public:
-  params &header() noexcept
-  { dialect.has_header = pocket_csv::dialect::HAS_HEADER; return *this; }
-  params &no_header() noexcept
-  { dialect.has_header = pocket_csv::dialect::NO_HEADER; return *this; }
-
-  params &output(std::size_t o) noexcept
-  { output_index = o; return *this; }
-  params &no_output() noexcept
-  { output_index = std::nullopt; return *this; }
+  /// See `typing` for details.
+  typing data_typing {typing::weak};
 
   /// \remark
   /// Used only when reading CSV files.
@@ -244,6 +186,19 @@ public:
   /// \remark
   /// Used only when reading CSV files.
   std::optional<std::size_t> output_index {0};
+
+  params &header() noexcept
+  { dialect.has_header = pocket_csv::dialect::HAS_HEADER; return *this; }
+  params &no_header() noexcept
+  { dialect.has_header = pocket_csv::dialect::NO_HEADER; return *this; }
+
+  params &output(std::size_t o) { output_index = o; return *this; }
+  params &no_output() noexcept { output_index = std::nullopt; return *this; }
+
+  params &strong_data_typing() noexcept
+  { data_typing = typing::strong; return *this; }
+  params &weak_data_typing() noexcept
+  { data_typing = typing::weak; return *this; }
 };
 
 }  // namespace ultra::src

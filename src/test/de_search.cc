@@ -27,6 +27,8 @@ TEST_CASE("Rastrigin")
 {
   using namespace ultra;
 
+  log::reporting_level = log::lWARNING;
+
   const unsigned dimensions(5);  // 5D - Rastrigin function
 
   de::problem prob(dimensions, {-5.12, 5.12});

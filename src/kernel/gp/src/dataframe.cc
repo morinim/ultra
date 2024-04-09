@@ -31,7 +31,7 @@ namespace
 ///             conversion can be applied
 //
 // `convert("123.1", D_DOUBLE) == value_t(123.1f)`
-value_t convert(const std::string &s, domain_t d)
+[[nodiscard]] value_t convert(const std::string &s, domain_t d)
 {
   switch (d)
   {
@@ -67,7 +67,7 @@ value_t convert(const std::string &s, domain_t d)
 /// \return      the internal id corresponding to  the weka-domain `n`
 ///              (`D_VOID` if unknown / not managed)
 ///
-domain_t from_weka(const std::string &n)
+[[nodiscard]] domain_t from_weka(const std::string &n)
 {
   static const std::map<std::string, domain_t> map(
   {
@@ -92,100 +92,6 @@ domain_t from_weka(const std::string &n)
 }
 
 ///
-/// Adds a new column at the end of the column list.
-///
-/// \param[in] v information about the new column
-///
-void columns_info::push_back(const column_info &v)
-{
-  cols_.push_back(v);
-}
-
-///
-/// Adds a new column at the front of the column list.
-///
-/// \param[in] v information about the new column
-///
-void columns_info::push_front(const column_info &v)
-{
-  cols_.insert(begin(), v);
-}
-
-///
-/// Given an example compiles information about the columns of the dataframe.
-///
-/// \param[in] r            a record containing an example
-/// \param[in] header_first `true` if the first example contains the header
-///
-/// The function can be called multiple times to incrementally collect
-/// information from different examples.
-///
-/// When `header_first` is `true` the first example is used to gather the names
-/// of the columns and successive example contribute to determine the domain
-/// of each column.
-///
-/// \remark
-/// The function assumes columns `0` as the output column.
-///
-void columns_info::build(const std::vector<std::string> &r, bool header_first)
-{
-  Expects(r.size());
-
-  // Sets the domain associated to a column.
-  const auto set_domain(
-    [&](std::size_t idx)
-    {
-      const std::string &value(trim(r[idx]));
-      if (value.empty())
-        return;
-
-      const bool number(is_number(value));
-      const bool classification(idx == 0 && !number);
-
-      // DOMAIN
-      if (cols_[idx].domain == d_void)
-        // For classification tasks we use discriminant functions and the actual
-        // output type is always numeric.
-        cols_[idx].domain = number || classification ? d_double : d_string;
-    });
-
-  const auto fields(r.size());
-
-  if (cols_.empty())
-  {
-    cols_.reserve(fields);
-
-    if (header_first)  // first line contains the names of the columns
-    {
-      std::ranges::transform(r, std::back_inserter(cols_),
-                             [](const auto &name)
-                             {
-                               return column_info{trim(name), d_void, {}};
-                             });
-
-      return;
-    }
-    else
-      std::fill_n(std::back_inserter(cols_), fields, column_info());
-  }
-
-  assert(size() == r.size());
-
-  for (std::size_t field(0); field < fields; ++field)
-    set_domain(field);
-}
-
-///
-/// \return `true` if the object passes the internal consistency check
-///
-bool columns_info::is_valid() const
-{
-  return std::none_of(begin(), end(),
-                      [](const auto &c)
-                      { return c.domain == d_void && !c.states.empty(); });
-}
-
-///
 /// New dataframe instance containing the learning collection from a stream.
 ///
 /// \param[in] is input stream
@@ -194,7 +100,7 @@ bool columns_info::is_valid() const
 /// \remark
 /// Data from the input stream must be in CSV format.
 ///
-dataframe::dataframe(std::istream &is, const params &p) : dataframe()
+dataframe::dataframe(std::istream &is, const params &p)
 {
   Expects(is.good());
   read_csv(is, p);
@@ -211,7 +117,6 @@ dataframe::dataframe(std::istream &is) : dataframe(is, {}) {}
 /// \param[in] p  additional, optional, parameters (see `params` structure)
 ///
 dataframe::dataframe(const std::filesystem::path &fn, const params &p)
-  : dataframe()
 {
   Expects(!fn.empty());
   read(fn, p);
@@ -482,7 +387,7 @@ std::size_t dataframe::read_xrff(std::istream &in)
 ///
 /// \param[in] doc object containing the xrff file
 /// \param[in] p   additional, optional, parameters (see `params` structure)
-/// \return        number of lines parsed (0 in case of errors)
+/// \return        number of lines parsed (`0` in case of errors)
 ///
 /// \exception exception::data_format wrong data format for data file
 ///
@@ -496,6 +401,8 @@ std::size_t dataframe::read_xrff(std::istream &in)
 ///
 std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
 {
+  columns.data_typing(p.data_typing);
+
   // Iterate over `dataset.header.attributes` selection and store all found
   // attributes in the header vector.
   tinyxml2::XMLHandle handle(&doc);
@@ -513,7 +420,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
        attribute;
        attribute = attribute->NextSiblingElement("attribute"), ++index)
   {
-    columns_info::column_info a;
+    columns_info::column_info a(columns);
 
     const char *s(attribute->Attribute("name"));
     if (s)
@@ -678,6 +585,8 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 ///
 std::size_t dataframe::read_csv(std::istream &from, params p)
 {
+  columns.data_typing(p.data_typing);
+
   clear();
 
   if (p.dialect.has_header == pocket_csv::dialect::GUESS_HEADER

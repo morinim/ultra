@@ -12,6 +12,7 @@
 
 #include "test/alps.cc"
 #include "test/analyzer.cc"
+#include "test/columns_info.cc"
 #include "test/dataframe.cc"
 #include "test/de_problem.cc"
 #include "test/de_individual.cc"
