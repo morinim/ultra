@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -23,7 +23,7 @@ const gene &interpreter::current_gene() const
 }
 
 ///
-/// \param[in] ind individual whose value/ we are interested in
+/// \param[in] ind individual whose value we are interested in
 ///
 /// \warning
 /// The lifetime of `ind` must extend beyond that of the interpreter.
