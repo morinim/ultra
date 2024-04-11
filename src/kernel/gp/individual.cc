@@ -166,17 +166,19 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
 
   const auto pack_opcode([&](const symbol::opcode_t &opcode)
   {
-    Expects(opcode <= std::numeric_limits<symbol::opcode_t>::max());
+    Expects(opcode <= std::numeric_limits<std::uint16_t>::max());
 
     // Although 16 bit are enough to contain opcodes and parameters, they are
     // usually stored in unsigned variables (i.e. 32 or 64 bit) for performance
     // reasons.
     // Anyway before hashing opcodes/parameters we convert them to 16 bit types
     // to avoid hashing more than necessary.
+    // This also distinguish between an opcode and an integer value (the former
+    // is treated as a 16bit number the latter as something bigger).
     const auto opcode16(static_cast<std::uint16_t>(opcode));
-
     pack_value(opcode16);
   });
+
 
   const gene &g(genome_(l));
   pack_opcode(g.func->opcode());
