@@ -10,7 +10,7 @@
 ## UNDER DEVELOPMENT
 There is still an ongoing transferring process from Vita and many features aren't available or don't completely work.
 
-This framework will be a major breakthrough but at the moment is far from being production ready.
+This framework will be a major breakthrough but at the moment is far from being production ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
 
 Source has been made available for people / companies:
 - already using [Vita][vita] to be able to experience the new library;
