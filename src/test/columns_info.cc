@@ -65,6 +65,7 @@ fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur 
   CHECK(cs[11].name() == "quality");
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+  CHECK(cs.domain_of_category(0) == d_double);
 
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
 }
@@ -122,6 +123,10 @@ fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur 
         == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8,9,10,11});
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+
+  CHECK(std::ranges::all_of(
+          cs.used_categories(),
+          [&cs] (auto c) { return cs.domain_of_category(c) == d_double; }));
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
@@ -176,6 +181,9 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
   CHECK(cs[8].category() == 0);
 
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0,1});
+
+  CHECK(cs.domain_of_category(0) == d_double);
+  CHECK(cs.domain_of_category(1) == d_string);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
@@ -230,8 +238,15 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
   CHECK(cs[8].domain() == d_double);
   CHECK(cs[8].category() == 8);
 
-  CHECK(cs.used_categories()
-        == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8});
+  const auto used_categories(cs.used_categories());
+
+  CHECK(used_categories == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8});
+
+  for (auto c : used_categories)
+    if (c == 1)
+      CHECK(cs.domain_of_category(c) == d_string);
+    else
+      CHECK(cs.domain_of_category(c) == d_double);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
@@ -291,6 +306,11 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
 
   CHECK(cs.used_categories()
         == std::set<symbol::category_t>{0, 1, 2, symbol::undefined_category});
+
+  CHECK(cs.domain_of_category(symbol::undefined_category) == d_void);
+  CHECK(cs.domain_of_category(0) == d_string);
+  CHECK(cs.domain_of_category(1) == d_double);
+  CHECK(cs.domain_of_category(2) == d_string);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
@@ -352,6 +372,13 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
   CHECK(cs.used_categories()
         == std::set<symbol::category_t>{0, 1, 2, 3, 4, 5, 6, 7, 8,
                                         symbol::undefined_category});
+
+  CHECK(cs.domain_of_category(symbol::undefined_category) == d_void);
+  CHECK(cs.domain_of_category(0) == d_string);
+  CHECK(cs.domain_of_category(8) == d_string);
+
+  for (symbol::category_t c(1); c <= 7; ++c)
+    CHECK(cs.domain_of_category(c) == d_double);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
@@ -384,6 +411,8 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
   CHECK(cs[4].name() == "petal width");
 
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
+  CHECK(cs.domain_of_category(0) == d_double);
+
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }
@@ -423,7 +452,12 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
   CHECK(cs[4].name() == "petal width");
   CHECK(cs[4].category() == 4);
 
-  CHECK(cs.used_categories() == std::set<symbol::category_t>{0, 1, 2, 3, 4});
+  const auto used_categories(cs.used_categories());
+
+  CHECK(used_categories == std::set<symbol::category_t>{0, 1, 2, 3, 4});
+
+  for (auto c : used_categories)
+    CHECK(cs.domain_of_category(c) == d_double);
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }

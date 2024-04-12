@@ -305,13 +305,24 @@ std::set<symbol::category_t> columns_info::used_categories() const
   return categories;
 }
 
+domain_t columns_info::domain_of_category(symbol::category_t target) const
+{
+  const auto it(std::ranges::find_if(
+                  cols_,
+                  [target](const auto &ci) {return ci.category() == target;}));
+
+  return it == cols_.end() ? d_void : it->domain();
+}
+
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
 bool columns_info::is_valid() const
 {
-  for (const auto &c : cols_)
+  for (std::size_t i(0); i < cols_.size(); ++i)
   {
+    const auto &c(cols_[i]);
+
     if (!basic_data_type(c.domain()))
       return false;
 
@@ -322,6 +333,11 @@ bool columns_info::is_valid() const
                             [&c](const auto &v)
                             { return v.index() != c.domain(); }))
       return false;
+
+    const auto cat(c.category());
+    for (std::size_t j(i + 1); j < cols_.size(); ++j)
+      if (cat == cols_[j].category() && c.domain() != cols_[j].domain())
+        return false;
   }
 
   return true;

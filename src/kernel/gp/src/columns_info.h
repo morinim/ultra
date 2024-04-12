@@ -111,6 +111,8 @@ public:
   void build(const std::vector<std::string> &, bool);
   std::set<symbol::category_t> used_categories() const;
 
+  [[nodiscard]] domain_t domain_of_category(symbol::category_t) const;
+
   [[nodiscard]] bool is_valid() const;
 
 private:
