@@ -40,8 +40,8 @@ enum domain_t {d_void = 0, d_int, d_double, d_string, d_nullary, d_address,
 using D_VOID     = std::monostate;
 using D_INT      =            int;
 using D_DOUBLE   =         double;
-using D_NULLARY  =        nullary;
 using D_STRING   =    std::string;
+using D_NULLARY  =        nullary;
 using D_ADDRESS  =  param_address;
 using D_VARIABLE =  src::variable;
 
@@ -52,6 +52,7 @@ using D_VARIABLE =  src::variable;
 using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_STRING,
                              const D_NULLARY *, D_ADDRESS, const D_VARIABLE *>;
 
+[[nodiscard]] bool basic_data_type(domain_t) noexcept;
 [[nodiscard]] bool basic_data_type(const value_t &) noexcept;
 [[nodiscard]] const D_NULLARY *get_if_nullary(const value_t &) noexcept;
 [[nodiscard]] bool has_value(const value_t &) noexcept;

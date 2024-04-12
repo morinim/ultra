@@ -19,9 +19,64 @@
 namespace ultra::src
 {
 
-category_t columns_info::column_info::category() const
+///
+/// \param[in] csi    owner `columns_info` object
+/// \param[in] name   name of the column
+/// \param[in] domain domain of the column (must be a basic data type)
+/// \param[in] states possible restriction to a set of values
+///
+columns_info::column_info::column_info(const columns_info &csi,
+                                       const std::string &name,
+                                       domain_t domain,
+                                       const std::set<value_t> &states)
+  : owner_(&csi), name_(name), domain_(domain), states_(states)
 {
-  return owner_ ? owner_->category(*this) : undefined_category;
+  Expects(basic_data_type(domain));
+}
+
+const std::string &columns_info::column_info::name() const noexcept
+{
+  return name_;
+}
+
+void columns_info::column_info::name(const std::string &n)
+{
+  name_ = n;
+}
+
+domain_t columns_info::column_info::domain() const noexcept
+{
+  return domain_;
+}
+
+void columns_info::column_info::domain(domain_t d)
+{
+  Expects(basic_data_type(d));
+  domain_ = d;
+}
+
+const std::set<value_t> &columns_info::column_info::states() const noexcept
+{
+  return states_;
+}
+
+void columns_info::column_info::add_state(value_t s)
+{
+  Expects(basic_data_type(s));
+  Expects(s.index() == domain());
+  states_.insert(s);
+}
+
+///
+/// The category of the column.
+///
+/// \note
+/// This is a computed field: if the value have to be used multiple time store
+/// it in a local variable (buffer).
+///
+symbol::category_t columns_info::column_info::category() const
+{
+  return owner_ ? owner_->category(*this) : symbol::undefined_category;
 }
 
 const columns_info::column_info &columns_info::operator[](size_type i) const
@@ -135,12 +190,6 @@ void columns_info::push_front(const column_info &v)
   cols_.insert(begin(), v);
 }
 
-columns_info::column_info::column_info(const columns_info &csi,
-                                       const std::string &n)
-  : name(n), owner_(&csi)
-{
-}
-
 ///
 /// Given an example compiles information about the columns of the dataframe.
 ///
@@ -173,10 +222,10 @@ void columns_info::build(const std::vector<std::string> &r, bool header_first)
       const bool classification(idx == 0 && !number);
 
       // DOMAIN
-      if (cols_[idx].domain == d_void)
+      if (cols_[idx].domain() == d_void)
         // For classification tasks we use discriminant functions and the actual
         // output type is always numeric.
-        cols_[idx].domain = number || classification ? d_double : d_string;
+        cols_[idx].domain(number || classification ? d_double : d_string);
     });
 
   const auto fields(r.size());
@@ -205,11 +254,11 @@ void columns_info::build(const std::vector<std::string> &r, bool header_first)
     set_domain(field);
 }
 
-category_t columns_info::category(const column_info &ci) const
+symbol::category_t columns_info::category(const column_info &ci) const
 {
   const auto target(get_index(ci, cols_));
 
-  std::vector<category_t> ret;
+  std::vector<symbol::category_t> ret;
   ret.reserve(target + 1);
 
   // This value isn't always equal to `ret.size()` because of possible columns
@@ -218,21 +267,21 @@ category_t columns_info::category(const column_info &ci) const
 
   for (std::size_t i(0); i <= target; ++i)  // identifying `i`-th column
   {
-    category_t id(undefined_category);
-    if (cols_[i].domain == d_void)
+    auto id(symbol::undefined_category);
+    if (cols_[i].domain() == d_void)
       ;
-    else if (typing_ == typing::strong || cols_[i].domain == d_string)
+    else if (typing_ == typing::strong || cols_[i].domain() == d_string)
       id = found_categories++;
     else  // weak typing
     {
       for (std::size_t j(0); j < i; ++j)
-        if (cols_[j].domain == cols_[i].domain)
+        if (cols_[j].domain() == cols_[i].domain())
         {
           id = ret[j];
           break;
         }
 
-      if (id == undefined_category)  // same domain column not seen yet
+      if (id == symbol::undefined_category)  // same domain column not seen yet
         id = found_categories++;
     }
 
@@ -246,9 +295,9 @@ category_t columns_info::category(const column_info &ci) const
 ///
 /// \return the set of used categories
 ///
-std::set<category_t> columns_info::used_categories() const
+std::set<symbol::category_t> columns_info::used_categories() const
 {
-  std::set<category_t> categories;
+  std::set<symbol::category_t> categories;
 
   for (std::size_t column(0); column < size();  ++column)
     categories.insert(category(cols_[column]));
@@ -261,9 +310,21 @@ std::set<category_t> columns_info::used_categories() const
 ///
 bool columns_info::is_valid() const
 {
-  return std::ranges::none_of(
-    cols_,
-    [](const auto &c) { return c.domain == d_void && !c.states.empty(); });
+  for (const auto &c : cols_)
+  {
+    if (!basic_data_type(c.domain()))
+      return false;
+
+    if (c.domain() == d_void && !c.states().empty())
+      return false;
+
+    if (std::ranges::any_of(c.states(),
+                            [&c](const auto &v)
+                            { return v.index() != c.domain(); }))
+      return false;
+  }
+
+  return true;
 }
 
 }  // namespace ultra

@@ -19,19 +19,11 @@
 #include <string>
 #include <vector>
 
+#include "kernel/symbol.h"
 #include "kernel/value.h"
 
 namespace ultra::src
 {
-
-/// A category provide operations which supplement or supersede those of the
-/// domain but which are restricted to values lying in the (sub)domain by
-/// which is parametrized.
-/// For instance the constant `4.0` (in the domain `d_double`) may belong to
-/// two distinct categories: `2 =="km/h"` and `3 == "kg"`).
-/// Categories are the way strong typing GP is enforced in Ultra.
-using category_t = std::size_t;
-constexpr category_t undefined_category = static_cast<category_t>(-1);
 
 ///
 /// Category/type management of the dataframe columns.
@@ -63,16 +55,28 @@ public:
   class column_info
   {
   public:
-    explicit column_info(const columns_info &, const std::string & = "");
+    explicit column_info(const columns_info &,
+                         const std::string & = "",
+                         domain_t = d_void,
+                         const std::set<value_t> & = {});
 
-    std::string         name {};
-    domain_t          domain {d_void};
-    std::set<value_t> states {};
+    [[nodiscard]] const std::string &name() const noexcept;
+    void name(const std::string &);
 
-    [[nodiscard]] category_t category() const;
+    [[nodiscard]] domain_t domain() const noexcept;
+    void domain(domain_t);
+
+    [[nodiscard]] const std::set<value_t> &states() const noexcept;
+    void add_state(value_t);
+
+    [[nodiscard]] symbol::category_t category() const;
 
   private:
     const columns_info *owner_ {nullptr};
+
+    std::string         name_;
+    domain_t          domain_;
+    std::set<value_t> states_;
   };
 
   using const_iterator = std::vector<column_info>::const_iterator;
@@ -105,12 +109,12 @@ public:
   void push_front(const column_info &);
 
   void build(const std::vector<std::string> &, bool);
-  std::set<category_t> used_categories() const;
+  std::set<symbol::category_t> used_categories() const;
 
   [[nodiscard]] bool is_valid() const;
 
 private:
-  [[nodiscard]] category_t category(const column_info &) const;
+  [[nodiscard]] symbol::category_t category(const column_info &) const;
 
   std::vector<column_info> cols_ {};
   typing typing_ {typing::weak};

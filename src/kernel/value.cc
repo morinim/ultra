@@ -30,17 +30,29 @@ bool has_value(const value_t &v) noexcept
 }
 
 ///
-/// \param[in] v value to be checked
+/// \param[in] d domain to be checked
 /// \return      `true` for numbers and strings
 ///
-bool basic_data_type(const value_t &v) noexcept
+bool basic_data_type(domain_t d) noexcept
 {
   static_assert(0 <= d_void && d_void < d_string);
   static_assert(0 <= d_int && d_int < d_string);
   static_assert(0 <= d_double && d_double < d_string);
   static_assert(0 <= d_string);
 
-  return v.index() <= d_string;
+  return d <= d_string;
+}
+
+///
+/// \param[in] v value to be checked
+/// \return      `true` for numbers and strings
+///
+/// \related
+/// value_t
+///
+bool basic_data_type(const value_t &v) noexcept
+{
+  return basic_data_type(static_cast<domain_t>(v.index()));
 }
 
 ///

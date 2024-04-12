@@ -273,7 +273,7 @@ example dataframe::to_example(const record_t &v, bool add_instance)
   example ret;
 
   for (std::size_t i(0); i < v.size(); ++i)
-    if (const auto domain(columns[i].domain); domain != d_void)
+    if (const auto domain(columns[i].domain()); domain != d_void)
     {
       const auto feature(trim(v[i]));
 
@@ -292,7 +292,7 @@ example dataframe::to_example(const record_t &v, bool add_instance)
         ret.input.push_back(convert(feature, domain));
 
       if (add_instance && domain == d_string)
-        columns[i].states.insert(feature);
+        columns[i].add_state(feature);
     }
 
   return ret;
@@ -422,15 +422,14 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
   {
     columns_info::column_info a(columns);
 
-    const char *s(attribute->Attribute("name"));
-    if (s)
-      a.name = s;
+    if (const char *s = attribute->Attribute("name"))
+      a.name(s);
 
     // One can define which attribute should act as output value via the
     // `class="yes"` attribute in the attribute specification of the header.
     const bool output(attribute->Attribute("class", "yes"));
 
-    s = attribute->Attribute("type");
+    const char *s(attribute->Attribute("type"));
     std::string xml_type(s ? s : "");
 
     if (output)
@@ -449,7 +448,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
         xml_type = "numeric";
     }
 
-    a.domain = from_weka(xml_type);
+    a.domain(from_weka(xml_type));
 
     // Store label1... labelN.
     if (xml_type == "nominal")
@@ -458,7 +457,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
            l = l->NextSiblingElement("label"))
       {
         const std::string label(l->GetText() ? l->GetText() : "");
-        a.states.insert(label);
+        a.add_state(label);
       }
 
     // Output column is always the first one.

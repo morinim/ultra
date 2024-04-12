@@ -51,22 +51,22 @@ fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur 
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "fixed acidity");
-  CHECK(cs[1].name == "volatile acidity");
-  CHECK(cs[2].name == "citric acid");
-  CHECK(cs[3].name == "residual sugar");
-  CHECK(cs[4].name == "chlorides");
-  CHECK(cs[5].name == "free sulfur dioxide");
-  CHECK(cs[6].name == "total sulfur dioxide");
-  CHECK(cs[7].name == "density");
-  CHECK(cs[8].name == "pH");
-  CHECK(cs[9].name == "sulphates");
-  CHECK(cs[10].name == "alcohol");
-  CHECK(cs[11].name == "quality");
+  CHECK(cs[0].name() == "fixed acidity");
+  CHECK(cs[1].name() == "volatile acidity");
+  CHECK(cs[2].name() == "citric acid");
+  CHECK(cs[3].name() == "residual sugar");
+  CHECK(cs[4].name() == "chlorides");
+  CHECK(cs[5].name() == "free sulfur dioxide");
+  CHECK(cs[6].name() == "total sulfur dioxide");
+  CHECK(cs[7].name() == "density");
+  CHECK(cs[8].name() == "pH");
+  CHECK(cs[9].name() == "sulphates");
+  CHECK(cs[10].name() == "alcohol");
+  CHECK(cs[11].name() == "quality");
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain == d_double; }));
+  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 
-  CHECK(cs.used_categories() == std::set<src::category_t>{0});
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
 }
 
 TEST_CASE("wine categories strong")
@@ -93,35 +93,35 @@ fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur 
   const auto &cs(d.columns);
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "fixed acidity");
+  CHECK(cs[0].name() == "fixed acidity");
   CHECK(cs[0].category() == 0);
-  CHECK(cs[1].name == "volatile acidity");
+  CHECK(cs[1].name() == "volatile acidity");
   CHECK(cs[1].category() == 1);
-  CHECK(cs[2].name == "citric acid");
+  CHECK(cs[2].name() == "citric acid");
   CHECK(cs[2].category() == 2);
-  CHECK(cs[3].name == "residual sugar");
+  CHECK(cs[3].name() == "residual sugar");
   CHECK(cs[3].category() == 3);
-  CHECK(cs[4].name == "chlorides");
+  CHECK(cs[4].name() == "chlorides");
   CHECK(cs[4].category() == 4);
-  CHECK(cs[5].name == "free sulfur dioxide");
+  CHECK(cs[5].name() == "free sulfur dioxide");
   CHECK(cs[5].category() == 5);
-  CHECK(cs[6].name == "total sulfur dioxide");
+  CHECK(cs[6].name() == "total sulfur dioxide");
   CHECK(cs[6].category() == 6);
-  CHECK(cs[7].name == "density");
+  CHECK(cs[7].name() == "density");
   CHECK(cs[7].category() == 7);
-  CHECK(cs[8].name == "pH");
+  CHECK(cs[8].name() == "pH");
   CHECK(cs[8].category() == 8);
-  CHECK(cs[9].name == "sulphates");
+  CHECK(cs[9].name() == "sulphates");
   CHECK(cs[9].category() == 9);
-  CHECK(cs[10].name == "alcohol");
+  CHECK(cs[10].name() == "alcohol");
   CHECK(cs[10].category() == 10);
-  CHECK(cs[11].name == "quality");
+  CHECK(cs[11].name() == "quality");
   CHECK(cs[11].category() == 11);
 
   CHECK(cs.used_categories()
-        == std::set<src::category_t>{0,1,2,3,4,5,6,7,8,9,10,11});
+        == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8,9,10,11});
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain == d_double; }));
+  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
@@ -147,35 +147,35 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "rings");
-  CHECK(cs[0].domain == d_double);
+  CHECK(cs[0].name() == "rings");
+  CHECK(cs[0].domain() == d_double);
   CHECK(cs[0].category() == 0);
-  CHECK(cs[1].name == "sex");
-  CHECK(cs[1].domain == d_string);
+  CHECK(cs[1].name() == "sex");
+  CHECK(cs[1].domain() == d_string);
   CHECK(cs[1].category() == 1);
-  CHECK(cs[2].name == "length");
-  CHECK(cs[2].domain == d_double);
+  CHECK(cs[2].name() == "length");
+  CHECK(cs[2].domain() == d_double);
   CHECK(cs[2].category() == 0);
-  CHECK(cs[3].name == "diameter");
-  CHECK(cs[3].domain == d_double);
+  CHECK(cs[3].name() == "diameter");
+  CHECK(cs[3].domain() == d_double);
   CHECK(cs[3].category() == 0);
-  CHECK(cs[4].name == "height");
-  CHECK(cs[4].domain == d_double);
+  CHECK(cs[4].name() == "height");
+  CHECK(cs[4].domain() == d_double);
   CHECK(cs[4].category() == 0);
-  CHECK(cs[5].name == "whole weight");
-  CHECK(cs[5].domain == d_double);
+  CHECK(cs[5].name() == "whole weight");
+  CHECK(cs[5].domain() == d_double);
   CHECK(cs[5].category() == 0);
-  CHECK(cs[6].name == "shucked weight");
-  CHECK(cs[6].domain == d_double);
+  CHECK(cs[6].name() == "shucked weight");
+  CHECK(cs[6].domain() == d_double);
   CHECK(cs[6].category() == 0);
-  CHECK(cs[7].name == "viscera weight");
-  CHECK(cs[7].domain == d_double);
+  CHECK(cs[7].name() == "viscera weight");
+  CHECK(cs[7].domain() == d_double);
   CHECK(cs[7].category() == 0);
-  CHECK(cs[8].name == "shell weight");
-  CHECK(cs[8].domain == d_double);
+  CHECK(cs[8].name() == "shell weight");
+  CHECK(cs[8].domain() == d_double);
   CHECK(cs[8].category() == 0);
 
-  CHECK(cs.used_categories() == std::set<src::category_t>{0,1});
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0,1});
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
@@ -202,35 +202,36 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "rings");
-  CHECK(cs[0].domain == d_double);
+  CHECK(cs[0].name() == "rings");
+  CHECK(cs[0].domain() == d_double);
   CHECK(cs[0].category() == 0);
-  CHECK(cs[1].name == "sex");
-  CHECK(cs[1].domain == d_string);
+  CHECK(cs[1].name() == "sex");
+  CHECK(cs[1].domain() == d_string);
   CHECK(cs[1].category() == 1);
-  CHECK(cs[2].name == "length");
-  CHECK(cs[2].domain == d_double);
+  CHECK(cs[2].name() == "length");
+  CHECK(cs[2].domain() == d_double);
   CHECK(cs[2].category() == 2);
-  CHECK(cs[3].name == "diameter");
-  CHECK(cs[3].domain == d_double);
+  CHECK(cs[3].name() == "diameter");
+  CHECK(cs[3].domain() == d_double);
   CHECK(cs[3].category() == 3);
-  CHECK(cs[4].name == "height");
-  CHECK(cs[4].domain == d_double);
+  CHECK(cs[4].name() == "height");
+  CHECK(cs[4].domain() == d_double);
   CHECK(cs[4].category() == 4);
-  CHECK(cs[5].name == "whole weight");
-  CHECK(cs[5].domain == d_double);
+  CHECK(cs[5].name() == "whole weight");
+  CHECK(cs[5].domain() == d_double);
   CHECK(cs[5].category() == 5);
-  CHECK(cs[6].name == "shucked weight");
-  CHECK(cs[6].domain == d_double);
+  CHECK(cs[6].name() == "shucked weight");
+  CHECK(cs[6].domain() == d_double);
   CHECK(cs[6].category() == 6);
-  CHECK(cs[7].name == "viscera weight");
-  CHECK(cs[7].domain == d_double);
+  CHECK(cs[7].name() == "viscera weight");
+  CHECK(cs[7].domain() == d_double);
   CHECK(cs[7].category() == 7);
-  CHECK(cs[8].name == "shell weight");
-  CHECK(cs[8].domain == d_double);
+  CHECK(cs[8].name() == "shell weight");
+  CHECK(cs[8].domain() == d_double);
   CHECK(cs[8].category() == 8);
 
-  CHECK(cs.used_categories() == std::set<src::category_t>{0,1,2,3,4,5,6,7,8});
+  CHECK(cs.used_categories()
+        == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8});
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
@@ -257,39 +258,39 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "");
-  CHECK(cs[0].domain == d_void);
-  CHECK(cs[0].category() == src::undefined_category);
-  CHECK(cs[1].name == "sequence name");
-  CHECK(cs[1].domain == d_string);
+  CHECK(cs[0].name() == "");
+  CHECK(cs[0].domain() == d_void);
+  CHECK(cs[0].category() == symbol::undefined_category);
+  CHECK(cs[1].name() == "sequence name");
+  CHECK(cs[1].domain() == d_string);
   CHECK(cs[1].category() == 0);
-  CHECK(cs[2].name == "mcg");
-  CHECK(cs[2].domain == d_double);
+  CHECK(cs[2].name() == "mcg");
+  CHECK(cs[2].domain() == d_double);
   CHECK(cs[2].category() == 1);
-  CHECK(cs[3].name == "gvh");
-  CHECK(cs[3].domain == d_double);
+  CHECK(cs[3].name() == "gvh");
+  CHECK(cs[3].domain() == d_double);
   CHECK(cs[3].category() == 1);
-  CHECK(cs[4].name == "lip");
-  CHECK(cs[4].domain == d_double);
+  CHECK(cs[4].name() == "lip");
+  CHECK(cs[4].domain() == d_double);
   CHECK(cs[4].category() == 1);
-  CHECK(cs[5].name == "chg");
-  CHECK(cs[5].domain == d_double);
+  CHECK(cs[5].name() == "chg");
+  CHECK(cs[5].domain() == d_double);
   CHECK(cs[5].category() == 1);
-  CHECK(cs[6].name == "aac");
-  CHECK(cs[6].domain == d_double);
+  CHECK(cs[6].name() == "aac");
+  CHECK(cs[6].domain() == d_double);
   CHECK(cs[6].category() == 1);
-  CHECK(cs[7].name == "alm1");
-  CHECK(cs[7].domain == d_double);
+  CHECK(cs[7].name() == "alm1");
+  CHECK(cs[7].domain() == d_double);
   CHECK(cs[7].category() == 1);
-  CHECK(cs[8].name == "alm2");
-  CHECK(cs[8].domain == d_double);
+  CHECK(cs[8].name() == "alm2");
+  CHECK(cs[8].domain() == d_double);
   CHECK(cs[8].category() == 1);
-  CHECK(cs[9].name == "localization");
-  CHECK(cs[9].domain == d_string);
+  CHECK(cs[9].name() == "localization");
+  CHECK(cs[9].domain() == d_string);
   CHECK(cs[9].category() == 2);
 
   CHECK(cs.used_categories()
-        == std::set<src::category_t>{0, 1, 2, src::undefined_category});
+        == std::set<symbol::category_t>{0, 1, 2, symbol::undefined_category});
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
@@ -317,40 +318,40 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "");
-  CHECK(cs[0].domain == d_void);
-  CHECK(cs[0].category() == src::undefined_category);
-  CHECK(cs[1].name == "sequence name");
-  CHECK(cs[1].domain == d_string);
+  CHECK(cs[0].name() == "");
+  CHECK(cs[0].domain() == d_void);
+  CHECK(cs[0].category() == symbol::undefined_category);
+  CHECK(cs[1].name() == "sequence name");
+  CHECK(cs[1].domain() == d_string);
   CHECK(cs[1].category() == 0);
-  CHECK(cs[2].name == "mcg");
-  CHECK(cs[2].domain == d_double);
+  CHECK(cs[2].name() == "mcg");
+  CHECK(cs[2].domain() == d_double);
   CHECK(cs[2].category() == 1);
-  CHECK(cs[3].name == "gvh");
-  CHECK(cs[3].domain == d_double);
+  CHECK(cs[3].name() == "gvh");
+  CHECK(cs[3].domain() == d_double);
   CHECK(cs[3].category() == 2);
-  CHECK(cs[4].name == "lip");
-  CHECK(cs[4].domain == d_double);
+  CHECK(cs[4].name() == "lip");
+  CHECK(cs[4].domain() == d_double);
   CHECK(cs[4].category() == 3);
-  CHECK(cs[5].name == "chg");
-  CHECK(cs[5].domain == d_double);
+  CHECK(cs[5].name() == "chg");
+  CHECK(cs[5].domain() == d_double);
   CHECK(cs[5].category() == 4);
-  CHECK(cs[6].name == "aac");
-  CHECK(cs[6].domain == d_double);
+  CHECK(cs[6].name() == "aac");
+  CHECK(cs[6].domain() == d_double);
   CHECK(cs[6].category() == 5);
-  CHECK(cs[7].name == "alm1");
-  CHECK(cs[7].domain == d_double);
+  CHECK(cs[7].name() == "alm1");
+  CHECK(cs[7].domain() == d_double);
   CHECK(cs[7].category() == 6);
-  CHECK(cs[8].name == "alm2");
-  CHECK(cs[8].domain == d_double);
+  CHECK(cs[8].name() == "alm2");
+  CHECK(cs[8].domain() == d_double);
   CHECK(cs[8].category() == 7);
-  CHECK(cs[9].name == "localization");
-  CHECK(cs[9].domain == d_string);
+  CHECK(cs[9].name() == "localization");
+  CHECK(cs[9].domain() == d_string);
   CHECK(cs[9].category() == 8);
 
   CHECK(cs.used_categories()
-        == std::set<src::category_t>{0, 1, 2, 3, 4, 5, 6, 7, 8,
-                                     src::undefined_category});
+        == std::set<symbol::category_t>{0, 1, 2, 3, 4, 5, 6, 7, 8,
+                                        symbol::undefined_category});
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
@@ -376,15 +377,15 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "class");
-  CHECK(cs[1].name == "sepal length");
-  CHECK(cs[2].name == "sepal width");
-  CHECK(cs[3].name == "petal length");
-  CHECK(cs[4].name == "petal width");
+  CHECK(cs[0].name() == "class");
+  CHECK(cs[1].name() == "sepal length");
+  CHECK(cs[2].name() == "sepal width");
+  CHECK(cs[3].name() == "petal length");
+  CHECK(cs[4].name() == "petal width");
 
-  CHECK(cs.used_categories() == std::set<src::category_t>{0});
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain == d_double; }));
+  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
@@ -411,20 +412,20 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
 
   CHECK(cs.is_valid());
 
-  CHECK(cs[0].name == "class");
+  CHECK(cs[0].name() == "class");
   CHECK(cs[0].category() == 0);
-  CHECK(cs[1].name == "sepal length");
+  CHECK(cs[1].name() == "sepal length");
   CHECK(cs[1].category() == 1);
-  CHECK(cs[2].name == "sepal width");
+  CHECK(cs[2].name() == "sepal width");
   CHECK(cs[2].category() == 2);
-  CHECK(cs[3].name == "petal length");
+  CHECK(cs[3].name() == "petal length");
   CHECK(cs[3].category() == 3);
-  CHECK(cs[4].name == "petal width");
+  CHECK(cs[4].name() == "petal width");
   CHECK(cs[4].category() == 4);
 
-  CHECK(cs.used_categories() == std::set<src::category_t>{0, 1, 2, 3, 4});
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0, 1, 2, 3, 4});
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain == d_double; }));
+  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }
 
 }  // TEST_SUITE("COLUMNS_INFO")

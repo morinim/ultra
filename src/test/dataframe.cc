@@ -143,28 +143,28 @@ TEST_CASE("load_csv headers")
   CHECK(d.columns.size() == ncol);
   CHECK(!d.columns.empty());
 
-  CHECK(d.columns[ 0].name ==        "fixed acidity");
-  CHECK(d.columns[ 1].name ==     "volatile acidity");
-  CHECK(d.columns[ 2].name ==          "citric acid");
-  CHECK(d.columns[ 3].name ==       "residual sugar");
-  CHECK(d.columns[ 4].name ==            "chlorides");
-  CHECK(d.columns[ 5].name ==  "free sulfur dioxide");
-  CHECK(d.columns[ 6].name == "total sulfur dioxide");
-  CHECK(d.columns[ 7].name ==              "density");
-  CHECK(d.columns[ 8].name ==                   "pH");
-  CHECK(d.columns[ 9].name ==            "sulphates");
-  CHECK(d.columns[10].name ==              "alcohol");
-  CHECK(d.columns[11].name ==              "quality");
+  CHECK(d.columns[ 0].name() ==        "fixed acidity");
+  CHECK(d.columns[ 1].name() ==     "volatile acidity");
+  CHECK(d.columns[ 2].name() ==          "citric acid");
+  CHECK(d.columns[ 3].name() ==       "residual sugar");
+  CHECK(d.columns[ 4].name() ==            "chlorides");
+  CHECK(d.columns[ 5].name() ==  "free sulfur dioxide");
+  CHECK(d.columns[ 6].name() == "total sulfur dioxide");
+  CHECK(d.columns[ 7].name() ==              "density");
+  CHECK(d.columns[ 8].name() ==                   "pH");
+  CHECK(d.columns[ 9].name() ==            "sulphates");
+  CHECK(d.columns[10].name() ==              "alcohol");
+  CHECK(d.columns[11].name() ==              "quality");
 
-  CHECK(d.columns.begin()->name == d.columns[       0].name);
-  CHECK(d.columns.begin()->name ==   d.columns.front().name);
-  CHECK(d.columns.back().name   == d.columns[ncol - 1].name);
+  CHECK(d.columns.begin()->name() == d.columns[       0].name());
+  CHECK(d.columns.begin()->name() ==   d.columns.front().name());
+  CHECK(d.columns.back().name()   == d.columns[ncol - 1].name());
 
   std::size_t count(0);
   for (const auto &c: d.columns)
   {
     ++count;
-    CHECK(c.domain == d_double);
+    CHECK(c.domain() == d_double);
   }
   CHECK(count == ncol);
 
@@ -213,22 +213,22 @@ TEST_CASE("load_csv output_index")
   CHECK(d.columns.size() == ncol);
   CHECK(!d.columns.empty());
 
-  CHECK(d.columns[ 0].name ==          "rings");
-  CHECK(d.columns[ 1].name ==            "sex");
-  CHECK(d.columns[ 2].name ==         "length");
-  CHECK(d.columns[ 3].name ==       "diameter");
-  CHECK(d.columns[ 4].name ==         "height");
-  CHECK(d.columns[ 5].name ==   "whole weight");
-  CHECK(d.columns[ 6].name == "shucked weight");
-  CHECK(d.columns[ 7].name == "viscera weight");
-  CHECK(d.columns[ 8].name ==   "shell weight");
+  CHECK(d.columns[ 0].name() ==          "rings");
+  CHECK(d.columns[ 1].name() ==            "sex");
+  CHECK(d.columns[ 2].name() ==         "length");
+  CHECK(d.columns[ 3].name() ==       "diameter");
+  CHECK(d.columns[ 4].name() ==         "height");
+  CHECK(d.columns[ 5].name() ==   "whole weight");
+  CHECK(d.columns[ 6].name() == "shucked weight");
+  CHECK(d.columns[ 7].name() == "viscera weight");
+  CHECK(d.columns[ 8].name() ==   "shell weight");
 
-  CHECK(d.columns.begin()->name == d.columns[       0].name);
-  CHECK(d.columns.begin()->name ==   d.columns.front().name);
-  CHECK(d.columns.back().name   == d.columns[ncol - 1].name);
+  CHECK(d.columns.begin()->name() == d.columns[       0].name());
+  CHECK(d.columns.begin()->name() ==   d.columns.front().name());
+  CHECK(d.columns.back().name()   == d.columns[ncol - 1].name());
 
-  CHECK(d.columns[0].domain == d_double);
-  CHECK(d.columns[1].domain == d_string);
+  CHECK(d.columns[0].domain() == d_double);
+  CHECK(d.columns[1].domain() == d_string);
 
   CHECK(d.classes() == 0);
   CHECK(d.front().input.size() == ncol - 1);
@@ -271,30 +271,30 @@ TEST_CASE("load_csv_no_output_index")
   CHECK(d.columns.size() == ncol + 1);
   CHECK(!d.columns.empty());
 
-  CHECK(d.columns[ 0].name ==              "");
-  CHECK(d.columns[ 1].name == "sequence name");
-  CHECK(d.columns[ 2].name ==           "mcg");
-  CHECK(d.columns[ 3].name ==           "gvh");
-  CHECK(d.columns[ 4].name ==           "lip");
-  CHECK(d.columns[ 5].name ==           "chg");
-  CHECK(d.columns[ 6].name ==           "aac");
-  CHECK(d.columns[ 7].name ==          "alm1");
-  CHECK(d.columns[ 8].name ==          "alm2");
-  CHECK(d.columns[ 9].name ==  "localization");
+  CHECK(d.columns[ 0].name() ==              "");
+  CHECK(d.columns[ 1].name() == "sequence name");
+  CHECK(d.columns[ 2].name() ==           "mcg");
+  CHECK(d.columns[ 3].name() ==           "gvh");
+  CHECK(d.columns[ 4].name() ==           "lip");
+  CHECK(d.columns[ 5].name() ==           "chg");
+  CHECK(d.columns[ 6].name() ==           "aac");
+  CHECK(d.columns[ 7].name() ==          "alm1");
+  CHECK(d.columns[ 8].name() ==          "alm2");
+  CHECK(d.columns[ 9].name() ==  "localization");
 
-  CHECK(d.columns.begin()->name == d.columns[       0].name);
-  CHECK(d.columns.begin()->name ==   d.columns.front().name);
-  CHECK(d.columns.back().name   ==     d.columns[ncol].name);
+  CHECK(d.columns.begin()->name() == d.columns[       0].name());
+  CHECK(d.columns.begin()->name() ==   d.columns.front().name());
+  CHECK(d.columns.back().name()   ==     d.columns[ncol].name());
 
-  CHECK(d.columns[1].domain == d_string);
-  CHECK(d.columns[2].domain == d_double);
-  CHECK(d.columns[3].domain == d_double);
-  CHECK(d.columns[4].domain == d_double);
-  CHECK(d.columns[5].domain == d_double);
-  CHECK(d.columns[6].domain == d_double);
-  CHECK(d.columns[7].domain == d_double);
-  CHECK(d.columns[8].domain == d_double);
-  CHECK(d.columns[9].domain == d_string);
+  CHECK(d.columns[1].domain() == d_string);
+  CHECK(d.columns[2].domain() == d_double);
+  CHECK(d.columns[3].domain() == d_double);
+  CHECK(d.columns[4].domain() == d_double);
+  CHECK(d.columns[5].domain() == d_double);
+  CHECK(d.columns[6].domain() == d_double);
+  CHECK(d.columns[7].domain() == d_double);
+  CHECK(d.columns[8].domain() == d_double);
+  CHECK(d.columns[9].domain() == d_string);
 
   CHECK(d.classes() == 0);
 
@@ -338,21 +338,21 @@ TEST_CASE("load_csv_classification")
   CHECK(d.columns.size() == ncol);
   CHECK(!d.columns.empty());
 
-  CHECK(d.columns[ 0].name ==        "class");
-  CHECK(d.columns[ 1].name == "sepal length");
-  CHECK(d.columns[ 2].name ==  "sepal width");
-  CHECK(d.columns[ 3].name == "petal length");
-  CHECK(d.columns[ 4].name ==  "petal width");
+  CHECK(d.columns[ 0].name() ==        "class");
+  CHECK(d.columns[ 1].name() == "sepal length");
+  CHECK(d.columns[ 2].name() ==  "sepal width");
+  CHECK(d.columns[ 3].name() == "petal length");
+  CHECK(d.columns[ 4].name() ==  "petal width");
 
-  CHECK(d.columns.begin()->name == d.columns[       0].name);
-  CHECK(d.columns.begin()->name ==   d.columns.front().name);
-  CHECK(d.columns.back().name   == d.columns[ncol - 1].name);
+  CHECK(d.columns.begin()->name() == d.columns[       0].name());
+  CHECK(d.columns.begin()->name() ==   d.columns.front().name());
+  CHECK(d.columns.back().name()   == d.columns[ncol - 1].name());
 
   std::size_t count(0);
   for (const auto &c: d.columns)
   {
     ++count;
-    CHECK(c.domain == d_double);
+    CHECK(c.domain() == d_double);
   }
   CHECK(count == ncol);
 
@@ -415,21 +415,21 @@ std::istringstream iris_xrff(R"(
   CHECK(d.columns.size() == ncol);
   CHECK(!d.columns.empty());
 
-  CHECK(d.columns[0].name ==       "class");
-  CHECK(d.columns[1].name == "sepallength");
-  CHECK(d.columns[2].name ==  "sepalwidth");
-  CHECK(d.columns[3].name == "petallength");
-  CHECK(d.columns[4].name ==  "petalwidth");
+  CHECK(d.columns[0].name() ==       "class");
+  CHECK(d.columns[1].name() == "sepallength");
+  CHECK(d.columns[2].name() ==  "sepalwidth");
+  CHECK(d.columns[3].name() == "petallength");
+  CHECK(d.columns[4].name() ==  "petalwidth");
 
-  CHECK(d.columns.begin()->name == d.columns[       0].name);
-  CHECK(d.columns.begin()->name ==   d.columns.front().name);
-  CHECK(d.columns.back().name   == d.columns[ncol - 1].name);
+  CHECK(d.columns.begin()->name() == d.columns[       0].name());
+  CHECK(d.columns.begin()->name() ==   d.columns.front().name());
+  CHECK(d.columns.back().name()   == d.columns[ncol - 1].name());
 
   std::size_t count(0);
   for (const auto &c: d.columns)
   {
     ++count;
-    CHECK(c.domain == d_double);
+    CHECK(c.domain() == d_double);
   }
   CHECK(count == ncol);
 

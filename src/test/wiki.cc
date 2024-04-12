@@ -33,10 +33,10 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 1")
 
   d.read_csv(dataset);
 
-  CHECK(d.columns[0].name == "A");
-  CHECK(d.columns[1].name == "B");
-  CHECK(d.columns[2].name == "C");
-  CHECK(d.columns[3].name == "D");
+  CHECK(d.columns[0].name() == "A");
+  CHECK(d.columns[1].name() == "B");
+  CHECK(d.columns[2].name() == "C");
+  CHECK(d.columns[3].name() == "D");
 }
 
 TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
@@ -45,10 +45,10 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
 
   d.read_csv(dataset, dataframe::params().output(2));
 
-  CHECK(d.columns[0].name == "C");
-  CHECK(d.columns[1].name == "A");
-  CHECK(d.columns[2].name == "B");
-  CHECK(d.columns[3].name == "D");
+  CHECK(d.columns[0].name() == "C");
+  CHECK(d.columns[1].name() == "A");
+  CHECK(d.columns[2].name() == "B");
+  CHECK(d.columns[3].name() == "D");
 
   std::cout << "Label of the first example is: "
             << lexical_cast<double>(d.front().output)
@@ -64,11 +64,11 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 3")
 
   d.read_csv(dataset, dataframe::params().no_output());
 
-  CHECK(d.columns[0].name == "");
-  CHECK(d.columns[1].name == "A");
-  CHECK(d.columns[2].name == "B");
-  CHECK(d.columns[3].name == "C");
-  CHECK(d.columns[4].name == "D");
+  CHECK(d.columns[0].name() == "");
+  CHECK(d.columns[1].name() == "A");
+  CHECK(d.columns[2].name() == "B");
+  CHECK(d.columns[3].name() == "C");
+  CHECK(d.columns[4].name() == "D");
 
   CHECK(!has_value(d.front().output));
 }
@@ -79,8 +79,8 @@ TEST_CASE_FIXTURE(fixture1, "dataframe columns")
 
   d.read_csv(dataset, dataframe::params().header());
 
-  std::cout << "Name of the first column: " << d.columns[0].name
-            << "\nDomain of the first column: " << d.columns[0].domain;
+  std::cout << "Name of the first column: " << d.columns[0].name()
+            << "\nDomain of the first column: " << d.columns[0].domain();
 
   std::cout << "\nThere are " << d.columns.size() << " columns\n";
 }
