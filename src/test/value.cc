@@ -23,6 +23,26 @@
 TEST_SUITE("VALUE_T")
 {
 
+TEST_CASE("Correct mapping")
+{
+  using namespace ultra;
+
+  static_assert(std::is_same_v
+    <D_VOID, std::variant_alternative_t<d_void, value_t>>);
+  static_assert(std::is_same_v
+    <D_INT, std::variant_alternative_t<d_int, value_t>>);
+  static_assert(std::is_same_v
+    <D_DOUBLE, std::variant_alternative_t<d_double, value_t>>);
+  static_assert(std::is_same_v
+    <D_STRING, std::variant_alternative_t<d_string, value_t>>);
+  static_assert(std::is_same_v
+    <const D_NULLARY *, std::variant_alternative_t<d_nullary, value_t>>);
+  static_assert(std::is_same_v
+    <D_ADDRESS, std::variant_alternative_t<d_address, value_t>>);
+  static_assert(std::is_same_v
+    <const D_VARIABLE *, std::variant_alternative_t<d_variable, value_t>>);
+}
+
 TEST_CASE("Base")
 {
   using namespace ultra;
