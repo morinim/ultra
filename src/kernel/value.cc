@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2023, 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +14,7 @@
 
 #include "kernel/value.h"
 #include "kernel/nullary.h"
+#include "kernel/gp/src/variable.h"
 #include "utility/misc.h"
 
 namespace ultra
@@ -23,9 +24,23 @@ namespace ultra
 /// \param[in] v value to be checked
 /// \return      `true` if `v` isn't empty
 ///
-bool has_value(const value_t &v)
+bool has_value(const value_t &v) noexcept
 {
   return !std::holds_alternative<std::monostate>(v);
+}
+
+///
+/// \param[in] v value to be checked
+/// \return      `true` for numbers and strings
+///
+bool basic_data_type(const value_t &v) noexcept
+{
+  static_assert(0 <= d_void && d_void < d_string);
+  static_assert(0 <= d_int && d_int < d_string);
+  static_assert(0 <= d_double && d_double < d_string);
+  static_assert(0 <= d_string);
+
+  return v.index() <= d_string;
 }
 
 ///
@@ -33,7 +48,7 @@ bool has_value(const value_t &v)
 /// \return      a pointer to the nullary object contained in `v` if present,
 ///              otherwise `nullptr`
 ///
-const D_NULLARY *get_if_nullary(const value_t &v)
+const D_NULLARY *get_if_nullary(const value_t &v) noexcept
 {
   return std::holds_alternative<const D_NULLARY *>(v) ?
          std::get<const D_NULLARY *>(v) : nullptr;
@@ -58,6 +73,7 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
   case d_int:     o << std::get<D_INT>(v);                               break;
   case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string();      break;
   case d_string:  o << std::quoted(std::get<D_STRING>(v));               break;
+  case d_variable:o << std::get<const D_VARIABLE *>(v)->name();          break;
   case d_void:    o << "{}";                                             break;
   }
 

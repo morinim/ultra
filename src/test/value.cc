@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +14,7 @@
 
 #include "kernel/value.h"
 #include "kernel/nullary.h"
+#include "kernel/gp/src/variable.h"
 #include "utility/misc.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -33,6 +34,7 @@ TEST_CASE("Base")
   {
     CHECK(!has_value(v1));
     CHECK(v1.index() == d_void);
+    CHECK(basic_data_type(v1));
 
     out << v1;
     CHECK(out.str() == "{}");
@@ -43,6 +45,7 @@ TEST_CASE("Base")
     v1 = std::string("dummy");
     CHECK(has_value(v1));
     CHECK(v1.index() == d_string);
+    CHECK(basic_data_type(v1));
 
     out << v1;
     CHECK(out.str() == "\"" + std::get<D_STRING>(v1) + "\"");
@@ -66,6 +69,7 @@ TEST_CASE("Base")
     v1 = &hw;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_nullary);
+    CHECK(!basic_data_type(v1));
     CHECK(get_if_nullary(v1));
 
     out << v1;
@@ -77,6 +81,7 @@ TEST_CASE("Base")
     v1 = 1;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_int);
+    CHECK(basic_data_type(v1));
 
     out << v1;
     CHECK(out.str() == std::to_string(std::get<D_INT>(v1)));
@@ -87,6 +92,7 @@ TEST_CASE("Base")
     v1 = 1.0;
     CHECK(has_value(v1));
     CHECK(v1.index() == d_double);
+    CHECK(basic_data_type(v1));
 
     out << v1;
     CHECK(almost_equal(std::stod(out.str()), std::get<D_DOUBLE>(v1)));
@@ -94,6 +100,19 @@ TEST_CASE("Base")
     value_t v2(1.00000000000001);
     CHECK(has_value(v2));
     CHECK(v2.index() == d_double);
+  }
+
+  SUBCASE("Variable")
+  {
+    const std::string name("X2");
+    src::variable var(2, name);
+    v1 = &var;
+    CHECK(has_value(v1));
+    CHECK(v1.index() == d_variable);
+    CHECK(!basic_data_type(v1));
+
+    out << v1;
+    CHECK(out.str() == name);
   }
 
   SUBCASE("Different types comparison")

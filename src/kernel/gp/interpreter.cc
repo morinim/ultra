@@ -12,6 +12,7 @@
 
 #include "kernel/nullary.h"
 #include "kernel/gp/interpreter.h"
+#include "kernel/gp/src/variable.h"
 #include "utility/misc.h"
 
 namespace ultra
@@ -121,6 +122,9 @@ value_t interpreter::fetch_opaque_arg(std::size_t i) const
 
   case d_nullary:
     return std::get<const D_NULLARY *>(arg)->eval();
+
+  case d_variable:
+    return std::get<const D_VARIABLE *>(arg)->eval(*this);
 
   default:
     return arg;

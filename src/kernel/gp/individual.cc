@@ -15,6 +15,7 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/nullary.h"
+#include "kernel/gp/src/variable.h"
 #include "utility/log.h"
 #include "utility/misc.h"
 
@@ -200,6 +201,9 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
       break;
     case d_string:
       pack_value(std::get<D_STRING>(a));
+      break;
+    case d_variable:
+      pack_opcode(std::get<const D_VARIABLE *>(a)->opcode());
       break;
     case d_void:
       break;
