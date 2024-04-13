@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -61,8 +61,8 @@ public:
     Expects(m < s);
   }
 
-  [[nodiscard]] D_DOUBLE min() const { return min_; }
-  [[nodiscard]] D_DOUBLE sup() const { return sup_; }
+  [[nodiscard]] D_DOUBLE min() const noexcept { return min_; }
+  [[nodiscard]] D_DOUBLE sup() const noexcept { return sup_; }
 
   [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }
@@ -84,8 +84,10 @@ public:
     Expects(m < s);
   }
 
-  [[nodiscard]] D_DOUBLE min() const {return static_cast<D_DOUBLE>(min_);}
-  [[nodiscard]] D_DOUBLE sup() const {return static_cast<D_DOUBLE>(sup_);}
+  [[nodiscard]] D_DOUBLE min() const noexcept
+  {return static_cast<D_DOUBLE>(min_);}
+  [[nodiscard]] D_DOUBLE sup() const noexcept
+  {return static_cast<D_DOUBLE>(sup_);}
 
   [[nodiscard]] value_t instance() const final
   { return static_cast<D_DOUBLE>(random::between(min_, sup_)); }
@@ -102,7 +104,7 @@ public:
   {
   }
 
-  [[nodiscard]] value_t instance() const final { return val_; }
+  [[nodiscard]] value_t instance() const noexcept final { return val_; }
 
 private:
   const D_DOUBLE val_;
