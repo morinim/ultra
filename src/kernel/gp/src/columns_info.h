@@ -91,6 +91,8 @@ public:
   [[nodiscard]] const column_info &operator[](size_type) const;
   [[nodiscard]] column_info &operator[](size_type);
 
+  [[nodiscard]] const column_info &operator[](const std::string &) const;
+
   [[nodiscard]] size_type size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
 

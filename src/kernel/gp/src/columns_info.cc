@@ -89,6 +89,18 @@ columns_info::column_info &columns_info::operator[](size_type i)
   return cols_[i];
 }
 
+const columns_info::column_info &columns_info::operator[](
+  const std::string &name) const
+{
+  const auto it(std::ranges::find_if(
+                  cols_,
+                  [name](const auto &e)
+                  {
+                    return e.name == name;
+                  }));
+  return it == columns_.end() ? column_info(*this) : *it;
+}
+
 ///
 /// Set the data typing system used for category identification.
 ///
