@@ -89,16 +89,16 @@ columns_info::column_info &columns_info::operator[](size_type i)
   return cols_[i];
 }
 
-const columns_info::column_info &columns_info::operator[](
+columns_info::column_info columns_info::operator[](
   const std::string &name) const
 {
   const auto it(std::ranges::find_if(
                   cols_,
-                  [name](const auto &e)
+                  [name](const auto &c)
                   {
-                    return e.name == name;
+                    return c.name() == name;
                   }));
-  return it == columns_.end() ? column_info(*this) : *it;
+  return it == cols_.end() ? column_info(*this) : *it;
 }
 
 ///
