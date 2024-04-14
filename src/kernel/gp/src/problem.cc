@@ -322,111 +322,6 @@ std::size_t problem::setup_symbols_impl()
 }
 
 ///
-/// Initialize the symbols set reading symbols from a file.
-///
-/// \param[in] file name of the file containing the symbols
-/// \return         number of parsed symbols
-///
-/// \exception exception::data_format wrong data format for symbol file
-///
-std::size_t problem::setup_symbols_impl(const std::filesystem::path &)
-{
-  return 0;
-/*
-  ultraINFO << "Reading symbol set " << file << "...";
-  tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(file.string().c_str()) != tinyxml2::XML_SUCCESS)
-    throw exception::data_format("Symbol set format error");
-
-  category_set categories(training_.columns);
-  const auto used_categories(categories.used_categories());
-  std::size_t parsed(0);
-
-  // When I wrote this, only God and I understood what I was doing.
-  // Now, God only knows.
-  tinyxml2::XMLHandle handle(&doc);
-  auto *symbolset(handle.FirstChildElement("symbolset").ToElement());
-
-  if (!symbolset)
-    throw exception::data_format("Empty symbol set");
-
-  for (auto *s(symbolset->FirstChildElement("symbol"));
-       s;
-       s = s->NextSiblingElement("symbol"))
-  {
-    if (!s->Attribute("name"))
-    {
-      ultraERROR << "Skipped unnamed symbol in symbolset";
-      continue;
-    }
-    const std::string sym_name(s->Attribute("name"));
-
-    if (const char *sym_sig = s->Attribute("signature")) // single category,
-    {                                                    // uniform init
-      for (auto category : used_categories)
-        if (compatible({category}, {std::string(sym_sig)}, categories))
-        {
-          const auto n_args(factory_.args(sym_name));
-          std::string signature(sym_name + ":");
-
-          for (std::size_t j(0); j < n_args; ++j)
-            signature += " " + std::to_string(category);
-          ultraDEBUG << "Adding to symbol set " << signature;
-
-          sset.insert(factory_.make(sym_name, cvect(n_args, category)));
-        }
-    }
-    else  // !sym_sig => complex signature
-    {
-      auto *sig(s->FirstChildElement("signature"));
-      if (!sig)
-      {
-        ultraERROR << "Skipping " << sym_name << " symbol (empty signature)";
-        continue;
-      }
-
-      std::vector<std::string> args;
-      for (auto *arg(sig->FirstChildElement("arg"));
-           arg;
-           arg = arg->NextSiblingElement("arg"))
-      {
-        if (!arg->GetText())
-        {
-          ultraERROR << "Skipping " << sym_name << " symbol (wrong signature)";
-          args.clear();
-          break;
-        }
-
-        args.push_back(arg->GetText());
-      }
-
-      // From the list of all the sequences with repetition of `args.size()`
-      // elements...
-      const auto sequences(implementation::seq_with_rep(used_categories,
-                                                        args.size()));
-
-      // ...we choose those compatible with the xml signature of the current
-      // symbol.
-      for (const auto &seq : sequences)
-        if (compatible(seq, args, categories))
-        {
-          std::string signature(sym_name + ":");
-          for (const auto &j : seq)
-            signature += " " + std::to_string(j);
-          ultraDEBUG << "Adding to symbol set " << signature;
-
-          sset.insert(factory_.make(sym_name, seq));
-        }
-    }
-
-    ++parsed;
-  }
-
-  ultraINFO << "...symbol set read. Symbols: " << parsed;
-  return parsed;*/
-}
-
-///
 /// Checks if a sequence of categories matches a sequence of domain names.
 ///
 /// \param[in] instance a vector of categories
@@ -519,7 +414,8 @@ const dataframe &problem::data(dataset_t t) const noexcept
 ///
 bool problem::is_valid() const
 {
-  return problem::is_valid() && training_.is_valid() && validation_.is_valid();
+  return ultra::problem::is_valid()
+         && training_.is_valid() && validation_.is_valid();
 }
 
 }  // namespace ultra::src

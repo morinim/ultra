@@ -79,6 +79,9 @@ public:
   [[nodiscard]] std::size_t classes() const noexcept;
   [[nodiscard]] std::size_t variables() const noexcept;
 
+  template<Symbol S, symbol_set::weight_t = symbol_set::default_weight>
+  unsigned insert_range(const std::set<symbol::category_t> &);
+
   [[nodiscard]] bool is_valid() const override;
 
 private:
@@ -92,6 +95,28 @@ private:
   dataframe training_ {};
   dataframe validation_ {};
 };
+
+///
+/// Adds a symbol to the internal symbol set.
+///
+/// \tparam S symbol to be added
+/// \tparam W weight associated to the symbol
+///
+/// \param[in] categories a set of categories
+/// \return               the number of symbols inserted
+///
+template<Symbol S, symbol_set::weight_t W>
+unsigned problem::insert_range(const std::set<symbol::category_t> &categories)
+{
+  unsigned count(0);
+
+  if constexpr (std::is_constructible_v<S, symbol::category_t>)
+    for (auto c : categories)
+      if (sset.insert<S, W>(c))
+        ++count;
+
+  return count;
+}
 
 }  // namespace ultra::src
 
