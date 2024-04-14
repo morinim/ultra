@@ -526,6 +526,11 @@ public:
 ///
 /// Natural logarithm of a real number.
 ///
+/// \remark
+/// The argument of a trascendental function must be dimensionless and
+/// dimensionless is the return type (so same category). For a possible
+/// explanation see https://math.stackexchange.com/a/238400
+///
 class ln : public function
 {
 public:
@@ -565,8 +570,8 @@ class lt : public function
 {
 public:
   explicit lt(return_type r = symbol::default_category,
-               const param_data_types &pt = {symbol::default_category,
-                                             symbol::default_category})
+              const param_data_types &pt = {symbol::default_category,
+                                            symbol::default_category})
     : function("<", r, pt)
   {
     Expects(pt.size() == 2);
