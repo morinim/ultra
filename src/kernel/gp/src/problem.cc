@@ -20,60 +20,15 @@
 #include "kernel/gp/primitive/string.h"
 #include "kernel/gp/src/variable.h"
 
-//#include "third_party/tinyxml2/tinyxml2.h"
-
 namespace ultra::src
 {
-
-namespace implementation
-{
-
-///
-/// \param[in] availables the "dictionary" for the sequence
-/// \param[in] size       length of the output sequence
-/// \return               a set of sequences with repetition with elements
-///                       taken from a given set (`availables`) and fixed
-///                       length (`size`).
-///
-/// \note This is in the `detail` namespace for ease of testing.
-///
-template<class C>
-[[nodiscard]] std::set<std::vector<C>> seq_with_rep(
-  const std::set<C> &availables, std::size_t size)
-{
-  Expects(availables.size());
-  Expects(size);
-
-  std::set<std::vector<C>> ret;
-
-  std::function<void (std::size_t, std::vector<C>)> swr;
-  swr = [&](std::size_t left, std::vector<C> current)
-        {
-          if (!left)  // we have a sequence of the correct length
-          {
-            ret.insert(current);
-            return;
-          }
-
-          for (auto elem : availables)
-          {
-            current.push_back(elem);
-            swr(left - 1, current);
-            current.pop_back();
-          }
-        };
-
-  swr(size, {});
-  return ret;
-}
-
-}  // namespace implementation
 
 ///
 /// Initializes problem dataset with examples coming from a file.
 ///
 /// \param[in] ds name of the dataset file (CSV or XRFF format)
-/// \param[in] t  weak or strong data typing
+/// \param[in] p  additional, optional, parameters (see `dataframe::params`
+///               structure)
 ///
 /// \warning
 /// - Users **must** specify, at least, the functions to be used;
@@ -82,12 +37,11 @@ template<class C>
 /// - any additional terminal (ephemeral random constant, problem specific
 ///   constant...) can be manually inserted.
 ///
-problem::problem(const std::filesystem::path &ds, typing t) : problem()
+problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
+  : problem()
 {
   ultraINFO << "Reading dataset " << ds << "...";
 
-  dataframe::params p;
-  p.data_typing = t;
   training_.read(ds, p);
 
   ultraINFO << "...dataset read."
@@ -103,7 +57,8 @@ problem::problem(const std::filesystem::path &ds, typing t) : problem()
 /// Initializes problem dataset with examples coming from a file.
 ///
 /// \param[in] ds dataset
-/// \param[in] t  weak or strong typing
+/// \param[in] p  additional, optional, parameters (see `dataframe::params`
+///               structure)
 ///
 /// \warning
 /// - Users **must** specify, at least, the functions to be used;
@@ -112,12 +67,10 @@ problem::problem(const std::filesystem::path &ds, typing t) : problem()
 /// - any additional terminal (ephemeral random constant, problem specific
 ///   constants...) can be manually inserted.
 ///
-problem::problem(std::istream &ds, typing t) : problem()
+problem::problem(std::istream &ds, const dataframe::params &p) : problem()
 {
   ultraINFO << "Reading dataset from input stream...";
 
-  dataframe::params p;
-  p.data_typing = t;
   training_.read_csv(ds, p);
 
   ultraINFO << "...dataset read."
@@ -127,48 +80,6 @@ problem::problem(std::istream &ds, typing t) : problem()
             << ", classes: " << classes();
 
   setup_terminals();
-}
-
-///
-/// Initializes the problem with the default symbol set and data coming from a
-/// file.
-///
-/// \param[in] ds name of the dataset file
-/// \param[in] t  weak or strong typing
-///
-/// Mainly useful for simple problems (single category regression /
-/// classification) or for the initial approach.
-///
-problem::problem(const std::filesystem::path &ds, const default_symbols_t &,
-                 typing t)
-  : problem(ds, std::filesystem::path(), t)
-{
-}
-
-///
-/// Initializes the problem with data / symbols coming from input files.
-///
-/// \param[in] ds      name of the training dataset file
-/// \param[in] symbols name of the file containing the symbols to be used.
-/// \param[in] t       weak or strong typing
-///
-problem::problem(const std::filesystem::path &ds,
-                 const std::filesystem::path &symbols, typing t)
-  : problem()
-{
-  ultraINFO << "Reading dataset " << ds << "...";
-
-  dataframe::params p;
-  p.data_typing = t;
-  training_.read(ds, p);
-
-  ultraINFO << "....dataset read."
-            << " Examples: " << training_.size()
-            << ", categories: " << categories()
-            << ", features: " << variables()
-            << ", classes: " << classes();
-
-  setup_symbols(symbols);
 }
 
 ///
@@ -231,9 +142,9 @@ void problem::setup_terminals()
 }
 
 ///
-/// Sets up the symbol set.
+/// Default symbol set.
 ///
-/// \return number of parsed symbols
+/// \return number of symbols inserted
 ///
 /// A predefined set is arranged (useful for simple problems: single category
 /// regression / classification).
@@ -243,41 +154,6 @@ void problem::setup_terminals()
 /// other things, the features the dataset has.
 ///
 std::size_t problem::setup_symbols()
-{
-  return setup_symbols({});
-}
-
-///
-/// Sets up the symbol set.
-///
-/// \param[in] file name of the file containing the symbols
-/// \return         number of parsed symbols
-///
-/// If a file isn't specified, a predefined set is arranged (useful for simple
-/// problems: single category regression / classification).
-///
-/// \warning
-/// Data should be loaded before symbols: without data we don't know, among
-/// other things, the features the dataset has.
-///
-std::size_t problem::setup_symbols(const std::filesystem::path &file)
-{
-  sset.clear();
-
-  setup_terminals();
-
-  return file.empty() ? setup_symbols_impl() : setup_symbols_impl(file);
-}
-
-///
-/// Default symbol set.
-///
-/// \return number of symbols inserted
-///
-/// This is useful for simple problems (single category regression /
-/// classification).
-///
-std::size_t problem::setup_symbols_impl()
 {
   ultraINFO << "Setting up default symbol set...";
 

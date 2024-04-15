@@ -41,7 +41,7 @@ enum class dataset_t {training = 0, validation, test};
 class problem : public ultra::problem
 {
 public:
-  // --- Constructors ---
+  // ---- Constructors ----
   /// New empty instance of src_problem.
   ///
   /// \warning
@@ -51,27 +51,16 @@ public:
   /// before starting the evolution.
   problem() = default;
 
-  explicit problem(const std::filesystem::path &, typing = typing::weak);
-  explicit problem(std::istream &, typing = typing::weak);
+  explicit problem(const std::filesystem::path &,
+                   const dataframe::params & = {});
+  explicit problem(std::istream &, const dataframe::params & = {});
 
-  struct default_symbols_t {};
-  static constexpr default_symbols_t default_symbols {};
-
-  problem(const std::filesystem::path &, const default_symbols_t &,
-          typing = typing::weak);
-  problem(const std::filesystem::path &, const std::filesystem::path &,
-          typing = typing::weak);
-  // --------------------
-
-  [[nodiscard]] bool operator!() const;
-  std::size_t setup_symbols();
-  std::size_t setup_symbols(const std::filesystem::path &);
-  void setup_terminals();
-
+  // ---- Data access ----
   [[nodiscard]] const dataframe &data(
     dataset_t = dataset_t::training) const noexcept;
   [[nodiscard]] dataframe &data(dataset_t = dataset_t::training) noexcept;
 
+  // ---- Information about the problem ----
   /// Just a shorthand for checking number of classes.
   [[nodiscard]] bool classification() const noexcept { return classes() > 1; }
 
@@ -79,44 +68,22 @@ public:
   [[nodiscard]] std::size_t classes() const noexcept;
   [[nodiscard]] std::size_t variables() const noexcept;
 
-  template<Symbol S, symbol_set::weight_t = symbol_set::default_weight>
-  unsigned insert_range(const std::set<symbol::category_t> &);
-
+  // ---- Misc ----
+  [[nodiscard]] bool operator!() const;
+  std::size_t setup_symbols();
+  void setup_terminals();
   [[nodiscard]] bool is_valid() const override;
 
 private:
   // Private support methods.
   [[nodiscard]] bool compatible(const function::param_data_types &,
                                 const std::vector<std::string> &) const;
-  std::size_t setup_symbols_impl();
-  std::size_t setup_symbols_impl(const std::filesystem::path &);
 
   // Private data members.
   dataframe training_ {};
   dataframe validation_ {};
 };
 
-///
-/// Adds a symbol to the internal symbol set.
-///
-/// \tparam S symbol to be added
-/// \tparam W weight associated to the symbol
-///
-/// \param[in] categories a set of categories
-/// \return               the number of symbols inserted
-///
-template<Symbol S, symbol_set::weight_t W>
-unsigned problem::insert_range(const std::set<symbol::category_t> &categories)
-{
-  unsigned count(0);
-
-  if constexpr (std::is_constructible_v<S, symbol::category_t>)
-    for (auto c : categories)
-      if (sset.insert<S, W>(c))
-        ++count;
-
-  return count;
-}
 
 }  // namespace ultra::src
 
