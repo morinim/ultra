@@ -147,6 +147,12 @@ bool parameters::is_valid(bool force_defined) const
       ultraERROR << "Undefined `slp.code_length` data member";
       return false;
     }
+
+    if (!team.individuals)
+    {
+      ultraERROR << "Undefined `team.individuals` parameter";
+      return false;
+    }
   }  // if (force_defined)
 
   if (evolution.p_cross > 1.0)

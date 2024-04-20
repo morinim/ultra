@@ -215,6 +215,14 @@ struct parameters
     std::filesystem::path serialization_file {};
   } cache;
 
+  struct team_parameters
+  {
+    /// Default team size:
+    /// - `0` means auto tune;
+    /// - `1` is used for debugging.
+    std::size_t individuals {3};
+  } team;
+
   parameters &init();
   [[nodiscard]] bool is_valid(bool) const;
 };  // parameters
