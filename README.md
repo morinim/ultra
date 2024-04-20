@@ -157,6 +157,7 @@ As a side note, the command to build the global header is:
 [Mozilla Public License v2.0][mpl2] (also available in the accompanying [LICENSE][license] file).
 
 ## Versioning
+<img align="left" src="https://imgs.xkcd.com/comics/workflow.png">
 
 Ultra does **not** use semantic versioning. Releases are tagged.
 
