@@ -324,7 +324,8 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
-/// \relates gp::individual
+/// \related
+/// gp::individual
 ///
 unsigned active_slots(const individual &prg)
 {
@@ -483,6 +484,9 @@ individual crossover(const individual &lhs, const individual &rhs)
 ///
 /// \param[in] prb the current problem
 /// \return        number of mutations performed
+///
+/// \note
+/// External parameters: `evolution.p_mutation`
 ///
 unsigned individual::mutation(const problem &prb)
 {
