@@ -27,6 +27,10 @@ TEST_CASE("Correct mapping")
 {
   using namespace ultra;
 
+  // Consider `return {};`... this is void not something default initialized!
+  static_assert(d_void == 0,
+                "D_VOID must be the first alternative of the variant");
+
   static_assert(std::is_same_v
     <D_VOID, std::variant_alternative_t<d_void, value_t>>);
   static_assert(std::is_same_v
