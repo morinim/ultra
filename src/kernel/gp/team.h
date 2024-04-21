@@ -114,16 +114,14 @@ template<Individual I> std::ostream &operator<<(std::ostream &,
                                                 const team<I> &);
 
 
-// The SFINAE way of recognizing a team.
-template<class T> struct is_team : std::false_type
-{ enum {value = false}; };
-template<class T> struct is_team<team<T>> : std::true_type
-{ enum {value = true}; };
-
-template<class T> struct not_team : std::true_type
-{ enum {value = true}; };
-template<class T> struct not_team<team<T>> : std::false_type
-{ enum {value = false}; };
+template<class T> concept Team = requires(T t)
+{
+  // See https://stackoverflow.com/q/71921797/3235496
+  // This C++20 template lambda only binds to `team<I>` specialisations,
+  // including classes derived from them.
+  //
+  []<Individual I>(team<I> &){}(t);
+};
 
 #include "kernel/gp/team.tcc"
 
