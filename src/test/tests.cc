@@ -39,6 +39,7 @@
 #include "test/matrix.cc"
 #include "test/misc.cc"
 #include "test/model_measurements.cc"
+#include "test/oracle.cc"
 #include "test/problem.cc"
 #include "test/random.cc"
 #include "test/search.cc"
