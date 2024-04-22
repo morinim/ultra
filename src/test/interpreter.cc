@@ -94,7 +94,7 @@ TEST_CASE_FIXTURE(fixture1, "Run")
       });
 
     const auto ret(run(i));
-    CHECK(std::isinf(real::base(ret)));
+    CHECK(!has_value(ret));
   }
 
   SUBCASE("Ifz")

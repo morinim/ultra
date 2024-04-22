@@ -134,6 +134,7 @@ public:
     const auto p(pars[0]);
     if (!has_value(p))  return p;
 
+    assert(std::isfinite(base(p)));
     return std::fabs(base(p));
   }
 };
@@ -161,7 +162,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) + base(p1));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -206,7 +207,7 @@ public:
 
     const auto x(base(p0)), y(base(p1));
     const auto ret(x / std::sqrt(1.0 + y * y));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -235,11 +236,8 @@ public:
     const auto p(pars[0]);
     if (!has_value(p))  return p;
 
-    const auto b(base(p));
-    if (std::isinf(b))
-      return {};
-
-    return std::cos(b);
+    assert(!std::isinf(base(p)));
+    return std::cos(base(p));
   }
 };
 
@@ -271,7 +269,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) / base(p1));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -350,7 +348,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::floor(base(p0) / base(p1)));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -555,7 +553,7 @@ public:
     if (!has_value(p0))  return p0;
 
     const auto ret(std::log(base(p0)));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -628,7 +626,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::fmax(base(p0), base(p1)));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -668,7 +666,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(std::fmod(base(p0), base(p1)));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -703,7 +701,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) * base(p1));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -732,11 +730,8 @@ public:
     const auto p(pars[0]);
     if (!has_value(p))  return p;
 
-    const auto b(base(p));
-    if (std::isinf(b))
-      return {};
-
-    return std::sin(b);
+    assert(!std::isinf(base(p)));
+    return std::sin(base(p));
   }
 };
 
@@ -763,10 +758,11 @@ public:
     const auto p(pars[0]);
     if (!has_value(p))  return p;
 
-    const auto ret(std::sqrt(base(p)));
-    if (std::isnan(ret))  return {};
+    const auto v(base(p));
+    if (std::isless(v, 0.0))
+      return {};
 
-    return ret;
+    return std::sqrt(v);
   }
 };
 
@@ -793,7 +789,7 @@ public:
     if (!has_value(p1))  return p1;
 
     const auto ret(base(p0) - base(p1));
-    if (std::isnan(ret))  return {};
+    if (!std::isfinite(ret))  return {};
 
     return ret;
   }
@@ -829,13 +825,8 @@ public:
     // cases (`x --> +inf` and `x --> -inf` respectively).
     const auto x(base(p0));
 
-    const auto ret(x >= 0.0 ? 1.0 / (1.0 + std::exp(-x))
-                            : std::exp(x) / (1.0 + std::exp(x)));
-
-    if (std::isnan(ret))
-      return {};
-
-    return ret;
+    return x >= 0.0 ? 1.0 / (1.0 + std::exp(-x))
+                    : std::exp(x) / (1.0 + std::exp(x));
   }
 };
 

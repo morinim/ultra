@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -57,7 +57,6 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-1.0}))) == doctest::Approx(1.0));
     CHECK(base(f.eval(debug_params({ 1.0}))) == doctest::Approx(1.0));
     CHECK(base(f.eval(debug_params({ 0.0}))) == doctest::Approx(0.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf})))));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
 
@@ -68,8 +67,8 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-1.0, 1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({1.0, 1.0}))) == doctest::Approx(2.0));
     CHECK(base(f.eval(debug_params({0.0, 10.0}))) == doctest::Approx(10.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, -1.0})))));
-    CHECK(std::isinf(base(f.eval(debug_params({+inf, +inf})))));
+    CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
+    CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
     CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
@@ -84,7 +83,7 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({1.0, 10000.0})))
           == doctest::Approx(1.0/10000.0));
     CHECK(base(f.eval(debug_params({1.0, inf}))) == doctest::Approx(0.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, 1.0})))));
+    CHECK(!has_value(f.eval(debug_params({inf, 1.0}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({inf, inf}))));
   }
@@ -98,7 +97,6 @@ TEST_CASE("REAL")
           == doctest::Approx(-1.0));
     CHECK(base(f.eval(debug_params({std::numbers::pi / 4.0})))
           == doctest::Approx(1.0 / std::sqrt(2.0)));
-    CHECK(!has_value(f.eval(debug_params({inf}))));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
 
@@ -107,10 +105,10 @@ TEST_CASE("REAL")
     real::div f;
 
     CHECK(base(f.eval(debug_params({0.0, 1.0}))) == doctest::Approx(0.0));
-    CHECK(std::isinf(base(f.eval(debug_params({1.0, 0.0})))));
+    CHECK(!has_value(f.eval(debug_params({1.0, 0.0}))));
     CHECK(base(f.eval(debug_params({-2.0, 2.0}))) == doctest::Approx(-1.0));
     CHECK(base(f.eval(debug_params({1.0, inf}))) == doctest::Approx(0.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, 1.0})))));
+    CHECK(!has_value(f.eval(debug_params({inf, 1.0}))));
     CHECK(!has_value(f.eval(debug_params({inf, inf}))));
     CHECK(!has_value(f.eval(debug_params({{}, 1.0}))));
     CHECK(!has_value(f.eval(debug_params({1.0, {}}))));
@@ -135,8 +133,8 @@ TEST_CASE("REAL")
     real::idiv f;
 
     CHECK(base(f.eval(debug_params({0.0, 1.0}))) == doctest::Approx(0.0));
-    CHECK(std::isinf(base(f.eval(debug_params({1.0, 0.0})))));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, 2.0})))));
+    CHECK(!has_value(f.eval(debug_params({1.0, 0.0}))));
+    CHECK(!has_value(f.eval(debug_params({inf, 2.0}))));
     CHECK(base(f.eval(debug_params({9.0, 4.0}))) == doctest::Approx(2.0));
     CHECK(base(f.eval(debug_params({9.0, inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({{}, 1.0}))));
@@ -205,8 +203,8 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({std::numbers::e})))
           == doctest::Approx(1.0));
-    CHECK(std::isinf(base(f.eval(debug_params({0.0})))));
-    CHECK(std::isinf(base(f.eval(debug_params({inf})))));
+    CHECK(!has_value(f.eval(debug_params({0.0}))));
+    CHECK(!has_value(f.eval(debug_params({inf}))));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
 
@@ -229,7 +227,7 @@ TEST_CASE("REAL")
 
     CHECK(base(f.eval(debug_params({0.0, 1.0}))) == doctest::Approx(1.0));
     CHECK(base(f.eval(debug_params({1.0, 0.0}))) == doctest::Approx(1.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, 0.0})))));
+    CHECK(!has_value(f.eval(debug_params({inf, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
   }
@@ -253,8 +251,8 @@ TEST_CASE("REAL")
 
     CHECK(base(f.eval(debug_params({0.0, 1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({-2.0, 2.0}))) == doctest::Approx(-4.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, 1.0})))));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, inf})))));
+    CHECK(!has_value(f.eval(debug_params({inf, 1.0}))));
+    CHECK(!has_value(f.eval(debug_params({inf, inf}))));
     CHECK(!has_value(f.eval(debug_params({inf, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({{}, 1.0}))));
     CHECK(!has_value(f.eval(debug_params({1.0, {}}))));
@@ -269,7 +267,6 @@ TEST_CASE("REAL")
           == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({std::numbers::pi / 4.0})))
           == doctest::Approx(1.0 / std::sqrt(2.0)));
-    CHECK(!has_value(f.eval(debug_params({inf}))));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
 
@@ -292,8 +289,8 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-1.0, 1.0}))) == doctest::Approx(-2.0));
     CHECK(base(f.eval(debug_params({1.0, 1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({0.0, 10.0}))) == doctest::Approx(-10.0));
-    CHECK(std::isinf(base(f.eval(debug_params({inf, -1.0})))));
-    CHECK(std::isinf(base(f.eval(debug_params({+inf, -inf})))));
+    CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
+    CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
     CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));

@@ -167,7 +167,7 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
 
   const auto pack_opcode([&](const symbol::opcode_t &opcode)
   {
-    Expects(opcode <= std::numeric_limits<std::uint16_t>::max());
+    Expects(std::in_range<std::uint16_t>(opcode));
 
     // Although 16 bit are enough to contain opcodes and parameters, they are
     // usually stored in unsigned variables (i.e. 32 or 64 bit) for performance
