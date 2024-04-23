@@ -25,15 +25,15 @@
 TEST_SUITE("EVALUATOR")
 {
 
-TEST_CASE_FIXTURE(fixture1, "Concepts")
+TEST_CASE("Concepts")
 {
   using namespace ultra;
 
   test_evaluator<gp::individual> eva;
-  static_assert(Evaluator<decltype(eva)>);
+  CHECK(Evaluator<decltype(eva)>);
 
   auto eva2([&eva](const gp::individual &i) { return eva(i); });
-  static_assert(Evaluator<decltype(eva2)>);
+  CHECK(Evaluator<decltype(eva2)>);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Test evaluator")
