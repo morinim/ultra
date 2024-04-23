@@ -17,6 +17,7 @@
 
 #include "kernel/cache.h"
 #include "kernel/individual.h"
+#include "kernel/problem.h"
 
 namespace ultra
 {
