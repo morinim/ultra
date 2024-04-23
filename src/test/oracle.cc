@@ -49,7 +49,7 @@ struct build<ultra::src::reg_oracle, T, 0>
   ultra::src::reg_oracle<T> operator()(const T &prg,
                                        ultra::src::dataframe &) const
   {
-    return ultra::src::reg_oracle<T>(prg);
+    return ultra::src::reg_oracle(prg);
   }
 };
 
@@ -147,10 +147,10 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
   for (unsigned i(0); i < 1000; ++i)
   {
     const gp::individual ind(pr);
-    const src::reg_oracle<gp::individual> li(ind);
+    const src::reg_oracle li(ind);
 
     const team<gp::individual> t{{ind, ind, ind, ind}};
-    const src::reg_oracle<team<gp::individual>> lt(t);
+    const src::reg_oracle lt(t);
 
     for (const auto &e : pr.data())
     {
@@ -176,13 +176,13 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     const gp::individual i3(pr);
     const gp::individual i4(pr);
 
-    const src::reg_oracle<gp::individual> oracle1(i1);
-    const src::reg_oracle<gp::individual> oracle2(i2);
-    const src::reg_oracle<gp::individual> oracle3(i3);
-    const src::reg_oracle<gp::individual> oracle4(i4);
+    const src::reg_oracle oracle1(i1);
+    const src::reg_oracle oracle2(i2);
+    const src::reg_oracle oracle3(i3);
+    const src::reg_oracle oracle4(i4);
 
     const team<gp::individual> t({i1, i2, i3, i4});
-    const src::reg_oracle<team<gp::individual>> oracle_team(t);
+    const src::reg_oracle oracle_team(t);
 
     for (const auto &e : pr.data())
     {

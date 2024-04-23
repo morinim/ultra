@@ -153,7 +153,13 @@ private:
 // *  Template aliases to simplify the syntax and help the user          *
 // ***********************************************************************
 template<IndividualOrTeam P>
-using reg_oracle = basic_reg_oracle<P, true>;
+class reg_oracle : public basic_reg_oracle<P, true>
+{
+public:
+  using reg_oracle::basic_reg_oracle::basic_reg_oracle;
+};
+template<IndividualOrTeam P> reg_oracle(const P &) -> reg_oracle<P>;
+
 
 #include "kernel/gp/src/oracle.tcc"
 }  // namespace src
