@@ -145,7 +145,7 @@ public:
 
   [[nodiscard]] weight_t weight(const symbol &) const;
 
-  [[nodiscard] ]bool enough_terminals() const;
+  [[nodiscard]] bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
   friend std::ostream &operator<<(std::ostream &, const symbol_set &);
