@@ -44,7 +44,7 @@ sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
 template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
 template<IndividualOrTeam P>
 auto sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_impl(
-  const P &prg, std::size_t step) const
+  const P &prg, typename DAT::difference_type step) const
 {
   Expects(std::distance(std::begin(*this->dat_), std::end(*this->dat_))
           >= step);
@@ -153,7 +153,8 @@ rmae_error_functor<P>::rmae_error_functor(const P &prg) : oracle_(prg)
 template<IndividualOrTeam P>
 double rmae_error_functor<P>::operator()(const example &example) const
 {
-  double err(200.0);
+  constexpr double ERR_SUP(200.0);
+  double err(ERR_SUP);
 
   if (const auto foreseen(oracle_(example)); has_value(foreseen))
   {
@@ -167,7 +168,7 @@ double rmae_error_functor<P>::operator()(const example &example) const
     if (delta <= 10.0 * std::numeric_limits<D_DOUBLE>::min())
       err = 0.0;
     else
-      err = 200.0 * delta / (std::fabs(approx) + std::fabs(target));
+      err = ERR_SUP * delta / (std::fabs(approx) + std::fabs(target));
     // Some alternatives for the error:
     // * delta / std::max(approx, target)
     // * delta / std::fabs(target)

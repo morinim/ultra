@@ -21,7 +21,10 @@ namespace ultra::src
 {
 
 /// A sized range that contains a series of examples.
-template<class DAT> concept DataSet = std::ranges::range<DAT>;
+template<class DAT> concept DataSet = std::ranges::range<DAT> && requires(DAT d)
+{
+  typename DAT::difference_type;
+};
 
 /// An error function/functor returns a measurement of the error that a program
 /// commits in a given training case.
@@ -70,7 +73,7 @@ public:
 
 private:
   template<IndividualOrTeam P> [[nodiscard]] auto sum_of_errors_impl(
-    const P &, std::size_t) const;
+    const P &, typename DAT::difference_type) const;
 };
 
 ///
