@@ -37,7 +37,7 @@ TEST_CASE("Concepts")
   CHECK(ErrorFunction<count_error_functor<ultra::gp::individual>, dataframe>);
 }
 
-TEST_CASE("Omniscent Oracle")
+TEST_CASE("Evaluators")
 {
   using namespace ultra;
 
@@ -65,21 +65,134 @@ TEST_CASE("Omniscent Oracle")
 
   const function *f_ife(pr.insert<ultra::real::ife>());
 
-  const src::reg_oracle delphi(gp::individual(
-    {
-      {f_ife, {x1, 15.000, 54240.0000, 168420.0}},
-      {f_ife, {x1, 14.000, 41370.0000, 0_addr}},
-      {f_ife, {x1, 12.000, 22620.0000, 1_addr}},
-      {f_ife, {x1, 11.380, 18386.0340, 2_addr}},
-      {f_ife, {x1, 10.000,  1110.0000, 3_addr}},
-      {f_ife, {x1,  8.000,  4680.0000, 4_addr}},
-      {f_ife, {x1,  7.043,  2866.5485, 5_addr}},
-      {f_ife, {x1,  6.000,  1554.0000, 6_addr}},
-      {f_ife, {x1,  2.810,    95.2425, 7_addr}}
-    }));
+  const std::vector out = {95.2425, 1554.0, 2866.5485, 4680.0, 11110.0,
+                           18386.0340, 22620.0, 41370.0, 54240.0, 168420.0};
 
-  CHECK(std::get<D_DOUBLE>(delphi(pr.data().front()))
-        == doctest::Approx(95.2425));
+  const gp::individual delphi(
+    {
+      {f_ife, {x1, 15.000, out[8], out[9]}},
+      {f_ife, {x1, 14.000, out[7], 0_addr}},
+      {f_ife, {x1, 12.000, out[6], 1_addr}},
+      {f_ife, {x1, 11.380, out[5], 2_addr}},
+      {f_ife, {x1, 10.000, out[4], 3_addr}},
+      {f_ife, {x1,  8.000, out[3], 4_addr}},
+      {f_ife, {x1,  7.043, out[2], 5_addr}},
+      {f_ife, {x1,  6.000, out[1], 6_addr}},
+      {f_ife, {x1,  2.810, out[0], 7_addr}}
+    });
+
+  const gp::individual delta1(
+    {
+      {f_ife, {x1, 15.000, out[8] + 1.0, out[9] + 1.0}},
+      {f_ife, {x1, 14.000, out[7] + 1.0, 0_addr}},
+      {f_ife, {x1, 12.000, out[6] + 1.0, 1_addr}},
+      {f_ife, {x1, 11.380, out[5] + 1.0, 2_addr}},
+      {f_ife, {x1, 10.000, out[4] + 1.0, 3_addr}},
+      {f_ife, {x1,  8.000, out[3] + 1.0, 4_addr}},
+      {f_ife, {x1,  7.043, out[2] + 1.0, 5_addr}},
+      {f_ife, {x1,  6.000, out[1] + 1.0, 6_addr}},
+      {f_ife, {x1,  2.810, out[0] + 1.0, 7_addr}}
+    });
+
+  const gp::individual delta2(
+    {
+      {f_ife, {x1, 15.000, out[8] + 2.0, out[9] + 2.0}},
+      {f_ife, {x1, 14.000, out[7] + 2.0, 0_addr}},
+      {f_ife, {x1, 12.000, out[6] + 2.0, 1_addr}},
+      {f_ife, {x1, 11.380, out[5] + 2.0, 2_addr}},
+      {f_ife, {x1, 10.000, out[4] + 2.0, 3_addr}},
+      {f_ife, {x1,  8.000, out[3] + 2.0, 4_addr}},
+      {f_ife, {x1,  7.043, out[2] + 2.0, 5_addr}},
+      {f_ife, {x1,  6.000, out[1] + 2.0, 6_addr}},
+      {f_ife, {x1,  2.810, out[0] + 2.0, 7_addr}}
+    });
+
+  const gp::individual huge1(
+    {
+      {f_ife, {x1, 15.000, out[8], out[9]}},
+      {f_ife, {x1, 14.000, out[7], 0_addr}},
+      {f_ife, {x1, 12.000, out[6], 1_addr}},
+      {f_ife, {x1, 11.380, out[5], 2_addr}},
+      {f_ife, {x1, 10.000, out[4], 3_addr}},
+      {f_ife, {x1,  8.000, out[3], 4_addr}},
+      {f_ife, {x1,  7.043, out[2], 5_addr}},
+      {f_ife, {x1,  6.000, out[1], 6_addr}},
+      {f_ife, {x1,  2.810, HUGE_VAL, 7_addr}}
+    });
+
+  const gp::individual huge2(
+    {
+      {f_ife, {x1, 15.000, out[8], out[9]}},
+      {f_ife, {x1, 14.000, out[7], 0_addr}},
+      {f_ife, {x1, 12.000, out[6], 1_addr}},
+      {f_ife, {x1, 11.380, out[5], 2_addr}},
+      {f_ife, {x1, 10.000, out[4], 3_addr}},
+      {f_ife, {x1,  8.000, out[3], 4_addr}},
+      {f_ife, {x1,  7.043, out[2], 5_addr}},
+      {f_ife, {x1,  6.000, -HUGE_VAL, 6_addr}},
+      {f_ife, {x1,  2.810, HUGE_VAL, 7_addr}}
+    });
+
+  SUBCASE("Delphi knows everything")
+  {
+    {
+      const src::reg_oracle oracle(delphi);
+      for (std::size_t i(0); const auto &e : pr.data())
+        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++]));
+    }
+
+    {
+      const src::reg_oracle oracle(delta1);
+      for (std::size_t i(0); const auto &e : pr.data())
+        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++] + 1));
+    }
+
+    {
+      const src::reg_oracle oracle(delta2);
+      for (std::size_t i(0); const auto &e : pr.data())
+        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++] + 2));
+    }
+  }
+
+  SUBCASE("MAE Evaluator")
+  {
+    src::mae_evaluator<gp::individual> mae(pr.data());
+    CHECK(mae(delphi) == doctest::Approx(0.0));
+    CHECK(mae(delta1) == doctest::Approx(-1.0));
+    CHECK(mae(delta2) == doctest::Approx(-2.0));
+    CHECK(std::isnan(mae(huge1)));
+    CHECK(std::isnan(mae(huge2)));
+  }
+
+  SUBCASE("RMAE Evaluator")
+  {
+    src::rmae_evaluator<gp::individual> rmae(pr.data());
+    CHECK(rmae(delphi) == doctest::Approx(0.0));
+    CHECK(rmae(delta1) == doctest::Approx(-0.118876));
+    CHECK(rmae(delta2) == doctest::Approx(-0.23666));
+    CHECK(std::isnan(rmae(huge1)));
+    CHECK(std::isnan(rmae(huge2)));
+  }
+
+  SUBCASE("MSE Evaluator")
+  {
+    src::mse_evaluator<gp::individual> mse(pr.data());
+    CHECK(mse(delphi) == doctest::Approx(0.0));
+    CHECK(mse(delta1) == doctest::Approx(-1.0));
+    CHECK(mse(delta2) == doctest::Approx(-4.0));
+    CHECK(std::isnan(mse(huge1)));
+    CHECK(std::isnan(mse(huge2)));
+  }
+
+  SUBCASE("Count Evaluator")
+  {
+    src::count_evaluator<gp::individual> count(pr.data());
+    CHECK(count(delphi) == doctest::Approx(0.0));
+    CHECK(count(delta1) == doctest::Approx(-1.0));
+    CHECK(count(delta2) == doctest::Approx(-1.0));
+    CHECK(count(huge1) == doctest::Approx(-1.0 / pr.data().size()));
+    CHECK(count(huge2) == doctest::Approx(-2.0 / pr.data().size()));
+  }
 }
 
 }  // SRC::EVALUATOR
