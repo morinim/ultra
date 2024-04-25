@@ -105,7 +105,7 @@ public:
     // prevents some kinds of programming errors.
   };
 
-  explicit de(const parameters &);
+  explicit de(const parameters &params) : params_(params) {}
 
   template<SizedRandomAccessPopulation P>
   [[nodiscard]] selected_refs<typename P::value_type> operator()(P &) const;

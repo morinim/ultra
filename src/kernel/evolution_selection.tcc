@@ -175,13 +175,6 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 }
 
 ///
-/// \param[in] params access to selection specific parameters
-///
-de::de(const parameters &params) : params_(params)
-{
-}
-
-///
 /// \param[in] pop a population
 /// \return        references of four individuals suited for DE recombination.
 ///                First and second elements are parents, the remaining ones

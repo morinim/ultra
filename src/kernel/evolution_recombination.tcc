@@ -101,10 +101,6 @@ base<E>::operator()(const R &parents) const
   return off;
 }
 
-de::de(const problem &prob) : prob_(prob)
-{
-}
-
 ///
 /// This is strictly based on the DE crossover operator.
 ///

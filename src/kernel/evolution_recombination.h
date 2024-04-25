@@ -80,7 +80,7 @@ template<Evaluator E> base(E &, const problem &) -> base<E>;
 class de
 {
 public:
-  explicit de(const problem &);
+  explicit de(const problem &prob) : prob_(prob) {}
 
   template<Individual I>
   [[nodiscard]] I operator()(const selection::de::selected_refs<I> &) const;
