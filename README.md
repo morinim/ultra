@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
-## UNDER DEVELOPMENT
+## UNDER DEVELOPMENT ##
 There is still an ongoing transferring process from Vita and many features aren't available or don't completely work.
 
 This framework will be a major breakthrough but at the moment is far from being production ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
@@ -16,7 +16,7 @@ Source has been made available for people / companies:
 - already using [Vita][vita] to be able to experience the new library;
 - who would like to sponsor the project.
 
-## Overview
+## OVERVIEW
 
 Ultra is a scalable, high performance evolutionary algorithms framework.
 
@@ -32,7 +32,7 @@ It's suitable for [classification][classification], [symbolic regression][sr], c
 
 This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**. If you're coming from Vita take a look at the [migration notes][migrating].
 
-## Examples
+## EXAMPLES
 
 ### Mathematical optimization
 
@@ -54,7 +54,7 @@ auto value(res.best_measurements.fitness);
 
 Further details in the [specific tutorial][rastrigin].
 
-### Symbolic regression example
+### Symbolic regression
 
 ```C++
 // DATA SAMPLE (output, input)
@@ -90,11 +90,11 @@ const auto result(s.run());
 
 It's pretty straightforward (further details in the [specific tutorial][sr]).
 
-## Documentation
+## DOCUMENTATION
 
 There is a [comprehensive wiki][wiki]. You should probably start with the [tutorials][tutorials].
 
-## Build requirements
+## BUILD REQUIREMENTS
 
 Ultra is designed to have fairly minimal requirements to build and use with your projects, but there are some. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
 However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the
@@ -109,7 +109,7 @@ However, since core members of the Ultra project have no access to these platfor
 
 * [Python v3][python] for additional functionalities
 
-## Getting the source
+## GETTING THE SOURCE
 
 There are two ways of getting Ultra's source code: you can [download][download] a stable source release in your preferred archive format or directly clone the source from a repository.
 
@@ -121,7 +121,7 @@ Run the following command:
 git clone https://github.com/morinim/ultra.git
 ```
 
-## The Ultra distribution
+## THE ULTRA DISTRIBUTION
 
 This is a sketch of the resulting directory structure:
 ```
@@ -141,7 +141,7 @@ ultra/
   README.md
 ```
 
-## Setting up the build
+## SETTING UP THE BUILD
 
 ```shell
 cd ultra
@@ -167,7 +167,7 @@ The output files are stored in subdirectories of `build/` (out of source build).
 
 Windows may need various expedients about which you can read in the [Windows walkthrough][windows].
 
-## Installing Ultra
+## INSTALLING ULTRA
 
 To install Ultra use the command:
 
@@ -188,24 +188,18 @@ As a side note, the command to build the global header is:
 ```
 (must be executed from the repository main directory)
 
-## License
+## LICENSE
 
 [Mozilla Public License v2.0][mpl2] (also available in the accompanying [LICENSE][license] file).
 
-## Versioning
+## VERSIONING
 <img align="left" src="https://imgs.xkcd.com/comics/workflow.png">
 
-Ultra does **not** use semantic versioning. Releases are tagged.
+Ultra uses [semantic versioning][semver]. Releases are tagged.
 
-Given a version number `MAJOR.MINOR.PATCH`, increment when:
+When a release cannot be backward compatible, because an API is changing, modifications required for upgrading aren't (usually) too difficult.
 
-- `MAJOR`. New major release or a significant update and/or API stabilization;
-- `MINOR`. Minor features are added;
-- `PATCH`. Tiny changes, likely to go unnoticed by most.
-
-This allows folks, immediately upon hearing about a new release, to get a rough sense of its scope. As to backwards compatibility — ideally every release, even major ones, are backwards-compatible... and when they cannot be, because an API is changing, it should be done in a way that it's not too difficult to upgrade.
-
-Avoiding any change to the API and waiting for a *MAJOR* release to be ready would be a terrific impediment to progress. The alternative of frequently incrementing the *MAJOR* version number is incredibly unhelpful.
+So don't be afraid of a different *MAJOR* version and read the release notes for details about the breaking changes.
 
 ---
 
@@ -228,6 +222,7 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 [python]: https://www.python.org/
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
+[semver]: https://semver.org/
 [sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
