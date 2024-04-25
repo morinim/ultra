@@ -27,14 +27,27 @@ TEST_SUITE("SRC::EVALUATOR")
 
 TEST_CASE("Concepts")
 {
-  using namespace ultra::src;
+  using namespace ultra;
 
-  CHECK(DataSet<dataframe>);
+  CHECK(src::DataSet<src::dataframe>);
 
-  CHECK(ErrorFunction<mae_error_functor<ultra::gp::individual>, dataframe>);
-  CHECK(ErrorFunction<rmae_error_functor<ultra::gp::individual>, dataframe>);
-  CHECK(ErrorFunction<mse_error_functor<ultra::gp::individual>, dataframe>);
-  CHECK(ErrorFunction<count_error_functor<ultra::gp::individual>, dataframe>);
+  CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
+                           src::dataframe>);
+  CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
+                           src::dataframe>);
+  CHECK(src::ErrorFunction<src::mse_error_functor<gp::individual>,
+                           src::dataframe>);
+  CHECK(src::ErrorFunction<src::count_error_functor<gp::individual>,
+                           src::dataframe>);
+
+  CHECK(Evaluator<src::mae_evaluator<gp::individual>>);
+  CHECK(Evaluator<src::mae_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::rmae_evaluator<gp::individual>>);
+  CHECK(Evaluator<src::rmae_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::mse_evaluator<gp::individual>>);
+  CHECK(Evaluator<src::mse_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::count_evaluator<gp::individual>>);
+  CHECK(Evaluator<src::count_evaluator<team<gp::individual>>>);
 }
 
 TEST_CASE("Evaluators")
