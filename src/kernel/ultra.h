@@ -25,6 +25,9 @@
 #include "kernel/de/problem.h"
 #include "kernel/de/search.h"
 #include "kernel/gp/individual.h"
+#include "kernel/gp/primitive/integer.h"
+#include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/search.h"
 
 #endif  // include guard
