@@ -161,7 +161,7 @@ private:
 ///
 /// \tparam    T the result is casted to type `T`
 /// \param[in] e an example
-/// \return      the output value for example  `e`
+/// \return      the output value for the given example
 ///
 ///
 template<class T>
