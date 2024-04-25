@@ -20,12 +20,13 @@
 ///
 /// \param[in] prob the problem we're working on. The lifetime of `prob` must
 ///                 exceed lifetime of `this` class
+/// \param[in] eva  evaluator used during evolution. Must be copyable and
+///                 could be used to build a proxy evaluator.
 ///
 template<template<class> class ES, Evaluator E>
 search<ES, E>::search(problem &prob, E eva)
   : es_(ES<evaluator_proxy<E>>(prob,
                                evaluator_proxy(eva, prob.params.cache.size))),
-    vs_(std::make_unique<as_is_validation>()),
     prob_(prob)
 {
   Ensures(is_valid());

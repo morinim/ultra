@@ -66,9 +66,11 @@ protected:
 
   // *** Data members ***
   ES<evaluator_proxy<E>> es_;
-  std::unique_ptr<ultra::validation_strategy> vs_;
 
-  problem &prob_;    // problem we're working on
+  std::unique_ptr<ultra::validation_strategy> vs_
+    {std::make_unique<as_is_validation>()};
+
+  problem &prob_;  // problem we're working on
 
 private:
   // Template method of the `search::run` member function called exactly one
