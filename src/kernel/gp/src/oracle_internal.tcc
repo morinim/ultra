@@ -66,8 +66,8 @@ public:
 
   template<class ...Args> [[nodiscard]] value_t run(Args && ...args) const
   {
-    // Consider that there are situations in which `&int_.program() != &ind_`
-    // and this function will blow up.
+    // There are situations in which `&int_.program() != &ind_` and this
+    // function will blow up.
     // It shouldn't happen: `is_valid` checks for this problematic condition,
     // `operator=` resets the pointer to the reference individual... but it's
     // not enough.
