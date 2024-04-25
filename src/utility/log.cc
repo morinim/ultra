@@ -20,7 +20,7 @@
 namespace ultra
 {
 
-log::level log::reporting_level = log::lOUTPUT;
+log::level log::reporting_level = log::lINFO;
 std::unique_ptr<std::ostream> log::stream = nullptr;
 
 ///
