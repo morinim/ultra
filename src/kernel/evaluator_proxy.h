@@ -47,6 +47,8 @@ public:
 
   [[nodiscard]] evaluator_fitness_t<E> fast(const evaluator_individual_t<E> &);
 
+  [[nodiscard]] const E &core() const noexcept;
+
 private:
   // Access to the real evaluator.
   E eva_;

@@ -171,14 +171,12 @@ void evaluator_proxy<E>::clear()
 }
 
 ///
-/// \param[in] prg a program (individual/team)
-/// \return        a pointer to the executable version of `prg`
+/// \return a read only reference to the core evaluator.
 ///
-//template<Evaluator E>
-//std::unique_ptr<basic_lambda_f> evaluator_proxy<E>::lambdify(
-//  const T &prg) const
-//{
-//  return lambdify(prg, eva_);
-//}
+template<Evaluator E>
+const E &evaluator_proxy<E>::core() const noexcept
+{
+  return eva_;
+}
 
 #endif  // include guard
