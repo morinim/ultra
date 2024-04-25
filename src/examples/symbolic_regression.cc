@@ -21,7 +21,7 @@ int main()
 {
   using namespace ultra;
 
-  // DATA SAMPLE
+  // DATA SAMPLE (output, input)
   // (the target function is `x + sin(x)`)
   std::istringstream training(R"(
     -9.456,-10.0

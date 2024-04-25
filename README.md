@@ -54,6 +54,42 @@ auto value(res.best_measurements.fitness);
 
 Further details in the [specific tutorial][rastrigin].
 
+### Symbolic regression example
+
+```C++
+// DATA SAMPLE (output, input)
+// (the target function is `x + sin(x)`)
+std::istringstream training(R"(
+  -9.456,-10.0
+  -8.989, -8.0
+  -5.721, -6.0
+  -3.243, -4.0
+  -2.909, -2.0
+   0.000,  0.0
+   2.909,  2.0
+   3.243,  4.0
+   5.721,  6.0
+   8.989,  8.0
+)");
+
+// READING INPUT DATA
+src::problem prob(training);
+
+// SETTING UP SYMBOLS
+prob.insert<real::sin>();
+prob.insert<real::cos>();
+prob.insert<real::add>();
+prob.insert<real::sub>();
+prob.insert<real::div>();
+prob.insert<real::mul>();
+
+// SEARCHING
+src::search s(prob);
+const auto result(s.run());
+```
+
+It's pretty straightforward (further details in the [specific tutorial][sr]).
+
 ## Documentation
 
 There is a [comprehensive wiki][wiki]. You should probably start with the [tutorials][tutorials].
@@ -192,7 +228,7 @@ Avoiding any change to the API and waiting for a *MAJOR* release to be ready wou
 [python]: https://www.python.org/
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
-[sr]: https://github.com/morinim/ultra
+[sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
