@@ -43,10 +43,12 @@ template<DataSet DAT>
 class evaluator
 {
 public:
-  explicit evaluator(DAT &);
+  void dataset(DAT &);
 
 protected:
-  DAT *dat_;
+  explicit evaluator(DAT &);
+
+  DAT *dat_ {nullptr};
 };
 
 ///
@@ -111,6 +113,8 @@ class mae_evaluator : public sum_of_errors_evaluator<mae_error_functor<P>>
 {
 public:
   using mae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
+
+  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -154,6 +158,8 @@ class rmae_evaluator : public sum_of_errors_evaluator<rmae_error_functor<P>>
 {
 public:
   using rmae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
+
+  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -203,6 +209,8 @@ class mse_evaluator : public sum_of_errors_evaluator<mse_error_functor<P>>
 {
 public:
   using mse_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
+
+  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -238,6 +246,8 @@ class count_evaluator : public sum_of_errors_evaluator<count_error_functor<P>>
 {
 public:
   using count_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
+
+  [[nodiscard]] auto operator()(const P &) const;
 };
 
 #include "kernel/gp/src/evaluator.tcc"

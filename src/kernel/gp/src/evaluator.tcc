@@ -26,6 +26,17 @@ evaluator<DAT>::evaluator(DAT &d) : dat_(&d)
 }
 
 ///
+/// Changes the dataset that the evaluator will use.
+///
+/// \param[in] d new dataset
+///
+template<DataSet DAT>
+void evaluator<DAT>::dataset(DAT &d)
+{
+  dat_ = &d;
+}
+
+///
 /// \param[in] d the training dataset
 ///
 template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
@@ -135,6 +146,16 @@ double mae_error_functor<P>::operator()(const example &example) const
 }
 
 ///
+/// \param[in] prg program (individual/team) used for fitness evaluation
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<IndividualOrTeam P>
+auto mae_evaluator<P>::operator()(const P &prg) const
+{
+  return mae_evaluator::sum_of_errors_evaluator::operator()(prg);
+}
+
+///
 /// Sets up the environment for error measurement.
 ///
 /// \param[in] prg the program to be measured
@@ -181,6 +202,16 @@ double rmae_error_functor<P>::operator()(const example &example) const
 }
 
 ///
+/// \param[in] prg program (individual/team) used for fitness evaluation
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<IndividualOrTeam P>
+auto rmae_evaluator<P>::operator()(const P &prg) const
+{
+  return rmae_evaluator::sum_of_errors_evaluator::operator()(prg);
+}
+
+///
 /// Sets up the environment for error measurement.
 ///
 /// \param[in] prg the program to be measured
@@ -210,6 +241,16 @@ double mse_error_functor<P>::operator()(const example &example) const
 }
 
 ///
+/// \param[in] prg program (individual/team) used for fitness evaluation
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<IndividualOrTeam P>
+auto mse_evaluator<P>::operator()(const P &prg) const
+{
+  return mse_evaluator::sum_of_errors_evaluator::operator()(prg);
+}
+
+///
 /// Sets up the environment for error measurement.
 ///
 /// \param[in] prg the program to be measured
@@ -235,6 +276,16 @@ double count_error_functor<P>::operator()(const example &example) const
                              - label_as<D_DOUBLE>(example)));
 
   return err ? 1.0 : 0.0;
+}
+
+///
+/// \param[in] prg program (individual/team) used for fitness evaluation
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<IndividualOrTeam P>
+auto count_evaluator<P>::operator()(const P &prg) const
+{
+  return count_evaluator::sum_of_errors_evaluator::operator()(prg);
 }
 
 #endif  // include guard
