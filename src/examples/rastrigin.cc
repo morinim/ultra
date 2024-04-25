@@ -8,8 +8,11 @@
  *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
- *  \see https://github.com/morinim/vita/wiki/rastrigin_tutorial
+ *  \see
+ *  https://github.com/morinim/ultra/wiki/rastrigin_tutorial
  */
+
+/* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
 #include <numbers>
 #include "kernel/ultra.h"
