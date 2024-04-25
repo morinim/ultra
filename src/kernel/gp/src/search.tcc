@@ -121,9 +121,8 @@ void basic_search<ES, E>::calculate_metrics(summary<T> *s) const
 /// set for a given problem.
 ///
 /// \see
-/// * "Parameter Setting in Evolutionary Algorithms" (F.G. Lobo, C.F. Lima,
-///   Z. Michalewicz) - Springer;
-/// - https://github.com/morinim/ultra/wiki/bibliography#9
+/// - https://github.com/morinim/ultra/wiki/bibliography#11
+/// - https://github.com/morinim/ultra/wiki/bibliography#12
 ///
 template<template<class> class ES, Evaluator E>
 void basic_search<ES, E>::tune_parameters()
@@ -156,7 +155,7 @@ void basic_search<ES, E>::tune_parameters()
   }
 
   // A larger number of training cases requires an increase in the population
-  // size (e.g. https://github.com/morinim/ultra/wiki/bibliography#9 suggests
+  // size (e.g. https://github.com/morinim/ultra/wiki/bibliography#11 suggests
   // 10 - 1000 individuals for smaller problems; between 1000 and 10000
   // individuals for complex problem (more than 200 fitness cases).
   //
