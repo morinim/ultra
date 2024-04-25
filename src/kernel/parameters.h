@@ -57,7 +57,7 @@ struct parameters
     ///
     /// \note
     /// `0` means auto-tune.
-    std::size_t init_subgroups {1};
+    std::size_t init_subgroups {0};
 
     /// Minimum number of individuals in a layer of the population.
     ///
