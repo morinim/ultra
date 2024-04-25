@@ -44,13 +44,13 @@ problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
 
   training_.read(ds, p);
 
+  setup_terminals();
+
   ultraINFO << "...dataset read."
             << " Examples: " << training_.size()
             << ", categories: " << categories()
             << ", features: " << variables()
             << ", classes: " << classes();
-
-  setup_terminals();
 }
 
 ///
@@ -73,13 +73,13 @@ problem::problem(std::istream &ds, const dataframe::params &p) : problem()
 
   training_.read_csv(ds, p);
 
+  setup_terminals();
+
   ultraINFO << "...dataset read."
             << " Examples: " << training_.size()
             << ", categories: " << categories()
             << ", features: " << variables()
             << ", classes: " << classes();
-
-  setup_terminals();
 }
 
 ///
