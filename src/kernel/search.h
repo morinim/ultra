@@ -26,7 +26,7 @@ template<Individual I, Fitness F>
 struct search_stats
 {
   void update(const I &, const model_measurements<F> &,
-              std::chrono::milliseconds);
+              std::chrono::milliseconds, const model_measurements<F> &);
 
   I best_individual {};
   model_measurements<F> best_measurements {};
@@ -55,7 +55,8 @@ public:
 
   search(problem &, E);
 
-  search_stats<individual_t, fitness_t> run(unsigned = 1);
+  search_stats<individual_t, fitness_t> run(
+    unsigned = 1, const model_measurements<fitness_t> & = {});
 
   template<class V, class... Args> search &validation_strategy(Args && ...);
 

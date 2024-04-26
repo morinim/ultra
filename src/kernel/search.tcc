@@ -110,13 +110,15 @@ void search<ES, E>::tune_parameters()
 }
 
 ///
-/// \param[in] n number of runs
-/// \return      a summary of the search
+/// \param[in] n         number of runs
+/// \param[in] threshold used to identify successfully learned (matched,
+///                      classified, resolved...) examples
+/// \return              a summary of the search
 ///
 template<template<class> class ES, Evaluator E>
 search_stats<typename search<ES, E>::individual_t,
              typename search<ES, E>::fitness_t>
-search<ES, E>::run(unsigned n)
+search<ES, E>::run(unsigned n, const model_measurements<fitness_t> &threshold)
 {
   init();
 
@@ -135,7 +137,8 @@ search<ES, E>::run(unsigned n)
 
     // Update the search statistics (possibly using the validation setup).
     if (const auto prg = run_summary.best().ind; !prg.empty())
-      stats.update(prg, calculate_metrics(prg), run_summary.elapsed);
+      stats.update(prg, calculate_metrics(prg), run_summary.elapsed,
+                   threshold);
   }
 
   return stats;
@@ -221,11 +224,13 @@ bool search<ES, E>::is_valid() const
 ///                            finished
 /// \param[in] lr_measurements measurements from the last run
 /// \param[in] lr_elapsed      time taken for the last evolutionary run
+/// \param[in] threshold       used to identify good runs
 ///
 template<Individual I, Fitness F>
 void search_stats<I, F>::update(const I &lr_best_prg,
                                 const model_measurements<F> &lr_measurements,
-                                std::chrono::milliseconds lr_elapsed)
+                                std::chrono::milliseconds lr_elapsed,
+                                const model_measurements<F> &threshold)
 {
   if (lr_measurements > best_measurements)
   {
@@ -234,11 +239,9 @@ void search_stats<I, F>::update(const I &lr_best_prg,
     best_run = runs;
   }
 
-  //if (last_run.best.score.is_solution)
-  //{
-  //  overall.last_imp += lst_run.last_imp;
-  //  good_runs.insert(good_runs.end(), runs);
-  //}
+  if ((threshold.fitness.has_value() || threshold.accuracy.has_value())
+      && lr_measurements > threshold)
+    good_runs.insert(runs);
 
   using std::isfinite;
   if (const auto fit(*lr_measurements.fitness); isfinite(fit))
@@ -248,7 +251,7 @@ void search_stats<I, F>::update(const I &lr_best_prg,
 
   ++runs;
 
-  //Ensures(good_runs.empty() || good_runs.count(best_run));
+  Ensures(good_runs.empty() || good_runs.contains(best_run));
 }
 
 #endif  // include guard
