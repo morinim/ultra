@@ -347,4 +347,25 @@ bool basic_search<ES, E>::is_valid() const
   return ultra::search<ES, E>::is_valid();
 }
 
+template<IndividualOrTeam P>
+search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
+{
+}
+
+template<IndividualOrTeam P>
+search_stats<P, typename search<P>::fitness_t> search<P>::run(unsigned n)
+{
+  if (prob_.classification())
+  {
+    return {};
+  }
+  else
+  {
+    basic_search<alps_es, rmae_evaluator<P>> reg_search(
+      prob_, rmae_evaluator<P>(prob_.data()), metrics_);
+
+    return reg_search.run(n);
+  }
+}
+
 #endif  // include guard

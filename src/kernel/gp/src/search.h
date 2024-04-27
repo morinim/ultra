@@ -66,15 +66,16 @@ private:
 };  // class basic_search
 
 
+template<IndividualOrTeam P = gp::individual>
 class search
 {
 public:
-  using individual_t = gp::individual;
+  using individual_t = P;
   using fitness_t = double;
 
   search(problem &p, metric_flags m = metric_flags::nothing);
 
-  search_stats<individual_t, fitness_t> run(unsigned = 1);
+  search_stats<P, fitness_t> run(unsigned = 1);
 
 private:
   // *** Private data members ***
