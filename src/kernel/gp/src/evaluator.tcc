@@ -39,8 +39,9 @@ void evaluator<DAT>::dataset(DAT &d)
 ///
 /// \param[in] d the training dataset
 ///
-template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
-sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
+template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+requires ErrorFunction<ERRF<P>, DAT>
+sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
   : evaluator<DAT>(d)
 {
 }
@@ -52,15 +53,15 @@ sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
 /// \param[in] step consider just `1` example every `step`
 /// \return         the fitness (greater is better, max is `0`)
 ///
-template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
-template<IndividualOrTeam P>
-auto sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_impl(
+template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+requires ErrorFunction<ERRF<P>, DAT>
+auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
   const P &prg, typename DAT::difference_type step) const
 {
   Expects(std::distance(std::begin(*this->dat_), std::end(*this->dat_))
           >= step);
 
-  const ERRF err_fctr(prg);
+  const ERRF<P> err_fctr(prg);
 
   auto it(std::begin(*this->dat_));
   auto average_error(err_fctr(*it));
@@ -84,9 +85,9 @@ auto sum_of_errors_evaluator<ERRF, DAT>::sum_of_errors_impl(
 /// \param[in] prg program (individual/team) used for fitness evaluation
 /// \return        the fitness (greater is better, max is `0`)
 ///
-template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
-template<IndividualOrTeam P>
-auto sum_of_errors_evaluator<ERRF, DAT>::operator()(const P &prg) const
+template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+requires ErrorFunction<ERRF<P>, DAT>
+auto sum_of_errors_evaluator<P, ERRF, DAT>::operator()(const P &prg) const
 {
   return sum_of_errors_impl(prg, 1);
 }
@@ -98,9 +99,9 @@ auto sum_of_errors_evaluator<ERRF, DAT>::operator()(const P &prg) const
 /// This function is similar to operator()() but will skip `4` out of `5`
 /// training instances, so it's faster.
 ///
-template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
-template<IndividualOrTeam P>
-auto sum_of_errors_evaluator<ERRF, DAT>::fast(const P &prg) const
+template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+requires ErrorFunction<ERRF<P>, DAT>
+auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 {
   Expects(std::distance(this->dat_->begin(), this->dat_->end()) >= 100);
   return sum_of_errors_impl(prg, 5);
@@ -112,10 +113,10 @@ auto sum_of_errors_evaluator<ERRF, DAT>::fast(const P &prg) const
 /// \return        the lambda function associated with `prg` (`nullptr` in case
 ///                of errors).
 ///
-template<class ERRF, class DAT> requires ErrorFunction<ERRF, DAT>
-template<IndividualOrTeam P>
+template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+requires ErrorFunction<ERRF<P>, DAT>
 std::unique_ptr<basic_oracle>
-sum_of_errors_evaluator<ERRF, DAT>::oracle(const P &prg) const
+sum_of_errors_evaluator<P, ERRF, DAT>::oracle(const P &prg) const
 {
   return std::make_unique<basic_reg_oracle<P, true>>(prg);
 }
@@ -143,16 +144,6 @@ double mae_error_functor<P>::operator()(const example &example) const
                      - label_as<D_DOUBLE>(example));
 
   return std::numeric_limits<double>::max() / 1000.0;
-}
-
-///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
-///
-template<IndividualOrTeam P>
-auto mae_evaluator<P>::operator()(const P &prg) const
-{
-  return mae_evaluator::sum_of_errors_evaluator::operator()(prg);
 }
 
 ///
@@ -202,16 +193,6 @@ double rmae_error_functor<P>::operator()(const example &example) const
 }
 
 ///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
-///
-template<IndividualOrTeam P>
-auto rmae_evaluator<P>::operator()(const P &prg) const
-{
-  return rmae_evaluator::sum_of_errors_evaluator::operator()(prg);
-}
-
-///
 /// Sets up the environment for error measurement.
 ///
 /// \param[in] prg the program to be measured
@@ -241,16 +222,6 @@ double mse_error_functor<P>::operator()(const example &example) const
 }
 
 ///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
-///
-template<IndividualOrTeam P>
-auto mse_evaluator<P>::operator()(const P &prg) const
-{
-  return mse_evaluator::sum_of_errors_evaluator::operator()(prg);
-}
-
-///
 /// Sets up the environment for error measurement.
 ///
 /// \param[in] prg the program to be measured
@@ -276,16 +247,6 @@ double count_error_functor<P>::operator()(const example &example) const
                              - label_as<D_DOUBLE>(example)));
 
   return err ? 1.0 : 0.0;
-}
-
-///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
-///
-template<IndividualOrTeam P>
-auto count_evaluator<P>::operator()(const P &prg) const
-{
-  return count_evaluator::sum_of_errors_evaluator::operator()(prg);
 }
 
 #endif  // include guard

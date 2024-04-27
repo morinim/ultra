@@ -60,22 +60,21 @@ protected:
 /// \see
 /// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
 ///
-template<class ERRF, class DAT = dataframe>
-requires ErrorFunction<ERRF, DAT>
+template<IndividualOrTeam P, template<class> class ERRF, class DAT = dataframe>
+requires ErrorFunction<ERRF<P>, DAT>
 class sum_of_errors_evaluator : public evaluator<DAT>
 {
 public:
   explicit sum_of_errors_evaluator(DAT &);
 
-  template<IndividualOrTeam P> [[nodiscard]] auto operator()(const P &) const;
-  template<IndividualOrTeam P> [[nodiscard]] auto fast(const P &) const;
+  [[nodiscard]] auto operator()(const P &) const;
+  [[nodiscard]] auto fast(const P &) const;
 
-  template<IndividualOrTeam P>
   [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
 
 private:
-  template<IndividualOrTeam P> [[nodiscard]] auto sum_of_errors_impl(
-    const P &, typename DAT::difference_type) const;
+  [[nodiscard]] auto sum_of_errors_impl(const P &,
+                                        typename DAT::difference_type) const;
 };
 
 ///
@@ -109,12 +108,10 @@ private:
 /// mae_error_functor
 ///
 template<IndividualOrTeam P>
-class mae_evaluator : public sum_of_errors_evaluator<mae_error_functor<P>>
+class mae_evaluator : public sum_of_errors_evaluator<P, mae_error_functor>
 {
 public:
   using mae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-
-  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -154,12 +151,10 @@ private:
 /// \see rmae_error_functor
 ///
 template<IndividualOrTeam P>
-class rmae_evaluator : public sum_of_errors_evaluator<rmae_error_functor<P>>
+class rmae_evaluator : public sum_of_errors_evaluator<P, rmae_error_functor>
 {
 public:
   using rmae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-
-  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -205,12 +200,10 @@ private:
 /// mse_error_functor
 ///
 template<IndividualOrTeam P>
-class mse_evaluator : public sum_of_errors_evaluator<mse_error_functor<P>>
+class mse_evaluator : public sum_of_errors_evaluator<P, mse_error_functor>
 {
 public:
   using mse_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-
-  [[nodiscard]] auto operator()(const P &) const;
 };
 
 ///
@@ -242,12 +235,10 @@ private:
 /// count_error_functor
 ///
 template<IndividualOrTeam P>
-class count_evaluator : public sum_of_errors_evaluator<count_error_functor<P>>
+class count_evaluator : public sum_of_errors_evaluator<P, count_error_functor>
 {
 public:
   using count_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-
-  [[nodiscard]] auto operator()(const P &) const;
 };
 
 #include "kernel/gp/src/evaluator.tcc"
