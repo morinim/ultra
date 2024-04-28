@@ -47,6 +47,7 @@
 #include "test/src_evaluator.cc"
 #include "test/src_interpreter.cc"
 #include "test/src_problem.cc"
+#include "test/src_search.cc"
 #include "test/symbol_set.cc"
 #include "test/team.cc"
 #include "test/terminal.cc"
