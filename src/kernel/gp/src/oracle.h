@@ -14,6 +14,7 @@
 #define      ULTRA_ORACLE_H
 
 #include "kernel/exceptions.h"
+#include "kernel/gp/src/calculate_metrics.h"
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/interpreter.h"
 #include "kernel/gp/team.h"
@@ -30,6 +31,7 @@ namespace src
 
 // Forward declarations.
 class basic_oracle;
+class model_metric;
 
 namespace serialize
 {
@@ -89,8 +91,8 @@ public:
 
   [[nodiscard]] virtual bool is_valid() const = 0;
 
-  //[[nodiscard]] virtual double measure(const model_metric &,
-  //                                     const dataframe &) const = 0;
+  [[nodiscard]] virtual double measure(const model_metric &,
+                                       const dataframe &) const = 0;
   [[nodiscard]] virtual std::string name(const value_t &) const = 0;
   [[nodiscard]] virtual classification_result tag(const example &) const = 0;
 
@@ -134,8 +136,8 @@ public:
 
   [[nodiscard]] std::string name(const value_t &) const final;
 
-  //[[nodiscard]] double measure(const model_metric &,
-  //                             const dataframe &) const final;
+  [[nodiscard]] double measure(const model_metric &,
+                               const dataframe &) const final;
 
   [[nodiscard]] bool is_valid() const final;
 

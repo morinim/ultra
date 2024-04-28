@@ -102,12 +102,12 @@ std::string basic_reg_oracle<P, S>::name(const value_t &a) const
 /// \param[in] d a dataset
 /// \return      the value of `this` according to metric `m`
 ///
-//template<IndividualOrTeam P, bool S>
-//double basic_reg_omega<P, S>::measure(const model_metric &m,
-//                                      const dataframe &d) const
-//{
-//  return m(this, d);
-//}
+template<IndividualOrTeam P, bool S>
+double basic_reg_oracle<P, S>::measure(const model_metric &m,
+                                       const dataframe &d) const
+{
+  return m(this, d);
+}
 
 ///
 /// \return `true` if the object passes the internal consistency check
