@@ -95,7 +95,7 @@ void test_team_of_one(ultra::src::problem &pr)
 
     for (const auto &e : pr.data())
     {
-      const auto out_i(li(e)), out_t(lt(e));
+      const auto out_i(li(e.input)), out_t(lt(e.input));
 
       if (has_value(out_i))
       {
@@ -154,7 +154,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
 
     for (const auto &e : pr.data())
     {
-      const auto out_i(li(e)), out_t(lt(e));
+      const auto out_i(li(e.input)), out_t(lt(e.input));
 
       if (has_value(out_i))
       {
@@ -186,10 +186,10 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
 
     for (const auto &e : pr.data())
     {
-      const auto out1(oracle1(e));
-      const auto out2(oracle2(e));
-      const auto out3(oracle3(e));
-      const auto out4(oracle4(e));
+      const auto out1(oracle1(e.input));
+      const auto out2(oracle2(e.input));
+      const auto out3(oracle3(e.input));
+      const auto out4(oracle4(e.input));
 
       D_DOUBLE sum(0.0), n(0.0);
       if (has_value(out1))
@@ -215,7 +215,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
 
       if (n > 0.0)
       {
-        const auto out_t(oracle_team(e));
+        const auto out_t(oracle_team(e.input));
 
         if (std::fabs(sum / n) < 0.000001)
           CHECK(almost_equal(std::get<D_DOUBLE>(out_t), 0.0));

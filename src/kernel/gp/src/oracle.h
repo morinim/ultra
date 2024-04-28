@@ -84,7 +84,8 @@ class basic_oracle
 public:
   virtual ~basic_oracle() = default;
 
-  [[nodiscard]] virtual value_t operator()(const example &) const = 0;
+  [[nodiscard]] virtual value_t operator()(
+    const std::vector<value_t> &) const = 0;
 
   [[nodiscard]] virtual bool is_valid() const = 0;
 
@@ -129,7 +130,7 @@ public:
   explicit basic_reg_oracle(const P &);
   basic_reg_oracle(std::istream &, const symbol_set &);
 
-  [[nodiscard]] value_t operator()(const example &) const final;
+  [[nodiscard]] value_t operator()(const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string name(const value_t &) const final;
 

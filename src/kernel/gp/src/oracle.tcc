@@ -50,10 +50,10 @@ basic_reg_oracle<P, S>::basic_reg_oracle(std::istream &in,
 /// \return      the output value associated with `e`
 ///
 template<IndividualOrTeam P, bool S>
-value_t basic_reg_oracle<P, S>::operator()(const example &e) const
+value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 {
   if constexpr (!Team<P>)
-    return this->run(e.input);
+    return this->run(e);
   else
   {
     D_DOUBLE avg(0), count(0);
@@ -61,7 +61,7 @@ value_t basic_reg_oracle<P, S>::operator()(const example &e) const
     // Calculate the running average.
     for (const auto &core : this->team_)
     {
-      const auto res(core.run(e.input));
+      const auto res(core.run(e));
 
       if (has_value(res))
         avg += (std::get<D_DOUBLE>(res) - avg) / ++count;

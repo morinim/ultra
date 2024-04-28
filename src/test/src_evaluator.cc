@@ -151,19 +151,22 @@ TEST_CASE("Evaluators")
     {
       const src::reg_oracle oracle(delphi);
       for (std::size_t i(0); const auto &e : pr.data())
-        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++]));
+        CHECK(std::get<D_DOUBLE>(oracle(e.input))
+              == doctest::Approx(out[i++]));
     }
 
     {
       const src::reg_oracle oracle(delta1);
       for (std::size_t i(0); const auto &e : pr.data())
-        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++] + 1));
+        CHECK(std::get<D_DOUBLE>(oracle(e.input))
+              == doctest::Approx(out[i++] + 1));
     }
 
     {
       const src::reg_oracle oracle(delta2);
       for (std::size_t i(0); const auto &e : pr.data())
-        CHECK(std::get<D_DOUBLE>(oracle(e)) == doctest::Approx(out[i++] + 2));
+        CHECK(std::get<D_DOUBLE>(oracle(e.input))
+              == doctest::Approx(out[i++] + 2));
     }
   }
 

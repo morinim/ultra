@@ -139,7 +139,7 @@ mae_error_functor<P>::mae_error_functor(const P &prg) : oracle_(prg)
 template<IndividualOrTeam P>
 double mae_error_functor<P>::operator()(const example &example) const
 {
-  if (const auto foreseen(oracle_(example)); has_value(foreseen))
+  if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
     return std::fabs(std::get<D_DOUBLE>(foreseen)
                      - label_as<D_DOUBLE>(example));
 
@@ -168,7 +168,7 @@ double rmae_error_functor<P>::operator()(const example &example) const
   constexpr double ERR_SUP(200.0);
   double err(ERR_SUP);
 
-  if (const auto foreseen(oracle_(example)); has_value(foreseen))
+  if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
     const auto approx(std::get<D_DOUBLE>(foreseen));
     const auto target(label_as<D_DOUBLE>(example));
@@ -211,7 +211,7 @@ mse_error_functor<P>::mse_error_functor(const P &prg) : oracle_(prg)
 template<IndividualOrTeam P>
 double mse_error_functor<P>::operator()(const example &example) const
 {
-  if (const auto foreseen(oracle_(example)); has_value(foreseen))
+  if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
     const double err(std::get<D_DOUBLE>(foreseen)
                      - label_as<D_DOUBLE>(example));
@@ -240,7 +240,7 @@ count_error_functor<P>::count_error_functor(const P &prg) : oracle_(prg)
 template<IndividualOrTeam P>
 double count_error_functor<P>::operator()(const example &example) const
 {
-  const auto foreseen(oracle_(example));
+  const auto foreseen(oracle_(example.input));
 
   const bool err(!has_value(foreseen)
                  || !issmall(std::get<D_DOUBLE>(foreseen)
