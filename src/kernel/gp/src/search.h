@@ -73,9 +73,14 @@ public:
   using individual_t = P;
   using fitness_t = double;
 
+  using reg_evaluator_t = rmae_evaluator<P>;
+
   search(problem &p, metric_flags m = metric_flags::nothing);
 
-  search_stats<P, fitness_t> run(unsigned = 1);
+  search_stats<P, fitness_t> run(unsigned = 1,
+                                 const model_measurements<fitness_t> & = {});
+
+  std::unique_ptr<basic_oracle> oracle(const P &) const;
 
 private:
   // *** Private data members ***

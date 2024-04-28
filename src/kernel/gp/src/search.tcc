@@ -353,7 +353,8 @@ search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
 }
 
 template<IndividualOrTeam P>
-search_stats<P, typename search<P>::fitness_t> search<P>::run(unsigned n)
+search_stats<P, typename search<P>::fitness_t> search<P>::run(
+  unsigned n, const model_measurements<fitness_t> &threshold)
 {
   if (prob_.classification())
   {
@@ -361,11 +362,20 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(unsigned n)
   }
   else
   {
-    basic_search<alps_es, rmae_evaluator<P>> reg_search(
-      prob_, rmae_evaluator<P>(prob_.data()), metrics_);
+    basic_search<alps_es, reg_evaluator_t> reg_search(
+      prob_, reg_evaluator_t(prob_.data()), metrics_);
 
-    return reg_search.run(n);
+    return reg_search.run(n, threshold);
   }
+}
+
+template<IndividualOrTeam P>
+std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
+{
+  if (prob_.classification())
+    return nullptr;
+  else
+    return reg_evaluator_t(prob_.data()).oracle(prg);
 }
 
 #endif  // include guard

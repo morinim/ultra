@@ -110,6 +110,8 @@ void search<ES, E>::tune_parameters()
 }
 
 ///
+/// Executes a given number of evolutionary-runs possibly saving good runs.
+///
 /// \param[in] n         number of runs
 /// \param[in] threshold used to identify successfully learned (matched,
 ///                      classified, resolved...) examples
