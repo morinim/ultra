@@ -100,7 +100,7 @@ TEST_CASE("Filtering")
   SUBCASE("Random dataframe / random filtering")
   {
     dataframe::params p;
-    p.filter = [](dataframe::record_t &) { return random::boolean(); };
+    p.filter = [](auto &) { return random::boolean(); };
 
     dataframe d;
     d.read_csv(ss, p);

@@ -79,15 +79,6 @@ public:
   using examples_t = std::vector<src::example>;
   using value_type = examples_t::value_type;
 
-  /// Raw input record.
-  /// The ETL chain is:
-  /// > FILE -> record_t -> example --(ultra::push_back)--> ultra::dataframe
-  using record_t = std::vector<std::string>;
-
-  /// A filter and transform function (returns `true` for records that should
-  /// be loaded and, possibly, transform its input parameter).
-  using filter_hook_t = std::function<bool (record_t &)>;
-
   // ---- Constructors ----
   dataframe() = default;
   explicit dataframe(std::istream &);
@@ -136,6 +127,11 @@ public:
   src::columns_info columns {};
 
 private:
+  // Raw input record.
+  // The ETL chain is:
+  // > FILE -> record_t -> example --(push_back)--> dataframe
+  using record_t = std::vector<std::string>;
+
   bool read_record(const record_t &, bool);
   [[nodiscard]] src::example to_example(const record_t &, bool);
 
@@ -179,8 +175,9 @@ struct dataframe::params
   /// Used only when reading CSV files.
   pocket_csv::dialect dialect {};
 
-  /// A filter and transform function applied when reading data.
-  filter_hook_t filter {nullptr};
+  /// A filter and transform function (returns `true` for records that should
+  /// be loaded and, possibly, transforms its input parameter).
+  pocket_csv::parser::filter_hook_t filter {nullptr};
 
   /// Index of the column containing the output value (label).
   /// \remark

@@ -620,6 +620,7 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
     // Every new record may add further information about the column domain.
     const bool has_header(p.dialect.has_header
                           == pocket_csv::dialect::HAS_HEADER);
+
     if (count < 10)
       columns.build(record, has_header);
     if (has_header == false || count)
