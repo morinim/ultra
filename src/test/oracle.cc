@@ -22,8 +22,20 @@
 
 #define TEST_WTA
 
-// Examples in dataset
-constexpr std::size_t SR_COUNT        =  10;
+// Datasets
+constexpr std::size_t SR_COUNT = 10;
+std::istringstream sr(R"(
+      95.2425,  2.81
+    1554,       6
+    2866.5485,  7.043
+    4680,       8
+   11110,      10
+   18386.0340, 11.38
+   22620,      12
+   41370,      14
+   54240,      15
+  168420,      20
+)");
 
 template<template<class> class L, ultra::IndividualOrTeam T, unsigned P>
 struct build
@@ -124,19 +136,6 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
 {
   using namespace ultra;
 
-  std::istringstream sr(R"(
-        95.2425,  2.81
-      1554,       6
-      2866.5485,  7.043
-      4680,       8
-     11110,      10
-     18386.0340, 11.38
-     22620,      12
-     41370,      14
-     54240,      15
-    168420,      20
-)");
-
   CHECK(pr.data().read_csv(sr) == SR_COUNT);
   pr.setup_symbols();
 
@@ -233,40 +232,40 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     }
   }
 }
-/*
+
 TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
 {
   using namespace ultra;
 
-  CHECK(pr.data().read("./test_resources/mep.csv") == MEP_COUNT);
+  CHECK(pr.data().read_csv(sr) == SR_COUNT);
   pr.setup_symbols();
 
-  for (unsigned k(0); k < 1000; ++k)
+  for (unsigned iterations(1000); iterations; --iterations)
   {
-    const i_mep ind(pr);
-    const reg_lambda_f<i_mep> lambda1(ind);
+    const gp::individual ind(pr);
+    const src::reg_oracle oracle1(ind);
 
     std::stringstream ss;
 
-    CHECK(serialize::save(ss, lambda1));
-    const auto lambda2(serialize::lambda::load(ss, pr.sset));
-    REQUIRE(lambda2);
-    REQUIRE(lambda2->is_valid());
+    CHECK(src::serialize::save(ss, oracle1));
+    const auto oracle2(src::serialize::oracle::load(ss, pr.sset));
+    REQUIRE(oracle2);
+    REQUIRE(oracle2->is_valid());
 
     for (const auto &e : pr.data())
     {
-      const auto out1(lambda1(e));
-      const auto out2((*lambda2)(e));
+      const auto out1(oracle1(e.input));
+      const auto out2((*oracle2)(e.input));
 
       if (has_value(out1))
-        CHECK(lexical_cast<D_DOUBLE>(out1)
-              == doctest::Approx(lexical_cast<D_DOUBLE>(out2)));
+        CHECK(std::get<D_DOUBLE>(out1)
+              == doctest::Approx(std::get<D_DOUBLE>(out2)));
       else
         CHECK(!has_value(out2));
     }
   }
 }
-
+/*
 template<template<class> class L, unsigned P = 0>
 void test_team(ultra::src_problem &pr)
 {
