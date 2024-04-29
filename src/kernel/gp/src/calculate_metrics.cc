@@ -16,11 +16,11 @@ namespace ultra::src
 {
 
 ///
-/// \param[in] l the model whose accuracy we are evaluating
+/// \param[in] o the model whose accuracy we are evaluating
 /// \param[in] d a dataset
 /// \return      the accuracy
 ///
-double accuracy_metric::operator()(const core_reg_oracle *l,
+double accuracy_metric::operator()(const core_reg_oracle *o,
                                    const dataframe &d) const
 {
   Expects(!d.classes());
@@ -30,7 +30,7 @@ double accuracy_metric::operator()(const core_reg_oracle *l,
 
   for (const auto &example : d)
   {
-    if (const auto res((*l)(example.input));
+    if (const auto res((*o)(example.input));
         has_value(res) && issmall(std::get<D_DOUBLE>(res)
                                   - label_as<D_DOUBLE>(example)))
       ++ok;
@@ -43,28 +43,28 @@ double accuracy_metric::operator()(const core_reg_oracle *l,
 }
 
 ///
-/// \param[in] l the model whose accuracy we are evaluating
+/// \param[in] o the model whose accuracy we are evaluating
 /// \param[in] d a dataset
 /// \return      the accuracy
 ///
-//double accuracy_metric::operator()(const core_class_oracle *l,
-//                                   const dataframe &d) const
-//{
-//  Expects(d.classes());
-//  Expects(d.begin() != d.end());
+double accuracy_metric::operator()(const core_class_oracle *o,
+                                   const dataframe &d) const
+{
+  Expects(d.classes());
+  Expects(d.begin() != d.end());
 
-//  std::uintmax_t ok(0), total_nr(0);
+  std::uintmax_t ok(0), total_nr(0);
 
-//  for (const auto &example : d)
-//  {
-//    if (l->tag(example).label == label(example))
-//      ++ok;
+  for (const auto &example : d)
+  {
+    if (o->tag(example.input).label == label(example))
+      ++ok;
 
-//    ++total_nr;
-//  }
+    ++total_nr;
+  }
 
-//  Ensures(total_nr);
-//  return static_cast<double>(ok) / static_cast<double>(total_nr);
-//}
+  Ensures(total_nr);
+  return static_cast<double>(ok) / static_cast<double>(total_nr);
+}
 
 }  // namespace ultra::src

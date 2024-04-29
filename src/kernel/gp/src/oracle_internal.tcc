@@ -165,6 +165,124 @@ public:
   std::vector<reg_oracle_storage<typename T::value_type, S>> team_ {};
 };
 
+// ***********************************************************************
+// *  class_names                                                        *
+// ***********************************************************************
+
+///
+/// A class which (optionally) stores a vector of names.
+///
+/// \tparam N if `true` stores the names (otherwise saves memory)
+///
+/// This class is used for optimize the storage of basic_class_oracle. The
+/// strategy used is the so called 'Empty Base Class Optimization': the
+/// compiler is allowed to flatten the inheritance hierarchy in a way that
+/// the empty base class does not consume space (this is not true for empty
+/// class data members because C++ requires data member to have non-zero size
+/// to ensure object identity).
+///
+/// \see
+/// https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Empty_Base_Optimization
+///
+template<bool N>
+class class_names
+{
+public:
+  // *** Serialization ***
+  bool load(std::istream &) { return true; }
+  bool save(std::ostream &) const { return true; }
+
+protected:
+  class_names() = default;
+
+  /// Without names... there is nothing to do.
+  explicit class_names(const dataframe &) {}
+
+  /// \param[in] a id of a class
+  /// \return      the name of class `a`
+  [[nodiscard]] std::string string(const value_t &a) const
+  {
+    return std::to_string(std::get<D_INT>(a));
+  }
+};
+
+template<>
+class class_names<true>
+{
+public:
+  // *** Serialization ***
+
+  /// Loads the names from storage.
+  ///
+  /// \param[in] in input stream
+  /// \return       `true` on success
+  bool load(std::istream &in)
+  {
+    std::size_t n;
+    if (!(in >> n) || !n)
+      return false;
+
+    decltype(names_) v(n);
+
+    // When used immediately after whitespace-delimited input (e.g. after
+    // `int n; std::cin >> n;`) `getline` consumes the endline character left
+    // on the input stream by `operator>>` and returns immediately. A common
+    // solution, before switching to line-oriented input, is to ignore all
+    // leftover characters on the line of input with:
+    std::ws(in);
+
+    for (auto &line : v)
+      if (!getline(in, line))
+        return false;
+
+    names_ = v;
+
+    return true;
+  }
+
+  /// Saves the names.
+  ///
+  /// \param[out] o output stream
+  /// \return       `true` on success
+  ///
+  /// One name per line, end of line character is `\n`. First line contains
+  /// the number of names.
+  bool save(std::ostream &o) const
+  {
+    if (!(o << names_.size() << '\n'))
+      return false;
+
+    for (const auto &n : names_)
+      if (!(o << n << '\n'))
+        return false;
+
+    return o.good();
+  }
+
+protected:
+  class_names() = default;
+
+  /// \param[in] d the training set
+  explicit class_names(const dataframe &d) : names_(d.classes())
+  {
+    Expects(d.classes() > 1);
+    const auto classes(d.classes());
+
+    for (std::size_t i(0); i < classes; ++i)
+      names_[i] = d.class_name(i);
+  }
+
+  /// \param[in] a id of a class
+  /// \return      the name of class `a`
+  [[nodiscard]] std::string string(const value_t &a) const
+  {
+    return names_[std::get<D_INT>(a)];
+  }
+
+private:
+  std::vector<std::string> names_ {};
+};
+
 }  // namespace internal
 
 #endif  // include guard

@@ -19,6 +19,7 @@
 namespace ultra::src
 {
 
+class core_class_oracle;
 class core_reg_oracle;
 
 ///
@@ -35,8 +36,8 @@ class model_metric
 public:
   [[nodiscard]] virtual double operator()(const core_reg_oracle *,
                                           const dataframe &) const = 0;
-  //[[nodiscard]] virtual double operator()(const core_class_oracle *,
-  //                                        const dataframe &) const = 0;
+  [[nodiscard]] virtual double operator()(const core_class_oracle *,
+                                          const dataframe &) const = 0;
 };
 
 ///
@@ -60,8 +61,8 @@ public:
   [[nodiscard]] double operator()(const core_reg_oracle *,
                                   const dataframe &) const override;
 
-  //[[nodiscard]] double operator()(const core_class_oracle *,
-  //                                const dataframe &) const override;
+  [[nodiscard]] double operator()(const core_class_oracle *,
+                                  const dataframe &) const override;
 };
 
 }  // namespace ultra::src

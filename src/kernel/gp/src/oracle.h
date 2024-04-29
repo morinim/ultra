@@ -39,8 +39,9 @@ namespace serialize
 namespace oracle
 {
 
-template<IndividualOrTeam P> std::unique_ptr<basic_oracle> load(
-  std::istream &, const symbol_set &);
+template<IndividualOrTeam P = gp::individual>
+[[nodiscard]] std::unique_ptr<basic_oracle>
+load(std::istream &, const symbol_set &);
 
 }  // namespace oracle
 
@@ -94,7 +95,8 @@ public:
   [[nodiscard]] virtual double measure(const model_metric &,
                                        const dataframe &) const = 0;
   [[nodiscard]] virtual std::string name(const value_t &) const = 0;
-  [[nodiscard]] virtual classification_result tag(const example &) const = 0;
+  [[nodiscard]] virtual classification_result tag(
+    const std::vector<value_t> &) const = 0;
 
 private:
   // *** Serialization ***
@@ -103,7 +105,7 @@ private:
 
   template<IndividualOrTeam P> friend std::unique_ptr<basic_oracle>
   serialize::oracle::load(std::istream &, const symbol_set &);
-  friend bool serialize::save(std::ostream &, const basic_oracle *);
+  friend bool serialize::save(std::ostream &, const basic_oracle &);
 };
 
 // ***********************************************************************
@@ -147,9 +149,106 @@ public:
 
 private:
   // Not useful for regression tasks and moved to private section.
-  [[nodiscard]] classification_result tag(const example &) const final;
+  [[nodiscard]] classification_result tag(
+    const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+};
+
+// ***********************************************************************
+// * Classification                                                      *
+// ***********************************************************************
+
+///
+/// For classification problems there are two major possibilities to combine
+/// the outputs of multiple predictors: either the raw output values or the
+/// classification decisions can be aggregated (in the latter case the team
+/// members act as full pre-classificators themselves). We decided for the
+/// latter and combined classification decisions (thanks to the confidence
+/// parameter we don't have a reduction in the information content that each
+/// individual can contribute to the common team decision).
+///
+enum class team_composition
+{
+  mv,  // majority voting
+  wta, // winner takes all
+
+  standard = wta
+};
+
+/// The model_metric class choose the appropriate method considering this type.
+/// \see
+/// core_reg_oracle
+class core_class_oracle : public basic_oracle {};
+
+///
+/// The basic interface of a classification oracle.
+///
+/// \tparam N stores the name of the classes vs doesn't store the names
+///
+/// This class:
+/// - extends the interface of class basic_oracle to handle typical
+///   requirements of classification tasks;
+/// - factorizes out some code from specific classification schemes;
+/// - optionally stores class names.
+///
+template<bool N>
+class basic_class_oracle : public core_class_oracle,
+                           protected internal::class_names<N>
+{
+public:
+  explicit basic_class_oracle(const dataframe &);
+
+  [[nodiscard]] value_t operator()(const std::vector<value_t> &) const final;
+
+  [[nodiscard]] std::string name(const value_t &) const final;
+
+  [[nodiscard]] double measure(const model_metric &,
+                               const dataframe &) const final;
+
+protected:
+  basic_class_oracle() = default;
+};
+
+///
+/// Oracle for the Gaussian Distribution Classification.
+///
+/// \tparam S stores the individual inside vs keep a reference only
+/// \tparam N stores the name of the classes vs doesn't store the names
+///
+/// \see
+/// ultra::src::::gaussian_evaluator for further details.
+///
+template<IndividualOrTeam P, bool S, bool N>
+class basic_gaussian_oracle : public basic_class_oracle<N>
+{
+public:
+  basic_gaussian_oracle(const P &, dataframe &);
+  basic_gaussian_oracle(std::istream &, const symbol_set &);
+
+  [[nodiscard]] classification_result tag(
+    const std::vector<value_t> &) const final;
+
+  [[nodiscard]] bool is_valid() const final;
+
+  // *** Serialization ***
+  static const std::string SERIALIZE_ID;
+  bool save(std::ostream &) const final;
+
+private:
+  // *** Private support methods ***
+  void fill_vector(dataframe &);
+  bool load_(std::istream &, const symbol_set &, std::true_type);
+  bool load_(std::istream &, const symbol_set &, std::false_type);
+
+  [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+
+  // *** Private data members ***
+  basic_reg_oracle<P, S> oracle_;
+
+  // `gauss_dist[i]` contains the gaussian distribution of the i-th class of
+  // the classification problem.
+  std::vector<distribution<double>> gauss_dist_ {};
 };
 
 // ***********************************************************************
@@ -163,6 +262,13 @@ public:
 };
 template<IndividualOrTeam P> reg_oracle(const P &) -> reg_oracle<P>;
 
+template<IndividualOrTeam P>
+class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
+{
+public:
+  using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
+};
+template<IndividualOrTeam P> gaussian_oracle(const P &) -> gaussian_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"
 }  // namespace src
