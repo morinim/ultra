@@ -24,7 +24,7 @@
 TEST_SUITE("SRC::SEARCH")
 {
 
-TEST_CASE("Symbolic regression")
+TEST_CASE("Symbolic regression - single variable")
 {
   using namespace ultra;
 
@@ -71,8 +71,56 @@ TEST_CASE("Symbolic regression")
     { 11.4634,  12.0}
   };
 
-  for (const auto [out, in] : test)
+  for (const auto &[out, in] : test)
     CHECK(std::get<D_DOUBLE>((*oracle)({in})) == doctest::Approx(out));
+}
+
+TEST_CASE("Symbolic regression - multiple variables")
+{
+  using namespace ultra;
+
+  log::reporting_level = log::lWARNING;
+
+  // The target function is `ln(x*x + y*y)`
+  std::istringstream training(R"(
+    -2.079, 0.25, 0.25
+    -0.693, 0.50, 0.50
+     0.693, 1.00, 1.00
+     0.000, 0.00, 1.00
+     0.000, 1.00, 0.00
+     1.609, 1.00, 2.00
+     1.609, 2.00, 1.00
+     2.079, 2.00, 2.00
+  )");
+
+  // READING INPUT DATA
+  src::problem prob(training);
+
+  // SETTING UP SYMBOLS
+  prob.insert<real::sin>();
+  prob.insert<real::add>();
+  prob.insert<real::sub>();
+  prob.insert<real::mul>();
+  prob.insert<real::ln>();
+
+  // SEARCHING
+  src::search s(prob);
+  const auto result(s.run());
+
+  const auto oracle(s.oracle(result.best_individual));
+  CHECK(oracle->is_valid());
+
+  const std::vector<std::pair<double, std::vector<value_t>>> test =
+  {
+    { 2.07944, {-2.0, -2.0}},
+    { 2.89037, { 3.0,  3.0}},
+    {-3.91202, { 0.1,  0.1}},
+    {-4.60517, { 0.1,  0.0}},
+    {-4.60517, { 0.0,  0.1}}
+  };
+
+  for (const auto &[out, in] : test)
+    CHECK(std::get<D_DOUBLE>((*oracle)(in)) == doctest::Approx(out));
 }
 
 }  // TEST_SUITE("SRC::SEARCH")
