@@ -266,7 +266,7 @@ private:
 /// \tparam C composition method for team's member responses
 ///
 template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L,
+         template<class, bool, bool> class L,
          team_composition C = team_composition::standard>
 class team_class_oracle : public basic_class_oracle<N>
 {

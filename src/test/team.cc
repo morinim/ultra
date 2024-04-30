@@ -145,13 +145,13 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
     const auto tc(crossover(t1, t2));
     CHECK(tc.is_valid());
 
-    for (std::size_t x(0); x < tc.size(); ++x)
-      for (locus::index_t i(0); i < tc[x].size(); ++i)
-        for (symbol::category_t c(0); c < tc[x].categories(); ++c)
+    for (std::size_t p(0); p < tc.size(); ++p)
+      for (locus::index_t i(0); i < tc[p].size(); ++i)
+        for (symbol::category_t c(0); c < tc[p].categories(); ++c)
         {
           const locus l{i, c};
 
-          CHECK((tc[x][l] == t1[x][l] || tc[x][l] == t2[x][l]));
+          CHECK((tc[p][l] == t1[p][l] || tc[p][l] == t2[p][l]));
         }
   }
 }

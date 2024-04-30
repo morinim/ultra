@@ -26,7 +26,7 @@ const std::string basic_gaussian_oracle<I, S, N>::SERIALIZE_ID(
   "GAUSSIAN_ORACLE");
 
 template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L,
+         template<class, bool, bool> class L,
          team_composition C>
 const std::string team_class_oracle<I, S, N, L, C>::SERIALIZE_ID(
   "TEAM_" + L<I, S, N>::SERIALIZE_ID);
@@ -357,8 +357,8 @@ bool basic_gaussian_oracle<I, S, N>::is_valid() const
 /// \param[in] d    the training set
 /// \param[in] args auxiliary parameters for the specific oracle
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 template<class... Args>
 team_class_oracle<I, S, N, L, C>::team_class_oracle(const team<I> &t,
                                                     dataframe &d,
@@ -376,8 +376,8 @@ team_class_oracle<I, S, N, L, C>::team_class_oracle(const team<I> &t,
 /// \param[in] in input stream
 /// \param[in] ss active symbol set
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 team_class_oracle<I, S, N, L, C>::team_class_oracle(std::istream &in,
                                                     const symbol_set &ss)
   : basic_class_oracle<N>()
@@ -416,8 +416,8 @@ team_class_oracle<I, S, N, L, C>::team_class_oracle(std::istream &in,
 ///   best fitness. Then a decision on unknown data is only possible if the
 ///   right outputs are known in advance and is not made by the team itself).
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 classification_result team_class_oracle<I, S, N, L, C>::tag(
   const std::vector<value_t> &instance) const
 {
@@ -459,8 +459,8 @@ classification_result team_class_oracle<I, S, N, L, C>::tag(
 /// \param[out] out output stream
 /// \return         `true` on success
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 bool team_class_oracle<I, S, N, L, C>::save(std::ostream &out) const
 {
   if (!(out << classes_ << '\n'))
@@ -479,8 +479,8 @@ bool team_class_oracle<I, S, N, L, C>::save(std::ostream &out) const
 ///
 /// \return class ID used for serialization
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 std::string team_class_oracle<I, S, N, L, C>::serialize_id() const
 {
   Expects(team_.size());
@@ -490,8 +490,8 @@ std::string team_class_oracle<I, S, N, L, C>::serialize_id() const
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<Individual I, bool S, bool N,
-         template<Individual, bool, bool> class L, team_composition C>
+template<Individual I, bool S, bool N, template<class, bool, bool> class L,
+         team_composition C>
 bool team_class_oracle<I, S, N, L, C>::is_valid() const
 {
   return classes_ > 1;
