@@ -213,17 +213,18 @@ protected:
 ///
 /// Oracle for the Gaussian Distribution Classification.
 ///
+/// \tparam I individual
 /// \tparam S stores the individual inside vs keep a reference only
 /// \tparam N stores the name of the classes vs doesn't store the names
 ///
 /// \see
 /// ultra::src::::gaussian_evaluator for further details.
 ///
-template<IndividualOrTeam P, bool S, bool N>
+template<class I, bool S, bool N>
 class basic_gaussian_oracle : public basic_class_oracle<N>
 {
 public:
-  basic_gaussian_oracle(const P &, dataframe &);
+  basic_gaussian_oracle(const I &, dataframe &);
   basic_gaussian_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -244,11 +245,67 @@ private:
   [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
 
   // *** Private data members ***
-  basic_reg_oracle<P, S> oracle_;
+  basic_reg_oracle<I, S> oracle_;
 
   // `gauss_dist[i]` contains the gaussian distribution of the i-th class of
   // the classification problem.
   std::vector<distribution<double>> gauss_dist_ {};
+};
+
+// ***********************************************************************
+// * Extensions to support teams                                          *
+// ***********************************************************************
+
+///
+/// An helper class for extending classification schemes to teams.
+///
+/// \tparam I type of individual
+/// \tparam S stores the individual inside vs keep a reference only
+/// \tparam N stores the name of the classes vs doesn't store the names
+/// \tparam L the basic classificator that must be extended
+/// \tparam C composition method for team's member responses
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L,
+         team_composition C = team_composition::standard>
+class team_class_oracle : public basic_class_oracle<N>
+{
+public:
+  template<class... Args> team_class_oracle(const team<I> &, dataframe &,
+                                            Args &&...);
+  team_class_oracle(std::istream &, const symbol_set &);
+
+  [[nodiscard]] classification_result tag(
+    const std::vector<value_t> &) const final;
+
+  [[nodiscard]] bool is_valid() const final;
+
+  static const std::string SERIALIZE_ID;
+
+private:
+  bool save(std::ostream &) const final;
+  [[nodiscard]] std::string serialize_id() const final;
+
+  // The components of the team never store the names of the classes. If we
+  // need the names, the master class will memorize them.
+  std::vector<L<I, S, false>> team_;
+
+  src::class_t classes_ {};
+};
+
+///
+/// Gaussian Distribution Classification specialization for teams.
+///
+/// \tparam I type of individual
+/// \tparam S stores the individual inside vs keep a reference only
+/// \tparam N stores the name of the classes vs doesn't store the names
+///
+template<class I, bool S, bool N>
+class basic_gaussian_oracle<team<I>, S, N>
+  : public team_class_oracle<I, S, N, basic_gaussian_oracle>
+{
+public:
+  using basic_gaussian_oracle::team_class_oracle::team_class_oracle;
 };
 
 // ***********************************************************************
@@ -268,7 +325,9 @@ class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
 public:
   using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
 };
-template<IndividualOrTeam P> gaussian_oracle(const P &) -> gaussian_oracle<P>;
+template<IndividualOrTeam P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
+
+template<class P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"
 }  // namespace src

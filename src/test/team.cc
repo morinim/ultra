@@ -28,8 +28,8 @@ TEST_CASE("Concept")
 {
   using namespace ultra;
 
-  static_assert(Team<team<gp::individual>>);
-  static_assert(!Team<gp::individual>);
+  REQUIRE(Team<team<gp::individual>>);
+  REQUIRE(!Team<gp::individual>);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Random creation")

@@ -265,13 +265,88 @@ void test_team_of_one(ultra::src::problem &pr)
 
       if (has_value(out_i))
       {
-        const auto v1(std::get<D_DOUBLE>(out_i));
-        const auto v2(std::get<D_DOUBLE>(out_t));
+        const auto v1(lexical_cast<D_DOUBLE>(out_i));
+        const auto v2(lexical_cast<D_DOUBLE>(out_t));
 
         CHECK(almost_equal(v1, v2));
       }
       else
         CHECK(!has_value(out_t));
+    }
+  }
+}
+
+template<template<class> class L, unsigned P = 0>
+void test_team(ultra::src::problem &pr)
+{
+  using namespace ultra;
+
+  for (unsigned cycles(1000); cycles; --cycles)
+  {
+    const gp::individual ind1(pr);
+    const gp::individual ind2(pr);
+    const gp::individual ind3(pr);
+
+    const auto oracle1(build<L, gp::individual, P>()(ind1, pr.data()));
+    const auto oracle2(build<L, gp::individual, P>()(ind2, pr.data()));
+    const auto oracle3(build<L, gp::individual, P>()(ind3, pr.data()));
+
+    const team<gp::individual> t{{ind1, ind2, ind3}};
+    const auto ts(t.size());
+    const auto oracle_t(build<L, team<gp::individual>, P>()(t, pr.data()));
+
+    for (const auto &example : pr.data())
+    {
+      const std::vector out =
+      {
+        oracle1(example.input), oracle2(example.input), oracle3(example.input)
+      };
+      const std::vector<std::string> names =
+      {
+        oracle1.name(out[0]), oracle2.name(out[1]), oracle3.name(out[2])
+      };
+      const std::vector<src::classification_result> tags =
+      {
+        oracle1.tag(example.input), oracle2.tag(example.input),
+        oracle3.tag(example.input)
+      };
+
+      for (std::size_t j(0); j < ts; ++j)
+        CHECK(std::get<D_INT>(out[j]) == tags[j].label);
+
+      std::string s_best(names[0]);
+
+#if defined(TEST_MV)
+      std::map<std::string, unsigned> votes;
+
+      for (std::size_t j(0); j < ts; ++j)
+      {
+        if (votes.find(names[j]) == votes.end())
+          votes[names[j]] = 1;
+        else
+          ++votes[names[j]];
+      }
+
+      unsigned v_best(0);
+
+      for (auto &v : votes)
+        if (v.second > v_best)
+        {
+          s_best = v.first;
+          v_best = v.second;
+        }
+#elif defined(TEST_WTA)
+      src::class_t c_best(0);
+
+      for (std::size_t j(1); j < ts; ++j)
+        if (tags[j].sureness > tags[c_best].sureness)
+        {
+          s_best = names[j];
+          c_best = j;
+        }
+#endif
+
+      CHECK(s_best == oracle_t.name(oracle_t(example.input)));
     }
   }
 }
@@ -289,6 +364,7 @@ TEST_SUITE("ORACLE")
 TEST_CASE_FIXTURE(fixture, "reg_oracle")
 {
   using namespace ultra;
+  log::reporting_level = log::lWARNING;
 
   CHECK(pr.data().read_csv(sr) == SR_COUNT);
   pr.setup_symbols();
@@ -423,15 +499,16 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
 TEST_CASE_FIXTURE(fixture, "gaussian_oracle")
 {
   using namespace ultra;
+  log::reporting_level = log::lWARNING;
 
   CHECK(pr.data().read_csv(iris) == IRIS_COUNT);
   pr.setup_symbols();
 
   // GAUSSIAN ORACLE TEAM OF ONE INDIVIDUAL.
-  //test_team_of_one<src::gaussian_oracle>(pr);
+  test_team_of_one<src::gaussian_oracle>(pr);
 
   // GAUSSIAN ORACLE TEAM OF RANDOM INDIVIDUALS.
-  //test_team<gaussian_oracle>(pr);
+  test_team<src::gaussian_oracle>(pr);
 }
 
 }  // TEST_SUITE("ORACLE")

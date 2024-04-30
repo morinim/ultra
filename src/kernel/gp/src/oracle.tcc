@@ -21,9 +21,15 @@ template<IndividualOrTeam P, bool S>
 const std::string basic_reg_oracle<P, S>::SERIALIZE_ID(
   Team<P> ? "TEAM_REG_ORACLE" : "REG_ORACLE");
 
-template<IndividualOrTeam P, bool S, bool N>
-const std::string basic_gaussian_oracle<P, S, N>::SERIALIZE_ID(
+template<class I, bool S, bool N>
+const std::string basic_gaussian_oracle<I, S, N>::SERIALIZE_ID(
   "GAUSSIAN_ORACLE");
+
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L,
+         team_composition C>
+const std::string team_class_oracle<I, S, N, L, C>::SERIALIZE_ID(
+  "TEAM_" + L<I, S, N>::SERIALIZE_ID);
 
 ///
 /// \param[in] prg the program (individual/team) to be lambdified
@@ -32,6 +38,8 @@ template<IndividualOrTeam P, bool S>
 basic_reg_oracle<P, S>::basic_reg_oracle(const P &prg)
   : internal::reg_oracle_storage<P, S>(prg)
 {
+  Expects(!prg.empty());
+
   Ensures(is_valid());
 }
 
@@ -179,14 +187,17 @@ std::string basic_class_oracle<N>::name(const value_t &a) const
 }
 
 ///
-/// \param[in] prg program "to be transformed" into an oracle
+/// \param[in] ind program "to be transformed" into an oracle
 /// \param[in] d   the training set
 ///
-template<IndividualOrTeam P, bool S, bool N>
-basic_gaussian_oracle<P, S, N>::basic_gaussian_oracle(const P &prg,
+template<class I, bool S, bool N>
+basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(const I &ind,
                                                       dataframe &d)
-  : basic_class_oracle<N>(d), oracle_(prg), gauss_dist_(d.classes())
+  : basic_class_oracle<N>(d), oracle_(ind), gauss_dist_(d.classes())
 {
+  static_assert(Individual<I>);
+
+  Expects(!ind.empty());
   Expects(d.classes() > 1);
 
   fill_vector(d);
@@ -200,13 +211,13 @@ basic_gaussian_oracle<P, S, N>::basic_gaussian_oracle(const P &prg,
 /// \param[in] in input stream
 /// \param[in] ss active symbol set
 ///
-template<IndividualOrTeam P, bool S, bool N>
-basic_gaussian_oracle<P, S, N>::basic_gaussian_oracle(std::istream &in,
+template<class I, bool S, bool N>
+basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(std::istream &in,
                                                       const symbol_set &ss)
   : basic_class_oracle<N>(), oracle_(in, ss)
 {
   static_assert(
-    S, "gaussian_lambda_f requires storage space for de-serialization");
+    S, "gaussian_oracle requires storage space for de-serialization");
 
   std::size_t n;
   if (!(in >> n))
@@ -234,8 +245,8 @@ basic_gaussian_oracle<P, S, N>::basic_gaussian_oracle(std::istream &in,
 ///
 /// \param[in] d the training set
 ///
-template<IndividualOrTeam P, bool S, bool N>
-void basic_gaussian_oracle<P, S, N>::fill_vector(dataframe &d)
+template<class I, bool S, bool N>
+void basic_gaussian_oracle<I, S, N>::fill_vector(dataframe &d)
 {
   Expects(d.classes() > 1);
 
@@ -265,8 +276,8 @@ void basic_gaussian_oracle<P, S, N>::fill_vector(dataframe &d)
 ///               value is in the `[0,1]` interval and the sum of all the
 ///               confidence levels of each class equals `1`)
 ///
-template<IndividualOrTeam P, bool S, bool N>
-classification_result basic_gaussian_oracle<P, S, N>::tag(
+template<class I, bool S, bool N>
+classification_result basic_gaussian_oracle<I, S, N>::tag(
   const std::vector<value_t> &ex) const
 {
   const auto res(oracle_(ex));
@@ -316,8 +327,8 @@ classification_result basic_gaussian_oracle<P, S, N>::tag(
 /// \param[out] out output stream
 /// \return         `true` on success
 ///
-template<IndividualOrTeam P, bool S, bool N>
-bool basic_gaussian_oracle<P, S, N>::save(std::ostream &out) const
+template<class I, bool S, bool N>
+bool basic_gaussian_oracle<I, S, N>::save(std::ostream &out) const
 {
   if (!oracle_.save(out))
     return false;
@@ -335,10 +346,155 @@ bool basic_gaussian_oracle<P, S, N>::save(std::ostream &out) const
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<IndividualOrTeam P, bool S, bool N>
-bool basic_gaussian_oracle<P, S, N>::is_valid() const
+template<class I, bool S, bool N>
+bool basic_gaussian_oracle<I, S, N>::is_valid() const
 {
   return true;
+}
+
+///
+/// \param[in] t    team "to be transformed" into an oracle
+/// \param[in] d    the training set
+/// \param[in] args auxiliary parameters for the specific oracle
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+template<class... Args>
+team_class_oracle<I, S, N, L, C>::team_class_oracle(const team<I> &t,
+                                                    dataframe &d,
+                                                    Args&&... args)
+  : basic_class_oracle<N>(d), classes_(d.classes())
+{
+  team_.reserve(t.size());
+  for (const auto &ind : t)
+    team_.emplace_back(ind, d, std::forward<Args>(args)...);
+}
+
+///
+/// Constructs the object reading data from an input stream.
+///
+/// \param[in] in input stream
+/// \param[in] ss active symbol set
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+team_class_oracle<I, S, N, L, C>::team_class_oracle(std::istream &in,
+                                                    const symbol_set &ss)
+  : basic_class_oracle<N>()
+{
+  static_assert(
+    S, "team_class_oracle requires storage space for de-serialization");
+
+  if (!(in >> classes_))
+    throw exception::data_format("Cannot read number of classes");
+
+  std::size_t s;
+  if (!(in >> s))
+    throw exception::data_format("Cannot read team size");
+
+  team_.reserve(s);
+  for (std::size_t i(0); i < s; ++i)
+    team_.emplace_back(in, ss);
+
+  if (!internal::class_names<N>::load(in))
+    throw exception::data_format("Cannot read class_names");
+}
+
+///
+/// Specialized method for teams.
+///
+/// \param[in] instance data to be classified
+/// \return             the class of `instance` (numerical id) and the
+///                     confidence level (in the `[0,1]` interval)
+///
+/// * `team_composition::mv` the class which most of the individuals predict
+///   for a given example is selected as team output.
+/// * `team_composition::wta` the winner is the individual with the highest
+///   confidence in its decision. Specialization may emerge if different
+///   members of the team win this contest for different fitness cases (of
+///   course, it isn't a feasible alternative to select the member with the
+///   best fitness. Then a decision on unknown data is only possible if the
+///   right outputs are known in advance and is not made by the team itself).
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+classification_result team_class_oracle<I, S, N, L, C>::tag(
+  const std::vector<value_t> &instance) const
+{
+  if constexpr (C == team_composition::wta)
+  {
+    const auto size(team_.size());
+    auto best(team_[0].tag(instance));
+
+    for (std::size_t i(1); i < size; ++i)
+    {
+      const auto res(team_[i].tag(instance));
+
+      if (res.sureness > best.sureness)
+        best = res;
+    }
+
+    return best;
+  }
+  else if constexpr (C == team_composition::mv)
+  {
+    std::vector<unsigned> votes(classes_);
+
+    for (const auto &oracle : team_)
+      ++votes[oracle.tag(instance).label];
+
+    src::class_t max(0);
+    for (auto i(max + 1); i < classes_; ++i)
+      if (votes[i] > votes[max])
+        max = i;
+
+    return {max, static_cast<double>(votes[max])
+                 / static_cast<double>(team_.size())};
+  }
+}
+
+///
+/// Saves the oracle team on persistent storage.
+///
+/// \param[out] out output stream
+/// \return         `true` on success
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+bool team_class_oracle<I, S, N, L, C>::save(std::ostream &out) const
+{
+  if (!(out << classes_ << '\n'))
+    return false;
+
+  if (!(out << team_.size() << '\n'))
+    return false;
+
+  for (const auto &i : team_)
+    if (!i.save(out))
+      return false;
+
+  return internal::class_names<N>::save(out);
+}
+
+///
+/// \return class ID used for serialization
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+std::string team_class_oracle<I, S, N, L, C>::serialize_id() const
+{
+  Expects(team_.size());
+  return "TEAM_" + L<I, S, N>::SERIALIZE_ID;
+}
+
+///
+/// \return `true` if the object passes the internal consistency check
+///
+template<Individual I, bool S, bool N,
+         template<Individual, bool, bool> class L, team_composition C>
+bool team_class_oracle<I, S, N, L, C>::is_valid() const
+{
+  return classes_ > 1;
 }
 
 namespace serialize::oracle
@@ -376,7 +532,7 @@ std::unique_ptr<basic_oracle> load(std::istream &in, const symbol_set &ss)
   {
     insert<reg_oracle<T>>(reg_oracle<T>::SERIALIZE_ID);
     //insert<dyn_slot_lambda_f<T>>(dyn_slot_lambda_f<T>::SERIALIZE_ID);
-    //insert<gaussian_lambda_f<T>>(gaussian_lambda_f<T>::SERIALIZE_ID);
+    insert<gaussian_oracle<T>>(gaussian_oracle<T>::SERIALIZE_ID);
     //insert<binary_lambda_f<T>>(binary_lambda_f<T>::SERIALIZE_ID);
   }
 
