@@ -118,7 +118,7 @@ requires ErrorFunction<ERRF<P>, DAT>
 std::unique_ptr<basic_oracle>
 sum_of_errors_evaluator<P, ERRF, DAT>::oracle(const P &prg) const
 {
-  return std::make_unique<basic_reg_oracle<P, true>>(prg);
+  return std::make_unique<reg_oracle<P>>(prg);
 }
 
 ///
@@ -247,6 +247,44 @@ double count_error_functor<P>::operator()(const example &example) const
                              - label_as<D_DOUBLE>(example)));
 
   return err ? 1.0 : 0.0;
+}
+
+template<IndividualOrTeam P>
+gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
+{
+}
+
+///
+/// \param[in] prg program used for class recognition
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<IndividualOrTeam P>
+double gaussian_evaluator<P>::operator()(const P &prg)
+{
+  Expects(this->dat_->classes() >= 2);
+  basic_gaussian_oracle<P, false, false> oracle(prg, *this->dat_);
+
+  double d(0.0);
+  for (auto &example : *this->dat_)
+    if (const auto res(oracle.tag(example.input)); res.label == label(example))
+    {
+      const auto scale(static_cast<double>(this->dat_->classes() - 1));
+      // Note:
+      // * `(1.0 - res.sureness)` is the sum of the errors;
+      // * `(res.sureness - 1.0)` is the opposite (standardized fitness);
+      // * `(res.sureness - 1.0) / scale` is the opposite of the average error.
+      d += (res.sureness - 1.0) / scale;
+    }
+    else
+    {
+      // Note:
+      // * the maximum single class error is `1.0`;
+      // * the maximum average class error is `1.0 / dat_->classes()`;
+      // So -1.0 is like to say that we have a complete failure.
+      d -= 1.0;
+    }
+
+  return d;
 }
 
 #endif  // include guard

@@ -241,6 +241,27 @@ public:
   using count_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
 };
 
+///
+/// Gaussian distribution for multiclass object classification.
+///
+/// Instead of using predefined multiple thresholds to form different regions
+/// in the program output space for different classes, this approach uses
+/// probabilities of different classes, derived from Gaussian distributions,
+/// to construct the fitness function for classification.
+///
+/// \see
+/// https://github.com/morinim/ultra/wiki/bibliography#13
+///
+template<IndividualOrTeam P>
+class gaussian_evaluator : public evaluator<dataframe>
+{
+public:
+  explicit gaussian_evaluator(dataframe &);
+
+  [[nodiscard]] double operator()(const P &) override;
+  std::unique_ptr<basic_oracle> oracle(const P &) const;
+};
+
 #include "kernel/gp/src/evaluator.tcc"
 
 }  // namespace ultra::src
