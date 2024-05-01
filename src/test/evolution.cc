@@ -53,12 +53,12 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   evolution evo(std_es(prob, eva));
-  evo.set_shake_function([i = 0](unsigned gen) mutable
-                         {
-                           CHECK(gen == i);
-                           ++i;
-                           return true;
-                         });
+  evo.shake_function([i = 0](unsigned gen) mutable
+                     {
+                       CHECK(gen == i);
+                       ++i;
+                       return true;
+                     });
 
   evo.run();
 }

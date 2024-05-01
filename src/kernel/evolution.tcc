@@ -170,15 +170,33 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
 /// Sets the shake function.
 ///
 /// \param[in] f the shaking function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
 ///
 /// The shake function is called every new generation and is used to alter
 /// the environment of the evolution (i.e. it could change the points for a
 /// symbolic regression problem, the examples for a classification task...).
 ///
 template<Strategy S>
-void evolution<S>::set_shake_function(const std::function<bool(unsigned)> &f)
+evolution<S> &evolution<S>::shake_function(
+  const std::function<bool(unsigned)> &f)
 {
   shake_ = f;
+  return *this;
+}
+
+///
+/// Sets a callback function called at the end of every generation.
+///
+/// \param[in] f callback function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<Strategy S>
+evolution<S> &evolution<S>::after_generation(after_generation_callback_t f)
+{
+  after_generation_callback_ = std::move(f);
+  return *this;
 }
 
 /// The evolutionary core loop.
@@ -277,7 +295,10 @@ evolution<S>::run()
 
     sum_.az = analyze(pop_, es_.evaluator());
     log_evolution();
-    es_.after_generation(pop_, sum_);
+
+    es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
+    if (after_generation_callback_)
+      after_generation_callback_(pop_, sum_);
   }
 
   sum_.elapsed = from_start.elapsed();

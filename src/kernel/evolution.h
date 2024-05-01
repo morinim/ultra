@@ -25,6 +25,10 @@
 namespace ultra
 {
 
+template<Individual I, Fitness F>
+using after_generation_callback_t =
+  std::function<void(const layered_population<I> &, const summary<I, F> &)>;
+
 ///
 /// Progressively evolves a population of programs over a series of
 /// generations.
@@ -40,11 +44,15 @@ public:
   using individual_t = typename S::individual_t;
   using fitness_t = typename S::fitness_t;
 
+  using after_generation_callback_t =
+    ultra::after_generation_callback_t<individual_t, fitness_t>;
+
   explicit evolution(const S &);
 
   summary<individual_t, fitness_t> run();
 
-  void set_shake_function(const std::function<bool(unsigned)> &);
+  evolution &after_generation(after_generation_callback_t);
+  evolution &shake_function(const std::function<bool(unsigned)> &);
 
   [[nodiscard]] bool is_valid() const;
 
@@ -59,6 +67,8 @@ private:
   layered_population<individual_t> pop_;
   S es_;
   std::function<bool(unsigned)> shake_ {};
+
+  after_generation_callback_t after_generation_callback_ {};
 };
 
 #include "kernel/evolution.tcc"

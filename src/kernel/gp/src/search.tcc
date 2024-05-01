@@ -356,17 +356,19 @@ template<IndividualOrTeam P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
 {
-  if (prob_.classification())
+  const auto search_scheme([&]<Evaluator E>()
   {
-    return {};
-  }
-  else
-  {
-    basic_search<alps_es, reg_evaluator_t> reg_search(
-      prob_, reg_evaluator_t(prob_.data()), metrics_);
+    basic_search<alps_es, E> search(prob_, E(prob_.data()), metrics_);
 
-    return reg_search.run(n, threshold);
-  }
+    search.after_generation(after_generation_callback_);
+
+    return search.run(n, threshold);
+  });
+
+  if (prob_.classification())
+    return {};
+  else
+    return search_scheme.template operator()<reg_evaluator_t>();
 }
 
 template<IndividualOrTeam P>
@@ -376,6 +378,20 @@ std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
     return nullptr;
   else
     return reg_evaluator_t(prob_.data()).oracle(prg);
+}
+
+///
+/// Sets a callback function executed at the end of every generation.
+///
+/// \param[in] f callback function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<IndividualOrTeam P>
+search<P> &search<P>::after_generation(after_generation_callback_t f)
+{
+  after_generation_callback_ = std::move(f);
+  return *this;
 }
 
 #endif  // include guard

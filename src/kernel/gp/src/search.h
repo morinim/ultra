@@ -70,6 +70,8 @@ template<IndividualOrTeam P = gp::individual>
 class search
 {
 public:
+  using after_generation_callback_t =
+    ultra::after_generation_callback_t<P, double>;
   using individual_t = P;
   using fitness_t = double;
 
@@ -82,10 +84,14 @@ public:
 
   std::unique_ptr<basic_oracle> oracle(const P &) const;
 
+  search &after_generation(after_generation_callback_t);
+
 private:
   // *** Private data members ***
   problem &prob_;  // problem we're working on
   metric_flags metrics_;  // metrics we have to calculate during the search
+
+  after_generation_callback_t after_generation_callback_ {};
 };
 
 

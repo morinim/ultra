@@ -52,6 +52,8 @@ class search
 public:
   using individual_t = evaluator_individual_t<E>;
   using fitness_t = evaluator_fitness_t<E>;
+  using after_generation_callback_t =
+    ultra::after_generation_callback_t<individual_t, fitness_t>;
 
   search(problem &, E);
 
@@ -59,6 +61,8 @@ public:
     unsigned = 1, const model_measurements<fitness_t> & = {});
 
   template<class V, class... Args> search &validation_strategy(Args && ...);
+
+  search &after_generation(after_generation_callback_t);
 
   [[nodiscard]] virtual bool is_valid() const;
 
@@ -72,6 +76,9 @@ protected:
     {std::make_unique<as_is_validation>()};
 
   problem &prob_;  // problem we're working on
+
+  // Callback functions.
+  after_generation_callback_t after_generation_callback_ {};
 
 private:
   // Template method of the `search::run` member function called exactly one

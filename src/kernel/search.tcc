@@ -58,6 +58,20 @@ void search<ES, E>::init()
 }
 
 ///
+/// Sets a callback function executed at the end of every generation.
+///
+/// \param[in] f callback function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<template<class> class ES, Evaluator E>
+search<ES, E> &search<ES, E>::after_generation(after_generation_callback_t f)
+{
+  after_generation_callback_ = std::move(f);
+  return *this;
+}
+
+///
 /// Tries to tune search parameters for the current problem.
 ///
 template<template<class> class ES, Evaluator E>
@@ -132,7 +146,8 @@ search<ES, E>::run(unsigned n, const model_measurements<fitness_t> &threshold)
     vs_->training_setup(r);
 
     evolution evo(es_);
-    evo.set_shake_function(shake);
+    evo.after_generation(after_generation_callback_);
+    evo.shake_function(shake);
     const auto run_summary(evo.run());
 
     vs_->validation_setup(r);
