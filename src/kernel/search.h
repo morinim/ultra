@@ -42,12 +42,12 @@ struct search_stats
 };
 
 ///
-/// Search drives the evolution.
+/// basic_search drives the evolution.
 ///
 /// The class offers a general / customizable search strategy.
 ///
 template<template<class> class ES, Evaluator E>
-class search
+class basic_search
 {
 public:
   using individual_t = evaluator_individual_t<E>;
@@ -55,14 +55,15 @@ public:
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
 
-  search(problem &, E);
+  basic_search(problem &, E);
 
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
 
-  template<class V, class... Args> search &validation_strategy(Args && ...);
+  template<class V, class... Args> basic_search &validation_strategy(
+    Args && ...);
 
-  search &after_generation(after_generation_callback_t);
+  basic_search &after_generation(after_generation_callback_t);
 
   [[nodiscard]] virtual bool is_valid() const;
 
@@ -81,26 +82,26 @@ protected:
   after_generation_callback_t after_generation_callback_ {};
 
 private:
-  // Template method of the `search::run` member function called exactly one
-  // time just before the first run.
+  // Template method of the `basic_search::run` member function called exactly
+  // one time just before the first run.
   virtual void init();
 
-  // Template method of the `search::run` member function called exactly one
-  // time after every evolution run..
+  // Template method of the `basic_search::run` member function called exactly
+  // one time after every evolution run..
   [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
     const individual_t &) const;
 
   //void log_stats(const search_stats<T> &) const;
   bool load();
   //bool save() const;
-};  // class search
+};  // class basic_search
 
 
 template<Evaluator E>
-class alps_search : public search<alps_es, E>
+class search : public basic_search<alps_es, E>
 {
 public:
-  alps_search(problem &, E);
+  search(problem &, E);
 };
 
 #include "kernel/search.tcc"

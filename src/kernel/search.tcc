@@ -24,7 +24,7 @@
 ///                 could be used to build a proxy evaluator.
 ///
 template<template<class> class ES, Evaluator E>
-search<ES, E>::search(problem &prob, E eva)
+basic_search<ES, E>::basic_search(problem &prob, E eva)
   : es_(ES<evaluator_proxy<E>>(prob,
                                evaluator_proxy(eva, prob.params.cache.size))),
     prob_(prob)
@@ -33,8 +33,7 @@ search<ES, E>::search(problem &prob, E eva)
 }
 
 template<Evaluator E>
-alps_search<E>::alps_search(problem &prob, E eva)
-  : search<alps_es, E>(prob, eva)
+search<E>::search(problem &prob, E eva) : basic_search<alps_es, E>(prob, eva)
 {
 }
 
@@ -50,7 +49,7 @@ alps_search<E>::alps_search(problem &prob, E eva)
 /// multiple-run search).
 ///
 template<template<class> class ES, Evaluator E>
-void search<ES, E>::init()
+void basic_search<ES, E>::init()
 {
   tune_parameters();
 
@@ -65,7 +64,8 @@ void search<ES, E>::init()
 ///              interface)
 ///
 template<template<class> class ES, Evaluator E>
-search<ES, E> &search<ES, E>::after_generation(after_generation_callback_t f)
+basic_search<ES, E> &basic_search<ES, E>::after_generation(
+  after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
   return *this;
@@ -75,7 +75,7 @@ search<ES, E> &search<ES, E>::after_generation(after_generation_callback_t f)
 /// Tries to tune search parameters for the current problem.
 ///
 template<template<class> class ES, Evaluator E>
-void search<ES, E>::tune_parameters()
+void basic_search<ES, E>::tune_parameters()
 {
   // The `shape` function modifies the default parameters with
   // strategy-specific values.
@@ -132,9 +132,10 @@ void search<ES, E>::tune_parameters()
 /// \return              a summary of the search
 ///
 template<template<class> class ES, Evaluator E>
-search_stats<typename search<ES, E>::individual_t,
-             typename search<ES, E>::fitness_t>
-search<ES, E>::run(unsigned n, const model_measurements<fitness_t> &threshold)
+search_stats<typename basic_search<ES, E>::individual_t,
+             typename basic_search<ES, E>::fitness_t>
+basic_search<ES, E>::run(unsigned n,
+                         const model_measurements<fitness_t> &threshold)
 {
   init();
 
@@ -174,8 +175,8 @@ search<ES, E>::run(unsigned n, const model_measurements<fitness_t> &threshold)
 /// calculations.
 ///
 template<template<class> class ES, Evaluator E>
-model_measurements<typename search<ES, E>::fitness_t>
-search<ES, E>::calculate_metrics(const individual_t &prg) const
+model_measurements<typename basic_search<ES, E>::fitness_t>
+basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
   model_measurements<fitness_t> ret;
 
@@ -192,7 +193,7 @@ search<ES, E>::calculate_metrics(const individual_t &prg) const
 ///
 template<template<class> class ES, Evaluator E>
 template<class V, class... Args>
-search<ES, E> &search<ES, E>::validation_strategy(Args && ...args)
+basic_search<ES, E> &basic_search<ES, E>::validation_strategy(Args && ...args)
 {
   vs_ = std::make_unique<V>(std::forward<Args>(args)...);
   return *this;
@@ -204,7 +205,7 @@ search<ES, E> &search<ES, E>::validation_strategy(Args && ...args)
 /// \return `true` if the object is correctly loaded
 ///
 template<template<class> class ES, Evaluator E>
-bool search<ES, E>::load()
+bool basic_search<ES, E>::load()
 {
   if (prob_.params.cache.serialization_file.empty())
     return true;
@@ -229,7 +230,7 @@ bool search<ES, E>::load()
 /// \return `true` if the object passes the internal consistency check
 ///
 template<template<class> class ES, Evaluator E>
-bool search<ES, E>::is_valid() const
+bool basic_search<ES, E>::is_valid() const
 {
   return true;
 }

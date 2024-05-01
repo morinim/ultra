@@ -33,7 +33,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  alps_search s(prob, eva);
+  search s(prob, eva);
 
   const auto stats(s.run(1));
 

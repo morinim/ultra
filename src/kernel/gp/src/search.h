@@ -35,10 +35,10 @@ enum class metric_flags : unsigned
 /// tasks.
 ///
 template<template<class> class ES, Evaluator E>
-class basic_search : public ultra::search<ES, E>
+class basic_search : public ultra::basic_search<ES, E>
 {
 public:
-  using individual_t = typename ultra::search<ES, E>::individual_t;
+  using individual_t = typename ultra::basic_search<ES, E>::individual_t;
 
   basic_search(problem &, E, metric_flags = metric_flags::nothing);
 

@@ -34,7 +34,7 @@
 ///
 template<template<class> class ES, Evaluator E>
 basic_search<ES, E>::basic_search(problem &p, E eva, metric_flags m)
-  : ultra::search<ES, E>(p, eva), metrics_(m)
+  : ultra::basic_search<ES, E>(p, eva), metrics_(m)
 {
   Ensures(this->is_valid());
 }
@@ -137,7 +137,7 @@ void basic_search<ES, E>::tune_parameters()
   // function.
   const auto constrained(params);
 
-  ultra::search<ES, E>::tune_parameters();
+  ultra::basic_search<ES, E>::tune_parameters();
 
   const auto d_size(prob().data().size());
   Expects(d_size);
@@ -344,7 +344,7 @@ src_search<T, ES> &src_search<T, ES>::evaluator(evaluator_id id,
 template<template<class> class ES, Evaluator E>
 bool basic_search<ES, E>::is_valid() const
 {
-  return ultra::search<ES, E>::is_valid();
+  return ultra::basic_search<ES, E>::is_valid();
 }
 
 template<IndividualOrTeam P>

@@ -24,7 +24,7 @@ namespace ultra::de
 /// This class implements ultra::search for DE optimization tasks.
 ///
 template<Evaluator E>
-class search : public ultra::search<de_es, E>
+class search : public ultra::basic_search<de_es, E>
 {
 public:
   search(problem &, E);
