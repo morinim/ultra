@@ -25,8 +25,7 @@
 ///
 template<template<class> class ES, Evaluator E>
 basic_search<ES, E>::basic_search(problem &prob, E eva)
-  : es_(ES<evaluator_proxy<E>>(prob,
-                               evaluator_proxy(eva, prob.params.cache.size))),
+  : es_(prob, evaluator_proxy(eva, prob.params.cache.size)),
     prob_(prob)
 {
   Ensures(is_valid());

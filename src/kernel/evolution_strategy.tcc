@@ -19,8 +19,8 @@
 
 template<Evaluator E>
 evolution_strategy<E>::evolution_strategy(const ultra::problem &prob,
-                                          const E &eva)
-  : eva_(eva), prob_(&prob)
+                                          E eva)
+  : eva_(std::move(eva)), prob_(&prob)
 {
 }
 

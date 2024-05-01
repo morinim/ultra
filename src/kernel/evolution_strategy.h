@@ -64,11 +64,11 @@ public:
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
-  [[nodiscard]] const E &evaluator() const { return eva_; }
-  [[nodiscard]] const problem &get_problem() const { return *prob_; }
+  [[nodiscard]] const E &evaluator() const noexcept { return eva_; }
+  [[nodiscard]] const problem &get_problem() const noexcept { return *prob_; }
 
 protected:
-  evolution_strategy(const ultra::problem &, const E &);
+  evolution_strategy(const ultra::problem &, E);
 
   E eva_;
   const ultra::problem *prob_;  // a pointer since the class must be copyable
