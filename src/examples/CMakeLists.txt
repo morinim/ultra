@@ -2,7 +2,7 @@
 
 find_package(Threads)
 
-file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc)
+file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc symbolic_regression/*.cc)
 foreach (example_src ${EXAMPLES_SRC})
   # Gets the filename (`example`) without directory / longest extension
   # (`NAME_WE`) from the full filename (${example_src})
