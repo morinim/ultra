@@ -35,6 +35,7 @@ This software is the result of a complete rewriting of [Vita][vita]. The code ha
 ## EXAMPLES
 
 ### Mathematical optimization
+<img src="https://github.com/morinim/ultra/wiki/img/rastrigin.png" width="300">
 
 The core of the operation is:
 
@@ -55,6 +56,7 @@ auto value(res.best_measurements.fitness);
 Further details in the [specific tutorial][rastrigin].
 
 ### Symbolic regression
+<img src="https://github.com/morinim/ultra/wiki/img/symbolic_regression02.gif" width="300">
 
 ```C++
 // DATA SAMPLE (output, input)
