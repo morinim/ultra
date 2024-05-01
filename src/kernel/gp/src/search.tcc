@@ -366,7 +366,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
   });
 
   if (prob_.classification())
-    return {};
+    return search_scheme.template operator()<class_evaluator_t>();
   else
     return search_scheme.template operator()<reg_evaluator_t>();
 }
@@ -375,7 +375,7 @@ template<IndividualOrTeam P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
   if (prob_.classification())
-    return nullptr;
+    return class_evaluator_t(prob_.data()).oracle(prg);
   else
     return reg_evaluator_t(prob_.data()).oracle(prg);
 }

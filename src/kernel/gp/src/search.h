@@ -72,9 +72,11 @@ class search
 public:
   using after_generation_callback_t =
     ultra::after_generation_callback_t<P, double>;
+
   using individual_t = P;
   using fitness_t = double;
 
+  using class_evaluator_t = gaussian_evaluator<P>;
   using reg_evaluator_t = rmae_evaluator<P>;
 
   search(problem &p, metric_flags m = metric_flags::nothing);

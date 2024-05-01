@@ -258,8 +258,8 @@ class gaussian_evaluator : public evaluator<dataframe>
 public:
   explicit gaussian_evaluator(dataframe &);
 
-  [[nodiscard]] double operator()(const P &) override;
-  std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] double operator()(const P &) const;
+  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
 };
 
 #include "kernel/gp/src/evaluator.tcc"

@@ -108,10 +108,9 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 }
 
 ///
-/// \param[in] prg program(individual/team) to be transformed in a lambda
-///                function
-/// \return        the lambda function associated with `prg` (`nullptr` in case
-///                of errors).
+/// \param[in] prg program (individual/team) to be transformed in an oracle
+/// \return        the oracle associated with `prg` (`nullptr` in case of
+///                errors).
 ///
 template<IndividualOrTeam P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
@@ -259,7 +258,7 @@ gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
 /// \return        the fitness (greater is better, max is `0`)
 ///
 template<IndividualOrTeam P>
-double gaussian_evaluator<P>::operator()(const P &prg)
+double gaussian_evaluator<P>::operator()(const P &prg) const
 {
   Expects(this->dat_->classes() >= 2);
   basic_gaussian_oracle<P, false, false> oracle(prg, *this->dat_);
@@ -285,6 +284,17 @@ double gaussian_evaluator<P>::operator()(const P &prg)
     }
 
   return d;
+}
+
+///
+/// \param[in] prg program (individual/team) to be transformed in an oracle
+/// \return        the oracle associated with `prg` (`nullptr` in case of
+///                errors).
+///
+template<IndividualOrTeam P>
+std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
+{
+  return std::make_unique<gaussian_oracle<P>>(prg, *this->dat_);
 }
 
 #endif  // include guard
