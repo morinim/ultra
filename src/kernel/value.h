@@ -56,6 +56,8 @@ using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_STRING,
 [[nodiscard]] bool basic_data_type(const value_t &) noexcept;
 [[nodiscard]] const D_NULLARY *get_if_nullary(const value_t &) noexcept;
 [[nodiscard]] bool has_value(const value_t &) noexcept;
+[[nodiscard]] bool numerical_data_type(domain_t) noexcept;
+[[nodiscard]] bool numerical_data_type(const value_t &) noexcept;
 
 std::ostream &operator<<(std::ostream &, const value_t &);
 

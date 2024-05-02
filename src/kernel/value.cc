@@ -56,6 +56,27 @@ bool basic_data_type(const value_t &v) noexcept
 }
 
 ///
+/// \param[in] d domain to be checked
+/// \return      `true` for numbers
+///
+bool numerical_data_type(domain_t d) noexcept
+{
+  return d == d_int || d == d_double;
+}
+
+///
+/// \param[in] v value to be checked
+/// \return      `true` for numbers
+///
+/// \related
+/// value_t
+///
+bool numerical_data_type(const value_t &v) noexcept
+{
+  return numerical_data_type(static_cast<domain_t>(v.index()));
+}
+
+///
 /// \param[in] v container object
 /// \return      a pointer to the nullary object contained in `v` if present,
 ///              otherwise `nullptr`

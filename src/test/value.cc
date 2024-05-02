@@ -59,6 +59,7 @@ TEST_CASE("Base")
     CHECK(!has_value(v1));
     CHECK(v1.index() == d_void);
     CHECK(basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
 
     out << v1;
     CHECK(out.str() == "{}");
@@ -70,6 +71,7 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_string);
     CHECK(basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
 
     out << v1;
     CHECK(out.str() == "\"" + std::get<D_STRING>(v1) + "\"");
@@ -94,6 +96,7 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_nullary);
     CHECK(!basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
     CHECK(get_if_nullary(v1));
 
     out << v1;
@@ -106,6 +109,7 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_int);
     CHECK(basic_data_type(v1));
+    CHECK(numerical_data_type(v1));
 
     out << v1;
     CHECK(out.str() == std::to_string(std::get<D_INT>(v1)));
@@ -117,6 +121,7 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_double);
     CHECK(basic_data_type(v1));
+    CHECK(numerical_data_type(v1));
 
     out << v1;
     CHECK(almost_equal(std::stod(out.str()), std::get<D_DOUBLE>(v1)));
@@ -134,6 +139,7 @@ TEST_CASE("Base")
     CHECK(has_value(v1));
     CHECK(v1.index() == d_variable);
     CHECK(!basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
 
     out << v1;
     CHECK(out.str() == name);
