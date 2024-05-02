@@ -604,6 +604,9 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
   {
     if (p.output_index)
     {
+      if (p.output_index == params::index::back)
+        p.output_index = record.size() - 1;
+
       assert(p.output_index < record.size());
       //std::swap(record[0], record[*p.output_index]);
       if (p.output_index > 0)

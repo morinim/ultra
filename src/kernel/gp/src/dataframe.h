@@ -168,6 +168,9 @@ template<class T>
 
 struct dataframe::params
 {
+  enum index : std::size_t {front = 0,
+                            back = std::numeric_limits<std::size_t>::max() };
+
   /// See `typing` for details.
   typing data_typing {typing::weak};
 
