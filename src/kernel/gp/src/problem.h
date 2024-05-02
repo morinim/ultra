@@ -70,7 +70,7 @@ public:
 
   // ---- Misc ----
   [[nodiscard]] bool operator!() const;
-  std::size_t setup_symbols();
+  void setup_symbols();
   void setup_terminals();
   [[nodiscard]] bool is_valid() const override;
 
@@ -83,7 +83,6 @@ private:
   dataframe training_ {};
   dataframe validation_ {};
 };
-
 
 }  // namespace ultra::src
 
