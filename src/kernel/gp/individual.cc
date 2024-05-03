@@ -604,6 +604,12 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
             v = s;
           break;
 
+        case d_variable:
+          if (std::string name; in >> name)
+            if (const auto *n = get_if<D_VARIABLE>(ss.decode(name)))
+              v = n;
+          break;
+
         case d_void:
           break;
         }
@@ -654,6 +660,9 @@ bool individual::save_impl(std::ostream &out) const
         break;
       case d_string:
         out << std::get<D_STRING>(a);
+        break;
+      case d_variable:
+        out << std::get<const D_VARIABLE *>(a)->name();
         break;
       case d_void:
         break;
