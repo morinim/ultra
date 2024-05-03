@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -34,6 +34,7 @@ TEST_CASE("Constructor / Insertion")
     CHECK(!ss.categories());
     CHECK(!ss.terminals());
     CHECK(ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal().empty());
     CHECK(ss.is_valid());
   }
 
@@ -48,17 +49,21 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.categories() == 1);
     CHECK(!ss.terminals());
     CHECK(!ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal()
+          == std::set{symbol::default_category});
 
     ss.insert<real::number>();
     CHECK(ss.categories() == 1);
     CHECK(ss.terminals() == 1);
     CHECK(ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal().empty());
     CHECK(ss.is_valid());
 
     // Reset
     ss.clear();
     CHECK(ss.categories() == 0);
     CHECK(ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal().empty());
     CHECK(ss.is_valid());
   }
 
@@ -70,12 +75,14 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.categories() == 1);
     CHECK(ss.terminals() == 1);
     CHECK(!ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal() == std::set<symbol::category_t>{1});
 
     ss.insert<str::literal>("apple", 1);
     CHECK(ss.categories() == 2);
     CHECK(ss.terminals(0) == 1);
     CHECK(ss.terminals(1) == 1);
     CHECK(ss.enough_terminals());
+    CHECK(ss.categories_missing_terminal().empty());
     CHECK(ss.is_valid());
 
     CHECK(ss.decode("apple"));

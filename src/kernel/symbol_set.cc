@@ -313,15 +313,22 @@ std::size_t symbol_set::terminals(symbol::category_t c) const
 }
 
 ///
-/// We want at least one terminal for every used category.
+/// Calculates the set of categories that need a terminal before the correct
+/// representation of a SLP `gp::individual` would be possible.
 ///
-/// \return `true` if there are enough terminals for secure individual
-///         generation
+/// \return the set of categories
 ///
-bool symbol_set::enough_terminals() const
+/// Consider that:
+/// - random generation of individuals may put whatever available function at
+///   index `0`;
+/// - input values of a function at index `0` can only be terminals.
+///
+/// So we want, at least, one terminal for every category used by a function.
+///
+std::set<symbol::category_t> symbol_set::categories_missing_terminal() const
 {
   if (views_.empty())
-    return true;
+    return {};
 
   std::set<symbol::category_t> need;
 
@@ -329,11 +336,22 @@ bool symbol_set::enough_terminals() const
     if (const auto *f = get_if<function>(s.get()))
       need.insert(f->categories().begin(), f->categories().end());
 
+  std::set<symbol::category_t> missing;
+
   for (const auto &i : need)
     if (i >= categories() || !terminals(i))
-      return false;
+      missing.insert(i);
 
-  return true;
+  return missing;
+}
+
+///
+/// \return `true` if there are enough terminals for secure individual
+///         generation
+///
+bool symbol_set::enough_terminals() const
+{
+  return categories_missing_terminal().empty();
 }
 
 ///

@@ -14,6 +14,7 @@
 #define      ULTRA_SYMBOL_SET_H
 
 #include <memory>
+#include <set>
 #include <string>
 
 #include "kernel/terminal.h"
@@ -145,6 +146,8 @@ public:
 
   [[nodiscard]] weight_t weight(const symbol &) const;
 
+  [[nodiscard]] std::set<symbol::category_t>
+    categories_missing_terminal() const;
   [[nodiscard]] bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
