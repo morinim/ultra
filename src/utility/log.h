@@ -99,10 +99,10 @@ private:
 #if defined(NDEBUG)
 #define ultraPRINT(level) if (level == log::lDEBUG);\
                           else if (level < log::reporting_level);\
-                          else log().get(level)
+                          else ultra::log().get(level)
 #else
 #define ultraPRINT(level) if (level < log::reporting_level);\
-                          else log().get(level)
+                          else ultra::log().get(level)
 #endif
 
 #define ultraFATAL   ultraPRINT(log::lFATAL)
