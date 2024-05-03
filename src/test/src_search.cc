@@ -57,7 +57,7 @@ TEST_CASE("Symbolic regression - single variable")
 
   // SEARCHING
   src::search s(prob);
-  const auto result(s.run());
+  const auto result(s.run(4));
 
   const auto oracle(s.oracle(result.best_individual));
   CHECK(oracle->is_valid());
@@ -72,7 +72,10 @@ TEST_CASE("Symbolic regression - single variable")
   };
 
   for (const auto &[out, in] : test)
+  {
+    REQUIRE(has_value((*oracle)({in})));
     CHECK(std::get<D_DOUBLE>((*oracle)({in})) == doctest::Approx(out));
+  }
 }
 
 TEST_CASE("Symbolic regression - multiple variables")
@@ -105,7 +108,7 @@ TEST_CASE("Symbolic regression - multiple variables")
 
   // SEARCHING
   src::search s(prob);
-  const auto result(s.run());
+  const auto result(s.run(4));
 
   const auto oracle(s.oracle(result.best_individual));
   CHECK(oracle->is_valid());
@@ -120,7 +123,10 @@ TEST_CASE("Symbolic regression - multiple variables")
   };
 
   for (const auto &[out, in] : test)
+  {
+    REQUIRE(has_value((*oracle)(in)));
     CHECK(std::get<D_DOUBLE>((*oracle)(in)) == doctest::Approx(out));
+  }
 }
 
 }  // TEST_SUITE("SRC::SEARCH")
