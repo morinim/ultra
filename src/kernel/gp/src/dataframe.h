@@ -201,6 +201,8 @@ struct dataframe::params
   { data_typing = typing::weak; return *this; }
 };
 
+std::ostream &operator<<(std::ostream &, const dataframe &);
+
 }  // namespace ultra::src
 
 #endif  // include guard

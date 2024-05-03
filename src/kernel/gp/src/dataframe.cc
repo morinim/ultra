@@ -608,7 +608,7 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
         p.output_index = record.size() - 1;
 
       assert(p.output_index < record.size());
-      //std::swap(record[0], record[*p.output_index]);
+
       if (p.output_index > 0)
         std::rotate(record.begin(),
                     std::next(record.begin(), *p.output_index),
@@ -715,6 +715,71 @@ bool dataframe::is_valid() const
   }
 
   return columns.is_valid();
+}
+
+///
+/// Prints the content of the dataframe on a given stream (markdown format).
+///
+/// \param[out] os output stream
+/// \param[in]  d  dataframe to be printed
+/// \return        a reference to the (updated) output stream
+///
+/// \related
+/// dataframe
+///
+std::ostream &operator<<(std::ostream &os, const dataframe &d)
+{
+  const auto str_col_info([](const columns_info::column_info &ci)
+  {
+    const std::string name(ci.name().empty() ? std::string("EMPTY")
+                                             : "'" + ci.name() + "'");
+
+    std::string str_domain;
+    switch (ci.domain())
+    {
+    case d_void:     str_domain = "void"; break;
+    case d_int:      str_domain = "int"; break;
+    case d_double:   str_domain = "double"; break;
+    case d_string:   str_domain = "string"; break;
+    case d_nullary:  str_domain = "nullary"; break;
+    case d_address:  str_domain = "address"; break;
+    case d_variable: str_domain = "variable"; break;
+    default:         str_domain = "?"; break;
+    };
+
+    const auto str_category(std::to_string(ci.category()));
+
+    return name + " " + str_domain + "/" + str_category;
+  });
+
+  std::vector<std::size_t> width;
+  std::ranges::transform(d.columns, std::back_inserter(width),
+                         [str_col_info](const auto &ci)
+                         {
+                           return str_col_info(ci).length();
+                         });
+
+  for (const auto &col : d.columns)
+    os << "| " << str_col_info(col) << ' ';
+  os << "|\n";
+
+  for (std::size_t i(0); i < d.columns.size(); ++i)
+    os << "| " << std::string(width[i], '-') << ' ';
+  os << "|\n";
+
+  for (const auto &example : d)
+  {
+    std::size_t i(0);
+
+    os << "| " << std::setw(width[i++]) << example.output;
+
+    for (const auto &cell : example.input)
+      os << " | " << std::setw(width[i++]) << cell;
+
+    os << " |\n";
+  }
+
+  return os;
 }
 
 }  // namespace ultra
