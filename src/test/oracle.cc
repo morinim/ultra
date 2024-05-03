@@ -24,7 +24,7 @@
 
 // Datasets
 constexpr std::size_t SR_COUNT = 10;
-std::istringstream sr(R"(
+const std::string sr(R"(
       95.2425,  2.81
     1554,       6
     2866.5485,  7.043
@@ -38,7 +38,7 @@ std::istringstream sr(R"(
 )");
 
 constexpr std::size_t IRIS_COUNT = 150;
-std::istringstream iris(R"(
+const std::string iris(R"(
 "setosa",5.1,3.5,1.4,0.2
 "setosa",4.9,3,1.4,0.2
 "setosa",4.7,3.2,1.3,0.2
@@ -366,7 +366,8 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
   using namespace ultra;
   log::reporting_level = log::lWARNING;
 
-  CHECK(pr.data().read_csv(sr) == SR_COUNT);
+  std::istringstream is(sr);
+  CHECK(pr.data().read_csv(is) == SR_COUNT);
   pr.setup_symbols();
 
   // TEAM OF ONE INDIVIDUAL.
@@ -446,31 +447,34 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
       {
         const auto out_t(oracle_team(e.input));
 
-        if (std::fabs(sum / n) < 0.000001)
-          CHECK(almost_equal(std::get<D_DOUBLE>(out_t), 0.0));
-        else
+        if (!almost_equal(sum / n, std::get<D_DOUBLE>(out_t)))
         {
-          if (!almost_equal(sum / n, std::get<D_DOUBLE>(out_t)))
-            std::cout << std::get<D_DOUBLE>(out1) << "  "
-                      << std::get<D_DOUBLE>(out2) << "  "
-                      << std::get<D_DOUBLE>(out3) << "  "
-                      << std::get<D_DOUBLE>(out4) << "       "
-                      << std::get<D_DOUBLE>(out_t) << std::endl;
-          CHECK(sum / n == doctest::Approx(std::get<D_DOUBLE>(out_t)));
+          ultraWARNING << std::get<D_DOUBLE>(out1) << "  "
+                       << std::get<D_DOUBLE>(out2) << "  "
+                       << std::get<D_DOUBLE>(out3) << "  "
+                       << std::get<D_DOUBLE>(out4) << "       "
+                       << sum / n << " "
+                       << std::get<D_DOUBLE>(out_t) << std::endl;
         }
+
+        CHECK(sum / n == doctest::Approx(std::get<D_DOUBLE>(out_t)));
       }
     }
   }
 }
 
+
 TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
 {
   using namespace ultra;
+  log::reporting_level = log::lWARNING;
 
-  CHECK(pr.data().read_csv(sr) == SR_COUNT);
+  std::istringstream is(sr);
+  CHECK(pr.data().read_csv(is) == SR_COUNT);
   pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
 
-  for (unsigned iterations(1000); iterations; --iterations)
+  for (unsigned cycles(1000); cycles; --cycles)
   {
     const gp::individual ind(pr);
     const src::reg_oracle oracle1(ind);
@@ -501,8 +505,10 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle")
   using namespace ultra;
   log::reporting_level = log::lWARNING;
 
-  CHECK(pr.data().read_csv(iris) == IRIS_COUNT);
+  std::istringstream is(iris);
+  CHECK(pr.data().read_csv(is) == IRIS_COUNT);
   pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
 
   // GAUSSIAN ORACLE TEAM OF ONE INDIVIDUAL.
   test_team_of_one<src::gaussian_oracle>(pr);
