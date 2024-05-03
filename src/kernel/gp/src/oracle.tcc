@@ -68,19 +68,21 @@ value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
     return this->run(e);
   else
   {
-    D_DOUBLE avg(0), count(0);
+    D_DOUBLE sum(0), count(0);
 
-    // Calculate the running average.
     for (const auto &core : this->team_)
     {
       const auto res(core.run(e));
 
       if (has_value(res))
-        avg += (std::get<D_DOUBLE>(res) - avg) / ++count;
+      {
+        sum += std::get<D_DOUBLE>(res);
+        ++count;
+      }
     }
 
     if (count > 0.0)
-      return avg;
+      return sum / count;
 
     return {};
   }
