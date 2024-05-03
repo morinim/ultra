@@ -36,6 +36,7 @@ TEST_CASE("Base")
 TEST_CASE("setup_terminals")
 {
   using namespace ultra;
+  log::reporting_level = log::lWARNING;
 
   std::istringstream wine(R"(
     fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur dioxide,total sulfur dioxide,density,pH,sulphates,alcohol,quality
@@ -129,8 +130,7 @@ TEST_CASE("setup_terminals")
 
     src::problem p(iris, params);
     p.setup_symbols();
-
-    CHECK(p.is_valid());
+    CHECK(p.sset.enough_terminals());
 
     CHECK(p.categories() == 5);
     CHECK(p.classes() == 3);
