@@ -150,16 +150,17 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
     if (summary)
     {
       std::cout << std::string(50, ' ') << '\r' << std::flush;
-      ultraOUTPUT << std::setw(8) << sum_.generation << ": "
-                  << std::setw(12) << sum_.best().fit
-                  << " (" << std::setw(8) << lexical_cast<std::string>(elapsed)
-                  << ")";
+      ultraOUTPUT << std::setw(8) << lexical_cast<std::string>(elapsed)
+                  << std::setw(8) << sum_.generation
+                  << '[' << std::setw(3) << pop_.layers() << "]: "
+                  << std::setw(12) << sum_.best().fit;
     }
     else
     {
-      std::cout << std::setw(8) << sum_.generation << ": " << sum_.best().fit
-                << " (" << std::setw(8) << lexical_cast<std::string>(elapsed)
-                << ")\r" << std::flush;
+      std::cout << lexical_cast<std::string>(elapsed) << "  "
+                << sum_.generation << '[' << pop_.layers() << "]: "
+                << sum_.best().fit
+                << "          \r" << std::flush;
     }
 
     from_last_msg->restart();
