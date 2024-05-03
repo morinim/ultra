@@ -42,10 +42,9 @@ problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
 {
   ultraINFO << "Reading dataset " << ds << "...";
   training_.read(ds, p);
-  ultraINFO << "...dataset read.";
+  ultraINFO << "...dataset read";
 
   ultraINFO << "Examples: " << training_.size()
-            << ", categories: " << categories()
             << ", features: " << variables()
             << ", classes: " << classes();
 
@@ -70,10 +69,9 @@ problem::problem(std::istream &ds, const dataframe::params &p) : problem()
 {
   ultraINFO << "Reading dataset from input stream...";
   training_.read_csv(ds, p);
-  ultraINFO << "...dataset read.";
+  ultraINFO << "...dataset read";
 
   ultraINFO << " Examples: " << training_.size()
-            << ", categories: " << categories()
             << ", features: " << variables()
             << ", classes: " << classes();
 
@@ -107,7 +105,7 @@ void problem::setup_terminals()
     throw exception::insufficient_data("Cannot generate the terminal set");
 
   // ********* Sets up variables *********
-  std::string variables;
+  std::map<symbol::category_t, std::string> variables;
   for (std::size_t i(1); i < columns.size(); ++i)
   {
     // Sets up the variables (features).
@@ -116,9 +114,14 @@ void problem::setup_terminals()
     const auto category(columns[i].category());
 
     if (insert<variable>(i - 1, name, category))
-      variables += " `" + name + "`";
+      variables[category] += " `" + name + "`";
   }
-  ultraINFO << "Variables:" << variables;
+
+  for (const auto &[category, inserted] : variables)
+    if (!inserted.empty())
+    {
+      ultraINFO << "Category " << category << " variables:" << inserted;
+    }
 
   // ********* Sets up nominal attributes *********
   std::map<symbol::category_t, std::set<value_t>> attributes;
@@ -166,24 +169,34 @@ void problem::setup_terminals()
                 << attributes_in_category;
     }
 
-  ultraINFO << "...terminals ready.";
+  ultraINFO << "...terminals ready";
 }
 
 ///
-/// Default symbol set.
+/// Automatic set up of a symbol set.
 ///
 /// A predefined set is arranged (useful for simple problems: single category
 /// regression / classification).
 ///
+/// Multi-category tasks are supported but the result is suboptimal.
+///
 /// \warning
 /// Data should be loaded before symbols: without data we don't know, among
-/// other things, the features the dataset has.
+/// other things, the features of the dataset.
 ///
 void problem::setup_symbols()
 {
-  ultraINFO << "Setting up default symbol set...";
+  ultraINFO << "Automatically setting up symbol set...";
 
-  std::map<symbol::category_t, std::set<std::string>> symbols;
+  std::map<symbol::category_t, std::string> symbols;
+  const auto add_symbol([&symbols](symbol *s)
+  {
+    if (s)
+      symbols[s->category()] += " `" + s->name() + "`";
+  });
+
+  if (!sset.terminals())
+    setup_terminals();
 
   for (const auto used_categories(training_.columns.used_categories());
        auto category : used_categories)
@@ -191,62 +204,45 @@ void problem::setup_symbols()
     if (const auto domain(training_.columns.domain_of_category(category));
         numerical_data_type(domain))
     {
-      if (!classification())
-      {
-        if (domain == d_double)
-        {
-          if (auto *s = insert<real::number>(-100.0, 100.0, category))
-            symbols[category].insert(s->name());
-        }
-        else
-        {
-          if (auto *s = insert<integer::number>(100, 100, category))
-            symbols[category].insert(s->name());
-        }
-      }
-
-      if (auto *s = insert<real::abs>(category))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::add>(category))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::div>(
-            category, function::param_data_types{category, category}))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::ln>(category))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::mul>(
-            category, function::param_data_types{category, category}))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::mod>(
-            category, function::param_data_types{category, category}))
-        symbols[category].insert(s->name());
-      if (auto *s = insert<real::sub>(category))
-        symbols[category].insert(s->name());
+      add_symbol(insert<real::abs>(category));
+      add_symbol(insert<real::add>(category));
+      add_symbol(insert<real::div>(
+                   category, function::param_data_types{category, category}));
+      add_symbol(insert<real::ln>(category));
+      add_symbol(insert<real::mul>(
+                   category, function::param_data_types{category, category}));
+      add_symbol(insert<real::mod>(
+                   category, function::param_data_types{category, category}));
+      add_symbol(insert<real::sub>(category));
     }
     else if (domain == d_string)
     {
-      if (auto *s = insert<str::ife>(
-            symbol::default_category,
-            function::param_data_types{category, category,
-                                       symbol::default_category,
-                                       symbol::default_category}))
-        symbols[category].insert(s->name());
+      add_symbol(insert<str::ife>(
+                   symbol::default_category,
+                   function::param_data_types{category, category,
+                                              symbol::default_category,
+                                              symbol::default_category}));
     }
   }
+
+  for (const auto categories(sset.categories_missing_terminal());
+       auto category : categories)
+    if (const auto domain(training_.columns.domain_of_category(category));
+        numerical_data_type(domain))
+    {
+      if (domain == d_double)
+        add_symbol(insert<real::number>(-100.0, 100.0, category));
+      else
+        add_symbol(insert<integer::number>(100, 100, category));
+    }
 
   for (const auto &[category, names] : symbols)
     if (!names.empty())
     {
-      std::string names_in_category;
-
-      for (const auto &name : names)
-        names_in_category += " `" + name + "`";
-
-      ultraINFO << "Category " << category << " symbols: "
-                << names_in_category;
+      ultraINFO << "Category " << category << " symbols:" << names;
     }
 
-  ultraINFO << "...default symbol set ready.";
+  ultraINFO << "...symbol set ready";
 }
 
 ///
