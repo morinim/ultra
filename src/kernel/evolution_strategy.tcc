@@ -131,17 +131,33 @@ void alps_es<E>::after_generation(P &pop,
     {
       if (almost_equal(sum.az.fit_dist(*std::prev(layer)).mean(),
                        sum.az.fit_dist(*layer).mean()))
+      {
+        ultraINFO << "ALPS: erasing layer " << layer->uid() << " (UID)";
         layer = pop.erase(layer);
+      }
       else
       {
         const auto sd(sum.az.fit_dist(*layer).standard_deviation());
         const bool converged(issmall(sd));
 
         if (converged)
-          layer->allowed(std::max(params.population.min_individuals,
-                                  layer->size() / 2));
-        else
+        {
+          const auto new_allowed(std::max(params.population.min_individuals,
+                                          layer->size() / 2));
+
+          ultraINFO << "ALPS: decreasing allowed individuals of layer "
+                    << layer->uid() << " (UID) to " << new_allowed;
+
+          layer->allowed(new_allowed);
+        }
+        else if (layer->allowed() < params.population.individuals)
+        {
+          ultraINFO << "ALPS: restoring allowed individuals of layer "
+                    << layer->uid() << " (UID) to "
+                    << params.population.individuals;
+
           layer->allowed(params.population.individuals);
+        }
 
         ++layer;
       }
@@ -154,9 +170,13 @@ void alps_es<E>::after_generation(P &pop,
     if (const auto n_layers(pop.layers());
         n_layers < params.alps.max_layers
         || sum.az.age_dist(pop.back()).mean() > params.alps.max_age(n_layers))
+    {
+      ultraINFO << "ALPS: adding layer";
       pop.add_layer();
+    }
     else
     {
+      ultraINFO << "ALPS: try moving up layer 0";
       this->replace_.try_move_up_layer(pop.front(), pop.layer(1));
       pop.init(pop.front());
     }
@@ -244,7 +264,7 @@ std_es<E>::std_es(const problem &prob, const E &eva)
 
 ///
 /// \param[in] pop             a population. Operations are performed on
-///                            sub-populations of `pop`
+///                            sub-groups of `pop`
 /// \param[in] iter            iterator pointing to the main subpopulation
 ///                            we're going to work on
 /// \param[in] starting_status the starting status (usually generated via
