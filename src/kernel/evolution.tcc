@@ -152,15 +152,27 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
       std::cout << std::string(50, ' ') << '\r' << std::flush;
       ultraOUTPUT << std::setw(8) << lexical_cast<std::string>(elapsed)
                   << std::setw(8) << sum_.generation
-                  << '[' << std::setw(3) << pop_.layers() << "]: "
-                  << std::setw(12) << sum_.best().fit;
+                  << ':' << std::setw(13) << sum_.best().fit;
     }
     else
     {
+      const auto seconds(
+        std::max(
+          std::chrono::duration_cast<std::chrono::seconds>(elapsed),
+          std::chrono::seconds(1)).count());
+
+      double gph(3600.0 * sum_.generation / seconds);
+      if (gph > 2.0)
+        gph = std::floor(gph);
+
       std::cout << lexical_cast<std::string>(elapsed) << "  "
-                << sum_.generation << '[' << pop_.layers() << "]: "
-                << sum_.best().fit
-                << "          \r" << std::flush;
+                << sum_.generation << ": " << sum_.best().fit
+                << "  [" << pop_.layers();
+
+      if (sum_.generation)
+        std::cout << "x " << gph << "gph";
+
+      std::cout << ']' << "                              \r" << std::flush;
     }
 
     from_last_msg->restart();
@@ -228,7 +240,7 @@ evolution<S>::run()
     {
       auto evolve(es_.operations(pop_, iter, sum_.starting_status()));
 
-      // Asynchronous population update: each newly generate offspring can
+      // Asynchronous population update: each newly generated offspring can
       // replace an individual of the current population (aka steady state
       // population).
       // Asynchronous update permits new individual to contribute to the
@@ -247,7 +259,7 @@ evolution<S>::run()
   scored_individual previous_best(sum_.best());
 
   const auto print_and_update_if_better(
-    [&](const auto &candidate)
+    [&](auto candidate)
     {
       if (previous_best < candidate)
       {
