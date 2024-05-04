@@ -258,7 +258,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
     alps.after_generation(pop, sum);
 
-    CHECK(layer1.allowed() < layer1.size());
+    CHECK(layer1.allowed() <= layer1.size());
     CHECK(pop.layers() == prob.params.population.init_subgroups);
   }
 

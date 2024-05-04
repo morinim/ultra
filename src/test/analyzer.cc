@@ -31,6 +31,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   constexpr double sup_fit(10.0);
   const auto eva([](const gp::individual &) { return random::sup(sup_fit); });
 
+  prob.params.population.min_individuals = 1;
+
   for (std::size_t l(1); l < 3; ++l)
     for (std::size_t i(1); i < 50; ++i)
       for (std::size_t c(10); c < 20; ++c)

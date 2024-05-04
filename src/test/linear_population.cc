@@ -29,14 +29,26 @@ TEST_CASE_FIXTURE(fixture1, "Creation")
 {
   using namespace ultra;
 
-  for (unsigned i(0); i < 100; ++i)
+  SUBCASE("Empty")
   {
-    prob.params.population.individuals = random::between(1, 100);
-
-    linear_population<gp::individual> pop(prob);
-
-    CHECK(pop.size() == prob.params.population.individuals);
+    linear_population<gp::individual> pop;
+    CHECK(pop.size() == 0);
     CHECK(pop.is_valid());
+  }
+
+  SUBCASE("Standard")
+  {
+    for (unsigned i(0); i < 100; ++i)
+    {
+      prob.params.population.individuals =
+        random::between<std::size_t>(prob.params.population.min_individuals,
+                                     100);
+
+      linear_population<gp::individual> pop(prob);
+
+      CHECK(pop.size() == prob.params.population.individuals);
+      CHECK(pop.is_valid());
+    }
   }
 }
 
@@ -115,6 +127,17 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
     for (const auto &p : frequency)
       CHECK(std::abs(p.second - expected) <= tolerance);
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Allowed")
+{
+  using namespace ultra;
+
+  linear_population<gp::individual> pop(prob);
+
+  CHECK(pop.size() == prob.params.population.individuals);
+  pop.allowed(0);
+  CHECK(pop.size() == prob.params.population.min_individuals);
 }
 
 }  // TEST_SUITE("POPULATION")

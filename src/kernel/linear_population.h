@@ -49,18 +49,18 @@ public:
   [[nodiscard]] I &operator[](std::size_t);
   [[nodiscard]] const I &operator[](std::size_t) const;
 
-  [[nodiscard]] std::size_t size() const;
-  [[nodiscard]] bool empty() const;
+  [[nodiscard]] std::size_t size() const noexcept;
+  [[nodiscard]] bool empty() const noexcept;
 
   [[nodiscard]] std::size_t allowed() const;
   void allowed(std::size_t);
 
-  [[nodiscard]] unsigned max_age() const;
-  void max_age(unsigned);
+  [[nodiscard]] unsigned max_age() const noexcept;
+  void max_age(unsigned) noexcept;
 
   [[nodiscard]] app_level_uid uid() const noexcept;
 
-  void clear();
+  void clear() noexcept;
 
   void push_back(const I &);
   void pop_back();
@@ -87,7 +87,9 @@ private:
   mutable ignore_copy<std::shared_mutex> mutex_ {};
 
   std::vector<I> members_ {};
-  std::size_t allowed_ {0};
+
+  std::size_t allowed_ {std::numeric_limits<difference_type>::max()};
+  std::size_t min_allowed_ {1};
 
   unsigned max_age_ {std::numeric_limits<unsigned>::max()};
 

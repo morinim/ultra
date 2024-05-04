@@ -31,6 +31,7 @@ TEST_CASE_FIXTURE(fixture1, "Creation")
   using namespace ultra;
 
   prob.params.population.init_subgroups = 3;
+  prob.params.population.min_individuals = 1;
 
   for (unsigned i(0); i < 100; ++i)
   {
@@ -147,6 +148,8 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
 TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
+
+  prob.params.population.min_individuals = 1;
 
   for (unsigned i(0); i < 100; ++i)
   {

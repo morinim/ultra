@@ -24,7 +24,9 @@
 ///
 template<Individual I>
 linear_population<I>::linear_population(const ultra::problem &p)
-  : allowed_(p.params.population.individuals)
+  : allowed_(std::max(p.params.population.individuals,
+                      p.params.population.min_individuals)),
+    min_allowed_(p.params.population.min_individuals)
 {
   reset(p);
 }
@@ -39,7 +41,7 @@ void linear_population<I>::reset(const ultra::problem &p)
 {
   members_.clear();
   std::generate_n(std::back_inserter(members_), allowed(),
-                  [&p] {return I(p); });
+                  [&p] { return I(p); });
 }
 
 ///
@@ -68,7 +70,7 @@ const I &linear_population<I>::operator[](std::size_t i) const
 /// \return number of individuals in this layer
 ///
 template<Individual I>
-std::size_t linear_population<I>::size() const
+std::size_t linear_population<I>::size() const noexcept
 {
   return members_.size();
 }
@@ -77,7 +79,7 @@ std::size_t linear_population<I>::size() const
 /// \return reference max age for current layer
 ///
 template<Individual I>
-unsigned linear_population<I>::max_age() const
+unsigned linear_population<I>::max_age() const noexcept
 {
   return max_age_;
 }
@@ -86,7 +88,7 @@ unsigned linear_population<I>::max_age() const
 /// \param[in] m set the reference max age for the current layer
 ///
 template<Individual I>
-void linear_population<I>::max_age(unsigned m)
+void linear_population<I>::max_age(unsigned m) noexcept
 {
   max_age_ = m;
 }
@@ -101,7 +103,7 @@ std::shared_mutex &linear_population<I>::mutex() const
 /// \return number of individuals allowed in this layer
 ///
 /// \note
-/// `size() < allowed()`
+/// `size() <= allowed()`
 ///
 template<Individual I>
 std::size_t linear_population<I>::allowed() const
@@ -110,13 +112,30 @@ std::size_t linear_population<I>::allowed() const
 }
 
 ///
-/// \param[in] n number of individuals allowed in this layer
+/// Sets the number of individuals allowed in this layer.
+///
+/// \param[in] n number of allowed individuals
+///
+/// If the layer contains more individuals than the amount allowed, the surplus
+/// is erased.
 ///
 template<Individual I>
 void linear_population<I>::allowed(std::size_t n)
 {
-  members_.reserve(n);
+  // Don't drop under a predefined number of individuals.
+  n = std::max(n, min_allowed_);
+
+  if (size() > n)
+  {
+    const auto delta(size() - n);
+    members_.erase(members_.end() - delta, members_.end());
+
+    assert(size() == n);
+  }
+
   allowed_ = n;
+
+  Ensures(is_valid());
 }
 
 ///
@@ -127,7 +146,7 @@ void linear_population<I>::allowed(std::size_t n)
 /// a layer, see `layer_t::clear`.
 ///
 template<Individual I>
-bool linear_population<I>::empty() const
+bool linear_population<I>::empty() const noexcept
 {
   return members_.empty();
 }
@@ -136,7 +155,7 @@ bool linear_population<I>::empty() const
 /// Removes all elements from the layer.
 ///
 template<Individual I>
-void linear_population<I>::clear()
+void linear_population<I>::clear() noexcept
 {
   members_.clear();
 }
@@ -278,6 +297,9 @@ template<Individual I>
 bool linear_population<I>::is_valid() const
 {
   if (!std::ranges::all_of(*this, [](const auto &i) { return i.is_valid(); }))
+    return false;
+
+  if (allowed() < min_allowed_)
     return false;
 
   return size() <= allowed();
