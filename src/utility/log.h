@@ -34,7 +34,7 @@ public:
   ///
   /// * `lDEBUG`   - Only interesting for developers
   /// * `lINFO`    - I say something but I don't expect you to listen
-  /// * `lOUTPUT`  - Standard program's console output
+  /// * `lOUTPUT`  - Standard console output
   /// * `lWARNING` - I can continue but please have a look
   /// * `lERROR`   - Something really wrong... but you could be lucky
   /// * `lFATAL`   - The program cannot continue
