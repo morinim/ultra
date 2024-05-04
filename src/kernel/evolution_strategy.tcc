@@ -132,7 +132,7 @@ void alps_es<E>::after_generation(P &pop,
       if (almost_equal(sum.az.fit_dist(*std::prev(layer)).mean(),
                        sum.az.fit_dist(*layer).mean()))
       {
-        ultraINFO << "ALPS: erasing layer " << layer->uid() << " (UID)";
+        ultraDEBUG << "ALPS: erasing layer UID=" << layer->uid();
         layer = pop.erase(layer);
       }
       else
@@ -142,21 +142,28 @@ void alps_es<E>::after_generation(P &pop,
 
         if (converged)
         {
+          const auto prev_allowed(layer->allowed());
           const auto new_allowed(std::max(params.population.min_individuals,
                                           layer->size() / 2));
 
-          ultraINFO << "ALPS: decreasing allowed individuals of layer "
-                    << layer->uid() << " (UID) to " << new_allowed;
+          if (new_allowed < prev_allowed)
+          {
+            ultraDEBUG << "ALPS: decreasing allowed individuals of layer UID="
+                       << layer->uid() << " to " << new_allowed;
 
-          layer->allowed(new_allowed);
+            layer->allowed(new_allowed);
+          }
         }
-        else if (layer->allowed() < params.population.individuals)
+        else
         {
-          ultraINFO << "ALPS: restoring allowed individuals of layer "
-                    << layer->uid() << " (UID) to "
-                    << params.population.individuals;
+          if (layer->allowed() < params.population.individuals)
+          {
+            ultraDEBUG << "ALPS: restoring allowed individuals of layer UID="
+                       << layer->uid() << " to "
+                       << params.population.individuals;
 
-          layer->allowed(params.population.individuals);
+            layer->allowed(params.population.individuals);
+          }
         }
 
         ++layer;
@@ -171,12 +178,12 @@ void alps_es<E>::after_generation(P &pop,
         n_layers < params.alps.max_layers
         || sum.az.age_dist(pop.back()).mean() > params.alps.max_age(n_layers))
     {
-      ultraINFO << "ALPS: adding layer";
+      ultraDEBUG << "ALPS: adding layer";
       pop.add_layer();
     }
     else
     {
-      ultraINFO << "ALPS: try moving up layer 0";
+      ultraDEBUG << "ALPS: try moving up first layer";
       this->replace_.try_move_up_layer(pop.front(), pop.layer(1));
       pop.init(pop.front());
     }
