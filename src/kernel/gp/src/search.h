@@ -81,7 +81,7 @@ public:
   using class_evaluator_t = gaussian_evaluator<P>;
   using reg_evaluator_t = rmae_evaluator<P>;
 
-  search(problem &, metric_flags = metric_flags::nothing);
+  search(problem &, metric_flags = metric_flags::accuracy);
 
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
