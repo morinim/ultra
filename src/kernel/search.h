@@ -68,6 +68,9 @@ public:
   [[nodiscard]] virtual bool is_valid() const;
 
 protected:
+  // *** Template methods ***
+  [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
+    const individual_t &) const;
   virtual void tune_parameters();
 
   // *** Data members ***
@@ -85,11 +88,6 @@ private:
   // Template method of the `basic_search::run` member function called exactly
   // one time just before the first run.
   virtual void init();
-
-  // Template method of the `basic_search::run` member function called exactly
-  // one time after every evolution run..
-  [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
-    const individual_t &) const;
 
   //void log_stats(const search_stats<T> &) const;
   bool load();

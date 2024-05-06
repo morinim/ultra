@@ -39,6 +39,7 @@ class basic_search : public ultra::basic_search<ES, E>
 {
 public:
   using individual_t = typename ultra::basic_search<ES, E>::individual_t;
+  using fitness_t = typename ultra::basic_search<ES, E>::fitness_t;
 
   basic_search(problem &, E, metric_flags = metric_flags::nothing);
 
@@ -50,7 +51,8 @@ public:
 
 protected:
   // *** Template methods / customization points ***
-  //void calculate_metrics(summary<T> *) const override;
+  [[nodiscard]] model_measurements<fitness_t> calculate_metrics(
+    const individual_t &) const override;
 
   //void log_stats(const search_stats<T> &,
   //               tinyxml2::XMLDocument *) const override;
@@ -79,7 +81,7 @@ public:
   using class_evaluator_t = gaussian_evaluator<P>;
   using reg_evaluator_t = rmae_evaluator<P>;
 
-  search(problem &p, metric_flags m = metric_flags::nothing);
+  search(problem &, metric_flags = metric_flags::nothing);
 
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});

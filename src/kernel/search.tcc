@@ -153,7 +153,7 @@ basic_search<ES, E>::run(unsigned n,
     vs_->validation_setup(r);
 
     // Update the search statistics (possibly using the validation setup).
-    if (const auto prg = run_summary.best().ind; !prg.empty())
+    if (const auto prg(run_summary.best().ind); !prg.empty())
       stats.update(prg, calculate_metrics(prg), run_summary.elapsed,
                    threshold);
   }

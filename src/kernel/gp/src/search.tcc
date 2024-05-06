@@ -69,19 +69,30 @@ problem &basic_search<ES, E>::prob() const noexcept
 ///
 /// Calculates various performance metrics.
 ///
-/// \param[out] s update summary of the evolution run just finished
-///               (metrics regarding `s.best.solution`)
+/// \param[in] prg best individual from the evolution run just finished
+/// \return        measurements about the individual
 ///
-/// Accuracy calculation is performed if AT LEAST ONE of the following
-/// conditions is satisfied:
+/// Fitness is always calculated. Additional metrics only if explicitly asked
+/// in the constructor.
 ///
-/// * the accuracy threshold is defined (`env.threshold.accuracy > 0.0`);
-/// * we explicitly asked for accuracy calculation in the constructor.
+/// \warning
+/// Can be very time consuming.
 ///
-/// Otherwise the function skips accuracy calculation.
-///
-/// \warning Can be very time consuming.
-///
+template<template<class> class ES, Evaluator E>
+model_measurements<typename basic_search<ES, E>::fitness_t>
+basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
+{
+  auto ret(ultra::basic_search<ES, E>::calculate_metrics(prg));
+
+  if ((metrics_ & metric_flags::accuracy))
+  {
+    const auto prg_oracle(oracle(prg));
+    ret.accuracy = prg_oracle->measure(accuracy_metric(), prob().data());
+  }
+
+  return ret;
+}
+
 /*template<class T, template<class> class ES>
 void basic_search<ES, E>::calculate_metrics(summary<T> *s) const
 {
