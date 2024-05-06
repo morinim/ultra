@@ -162,7 +162,8 @@ template<std::input_iterator Iterator>
 class basic_range
 {
 public:
-  basic_range(Iterator b, Iterator e) noexcept : b_(b), e_(e) {}
+  basic_range(Iterator beg_it, Iterator end_it) noexcept
+    : b_(beg_it), e_(end_it) {}
 
   [[nodiscard]] auto begin() const noexcept { return b_; }
   [[nodiscard]] auto end() const noexcept { return e_; }

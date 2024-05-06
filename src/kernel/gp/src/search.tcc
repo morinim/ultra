@@ -369,11 +369,11 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
 {
   const auto search_scheme([&]<Evaluator E>()
   {
-    basic_search<alps_es, E> search(prob_, E(prob_.data()), metrics_);
+    basic_search<alps_es, E> alps(prob_, E(prob_.data()), metrics_);
 
-    search.after_generation(after_generation_callback_);
+    alps.after_generation(after_generation_callback_);
 
-    return search.run(n, threshold);
+    return alps.run(n, threshold);
   });
 
   if (prob_.classification())
