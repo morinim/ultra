@@ -50,7 +50,7 @@ double accuracy_metric::operator()(const core_reg_oracle *o,
 double accuracy_metric::operator()(const core_class_oracle *o,
                                    const dataframe &d) const
 {
-  Expects(d.classes());
+  Expects(d.classes() >= 2);
   Expects(d.begin() != d.end());
 
   std::uintmax_t ok(0), total_nr(0);
