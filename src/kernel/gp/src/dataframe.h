@@ -51,6 +51,8 @@ struct example
   /// machine learning system, or the right answer supplied in the training
   /// data.
   value_t output {};
+
+  [[nodiscard]] bool operator==(const example &) const noexcept = default;
 };
 
 [[nodiscard]] class_t label(const src::example &);
@@ -113,6 +115,7 @@ public:
   [[nodiscard]] bool operator!() const noexcept;
 
   void push_back(const src::example &);
+  template<class InputIt> iterator insert(const_iterator, InputIt, InputIt);
 
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
@@ -202,6 +205,32 @@ struct dataframe::params
 };
 
 std::ostream &operator<<(std::ostream &, const dataframe &);
+
+///
+/// Inserts elements from range `[first, last[` before `pos`.
+///
+/// \param[in] pos   iterator before which the content will be inserted (may be
+///                  the `end()` iterator)
+/// \param[in] first first iterator of the range of elements to insert, cannot
+///                  be iterator into container for which `insert` is called
+/// \param[in] last  last iterator of the range of elements to insert, cannot
+///                  be iterator into container for which `insert` is called
+/// \return          iterator pointing to the first element inserted, or `pos`
+///                  if `first == last`
+///
+/// \remark
+/// If, after the operation, the new `size()` is greater than old `capacity()`
+/// areallocation takes place, in which case all iterators (including the
+/// `end()` iterator) and all references to the elements are invalidated;
+/// otherwise, only the iterators and references before the insertion point
+/// remain valid.
+///
+template<class InputIt>
+dataframe::iterator dataframe::insert(dataframe::const_iterator pos,
+                                      InputIt first, InputIt last)
+{
+  return dataset_.insert(pos, first, last);
+}
 
 }  // namespace ultra::src
 

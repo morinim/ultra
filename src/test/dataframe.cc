@@ -76,6 +76,35 @@ private:
 TEST_SUITE("DATAFRAME")
 {
 
+TEST_CASE("push_back / insert")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  dataframe d1;
+
+  const std::size_t nr(1000);
+
+  for (std::size_t i(0); i < nr; ++i)
+  {
+    src::example ex;
+
+    ex.input = std::vector<value_t>{random::sup(1000.0),
+                                    random::sup(1000.0),
+                                    random::sup(1000.0)};
+    ex.output = random::sup(1000.0);
+
+    d1.push_back(ex);
+  }
+
+  CHECK(d1.size() == nr);
+
+  dataframe d2;
+  d2.insert(d2.begin(), d1.begin(), d1.end());
+
+  CHECK(std::ranges::equal(d1, d2));
+}
+
 TEST_CASE("Filtering")
 {
   using namespace ultra;
