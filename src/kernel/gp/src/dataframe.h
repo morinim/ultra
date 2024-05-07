@@ -98,12 +98,15 @@ public:
   [[nodiscard]] iterator end();
   [[nodiscard]] const_iterator end() const;
 
+  // ---- Element access ----
   [[nodiscard]] value_type front() const;
   [[nodiscard]] value_type &front();
 
   // ---- Modifiers ----
   void clear();
   iterator erase(iterator, iterator);
+  void push_back(const src::example &);
+  template<class InputIt> iterator insert(const_iterator, InputIt, InputIt);
 
   // ---- Convenience ----
   std::size_t read(const std::filesystem::path &);
@@ -114,19 +117,21 @@ public:
   std::size_t read_xrff(std::istream &, const params &);
   [[nodiscard]] bool operator!() const noexcept;
 
-  void push_back(const src::example &);
-  template<class InputIt> iterator insert(const_iterator, InputIt, InputIt);
+  bool clone_schema(const dataframe &);
 
+  // ---- Capacity ----
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
 
   [[nodiscard]] class_t classes() const noexcept;
   [[nodiscard]] unsigned variables() const;
 
+  // ---- Misc ----
   [[nodiscard]] std::string class_name(class_t) const noexcept;
 
   [[nodiscard]] bool is_valid() const;
 
+  // ---- Public data members ----
   src::columns_info columns {};
 
 private:

@@ -690,6 +690,26 @@ dataframe::iterator dataframe::erase(iterator first, iterator last)
 }
 
 ///
+/// Creates a copy of a given schema in an empty dataframe.
+///
+/// \param[in] other dataframe we copy schema from
+/// \return    `true` if schema has been cloned
+///
+/// \warning
+/// If the current dataframe isn't empty the operation fails.
+///
+bool dataframe::clone_schema(const dataframe &other)
+{
+  if (!empty())
+    return false;
+
+  columns = other.columns;
+  classes_map_ = other.classes_map_;
+
+  return true;
+}
+
+///
 /// \return `true` if the object passes the internal consistency check
 ///
 bool dataframe::is_valid() const
