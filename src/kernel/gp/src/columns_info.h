@@ -79,26 +79,23 @@ public:
     std::set<value_t> states_;
   };
 
+  // ---- Aliases ----
   using const_iterator = std::vector<column_info>::const_iterator;
   using iterator = std::vector<column_info>::iterator;
   using size_type = std::size_t;
   using value_type = column_info;
 
+  // ---- Constructors ----
   columns_info() = default;
+  columns_info(const columns_info &);
 
-  void data_typing(typing) noexcept;
+  columns_info &operator=(const columns_info &);
 
+  // ---- Element access ----
   [[nodiscard]] const column_info &operator[](size_type) const;
   [[nodiscard]] column_info &operator[](size_type);
 
   [[nodiscard]] column_info operator[](const std::string &) const;
-
-  [[nodiscard]] size_type size() const noexcept;
-  [[nodiscard]] bool empty() const noexcept;
-
-  [[nodiscard]] const_iterator begin() const noexcept;
-  [[nodiscard]] iterator begin() noexcept;
-  [[nodiscard]] const_iterator end() const noexcept;
 
   [[nodiscard]] const column_info &front() const;
   [[nodiscard]] column_info &front();
@@ -106,9 +103,22 @@ public:
   [[nodiscard]] const column_info &back() const;
   [[nodiscard]] column_info &back();
 
+  // ---- Capacity ----
+  [[nodiscard]] size_type size() const noexcept;
+  [[nodiscard]] bool empty() const noexcept;
+
+  // ---- Iterators ----
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] iterator begin() noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
+
+  // ---- Modifiers ----
   void pop_back();
   void push_back(const column_info &);
   void push_front(const column_info &);
+
+  // ---- Misc ----
+  void data_typing(typing) noexcept;
 
   void build(const std::vector<std::string> &, bool);
   std::set<symbol::category_t> used_categories() const;

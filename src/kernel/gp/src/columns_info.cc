@@ -79,6 +79,44 @@ symbol::category_t columns_info::column_info::category() const
   return owner_ ? owner_->category(*this) : symbol::undefined_category;
 }
 
+///
+/// Copy constructor.
+///
+/// \param[in] other another container to be used as source to initialize the
+///            elements of the container with
+///
+/// Constructs the container with the copy of the contents of `other`.
+///
+columns_info::columns_info(const columns_info &other)
+{
+  operator=(other);
+}
+
+///
+/// Copy assignment operator.
+///
+/// \param[in] other another container to use as data source
+/// \return          `*this`
+///
+/// Replaces the contents with a copy of the contents of other.
+///
+columns_info &columns_info::operator=(const columns_info &other)
+{
+  // A user defined copy assignment operator (and copy constructor) is required
+  // because the default copy operator fails to correctly initialize
+  // `column_info::owner_`.
+  if (this != &other)
+  {
+    cols_.clear();
+    for (auto &c : other.cols_)
+      cols_.emplace_back(*this, c.name(), c.domain(), c.states());
+
+    typing_ = other.typing_;
+  }
+
+  return *this;
+}
+
 const columns_info::column_info &columns_info::operator[](size_type i) const
 {
   return cols_[i];
