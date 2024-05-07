@@ -23,6 +23,23 @@
 namespace ultra::src
 {
 
+problem::problem(dataframe d) : problem()
+{
+  ultraINFO << "Importing dataset...";
+  data(dataset_t::training) = std::move(d);
+  ultraINFO << "...dataset imported";
+
+  ultraINFO << "Examples: " << data(dataset_t::training).size()
+            << ", features: " << variables()
+            << ", classes: " << classes();
+
+
+  dataset_[1].clone_schema(dataset_[0]);
+  dataset_[2].clone_schema(dataset_[0]);
+
+  setup_terminals();
+}
+
 ///
 /// Initializes problem dataset with examples coming from a file.
 ///
@@ -38,17 +55,8 @@ namespace ultra::src
 ///   constant...) can be manually inserted.
 ///
 problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
-  : problem()
+  : problem(dataframe(ds, p))
 {
-  ultraINFO << "Reading dataset " << ds << "...";
-  training_.read(ds, p);
-  ultraINFO << "...dataset read";
-
-  ultraINFO << "Examples: " << training_.size()
-            << ", features: " << variables()
-            << ", classes: " << classes();
-
-  setup_terminals();
 }
 
 ///
@@ -65,17 +73,9 @@ problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
 /// - any additional terminal (ephemeral random constant, problem specific
 ///   constants...) can be manually inserted.
 ///
-problem::problem(std::istream &ds, const dataframe::params &p) : problem()
+problem::problem(std::istream &ds, const dataframe::params &p)
+  : problem(dataframe(ds, p))
 {
-  ultraINFO << "Reading dataset from input stream...";
-  training_.read_csv(ds, p);
-  ultraINFO << "...dataset read";
-
-  ultraINFO << " Examples: " << training_.size()
-            << ", features: " << variables()
-            << ", classes: " << classes();
-
-  setup_terminals();
 }
 
 ///
@@ -83,7 +83,7 @@ problem::problem(std::istream &ds, const dataframe::params &p) : problem()
 ///
 bool problem::operator!() const
 {
-  return !training_.size() || !sset.enough_terminals();
+  return !data(dataset_t::training).size() || !sset.enough_terminals();
 }
 
 ///
@@ -100,7 +100,7 @@ void problem::setup_terminals()
 {
   ultraINFO << "Setting up terminals...";
 
-  const auto &columns(training_.columns);
+  const auto &columns(data(dataset_t::training).columns);
   if (columns.size() <= 1)
     throw exception::insufficient_data("Cannot generate the terminal set");
 
@@ -198,10 +198,12 @@ void problem::setup_symbols()
   if (!sset.terminals())
     setup_terminals();
 
-  for (const auto used_categories(training_.columns.used_categories());
+  for (const auto used_categories(
+         data(dataset_t::training).columns.used_categories());
        auto category : used_categories)
   {
-    if (const auto domain(training_.columns.domain_of_category(category));
+    if (const auto domain(
+          data(dataset_t::training).columns.domain_of_category(category));
         numerical_data_type(domain))
     {
       add_symbol(insert<real::abs>(category));
@@ -227,7 +229,8 @@ void problem::setup_symbols()
 
   for (const auto categories(sset.categories_missing_terminal());
        auto category : categories)
-    if (const auto domain(training_.columns.domain_of_category(category));
+    if (const auto domain(
+          data(dataset_t::training).columns.domain_of_category(category));
         numerical_data_type(domain))
     {
       if (domain == d_double)
@@ -266,7 +269,7 @@ bool problem::compatible(const function::param_data_types &instance,
 {
   Expects(instance.size() == pattern.size());
 
-  const auto &columns(training_.columns);
+  const auto &columns(data(dataset_t::training).columns);
 
   const auto sup(instance.size());
   for (std::size_t i(0); i < sup; ++i)
@@ -303,7 +306,7 @@ std::size_t problem::categories() const noexcept
 ///
 std::size_t problem::classes() const noexcept
 {
-  return training_.classes();
+  return data(dataset_t::training).classes();
 }
 
 ///
@@ -312,25 +315,57 @@ std::size_t problem::classes() const noexcept
 ///
 std::size_t problem::variables() const noexcept
 {
-  return training_.variables();
+  return data(dataset_t::training).variables();
+}
+
+///
+/// \return a reference to the active dataset
+///
+dataframe &problem::data() noexcept
+{
+  return data(selected_);
+}
+
+///
+/// \return a const reference to the active dataset
+///
+const dataframe &problem::data() const noexcept
+{
+  return data(selected_);
 }
 
 ///
 /// \param[in] t a dataset type
 /// \return      a reference to the specified dataset
 ///
-dataframe &problem::data(dataset_t t) noexcept
+dataframe &problem::data(dataset_t t)
 {
-  return t == dataset_t::training ? training_ : validation_;
+  Expects(dataset_t::training <= t && t <= dataset_t::test);
+
+  return dataset_[as_integer(t)];
 }
 
 ///
 /// \param[in] t a dataset type
 /// \return      a const reference to the specified dataset
 ///
-const dataframe &problem::data(dataset_t t) const noexcept
+const dataframe &problem::data(dataset_t t) const
 {
-  return t == dataset_t::training ? training_ : validation_;
+  Expects(dataset_t::training <= t && t <= dataset_t::test);
+  return dataset_[as_integer(t)];
+}
+
+///
+/// Selects the active dataset.
+///
+/// \param[in] t a selected dataset
+///
+/// When calling `data()` without parameters the last selected dataset is used.
+///
+void problem::set_data(dataset_t t)
+{
+  Expects(dataset_t::training <= t && t <= dataset_t::test);
+  selected_ = t;
 }
 
 ///
@@ -338,8 +373,11 @@ const dataframe &problem::data(dataset_t t) const noexcept
 ///
 bool problem::is_valid() const
 {
-  return ultra::problem::is_valid()
-         && training_.is_valid() && validation_.is_valid();
+  if (!ultra::problem::is_valid())
+    return false;
+
+  return std::ranges::all_of(dataset_,
+                             [](const auto &d) { return d.is_valid(); });
 }
 
 }  // namespace ultra::src

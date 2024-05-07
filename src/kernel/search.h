@@ -60,8 +60,9 @@ public:
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
 
-  template<class V, class... Args> basic_search &validation_strategy(
-    Args && ...);
+  template<ValidationStrategy, class... Args>
+  basic_search &validation_strategy(Args && ...);
+  basic_search &validation_strategy(const ultra::validation_strategy &);
 
   basic_search &after_generation(after_generation_callback_t);
 

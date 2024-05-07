@@ -28,9 +28,7 @@ namespace ultra::src
 ///   of an individual;
 /// - *test* for a forecast of how well an individual will do in the real
 ///   world.
-/// The `ultra::search` class asks the `problem` class to setup the requested
-/// simulation/dataset via the `select` function.
-enum class dataset_t {training = 0, validation, test};
+enum class dataset_t {training, validation, test};
 
 ///
 /// Provides a GP-specific interface to the generic `problem` class.
@@ -51,14 +49,17 @@ public:
   /// before starting the evolution.
   problem() = default;
 
+  explicit problem(dataframe);
   explicit problem(const std::filesystem::path &,
                    const dataframe::params & = {});
   explicit problem(std::istream &, const dataframe::params & = {});
 
   // ---- Data access ----
-  [[nodiscard]] const dataframe &data(
-    dataset_t = dataset_t::training) const noexcept;
-  [[nodiscard]] dataframe &data(dataset_t = dataset_t::training) noexcept;
+  [[nodiscard]] const dataframe &data() const noexcept;
+  [[nodiscard]] dataframe &data() noexcept;
+  [[nodiscard]] const dataframe &data(dataset_t) const;
+  [[nodiscard]] dataframe &data(dataset_t);
+  void set_data(dataset_t);
 
   // ---- Information about the problem ----
   /// Just a shorthand for checking number of classes.
@@ -80,8 +81,8 @@ private:
                                 const std::vector<std::string> &) const;
 
   // Private data members.
-  dataframe training_ {};
-  dataframe validation_ {};
+  std::vector<dataframe> dataset_ { {}, {}, {} };
+  dataset_t selected_ {dataset_t::training};
 };
 
 }  // namespace ultra::src

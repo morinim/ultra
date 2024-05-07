@@ -33,6 +33,7 @@
 #include "test/gene.cc"
 #include "test/gp_individual.cc"
 #include "test/hash_t.cc"
+#include "test/holdout_validation.cc"
 #include "test/interpreter.cc"
 #include "test/layered_population.cc"
 #include "test/linear_population.cc"

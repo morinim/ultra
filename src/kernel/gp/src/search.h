@@ -45,8 +45,6 @@ public:
 
   std::unique_ptr<basic_oracle> oracle(const individual_t &) const;
 
-  //basic_search &validation_strategy(validator_id);
-
   [[nodiscard]] bool is_valid() const override;
 
 protected:
@@ -88,12 +86,17 @@ public:
 
   std::unique_ptr<basic_oracle> oracle(const P &) const;
 
+  template<ValidationStrategy, class... Args>
+  search &validation_strategy(Args && ...);
+
   search &after_generation(after_generation_callback_t);
 
 private:
   // *** Private data members ***
   problem &prob_;  // problem we're working on
   metric_flags metrics_;  // metrics we have to calculate during the search
+
+  std::unique_ptr<ultra::validation_strategy> vs_ {};
 
   after_generation_callback_t after_generation_callback_ {};
 };

@@ -185,18 +185,33 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 }
 
 ///
-/// Sets the active validation strategy.
+/// Builds and sets the active validation strategy.
 ///
 /// \param[in] args parameters for the validation strategy
 /// \return         a reference to the search class (used for method chaining)
 ///
 template<template<class> class ES, Evaluator E>
-template<class V, class... Args>
+template<ValidationStrategy V, class... Args>
 basic_search<ES, E> &basic_search<ES, E>::validation_strategy(Args && ...args)
 {
   vs_ = std::make_unique<V>(std::forward<Args>(args)...);
   return *this;
 }
+
+///
+/// Sets the active validation strategy.
+///
+/// \param[in] vs a validation strategy
+/// \return       reference to the search class (used for method chaining)
+///
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::validation_strategy(
+  const ultra::validation_strategy &vs)
+{
+  vs_ = vs.clone();
+  return *this;
+}
+
 
 ///
 /// Loads the saved evaluation cache from a file (if available).

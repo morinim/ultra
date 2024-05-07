@@ -189,10 +189,6 @@ void basic_search<ES, E>::tune_parameters()
     ultraINFO << "Population size set to " << params.population.individuals;
   }
 
-  //if (!constrained.validation_percentage.has_value()
-  //  && typeid(this->vs_.get()) == typeid(holdout_validation))
-  //env.validation_percentage = dflt.validation_percentage;
-
   Ensures(params.is_valid(true));
 }
 
@@ -234,53 +230,7 @@ void basic_search<ES, E>::log_stats(const search_stats<T> &s,
   }
   }*/
 
-///
-/// Sets the active validation strategy.
-///
-/// \param[in] id  numerical id of the validator to be activated
-/// \return        a reference to the search class (used for method chaining)
-///
-/// \exception std::invalid_argument unknown validation strategy
-///
-/*template<class T, template<class> class ES>
-src_search<T, ES> &src_search<T, ES>::validation_strategy(validator_id id)
-{
-  switch (id)
-  {
-  case validator_id::as_is:
-    search<T, ES>::template validation_strategy<as_is_validation>();
-    break;
-
-  case validator_id::dss:
-    assert(this->eva1_);
-    assert(this->eva2_);
-    search<T, ES>::template validation_strategy<dss>(prob(),
-                                               *this->eva1_, *this->eva2_);
-    break;
-
-  case validator_id::holdout:
-    search<T, ES>::template validation_strategy<holdout_validation>(prob());
-    break;
-
-  default:
-    throw std::invalid_argument("Unknown validation strategy");
-  }
-
-  return *this;
-  }*/
-
 /*
-template<class T, template<class> class ES>
-template<class E, class... Args>
-void src_search<T, ES>::set_evaluator(Args && ...args)
-{
-  search<T, ES>::template training_evaluator<E>(
-    training_data(), std::forward<Args>(args)...);
-
-  search<T, ES>::template validation_evaluator<E>(
-    validation_data(), std::forward<Args>(args)...);
-}
-
 ///
 /// \param[in] id  numerical id of the evaluator to be activated
 /// \param[in] msg input parameters for the evaluator constructor
@@ -371,6 +321,8 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
   {
     basic_search<alps_es, E> alps(prob_, E(prob_.data()), metrics_);
 
+    if (vs_)
+      alps.validation_strategy(*vs_);
     alps.after_generation(after_generation_callback_);
 
     return alps.run(n, threshold);
@@ -402,6 +354,20 @@ template<IndividualOrTeam P>
 search<P> &search<P>::after_generation(after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
+  return *this;
+}
+
+///
+/// Builds and sets the active validation strategy.
+///
+/// \param[in] args parameters for the validation strategy
+/// \return         reference to the search class (used for method chaining)
+///
+template<IndividualOrTeam P>
+template<ValidationStrategy V, class... Args>
+search<P> &search<P>::validation_strategy(Args && ...args)
+{
+  vs_ = std::make_unique<V>(std::forward<Args>(args)...);
   return *this;
 }
 

@@ -10,6 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <concepts>
+#include <memory>
+
 #if !defined(ULTRA_VALIDATION_STRATEGY_H)
 #define      ULTRA_VALIDATION_STRATEGY_H
 
@@ -46,6 +49,8 @@ public:
   ///
   /// \note Called at the end of the evolution (one time per run).
   virtual void validation_setup(unsigned /* run */) = 0;
+
+  [[nodiscard]] virtual std::unique_ptr<validation_strategy> clone() const = 0;
 };
 
 ///
@@ -62,7 +67,15 @@ public:
   void training_setup(unsigned) override {}
   bool shake(unsigned) override { return false; }
   void validation_setup(unsigned) override {}
+
+  [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override
+  {
+    return std::make_unique<as_is_validation>(*this);
+  }
 };
+
+template<class V> concept ValidationStrategy =
+  std::derived_from<V, validation_strategy>;
 
 }  // namespace ultra
 
