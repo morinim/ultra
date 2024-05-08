@@ -28,6 +28,7 @@
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/holdout_validation.h"
 #include "kernel/gp/src/search.h"
 
 #endif  // include guard

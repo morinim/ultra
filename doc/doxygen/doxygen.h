@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
  *
- *  \mainpage ULTRA v0.0.0
+ *  \mainpage ULTRA
  *
  *  \section Introduction
  *  Welcome to the Ultra project.
@@ -30,7 +30,7 @@
 /**
  *  \page page1 ULTRA Architecture
  *  - [Tutorials](https://github.com/morinim/ultra/wiki/tutorials)
- *  - [Anatomy of Vita](https://github.com/morinim/ultra/wiki/anatomy)
+ *  - [Anatomy of Ultra](https://github.com/morinim/ultra/wiki/anatomy)
  *
  *  \page page2 Contributor guidelines
  *  - [Coding style](https://github.com/morinim/ultra/wiki/coding_style)
