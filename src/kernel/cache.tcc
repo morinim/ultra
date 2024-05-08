@@ -62,7 +62,8 @@ inline std::size_t cache<F>::index(const hash_t &h) const noexcept
 ///
 /// Clears the content and the statistical informations of the table.
 ///
-/// \note Allocated size isn't changed.
+/// \note
+/// Allocated size isn't changed.
 ///
 template<Fitness F>
 void cache<F>::clear()

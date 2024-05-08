@@ -26,8 +26,8 @@ struct layered_population<I>::coord
   std::size_t layer;
   std::size_t index;
 
-  [[nodiscard]] bool operator==(const coord &rhs) const = default;
-  [[nodiscard]] bool operator<(const coord &rhs) const
+  [[nodiscard]] bool operator==(const coord &) const noexcept = default;
+  [[nodiscard]] bool operator<(const coord &rhs) const noexcept
   {
     return layer < rhs.layer
            || (layer == rhs.layer && index < rhs.index);

@@ -294,7 +294,7 @@ bool individual::operator==(const individual &rhs) const
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs` (the number of different genes between individuals)
 ///
-/// \relates gp::individual
+/// \related gp::individual
 ///
 unsigned distance(const individual &lhs, const individual &rhs)
 {
@@ -324,8 +324,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
-/// \related
-/// gp::individual
+/// \related gp::individual
 ///
 unsigned active_slots(const individual &prg)
 {
@@ -413,8 +412,7 @@ locus random_locus(const individual &prg)
 /// - https://github.com/morinim/ultra/wiki/bibliography#1
 /// - https://github.com/morinim/ultra/wiki/bibliography#2
 ///
-/// \relates
-/// individual
+/// \related gp::individual
 ///
 individual crossover(const individual &lhs, const individual &rhs)
 {
@@ -911,7 +909,7 @@ std::ostream &tree(std::ostream &s, const individual &prg)
 /// \param[in]  prg individual to be printed
 /// \return         output stream including `prg`
 ///
-/// \relates gp::individual
+/// \related gp::individual
 ///
 std::ostream &operator<<(std::ostream &s, const individual &prg)
 {

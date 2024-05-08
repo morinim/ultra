@@ -288,8 +288,7 @@ namespace random
 ///
 /// Probability of extracting a subgroup is proportional to subgroup size.
 ///
-/// \related
-/// layered_population
+/// \related layered_population
 ///
 template<LayeredPopulation P>
 const auto &subgroup(const P &p)

@@ -47,8 +47,7 @@ bool basic_data_type(domain_t d) noexcept
 /// \param[in] v value to be checked
 /// \return      `true` for numbers and strings
 ///
-/// \related
-/// value_t
+/// \related value_t
 ///
 bool basic_data_type(const value_t &v) noexcept
 {
@@ -68,8 +67,7 @@ bool numerical_data_type(domain_t d) noexcept
 /// \param[in] v value to be checked
 /// \return      `true` for numbers
 ///
-/// \related
-/// value_t
+/// \related value_t
 ///
 bool numerical_data_type(const value_t &v) noexcept
 {

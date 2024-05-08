@@ -84,8 +84,7 @@ public:
     return tmp;
   }
 
-  /// \param[in] rhs second term of comparison
-  /// \return        `true` if iterators point to correspondant individuals
+  /// \return `true` if iterators point to correspondant individuals
   [[nodiscard]] bool operator==(const base_iterator &) const noexcept = default;
 
   [[nodiscard]] std::size_t uid() const noexcept

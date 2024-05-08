@@ -522,12 +522,14 @@ bool symbol_set::is_valid() const
 ///
 /// Prints the symbol set to an output stream.
 ///
-/// \param[out] o output stream
-/// \param[in] ss symbol set to be printed
-/// \return       output stream including `ss`
+/// \param[out] o  output stream
+/// \param[in]  ss symbol set to be printed
+/// \return        output stream including `ss`
 ///
 /// \note
 /// Useful for debugging purpose.
+///
+/// \related symbol_set
 ///
 std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
 {

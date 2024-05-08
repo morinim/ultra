@@ -53,8 +53,7 @@ namespace
 /// \warning
 /// Used only in classification tasks.
 ///
-/// \related
-/// example
+/// \related example
 ///
 [[nodiscard]] class_t label(const example &e)
 {
@@ -744,8 +743,7 @@ bool dataframe::is_valid() const
 /// \param[in]  d  dataframe to be printed
 /// \return        a reference to the (updated) output stream
 ///
-/// \related
-/// dataframe
+/// \related dataframe
 ///
 std::ostream &operator<<(std::ostream &os, const dataframe &d)
 {

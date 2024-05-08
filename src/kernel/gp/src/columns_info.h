@@ -45,8 +45,7 @@ enum class typing {weak, strong};
 ///
 /// Information about the collection of columns (type, name, output index).
 ///
-/// \related
-/// dataframe
+/// \related dataframe
 ///
 class columns_info
 {

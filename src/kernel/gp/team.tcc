@@ -90,8 +90,7 @@ unsigned team<I>::mutation(const problem &prb)
 /// \see
 /// individual::crossover for further details.
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I>
 team<I> crossover(const team<I> &lhs, const team<I> &rhs)
@@ -172,8 +171,7 @@ std::size_t team<I>::size() const noexcept
 /// \see
 /// team::size()
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I> unsigned active_slots(const team<I> &t)
 {
@@ -230,8 +228,7 @@ hash_t team<I>::hash() const
 /// \note
 /// Age is not checked.
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I>
 bool operator==(const team<I> &lhs, const team<I> &rhs)
@@ -244,8 +241,7 @@ bool operator==(const team<I> &lhs, const team<I> &rhs)
 /// \param[in] rhs second term of comparision
 /// \return        `true` if the two teams aren't equal
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I>
 bool operator!=(const team<I> &lhs, const team<I> &rhs)
@@ -259,8 +255,7 @@ bool operator!=(const team<I> &lhs, const team<I> &rhs)
 /// \return        a numeric measurement of the difference between `x` and
 ///                `this` (the number of different genes between teams)
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I>
 unsigned distance(const team<I> &lhs, const team<I> &rhs)
@@ -369,8 +364,7 @@ bool team<I>::save(std::ostream &out) const
 /// \param[in]  t team to print
 /// \return       output stream including `t`
 ///
-/// \related
-/// team
+/// \related team
 ///
 template<Individual I>
 std::ostream &operator<<(std::ostream &s, const team<I> &t)
