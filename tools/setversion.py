@@ -67,8 +67,9 @@ def changelog_rule(data, new_version):
 
 
 def doxygen_rule(data, new_version):
-    regex = r"([\s]+)(\*[\s]+\\mainpage ULTRA v)([\d]+)\.([\d]+)\.([\d]+)([\s]*)"
-    subst = r"\g<1>\g<2>" + new_version + r"\g<6>"
+    regex = r"(PROJECT_NUMBER\s+=)(\s*)(.+)"
+
+    subst = r"\g<1> " + new_version
 
     result = re.subn(regex, subst, data)
 
@@ -96,7 +97,7 @@ def main():
     dirname = os.path.dirname(__file__)
 
     #file_process(os.path.join(dirname, "../NEWS.md"), changelog_rule, version)
-    file_process(os.path.join(dirname, "../doc/doxygen/doxygen.h"),
+    file_process(os.path.join(dirname, "../doc/doxygen/ultra"),
                  doxygen_rule, version)
 
     print("\n\nRELEASE NOTE\n")
