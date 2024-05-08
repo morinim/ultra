@@ -78,11 +78,19 @@ holdout_validation::holdout_validation(src::problem &prob,
 
   std::ranges::shuffle(training_set, random::engine());
 
+  // Setup validation set.
+  if (validation_set.columns.empty())
+    validation_set.clone_schema(training_set);
+
   auto move_begin(std::next(training_set.begin(), n_training));
   auto move_end(std::next(move_begin, n_validation));
   validation_set.insert(validation_set.end(),
                         std::make_move_iterator(move_begin),
                         std::make_move_iterator(move_end));
+
+  // Setup test set.
+  if (test_set.columns.empty())
+    test_set.clone_schema(training_set);
 
   test_set.insert(test_set.end(),
                   std::make_move_iterator(move_end),
