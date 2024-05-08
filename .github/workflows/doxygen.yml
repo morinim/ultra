@@ -30,13 +30,14 @@ jobs:
         run: sudo apt-get install doxygen graphviz -y
 
       - name: Generate Doxygen Documentation
-        run: doxygen doc/doxygen/ultra
+        working-directory: ./doc/doxygen/
+        run: doxygen ultra
      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: 'docs/doxygen/html'
+          path: 'doc/doxygen/html'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
