@@ -28,11 +28,9 @@ jobs:
 
       - name: Install Doxygen
         run: sudo apt-get install doxygen graphviz -y
-        shell: bash
 
       - name: Generate Doxygen Documentation
-        run: doxygen docs/doxygen/ultra
-        shell: bash
+        run: doxygen doc/doxygen/ultra
      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
