@@ -28,9 +28,9 @@
  */
 
 /**
- *  \page page1 ULTRA Architecture
- *  - [Tutorials](https://github.com/morinim/ultra/wiki/tutorials)
+ *  \page page1 Understanding the architecture
  *  - [Anatomy of Ultra](https://github.com/morinim/ultra/wiki/anatomy)
+ *  - [Do it yourself](https://github.com/morinim/ultra/wiki/diy)
  *
  *  \page page2 Contributor guidelines
  *  - [Coding style](https://github.com/morinim/ultra/wiki/coding_style)
@@ -68,6 +68,14 @@
  *  Mathematical optimization (Differential Evolution).
  *  \example scheduling.cc
  *  Scheduling concurrent jobs for several machines (Differential Evolution).
+ *  \example symbolic_regression.cc
+ *  \example symbolic_regression01.cc
+ *  \example symbolic_regression02.cc
+ *  \example symbolic_regression03.cc
+ *  Searching the space of mathematical expressions to find the model that
+ *  best fits a given dataset (Genetic Programming).
+ *  \example sonar.cc
+ *  Classification (Genetic Programming).
  */
 
 // This is a global "project documentation" file that supplies the front page

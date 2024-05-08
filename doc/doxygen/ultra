@@ -875,12 +875,8 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = ./doxygen.h \
-                         ../../src/ \
                          ../../src/kernel/ \
-                         ../../src/kernel/de \
-                         ../../src/kernel/gp/ \
-                         ../../src/kernel/gp/primitive/ \
-                         ../../src/kernel/gp/src/
+                         ../../src/examples/
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -915,7 +911,7 @@ FILE_PATTERNS          = *.cc *.h *.tcc
 # be searched for input files as well.
 # The default value is: NO.
 
-RECURSIVE              = NO
+RECURSIVE              = YES
 
 # The EXCLUDE tag can be used to specify files and/or directories that should be
 # excluded from the INPUT source files. This way you can easily exclude a
@@ -1217,7 +1213,7 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  =
+HTML_EXTRA_STYLESHEET  = ultra.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
