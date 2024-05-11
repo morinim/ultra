@@ -15,6 +15,35 @@
 #include "kernel/gp/src/holdout_validation.h"
 #include "kernel/random.h"
 
+namespace
+{
+
+template<std::ranges::range R>
+[[nodiscard]] std::vector<ultra::basic_range<std::ranges::iterator_t<R>>>
+stratification(R &container)
+{
+  std::vector<ultra::basic_range<std::ranges::iterator_t<R>>> ret;
+
+  for (auto begin_it(container.begin()); begin_it != container.end(); )
+  {
+    const auto current_class(begin_it->output);
+
+    const auto end_it(std::partition(begin_it, container.end(),
+                                     [current_class](const auto &example)
+                                     {
+                                       return example.output == current_class;
+                                     }));
+
+    ret.push_back({begin_it, end_it});
+
+    begin_it = end_it;
+  };
+
+  return ret;
+}
+
+}  // namespace
+
 namespace ultra::src
 {
 
@@ -41,8 +70,7 @@ holdout_validation::holdout_validation(src::problem &prob,
   Expects(validation_set.empty());
   Expects(test_set.empty());
 
-  const auto available(training_set.size());
-  if (available <= 1)
+  if (training_set.size() <= 1)
     return;
 
   if (training <= 0)
@@ -62,44 +90,65 @@ holdout_validation::holdout_validation(src::problem &prob,
   else
     validation = std::min(100 - training, validation);
 
-  const auto n_training(std::max<std::size_t>(available * training / 100, 1));
-  const auto n_validation(
-    validation == 100 - training
-    ? available - n_training
-    : std::max<std::size_t>(available * validation / 100, 1));
+  assert(training + validation <= 100);
 
-  assert(n_training + n_validation <= available);
-
-  ultraINFO << "Holdout validation settings: " << training
-            << "% training (" << n_training << "), " << validation
-            << "% validation (" << n_validation << "), "
-            << 100 - training - validation << "% test ("
-            << available - n_training - n_validation << ')';
-
-  std::ranges::shuffle(training_set, random::engine());
-
-  // Setup validation set.
   if (validation_set.columns.empty())
     validation_set.clone_schema(training_set);
-
-  auto move_begin(std::next(training_set.begin(), n_training));
-  auto move_end(std::next(move_begin, n_validation));
-  validation_set.insert(validation_set.end(),
-                        std::make_move_iterator(move_begin),
-                        std::make_move_iterator(move_end));
-
-  // Setup test set.
   if (test_set.columns.empty())
     test_set.clone_schema(training_set);
 
-  test_set.insert(test_set.end(),
-                  std::make_move_iterator(move_end),
-                  std::make_move_iterator(training_set.end()));
+  std::vector<example> input_set;
+  input_set.insert(input_set.end(),
+                   std::make_move_iterator(training_set.begin()),
+                   std::make_move_iterator(training_set.end()));
+  training_set.clear();
 
-  training_set.erase(move_begin, training_set.end());
+  std::ranges::shuffle(input_set, random::engine());
 
-  Expects(training_set.size() == n_training);
-  Expects(validation_set.size() == n_validation);
+  const std::vector strata(
+    prob.classification()
+    ? std::vector{basic_range(input_set.begin(), input_set.end())}
+    : stratification(input_set));
+
+  for (auto &stratum : strata)
+  {
+    const auto available(std::ranges::size(stratum));
+    assert(available);
+
+    const auto n_training(std::max<std::size_t>(available * training / 100, 1));
+    assert(n_training);
+
+    std::size_t n_validation(0);
+    if (const auto remaining(available - n_training); remaining)
+    {
+      if (validation == 100 - training)
+        n_validation = remaining;
+      else
+        n_validation = std::max<std::size_t>(available * validation / 100, 1);
+    }
+
+    assert(n_training + n_validation <= available);
+
+    const auto move_end1(std::next(stratum.begin(), n_training));
+    training_set.insert(training_set.end(),
+                        std::make_move_iterator(stratum.begin()),
+                        std::make_move_iterator(move_end1));
+
+    const auto move_end2(std::next(move_end1, n_validation));
+    validation_set.insert(validation_set.end(),
+                          std::make_move_iterator(move_end1),
+                          std::make_move_iterator(move_end2));
+
+    test_set.insert(test_set.end(),
+                    std::make_move_iterator(move_end2),
+                    std::make_move_iterator(stratum.end()));
+  }
+
+  ultraINFO << "Holdout validation settings: " << training
+            << "% training (" << training_set.size() << "), " << validation
+            << "% validation (" << validation_set.size() << "), "
+            << 100 - training - validation << "% test ("
+            << test_set.size() << ')';
 }
 
 void holdout_validation::training_setup(unsigned)
