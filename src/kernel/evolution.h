@@ -47,7 +47,7 @@ public:
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
 
-  explicit evolution(const S &);
+  explicit evolution(S);
 
   summary<individual_t, fitness_t> run();
 

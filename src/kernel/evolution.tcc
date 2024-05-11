@@ -21,8 +21,8 @@
 /// \param[in] strategy evolution strategy to be used for evolution
 ///
 template<Strategy S>
-evolution<S>::evolution(const S &strategy) : pop_(strategy.get_problem()),
-                                             es_(strategy)
+evolution<S>::evolution(S strategy) : pop_(strategy.get_problem()),
+                                      es_(std::move(strategy))
 {
   Ensures(is_valid());
 }
