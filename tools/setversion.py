@@ -101,7 +101,7 @@ def main():
                  doxygen_rule, version)
 
     print("\n\nRELEASE NOTE\n")
-    print("1. Build.  cmake -B build/ src/ ; cmake --build build/")
+    print("1. Build.  cmake --preset=clang_sanitize_address src/ ; cmake --build build/")
     print("2. Check.  cd build/test ; ./tests")
     print('3. Commit. git commit -am "doc: change revision number v'
           + version + '"')
