@@ -107,6 +107,7 @@ public:
   iterator erase(iterator, iterator);
   void push_back(const src::example &);
   template<class InputIt> iterator insert(const_iterator, InputIt, InputIt);
+  void swap(dataframe &);
 
   // ---- Convenience ----
   std::size_t read(const std::filesystem::path &);

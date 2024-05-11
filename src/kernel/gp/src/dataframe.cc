@@ -709,6 +709,25 @@ bool dataframe::clone_schema(const dataframe &other)
 }
 
 ///
+/// Exchanges the contents and capacity of the container with those of `other`.
+///
+/// \param[in] other dataframe to exchange the contents with
+///
+/// \remark
+/// All iterators and references remain valid. The `end()` iterator is
+/// invalidated.
+///
+void dataframe::swap(dataframe &other)
+{
+  auto tmp(columns);
+  columns = other.columns;
+  other.columns = tmp;
+
+  classes_map_.swap(other.classes_map_);
+  dataset_.swap(other.dataset_);
+}
+
+///
 /// \return `true` if the object passes the internal consistency check
 ///
 bool dataframe::is_valid() const

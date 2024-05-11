@@ -12,6 +12,8 @@
 
 #include <sstream>
 
+#include "test/debug_datasets.h"
+
 #include "kernel/random.h"
 #include "kernel/gp/src/dataframe.h"
 
@@ -103,6 +105,28 @@ TEST_CASE("push_back / insert")
   d2.insert(d2.begin(), d1.begin(), d1.end());
 
   CHECK(std::ranges::equal(d1, d2));
+}
+
+TEST_CASE("swap")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  std::istringstream is(debug::sr);
+  dataframe sr(is);
+  CHECK(sr.size() == debug::SR_COUNT);
+
+  const dataframe backup(sr);
+  CHECK(backup.size() == sr.size());
+
+  dataframe empty;
+  CHECK(empty.empty());
+
+  sr.swap(empty);
+
+  CHECK(std::ranges::equal(empty, backup));
+  CHECK(empty.columns.size() == backup.columns.size());
+  CHECK(sr.empty());
 }
 
 TEST_CASE("Filtering")
