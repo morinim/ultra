@@ -35,7 +35,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 
 
   set(NO_WARN_FLAGS "/w")
-  set(CMAKE_CXX_FLAGS “${CMAKE_CXX_FLAGS} /bigobj”)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 
 endif()
 
