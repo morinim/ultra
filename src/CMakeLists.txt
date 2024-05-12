@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(ULTRA)
 
 # See https://stackoverflow.com/q/31355692/3235496
-include(CheckIPOSupported)
+# include(CheckIPOSupported)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -11,17 +11,15 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if (CMAKE_BUILD_TYPE MATCHES "Release")
-check_ipo_supported(RESULT supported_ipo OUTPUT error_ipo)
-
-if (supported_ipo)
-  message(STATUS "IPO / LTO supported: <${supported_ipo}>")
-  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-else ()
-  message(STATUS "IPO / LTO not supported: <${error_ipo}>")
-endif()
-
-endif()
+#if (CMAKE_BUILD_TYPE MATCHES "Release")
+#check_ipo_supported(RESULT supported_ipo OUTPUT error_ipo)
+#if (supported_ipo)
+#  message(STATUS "IPO / LTO supported: <${supported_ipo}>")
+#  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+#else ()
+#  message(STATUS "IPO / LTO not supported: <${error_ipo}>")
+#endif()
+#endif()
 
 #message("CMAKE_CXX_FLAGS_DEBUG is ${CMAKE_CXX_FLAGS_DEBUG}")
 #message("CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
