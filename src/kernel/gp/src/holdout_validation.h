@@ -28,6 +28,9 @@ namespace ultra::src
 /// training set) and validating the analysis on the other subset (called the
 /// validation set).
 ///
+/// \see
+/// https://en.wikipedia.org/wiki/Training,_validation,_and_test_data_sets
+///
 class holdout_validation : public validation_strategy
 {
 public:

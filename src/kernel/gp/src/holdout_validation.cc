@@ -94,7 +94,7 @@ namespace ultra::src
 /// \param[in] par  prarameters for controlling the splitting / subsampling
 ///
 /// Examples from `prob.data(training)` are randomly partitioned into training,
-/// validation and test set according to parameters containged in  `par`.
+/// validation and test set according to parameters contained in `par`.
 ///
 holdout_validation::holdout_validation(src::problem &prob, params par)
   : prob_(prob)
