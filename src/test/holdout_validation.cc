@@ -50,7 +50,12 @@ TEST_CASE("Cardinality")
   for (unsigned perc_train(1); perc_train < 100; ++perc_train)
     for (unsigned perc_val(0); perc_val + perc_train <= 100; ++perc_val)
     {
-      src::holdout_validation v(prob, perc_train, perc_val);
+      src::holdout_validation::params params;
+      params.training_perc = perc_train;
+      params.validation_perc = perc_val;
+      params.stratify = false;
+
+      src::holdout_validation v(prob, params);
 
       CHECK(near_integers(prob.data(src::dataset_t::training).size(),
                           examples * perc_train / 100));
@@ -92,9 +97,14 @@ TEST_CASE("Probabilities")
   const std::size_t extractions(10000);
   const unsigned validation_perc(30);
 
+  src::holdout_validation::params params;
+  params.training_perc = 40;
+  params.validation_perc = validation_perc;
+  params.stratify = false;
+
   for (unsigned j(0); j < extractions; ++j)
   {
-    src::holdout_validation v(prob, 40, validation_perc);
+    src::holdout_validation v(prob, params);
 
     for (const auto &e : prob.data(src::dataset_t::validation))
       ++count[std::get<int>(e.output)];
@@ -113,6 +123,66 @@ TEST_CASE("Probabilities")
   {
     CHECK(x > tolerance_inf);
     CHECK(x < tolerance_sup);
+  }
+}
+
+TEST_CASE("Stratify")
+{
+  using namespace ultra;
+
+  std::istringstream is(debug::iris_full);
+  src::problem prob(is);
+  CHECK(!!prob);
+
+  const auto orig(prob.data());
+  const auto examples(orig.size());
+
+  src::holdout_validation::params params;
+  params.training_perc = 60;
+  params.validation_perc = 20;
+  params.stratify = true;
+
+  for (unsigned cycles(10); cycles; --cycles)
+  {
+    src::holdout_validation v(prob, params);
+
+    CHECK(near_integers(prob.data(src::dataset_t::training).size(),
+                        examples * params.training_perc / 100));
+    CHECK(near_integers(prob.data(src::dataset_t::validation).size(),
+                        examples * params.validation_perc / 100));
+    CHECK(near_integers(prob.data(src::dataset_t::test).size(),
+                        examples
+                        * (100 - params.training_perc - params.validation_perc)
+                        / 100));
+
+    const std::vector indices = {src::dataset_t::training,
+                                 src::dataset_t::validation,
+                                 src::dataset_t::test};
+    std::vector<std::map<value_t, double>> count(indices.size());
+
+    for (auto index : indices)
+      for (auto example : prob.data(index))
+        ++count[as_integer(index)][example.output];
+
+    for (auto pair : count[0])
+    {
+      const double ref_perc(pair.second
+                            / prob.data(src::dataset_t::training).size());
+
+      const double perc_v(count[1][pair.first]
+                          / prob.data(src::dataset_t::validation).size());
+
+      CHECK(perc_v == doctest::Approx(ref_perc));
+
+      const double perc_t(count[2][pair.first]
+                          / prob.data(src::dataset_t::test).size());
+
+      CHECK(perc_t == doctest::Approx(ref_perc));
+    }
+
+    prob.data(src::dataset_t::training) = orig;
+    prob.data(src::dataset_t::validation).clear();
+    prob.data(src::dataset_t::test).clear();
   }
 }
 

@@ -34,7 +34,7 @@ int main()
 
   // SEARCHING
   src::search s(prob);
-  s.validation_strategy<src::holdout_validation>(prob, 70);
+  s.validation_strategy<src::holdout_validation>(prob);
 
   const auto result(s.run());
 

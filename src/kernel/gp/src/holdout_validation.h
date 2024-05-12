@@ -31,7 +31,35 @@ namespace ultra::src
 class holdout_validation : public validation_strategy
 {
 public:
-  explicit holdout_validation(src::problem &, int = -1, int = -1);
+  struct params
+  {
+    params() noexcept {}
+
+    /// Should be between `0` and `100` and represent the proportion of the
+    /// dataset to include in the train split.
+    /// If not positive, the value is automatically set to  `70`..
+    int training_perc {70};
+
+    /// Should be between `0` and `100` and represent the proportion of the
+    /// dataset to include in the validation split.
+    /// If negative, the value is set to the complement of the training
+    /// percentage.
+    int validation_perc {30};
+
+    /// Whether or not to shuffle the data before splitting.
+    bool shuffle {true};
+
+    /// Some classification problems can exhibit a large imbalance in the
+    /// distribution of the target classes: for instance there could be several
+    /// times more negative samples than positive samples. In such cases it's
+    /// recommended to use stratified sampling to ensure that relative class
+    /// frequencies is approximately preserved in train and validation sets.
+    /// \remark
+    /// `stratify` is ignored for symbolic regression problems.
+    bool stratify {true};
+  };
+
+  explicit holdout_validation(src::problem &, params = {});
 
   void training_setup(unsigned) override;
   bool shake(unsigned) override { return false; }

@@ -42,6 +42,46 @@ stratification(R &container)
   return ret;
 }
 
+template<std::ranges::range R>
+void split_dataset(R &stratum, int training_perc, int validation_perc,
+                   ultra::src::dataframe &training_set,
+                   ultra::src::dataframe &validation_set,
+                   ultra::src::dataframe &test_set)
+{
+  const auto available(std::ranges::size(stratum));
+  assert(available);
+
+  const auto n_training(std::max<std::size_t>(available * training_perc / 100,
+                                              1));
+  assert(n_training);
+
+  std::size_t n_validation(0);
+  if (const auto remaining(available - n_training); remaining)
+  {
+    if (validation_perc == 100 - training_perc)
+      n_validation = remaining;
+    else
+      n_validation = std::max<std::size_t>(available * validation_perc / 100,
+                                           1);
+  }
+
+  assert(n_training + n_validation <= available);
+
+  const auto move_end1(std::next(stratum.begin(), n_training));
+  training_set.insert(training_set.end(),
+                      std::make_move_iterator(stratum.begin()),
+                      std::make_move_iterator(move_end1));
+
+  const auto move_end2(std::next(move_end1, n_validation));
+  validation_set.insert(validation_set.end(),
+                        std::make_move_iterator(move_end1),
+                        std::make_move_iterator(move_end2));
+
+  test_set.insert(test_set.end(),
+                  std::make_move_iterator(move_end2),
+                  std::make_move_iterator(stratum.end()));
+}
+
 }  // namespace
 
 namespace ultra::src
@@ -51,15 +91,12 @@ namespace ultra::src
 /// Sets up a hold-out validator.
 ///
 /// \param[in] prob current problem
-/// \param[in] training   percentage of examples used for training
-/// \param[in] validation percentage of examples used for validation
+/// \param[in] par  prarameters for controlling the splitting / subsampling
 ///
 /// Examples from `prob.data(training)` are randomly partitioned into training,
-/// validation and test set according to the `training` and `validation`
-/// percentages.
+/// validation and test set according to parameters containged in  `par`.
 ///
-holdout_validation::holdout_validation(src::problem &prob,
-                                       int training, int validation)
+holdout_validation::holdout_validation(src::problem &prob, params par)
   : prob_(prob)
 {
   auto &training_set(prob_.data(dataset_t::training));
@@ -73,81 +110,53 @@ holdout_validation::holdout_validation(src::problem &prob,
   if (training_set.size() <= 1)
     return;
 
-  if (training <= 0)
+  if (par.training_perc <= 0)
   {
-    training   = 60;  // %
-    validation = 20;
-    // test is 20 %
+    par.training_perc   = 70;  // %
+    par.validation_perc = 30;
+    // test percentage is implicitly 0%
   }
-  else if (training >= 100)
+  else if (par.training_perc >= 100)
   {
     ultraWARNING << "Holdout with 100% training is unusual";
-    training = 100;
+    par.training_perc   = 100;
+    par.validation_perc =   0;
+    // test percentage is implicitly 0%
   }
 
-  if (validation < 0)
-    validation = (100 - training) / 2;
-  else
-    validation = std::min(100 - training, validation);
+  if (par.validation_perc < 0)
+    par.validation_perc = 100 - par.training_perc;
+    // test percentage is implicitly 0%
+  else if (const int remaining_perc(100 - par.training_perc);
+           par.validation_perc > remaining_perc)
+    par.validation_perc = remaining_perc;
 
-  assert(training + validation <= 100);
+  assert(par.training_perc + par.validation_perc <= 100);
 
-  if (validation_set.columns.empty())
-    validation_set.clone_schema(training_set);
-  if (test_set.columns.empty())
-    test_set.clone_schema(training_set);
+  validation_set.clone_schema(training_set);
+  test_set.clone_schema(training_set);
 
-  std::vector<example> input_set;
-  input_set.insert(input_set.end(),
-                   std::make_move_iterator(training_set.begin()),
-                   std::make_move_iterator(training_set.end()));
-  training_set.clear();
+  dataframe input_set;
+  input_set.clone_schema(training_set);
+  input_set.swap(training_set);
 
-  std::ranges::shuffle(input_set, random::engine());
+  if (par.shuffle)
+    std::ranges::shuffle(input_set, random::engine());
 
   const std::vector strata(
-    prob.classification()
-    ? std::vector{basic_range(input_set.begin(), input_set.end())}
-    : stratification(input_set));
+    prob.classification() && par.stratify
+    ? stratification(input_set)
+    : std::vector{basic_range(input_set.begin(), input_set.end())});
 
   for (auto &stratum : strata)
-  {
-    const auto available(std::ranges::size(stratum));
-    assert(available);
+    split_dataset(stratum, par.training_perc, par.validation_perc,
+                  training_set, validation_set, test_set);
 
-    const auto n_training(std::max<std::size_t>(available * training / 100, 1));
-    assert(n_training);
-
-    std::size_t n_validation(0);
-    if (const auto remaining(available - n_training); remaining)
-    {
-      if (validation == 100 - training)
-        n_validation = remaining;
-      else
-        n_validation = std::max<std::size_t>(available * validation / 100, 1);
-    }
-
-    assert(n_training + n_validation <= available);
-
-    const auto move_end1(std::next(stratum.begin(), n_training));
-    training_set.insert(training_set.end(),
-                        std::make_move_iterator(stratum.begin()),
-                        std::make_move_iterator(move_end1));
-
-    const auto move_end2(std::next(move_end1, n_validation));
-    validation_set.insert(validation_set.end(),
-                          std::make_move_iterator(move_end1),
-                          std::make_move_iterator(move_end2));
-
-    test_set.insert(test_set.end(),
-                    std::make_move_iterator(move_end2),
-                    std::make_move_iterator(stratum.end()));
-  }
-
-  ultraINFO << "Holdout validation settings: " << training
-            << "% training (" << training_set.size() << "), " << validation
-            << "% validation (" << validation_set.size() << "), "
-            << 100 - training - validation << "% test ("
+  ultraINFO << "Holdout validation settings: " << par.training_perc
+            << "% training (" << training_set.size() << "), "
+            << par.validation_perc << "% validation ("
+            << validation_set.size() << "), "
+            << 100 - par.training_perc - par.validation_perc << "% test ("
             << test_set.size() << ')';
 }
 
