@@ -92,6 +92,28 @@ const auto result(s.run());
 
 It's pretty straightforward (further details in the [specific tutorial][sr]).
 
+### Classification
+<img src="https://github.com/morinim/ultra/wiki/img/sonar.jpg" width="300">
+
+```C++
+  // READING INPUT DATA
+  src::dataframe::params params;
+  params.output_index = src::dataframe::params::index::back;
+
+  src::problem prob("sonar.csv", params);
+
+  // SETTING UP SYMBOLS
+  prob.setup_symbols();
+
+  // SEARCHING
+  src::search s(prob);
+  s.validation_strategy<src::holdout_validation>(prob);
+
+  const auto result(s.run());
+```
+
+Many additional information ins in the [specific tutorial][sonar].
+
 ## DOCUMENTATION
 
 There is a [comprehensive wiki][wiki]. You should probably start with the [tutorials][tutorials].
@@ -225,6 +247,7 @@ So don't be afraid of a different *MAJOR* version and read the release notes for
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
 [semver]: https://semver.org/
+[sonar]: https://github.com/morinim/ultra/wiki/sonar
 [sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
