@@ -114,7 +114,7 @@ This is a machine learning examples that classifies sonar data into two categori
   const auto result(s.run());
 ```
 
-Many additional information in in the [specific tutorial][sonar].
+Many additional information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
