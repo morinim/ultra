@@ -95,6 +95,8 @@ It's pretty straightforward (further details in the [specific tutorial][sr]).
 ### Classification
 <img src="https://github.com/morinim/ultra/wiki/img/sonar.jpg" width="300">
 
+This is a machine learning examples that classifies sonar data into two categories (rocks vs mines):
+
 ```C++
   // READING INPUT DATA
   src::dataframe::params params;
@@ -112,7 +114,7 @@ It's pretty straightforward (further details in the [specific tutorial][sr]).
   const auto result(s.run());
 ```
 
-Many additional information ins in the [specific tutorial][sonar].
+Many additional information in in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
@@ -247,7 +249,7 @@ So don't be afraid of a different *MAJOR* version and read the release notes for
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
 [semver]: https://semver.org/
-[sonar]: https://github.com/morinim/ultra/wiki/sonar
+[sonar]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
 [tutorials]: https://github.com/morinim/ultra/wiki/tutorials
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
