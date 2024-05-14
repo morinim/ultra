@@ -30,11 +30,16 @@ int main()
   // SETTING UP SYMBOLS
   prob.setup_symbols();
 
+  // TWEAKING THE PARAMETERS
+  prob.params.population.init_subgroups =    3;  // <-- 1
+  prob.params.population.individuals    = 3000;  // <-- 2
+  prob.params.evolution.generations     =  200;  // <-- 3
+
   // SEARCHING
   src::search s(prob);
   s.validation_strategy<src::holdout_validation>(prob);
 
-  const auto result(s.run());
+  const auto result(s.run(5));                   // <-- 4
 
   std::cout << "\nCANDIDATE SOLUTION\n"
             << out::c_language << result.best_individual
