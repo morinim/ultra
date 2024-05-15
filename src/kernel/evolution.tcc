@@ -165,9 +165,8 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
       if (gph > 2.0)
         gph = std::floor(gph);
 
-      std::cout << lexical_cast<std::string>(elapsed) << "  "
-                << sum_.generation << ": " << sum_.best().fit
-                << "  [" << pop_.layers();
+      std::cout << lexical_cast<std::string>(elapsed) << "  gen "
+                << sum_.generation << "  [" << pop_.layers();
 
       if (sum_.generation)
         std::cout << "x " << gph << "gph";
