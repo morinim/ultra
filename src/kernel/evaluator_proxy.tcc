@@ -27,6 +27,7 @@ cache<evaluator_fitness_t<E>> evaluator_proxy<E>::cache_ {};
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva))
 {
+  static_assert(!std::derived_from<E, evaluator_proxy>);
   Expects(ts);
   cache_.resize(ts);
 }
@@ -37,6 +38,7 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva))
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva) : eva_(std::move(eva))
 {
+  static_assert(!std::derived_from<E, evaluator_proxy>);
 }
 
 ///
