@@ -106,7 +106,7 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
 ///
 template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::fast(
-  const evaluator_individual_t<E> &prg)
+  const evaluator_individual_t<E> &prg) const
 {
   if constexpr (requires { eva_(prg, evaluation_type::fast); })
     return eva_.fast(prg);
@@ -165,9 +165,20 @@ bool evaluator_proxy<E>::save(std::ostream &out) const
 /// Resets the evaluation cache.
 ///
 template<Evaluator E>
-void evaluator_proxy<E>::clear()
+void evaluator_proxy<E>::clear() const
 {
   cache_.clear();
+}
+
+///
+/// Resets a specific element of the evaluation cache.
+///
+/// \param[in] h the signature of the element to be "forgiven"
+///
+template<Evaluator E>
+void evaluator_proxy<E>::clear(const hash_t &h) const
+{
+  cache_.clear(h);
 }
 
 ///

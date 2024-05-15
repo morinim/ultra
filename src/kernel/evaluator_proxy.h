@@ -40,12 +40,14 @@ public:
   bool load_cache(std::istream &) const;
   bool save_cache(std::ostream &) const;
 
-  void clear();
+  void clear() const;
+  void clear(const hash_t &) const;
 
   [[nodiscard]] evaluator_fitness_t<E> operator()(
     const evaluator_individual_t<E> &) const;
 
-  [[nodiscard]] evaluator_fitness_t<E> fast(const evaluator_individual_t<E> &);
+  [[nodiscard]] evaluator_fitness_t<E> fast(
+    const evaluator_individual_t<E> &) const;
 
   [[nodiscard]] const E &core() const noexcept;
 
