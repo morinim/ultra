@@ -19,7 +19,6 @@
 #include "kernel/individual.h"
 #include "kernel/fitness.h"
 #include "kernel/random.h"
-#include "kernel/gp/team.h"
 
 #include "utility/misc.h"
 
@@ -28,8 +27,7 @@ namespace ultra
 
 template<class F, class I = closure_arg_t<F>>
 concept Evaluator =
-  (Individual<I> || Team<I>)
-  && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
+  Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
 
 template<Evaluator E> using evaluator_individual_t = closure_arg_t<E>;
 template<Evaluator E> using evaluator_fitness_t = closure_return_t<E>;

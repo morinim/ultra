@@ -63,10 +63,10 @@ private:
 
 template<class I> concept Individual = requires(I i)
 {
-  requires std::derived_from<I, individual>;
-
   I();
+
   i.empty();
+  i.signature();
 };
 
 namespace out

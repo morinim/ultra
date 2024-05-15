@@ -97,14 +97,6 @@ team<I> crossover(const team<I> &lhs, const team<I> &rhs)
 {
   Expects(lhs.size() == rhs.size());
 
-/*
-  const auto j(random::sup(lhs.size()));
-
-  auto ret(lhs);
-  ret.individuals_[j] = crossover(lhs[j], rhs[j])
-  ret.signature_.clear();
-*/
-
   std::vector<I> crossed;
   crossed.reserve(lhs.size());
 
@@ -318,16 +310,17 @@ bool team<I>::is_valid() const
 template<Individual I>
 bool team<I>::load(std::istream &in, const symbol_set &ss)
 {
-  unsigned n;
+  std::size_t n;
   if (!(in >> n) || !n)
     return false;
 
   decltype(individuals_) v;
   v.reserve(n);
 
-  for (unsigned j(0); j < n; ++j)
+  for (std::size_t j(0); j < n; ++j)
   {
     I i;
+
     if (!i.load(in, ss))
       return false;
     v.push_back(i);

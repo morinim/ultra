@@ -19,7 +19,9 @@
 #include "kernel/distribution.h"
 #include "kernel/evaluator.h"
 #include "kernel/population.h"
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
+#include "kernel/gp/team.h"
 
 namespace ultra
 {

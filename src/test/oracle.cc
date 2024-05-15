@@ -24,7 +24,7 @@
 
 #define TEST_WTA
 
-template<template<class> class L, ultra::IndividualOrTeam T, unsigned P>
+template<template<class> class L, ultra::Individual T, unsigned P>
 struct build
 {
   L<T> operator()(const T &prg, ultra::src::dataframe &d) const
@@ -33,7 +33,7 @@ struct build
   }
 };
 
-template<template<class> class L, ultra::IndividualOrTeam T>
+template<template<class> class L, ultra::Individual T>
 struct build<L, T, 0>
 {
   L<T> operator()(const T &prg, ultra::src::dataframe &d) const
@@ -42,7 +42,7 @@ struct build<L, T, 0>
   }
 };
 
-template<ultra::IndividualOrTeam T>
+template<ultra::Individual T>
 struct build<ultra::src::reg_oracle, T, 0>
 {
   ultra::src::reg_oracle<T> operator()(const T &prg,
@@ -52,7 +52,7 @@ struct build<ultra::src::reg_oracle, T, 0>
   }
 };
 
-template<template<class> class L, ultra::IndividualOrTeam T, unsigned P = 0>
+template<template<class> class L, ultra::Individual T, unsigned P = 0>
 void test_serialization(ultra::src::problem &pr)
 {
   using namespace ultra;
@@ -89,8 +89,8 @@ void test_team_of_one(ultra::src::problem &pr)
     const gp::individual ind(pr);
     const auto li(build<L, gp::individual, P>()(ind, pr.data()));
 
-    const team<gp::individual> t{{ind}};
-    const auto lt(build<L, team<gp::individual>, P>()(t, pr.data()));
+    const gp::team<gp::individual> t{{ind}};
+    const auto lt(build<L, gp::team<gp::individual>, P>()(t, pr.data()));
 
     for (const auto &e : pr.data())
     {
@@ -124,9 +124,9 @@ void test_team(ultra::src::problem &pr)
     const auto oracle2(build<L, gp::individual, P>()(ind2, pr.data()));
     const auto oracle3(build<L, gp::individual, P>()(ind3, pr.data()));
 
-    const team<gp::individual> t{{ind1, ind2, ind3}};
+    const gp::team<gp::individual> t{{ind1, ind2, ind3}};
     const auto ts(t.size());
-    const auto oracle_t(build<L, team<gp::individual>, P>()(t, pr.data()));
+    const auto oracle_t(build<L, gp::team<gp::individual>, P>()(t, pr.data()));
 
     for (const auto &example : pr.data())
     {
@@ -212,7 +212,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     const gp::individual ind(pr);
     const src::reg_oracle li(ind);
 
-    const team<gp::individual> t{{ind, ind, ind, ind}};
+    const gp::team<gp::individual> t{{ind, ind, ind, ind}};
     const src::reg_oracle lt(t);
 
     for (const auto &e : pr.data())
@@ -244,7 +244,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     const src::reg_oracle oracle3(i3);
     const src::reg_oracle oracle4(i4);
 
-    const team<gp::individual> t({i1, i2, i3, i4});
+    const gp::team<gp::individual> t({i1, i2, i3, i4});
     const src::reg_oracle oracle_team(t);
 
     for (const auto &e : pr.data())

@@ -79,6 +79,7 @@ private:
 
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] double distance(const individual &, const individual &);
+[[nodiscard]] std::size_t active_slots(const individual &) noexcept;
 
 // Visualization/output functions.
 std::ostream &graphviz(std::ostream &, const individual &);

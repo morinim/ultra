@@ -206,6 +206,17 @@ std::size_t individual::parameters() const noexcept
 }
 
 ///
+/// Completely equivalent to `parameters()`.
+///
+/// \param[in] ind individual we're interested in
+/// \return        number of parameters stored in the individual
+///
+std::size_t active_slots(const individual &ind) noexcept
+{
+  return ind.parameters();
+}
+
+///
 /// \return the signature of this individual
 ///
 /// Identical individuals, at genotypic level, have the same signature

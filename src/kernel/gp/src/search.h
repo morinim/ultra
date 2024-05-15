@@ -66,7 +66,7 @@ private:
 };  // class basic_search
 
 
-template<IndividualOrTeam P = gp::individual>
+template<Individual P = gp::individual>
 class search
 {
 public:

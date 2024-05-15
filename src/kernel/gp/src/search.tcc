@@ -308,12 +308,12 @@ bool basic_search<ES, E>::is_valid() const
   return ultra::basic_search<ES, E>::is_valid();
 }
 
-template<IndividualOrTeam P>
+template<Individual P>
 search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
 {
 }
 
-template<IndividualOrTeam P>
+template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
 {
@@ -334,7 +334,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     return search_scheme.template operator()<reg_evaluator_t>();
 }
 
-template<IndividualOrTeam P>
+template<Individual P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
   if (prob_.classification())
@@ -350,7 +350,7 @@ std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 /// \return      a reference to *this* object (method chaining / fluent
 ///              interface)
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 search<P> &search<P>::after_generation(after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
@@ -363,7 +363,7 @@ search<P> &search<P>::after_generation(after_generation_callback_t f)
 /// \param[in] args parameters for the validation strategy
 /// \return         reference to the search class (used for method chaining)
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 template<ValidationStrategy V, class... Args>
 search<P> &search<P>::validation_strategy(Args && ...args)
 {

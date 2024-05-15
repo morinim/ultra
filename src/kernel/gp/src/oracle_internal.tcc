@@ -121,7 +121,7 @@ private:
 };
 
 // ********* Third specialization (teams) *********
-template<Team T, bool S>
+template<gp::Team T, bool S>
 class reg_oracle_storage<T, S>
 {
 public:

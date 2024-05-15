@@ -17,9 +17,9 @@
 #if !defined(ULTRA_ORACLE_TCC)
 #define      ULTRA_ORACLE_TCC
 
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 const std::string basic_reg_oracle<P, S>::SERIALIZE_ID(
-  Team<P> ? "TEAM_REG_ORACLE" : "REG_ORACLE");
+  gp::Team<P> ? "TEAM_REG_ORACLE" : "REG_ORACLE");
 
 template<class I, bool S, bool N>
 const std::string basic_gaussian_oracle<I, S, N>::SERIALIZE_ID(
@@ -34,7 +34,7 @@ const std::string team_class_oracle<I, S, N, L, C>::SERIALIZE_ID(
 ///
 /// \param[in] prg the program (individual/team) to be lambdified
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 basic_reg_oracle<P, S>::basic_reg_oracle(const P &prg)
   : internal::reg_oracle_storage<P, S>(prg)
 {
@@ -47,7 +47,7 @@ basic_reg_oracle<P, S>::basic_reg_oracle(const P &prg)
 /// \param[in] in input stream
 /// \param[in] ss active symbol set
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 basic_reg_oracle<P, S>::basic_reg_oracle(std::istream &in,
                                          const symbol_set &ss)
   : internal::reg_oracle_storage<P, S>(in, ss)
@@ -61,10 +61,10 @@ basic_reg_oracle<P, S>::basic_reg_oracle(std::istream &in,
 /// \param[in] e input example for the oracle
 /// \return      the output value associated with `e`
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 {
-  if constexpr (!Team<P>)
+  if constexpr (!gp::Team<P>)
     return this->run(e);
   else
   {
@@ -93,7 +93,7 @@ value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 ///
 /// \warning This function is useful only for classification tasks.
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 classification_result basic_reg_oracle<P, S>::tag(
   const std::vector<value_t> &) const
 {
@@ -104,7 +104,7 @@ classification_result basic_reg_oracle<P, S>::tag(
 /// \param[in] a value produced by basic_oracle::operator()
 /// \return      the string version of `a`
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 std::string basic_reg_oracle<P, S>::name(const value_t &a) const
 {
   return lexical_cast<std::string>(a);
@@ -117,7 +117,7 @@ std::string basic_reg_oracle<P, S>::name(const value_t &a) const
 /// \param[in] d a dataset
 /// \return      the value of `this` according to metric `m`
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 double basic_reg_oracle<P, S>::measure(const model_metric &m,
                                        const dataframe &d) const
 {
@@ -127,7 +127,7 @@ double basic_reg_oracle<P, S>::measure(const model_metric &m,
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 bool basic_reg_oracle<P, S>::is_valid() const
 {
   return internal::reg_oracle_storage<P, S>::is_valid();
@@ -139,7 +139,7 @@ bool basic_reg_oracle<P, S>::is_valid() const
 /// \param[out] out output stream
 /// \return         `true` if the oracle was saved correctly
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 bool basic_reg_oracle<P, S>::save(std::ostream &out) const
 {
   return internal::reg_oracle_storage<P, S>::save(out);
@@ -362,7 +362,7 @@ bool basic_gaussian_oracle<I, S, N>::is_valid() const
 template<Individual I, bool S, bool N, template<class, bool, bool> class L,
          team_composition C>
 template<class... Args>
-team_class_oracle<I, S, N, L, C>::team_class_oracle(const team<I> &t,
+team_class_oracle<I, S, N, L, C>::team_class_oracle(const gp::team<I> &t,
                                                     dataframe &d,
                                                     Args&&... args)
   : basic_class_oracle<N>(d), classes_(d.classes())
@@ -526,7 +526,7 @@ bool insert(const std::string &id)
   return internal::factory_.insert({id, internal::build<U>}).second;
 }
 
-template<IndividualOrTeam T>
+template<Individual T>
 std::unique_ptr<basic_oracle> load(std::istream &in, const symbol_set &ss)
 {
   if (internal::factory_.find(reg_oracle<T>::SERIALIZE_ID)

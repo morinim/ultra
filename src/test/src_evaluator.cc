@@ -41,13 +41,13 @@ TEST_CASE("Concepts")
                            src::dataframe>);
 
   CHECK(Evaluator<src::mae_evaluator<gp::individual>>);
-  CHECK(Evaluator<src::mae_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::mae_evaluator<gp::team<gp::individual>>>);
   CHECK(Evaluator<src::rmae_evaluator<gp::individual>>);
-  CHECK(Evaluator<src::rmae_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::rmae_evaluator<gp::team<gp::individual>>>);
   CHECK(Evaluator<src::mse_evaluator<gp::individual>>);
-  CHECK(Evaluator<src::mse_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::mse_evaluator<gp::team<gp::individual>>>);
   CHECK(Evaluator<src::count_evaluator<gp::individual>>);
-  CHECK(Evaluator<src::count_evaluator<team<gp::individual>>>);
+  CHECK(Evaluator<src::count_evaluator<gp::team<gp::individual>>>);
 }
 
 TEST_CASE("Evaluators")

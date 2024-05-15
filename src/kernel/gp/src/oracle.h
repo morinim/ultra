@@ -22,8 +22,6 @@
 namespace ultra
 {
 
-template<class P> concept IndividualOrTeam = Individual<P> || Team<P>;
-
 namespace src
 {
 
@@ -39,7 +37,7 @@ namespace serialize
 namespace oracle
 {
 
-template<IndividualOrTeam P = gp::individual>
+template<Individual P = gp::individual>
 [[nodiscard]] std::unique_ptr<basic_oracle>
 load(std::istream &, const symbol_set &);
 
@@ -103,7 +101,7 @@ private:
   [[nodiscard]] virtual std::string serialize_id() const = 0;
   virtual bool save(std::ostream &) const = 0;
 
-  template<IndividualOrTeam P> friend std::unique_ptr<basic_oracle>
+  template<Individual P> friend std::unique_ptr<basic_oracle>
   serialize::oracle::load(std::istream &, const symbol_set &);
   friend bool serialize::save(std::ostream &, const basic_oracle &);
 };
@@ -126,7 +124,7 @@ class core_reg_oracle : public basic_oracle {};
 ///           individual it's constructed on). Sometimes we prefer space
 ///           efficiency (typically inside an evaluator)
 ///
-template<IndividualOrTeam P, bool S>
+template<Individual P, bool S>
 class basic_reg_oracle : public core_reg_oracle,
                          protected internal::reg_oracle_storage<P, S>
 {
@@ -271,7 +269,7 @@ template<Individual I, bool S, bool N,
 class team_class_oracle : public basic_class_oracle<N>
 {
 public:
-  template<class... Args> team_class_oracle(const team<I> &, dataframe &,
+  template<class... Args> team_class_oracle(const gp::team<I> &, dataframe &,
                                             Args &&...);
   team_class_oracle(std::istream &, const symbol_set &);
 
@@ -301,7 +299,7 @@ private:
 /// \tparam N stores the name of the classes vs doesn't store the names
 ///
 template<class I, bool S, bool N>
-class basic_gaussian_oracle<team<I>, S, N>
+class basic_gaussian_oracle<gp::team<I>, S, N>
   : public team_class_oracle<I, S, N, basic_gaussian_oracle>
 {
 public:
@@ -311,21 +309,21 @@ public:
 // ***********************************************************************
 // *  Template aliases to simplify the syntax and help the user          *
 // ***********************************************************************
-template<IndividualOrTeam P>
+template<Individual P>
 class reg_oracle : public basic_reg_oracle<P, true>
 {
 public:
   using reg_oracle::basic_reg_oracle::basic_reg_oracle;
 };
-template<IndividualOrTeam P> reg_oracle(const P &) -> reg_oracle<P>;
+template<Individual P> reg_oracle(const P &) -> reg_oracle<P>;
 
-template<IndividualOrTeam P>
+template<Individual P>
 class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
 {
 public:
   using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
 };
-template<IndividualOrTeam P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
+template<Individual P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
 
 template<class P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
 

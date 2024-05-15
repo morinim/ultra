@@ -60,7 +60,7 @@ protected:
 /// \see
 /// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT = dataframe>
+template<Individual P, template<class> class ERRF, class DAT = dataframe>
 requires ErrorFunction<ERRF<P>, DAT>
 class sum_of_errors_evaluator : public evaluator<DAT>
 {
@@ -89,7 +89,7 @@ private:
 /// \see
 /// mae_evaluator
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class mae_error_functor
 {
 public:
@@ -107,7 +107,7 @@ private:
 /// \see
 /// mae_error_functor
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class mae_evaluator : public sum_of_errors_evaluator<P, mae_error_functor>
 {
 public:
@@ -133,7 +133,7 @@ public:
 /// - rmae_evaluator
 /// - https://github.com/morinim/documents/blob/master/math_notes/relative_difference.md
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class rmae_error_functor
 {
 public:
@@ -150,7 +150,7 @@ private:
 ///
 /// \see rmae_error_functor
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class rmae_evaluator : public sum_of_errors_evaluator<P, rmae_error_functor>
 {
 public:
@@ -181,7 +181,7 @@ public:
 ///
 /// \see mse_evaluator
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class mse_error_functor
 {
 public:
@@ -199,7 +199,7 @@ private:
 /// \see
 /// mse_error_functor
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class mse_evaluator : public sum_of_errors_evaluator<P, mse_error_functor>
 {
 public:
@@ -216,7 +216,7 @@ public:
 /// \see
 /// count_evaluator
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class count_error_functor
 {
 public:
@@ -234,7 +234,7 @@ private:
 /// \see
 /// count_error_functor
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class count_evaluator : public sum_of_errors_evaluator<P, count_error_functor>
 {
 public:
@@ -252,7 +252,7 @@ public:
 /// \see
 /// https://github.com/morinim/ultra/wiki/bibliography#13
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 class gaussian_evaluator : public evaluator<dataframe>
 {
 public:

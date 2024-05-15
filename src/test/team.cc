@@ -26,21 +26,23 @@ TEST_SUITE("TEAM")
 
 TEST_CASE("Concept")
 {
-  using namespace ultra;
+  using namespace ultra::gp;
 
-  REQUIRE(Team<team<gp::individual>>);
-  REQUIRE(!Team<gp::individual>);
+  REQUIRE(ultra::Individual<team<individual>>);
+
+  REQUIRE(Team<team<individual>>);
+  REQUIRE(!Team<individual>);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Random creation")
 {
-  using namespace ultra;
+  using namespace ultra::gp;
 
   // Variable length random creation
   for (auto l(prob.sset.categories() + 2); l < 100; ++l)
   {
     prob.params.slp.code_length = l;
-    team<gp::individual> t(prob);
+    team<individual> t(prob);
 
     CHECK(t.is_valid());
     CHECK(t.age() == 0);
@@ -49,11 +51,11 @@ TEST_CASE_FIXTURE(fixture1, "Random creation")
 
 TEST_CASE_FIXTURE(fixture1, "Mutation")
 {
-  using namespace ultra;
+  using namespace ultra::gp;
 
   prob.params.slp.code_length = 100;
 
-  team<gp::individual> t(prob);
+  team<individual> t(prob);
   const auto orig(t);
 
   CHECK(t.size() > 0);
@@ -78,7 +80,7 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
 
     for (unsigned i(0); i < n; ++i)
     {
-      const team<gp::individual> t1{t};
+      const team<individual> t1{t};
 
       t.mutation(prob);
       diff += distance(t, t1);
@@ -93,20 +95,20 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
 
 TEST_CASE_FIXTURE(fixture1, "Comparison")
 {
-  using namespace ultra;
+  using namespace ultra::gp;
 
   for (unsigned i(0); i < 2000; ++i)
   {
-    team<gp::individual> a(prob);
+    team<individual> a(prob);
     CHECK(a == a);
     CHECK(distance(a, a) == 0);
 
-    team<gp::individual> b(a);
+    team<individual> b(a);
     CHECK(a.signature() == b.signature());
     CHECK(a == b);
     CHECK(distance(a, b) == 0);
 
-    team<gp::individual> c(prob);
+    team<individual> c(prob);
     if (a.signature() != c.signature())
     {
       CHECK(a != c);
@@ -117,11 +119,11 @@ TEST_CASE_FIXTURE(fixture1, "Comparison")
 
 TEST_CASE_FIXTURE(fixture1, "Iterators")
 {
-  using namespace ultra;
+  using namespace ultra::gp;
 
   for (unsigned j(0); j < 1000; ++j)
   {
-    team<gp::individual> t(prob);
+    team<individual> t(prob);
 
     for (unsigned i(0); const auto &ind : t)
     {
@@ -137,7 +139,7 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
 
   prob.params.slp.code_length = 100;
 
-  team<gp::individual> t1(prob), t2(prob);
+  gp::team<gp::individual> t1(prob), t2(prob);
 
   const unsigned n(2000);
   for (unsigned j(0); j < n; ++j)
@@ -163,13 +165,13 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   for (unsigned i(0); i < 2000; ++i)
   {
     std::stringstream ss;
-    team<gp::individual> t1(prob);
+    gp::team<gp::individual> t1(prob);
 
     t1.inc_age(random::sup(100u));
 
     CHECK(t1.save(ss));
 
-    team<gp::individual> t2(prob);
+    gp::team<gp::individual> t2(prob);
     CHECK(t2.load(ss, prob.sset));
     CHECK(t2.is_valid());
 

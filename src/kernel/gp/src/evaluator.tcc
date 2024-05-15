@@ -39,7 +39,7 @@ void evaluator<DAT>::dataset(DAT &d)
 ///
 /// \param[in] d the training dataset
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
 sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
   : evaluator<DAT>(d)
@@ -53,7 +53,7 @@ sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
 /// \param[in] step consider just `1` example every `step`
 /// \return         the fitness (greater is better, max is `0`)
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
   const P &prg, typename DAT::difference_type step) const
@@ -85,7 +85,7 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
 /// \param[in] prg program (individual/team) used for fitness evaluation
 /// \return        the fitness (greater is better, max is `0`)
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::operator()(const P &prg) const
 {
@@ -99,7 +99,7 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::operator()(const P &prg) const
 /// This function is similar to operator()() but will skip `4` out of `5`
 /// training instances, so it's faster.
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 {
@@ -112,7 +112,7 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 /// \return        the oracle associated with `prg` (`nullptr` in case of
 ///                errors).
 ///
-template<IndividualOrTeam P, template<class> class ERRF, class DAT>
+template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
 std::unique_ptr<basic_oracle>
 sum_of_errors_evaluator<P, ERRF, DAT>::oracle(const P &prg) const
@@ -125,7 +125,7 @@ sum_of_errors_evaluator<P, ERRF, DAT>::oracle(const P &prg) const
 ///
 /// \param[in] prg the program to be measured
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 mae_error_functor<P>::mae_error_functor(const P &prg) : oracle_(prg)
 {
 }
@@ -135,7 +135,7 @@ mae_error_functor<P>::mae_error_functor(const P &prg) : oracle_(prg)
 /// \return            a measurement of the error of the model/program on the
 ///                    given training case (value in the `[0;+inf[` range)
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 double mae_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
@@ -150,7 +150,7 @@ double mae_error_functor<P>::operator()(const example &example) const
 ///
 /// \param[in] prg the program to be measured
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 rmae_error_functor<P>::rmae_error_functor(const P &prg) : oracle_(prg)
 {
 }
@@ -161,7 +161,7 @@ rmae_error_functor<P>::rmae_error_functor(const P &prg) : oracle_(prg)
 ///                    current training case. The value returned is in the
 ///                    `[0;200]` range
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 double rmae_error_functor<P>::operator()(const example &example) const
 {
   constexpr double ERR_SUP(200.0);
@@ -196,7 +196,7 @@ double rmae_error_functor<P>::operator()(const example &example) const
 ///
 /// \param[in] prg the program to be measured
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 mse_error_functor<P>::mse_error_functor(const P &prg) : oracle_(prg)
 {
 }
@@ -207,7 +207,7 @@ mse_error_functor<P>::mse_error_functor(const P &prg) : oracle_(prg)
 ///                    the current training case. The value returned is in the
 ///                    `[0;+inf[` range
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 double mse_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
@@ -225,7 +225,7 @@ double mse_error_functor<P>::operator()(const example &example) const
 ///
 /// \param[in] prg the program to be measured
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 count_error_functor<P>::count_error_functor(const P &prg) : oracle_(prg)
 {
 }
@@ -236,7 +236,7 @@ count_error_functor<P>::count_error_functor(const P &prg) : oracle_(prg)
 ///                    current training case. The value returned is in the
 ///                    `[0;+inf[` range
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 double count_error_functor<P>::operator()(const example &example) const
 {
   const auto foreseen(oracle_(example.input));
@@ -248,7 +248,7 @@ double count_error_functor<P>::operator()(const example &example) const
   return err ? 1.0 : 0.0;
 }
 
-template<IndividualOrTeam P>
+template<Individual P>
 gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
 {
 }
@@ -257,7 +257,7 @@ gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
 /// \param[in] prg program used for class recognition
 /// \return        the fitness (greater is better, max is `0`)
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 double gaussian_evaluator<P>::operator()(const P &prg) const
 {
   Expects(this->dat_->classes() >= 2);
@@ -291,7 +291,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 /// \return        the oracle associated with `prg` (`nullptr` in case of
 ///                errors).
 ///
-template<IndividualOrTeam P>
+template<Individual P>
 std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
 {
   return std::make_unique<gaussian_oracle<P>>(prg, *this->dat_);

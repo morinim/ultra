@@ -123,11 +123,10 @@ void analyzer<I, F>::add(const I &ind, const F &f, unsigned g)
   age_.add(ind.age());
   group_stat_[g].age.add(ind.age());
 
-  std::size_t len;
-  if constexpr (std::invocable<decltype(ultra::gp::active_slots), I>)
-    len = gp::active_slots(ind);
-  else
-    len = ind.parameters();
+  using de::active_slots;
+  using gp::active_slots;
+
+  const std::size_t len(active_slots(ind));
 
   length_.add(len);
   group_stat_[g].length.add(len);

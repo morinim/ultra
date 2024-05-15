@@ -19,7 +19,7 @@
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 
-namespace ultra
+namespace ultra::gp
 {
 ///
 /// A collection of cooperating individuals used as a member of
@@ -126,6 +126,6 @@ template<class T> concept Team = requires(T t)
 
 #include "kernel/gp/team.tcc"
 
-}  // namespace ultra
+}  // namespace ultra::gp
 
 #endif  // include guard
