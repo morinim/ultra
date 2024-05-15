@@ -56,6 +56,37 @@ void basic_search<ES, E>::init()
 }
 
 ///
+/// Template method of the `run` member function called at the end of each run.
+///
+/// \param[in] run current run
+/// \param[in] mm  measurements related to the best program of the current run
+///                (training set measurements and possibly validation set)
+///
+template<template<class> class ES, Evaluator E>
+void basic_search<ES, E>::after_evolution(
+  unsigned run, const std::vector<model_measurements<fitness_t>> &mm)
+{
+  Expects(mm.size());
+
+  std::string accuracy;
+  if (mm[0].accuracy)
+    accuracy = "  Accuracy: " + std::to_string(*mm[0].accuracy*100.0) + "%";
+
+  ultraOUTPUT << "Run " << run << " TRAINING. Fitness: " << *mm[0].fitness
+              << accuracy;
+
+  if (mm.size() > 1)
+  {
+    accuracy = "";
+    if (mm[1].accuracy)
+      accuracy = "  Accuracy: " + std::to_string(*mm[1].accuracy*100.0) + "%";
+
+    ultraOUTPUT << "Run " << run << " VALIDATION. Fitness: " << *mm[1].fitness
+                << accuracy;
+  }
+}
+
+///
 /// Sets a callback function executed at the end of every generation.
 ///
 /// \param[in] f callback function
@@ -150,12 +181,19 @@ basic_search<ES, E>::run(unsigned n,
     evo.shake_function(shake);
     const auto run_summary(evo.run());
 
-    vs_->validation_setup(r);
-
-    // Update the search statistics (possibly using the validation setup).
     if (const auto prg(run_summary.best().ind); !prg.empty())
-      stats.update(prg, calculate_metrics(prg), run_summary.elapsed,
-                   threshold);
+    {
+      const auto prg_train_metrics(calculate_metrics(prg));
+
+      vs_->validation_setup(r);
+
+      const auto prg_val_metrics(calculate_metrics(prg));
+
+      after_evolution(r, {prg_train_metrics, prg_val_metrics});
+
+      // Update the search statistics (possibly using the validation setup).
+      stats.update(prg, prg_val_metrics, run_summary.elapsed, threshold);
+    }
   }
 
   return stats;
@@ -179,7 +217,9 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
   model_measurements<fitness_t> ret;
 
-  ret.fitness = es_.evaluator()(prg);
+  // `calculate_metrics` is called after an environment-switch and must not use
+  // a cached value (so using `core()`).
+  ret.fitness = es_.evaluator().core()(prg);
 
   return ret;
 }

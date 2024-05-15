@@ -69,12 +69,14 @@ public:
   [[nodiscard]] virtual bool is_valid() const;
 
 protected:
-  // *** Template methods ***
+  // ---- Template methods ----
+  virtual void after_evolution(
+    unsigned, const std::vector<model_measurements<fitness_t>> &);
   [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
     const individual_t &) const;
   virtual void tune_parameters();
 
-  // *** Data members ***
+  // ---- Data members ----
   ES<evaluator_proxy<E>> es_;
 
   std::unique_ptr<ultra::validation_strategy> vs_
