@@ -358,14 +358,22 @@ const dataframe &problem::data(dataset_t t) const
 ///
 /// Selects the active dataset.
 ///
-/// \param[in] t a selected dataset
+/// \param[in] t the selected dataset
 ///
 /// When calling `data()` without parameters the last selected dataset is used.
 ///
-void problem::set_data(dataset_t t)
+void problem::set_dataset(dataset_t t)
 {
   Expects(dataset_t::training <= t && t <= dataset_t::test);
   selected_ = t;
+}
+
+///
+/// \return index of the currently selected dataset
+///
+[[nodiscard]] dataset_t problem::dataset() const noexcept
+{
+  return selected_;
 }
 
 ///

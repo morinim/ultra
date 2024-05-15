@@ -59,7 +59,8 @@ public:
   [[nodiscard]] dataframe &data() noexcept;
   [[nodiscard]] const dataframe &data(dataset_t) const;
   [[nodiscard]] dataframe &data(dataset_t);
-  void set_data(dataset_t);
+  void set_dataset(dataset_t);
+  [[nodiscard]] dataset_t dataset() const noexcept;
 
   // ---- Information about the problem ----
   /// Just a shorthand for checking number of classes.

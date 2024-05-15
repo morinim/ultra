@@ -45,7 +45,7 @@ basic_search<ES, E>::basic_search(problem &p, E eva, metric_flags m)
 /// \param[in] ind individual used as building block for the oracle
 /// \return        a pointer to the oracle (`nullptr` in case of errors)
 ///
-/// The lambda function depends on the active training evaluator.
+/// The oracle depends on the active training evaluator.
 ///
 template<template<class> class ES, Evaluator E>
 std::unique_ptr<basic_oracle> basic_search<ES, E>::oracle(
@@ -92,20 +92,6 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 
   return ret;
 }
-
-/*template<class T, template<class> class ES>
-void basic_search<ES, E>::calculate_metrics(summary<T> *s) const
-{
-  if ((metrics & metric_flags::accuracy)
-      || prob().env.threshold.accuracy > 0.0)
-  {
-    const auto model(lambdify(s->best.solution));
-    const auto &d(can_validate() ? validation_data() : training_data());
-    s->best.score.accuracy = model->measure(accuracy_metric(), d);
-  }
-
-  search<T, ES>::calculate_metrics(s);
-  }*/
 
 ///
 /// Tries to tune search parameters for the current problem.

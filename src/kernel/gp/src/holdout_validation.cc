@@ -162,12 +162,12 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
 
 void holdout_validation::training_setup(unsigned)
 {
-  prob_.set_data(dataset_t::training);
+  prob_.set_dataset(dataset_t::training);
 }
 
 void holdout_validation::validation_setup(unsigned)
 {
-  prob_.set_data(dataset_t::validation);
+  prob_.set_dataset(dataset_t::validation);
 }
 
 std::unique_ptr<validation_strategy> holdout_validation::clone() const
