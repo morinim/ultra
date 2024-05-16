@@ -99,9 +99,9 @@ namespace ultra::src
 holdout_validation::holdout_validation(src::problem &prob, params par)
   : prob_(prob)
 {
-  auto &training_set(prob_.data(dataset_t::training));
-  auto &validation_set(prob_.data(dataset_t::validation));
-  auto &test_set(prob_.data(dataset_t::test));
+  auto &training_set(prob_.data[dataset_t::training]);
+  auto &validation_set(prob_.data[dataset_t::validation]);
+  auto &test_set(prob_.data[dataset_t::test]);
 
   Expects(!training_set.empty());
   Expects(validation_set.empty());
@@ -162,12 +162,12 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
 
 void holdout_validation::training_setup(unsigned)
 {
-  prob_.set_dataset(dataset_t::training);
+  prob_.data.select(dataset_t::training);
 }
 
 void holdout_validation::validation_setup(unsigned)
 {
-  prob_.set_dataset(dataset_t::validation);
+  prob_.data.select(dataset_t::validation);
 }
 
 std::unique_ptr<validation_strategy> holdout_validation::clone() const

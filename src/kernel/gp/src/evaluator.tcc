@@ -1,6 +1,6 @@
 /**
  *  \file
- *  \remark This file is part of ULTA.
+ *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
@@ -18,22 +18,11 @@
 #define      ULTRA_SRC_EVALUATOR_TCC
 
 ///
-/// \param[in] d dataset that the evaluator will use
+/// \param[in] d `multi_dataset` that the evaluator will use
 ///
 template<DataSet DAT>
-evaluator<DAT>::evaluator(DAT &d) : dat_(&d)
+evaluator<DAT>::evaluator(multi_dataset<DAT> &d) noexcept : dat_(&d)
 {
-}
-
-///
-/// Changes the dataset that the evaluator will use.
-///
-/// \param[in] d new dataset
-///
-template<DataSet DAT>
-void evaluator<DAT>::dataset(DAT &d)
-{
-  dat_ = &d;
 }
 
 ///
@@ -41,7 +30,8 @@ void evaluator<DAT>::dataset(DAT &d)
 ///
 template<Individual P, template<class> class ERRF, class DAT>
 requires ErrorFunction<ERRF<P>, DAT>
-sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(DAT &d)
+sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(
+  multi_dataset<DAT> &d)
   : evaluator<DAT>(d)
 {
 }
@@ -58,18 +48,19 @@ requires ErrorFunction<ERRF<P>, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
   const P &prg, typename DAT::difference_type step) const
 {
-  Expects(std::distance(std::begin(*this->dat_), std::end(*this->dat_))
-          >= step);
+  const auto dat(this->dat_->selected());
+
+  Expects(std::distance(std::begin(dat), std::end(dat)) >= step);
 
   const ERRF<P> err_fctr(prg);
 
-  auto it(std::begin(*this->dat_));
+  auto it(std::begin(dat));
   auto average_error(err_fctr(*it));
   std::advance(it, step);
 
   double n(1.0);
 
-  while (std::distance(it, std::end(*this->dat_)) >= step)
+  while (std::distance(it, std::end(dat)) >= step)
   {
     average_error += (err_fctr(*it) - average_error) / ++n;
 
@@ -249,7 +240,8 @@ double count_error_functor<P>::operator()(const example &example) const
 }
 
 template<Individual P>
-gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
+gaussian_evaluator<P>::gaussian_evaluator(multi_dataset<dataframe> &d)
+  : evaluator(d)
 {
 }
 
@@ -260,14 +252,15 @@ gaussian_evaluator<P>::gaussian_evaluator(dataframe &d) : evaluator(d)
 template<Individual P>
 double gaussian_evaluator<P>::operator()(const P &prg) const
 {
-  Expects(this->dat_->classes() >= 2);
-  basic_gaussian_oracle<P, false, false> oracle(prg, *this->dat_);
+  Expects(this->dat_->selected().classes() >= 2);
+  const auto &dat(this->dat_->selected());
+  basic_gaussian_oracle<P, false, false> oracle(prg, dat);
 
   double d(0.0);
-  for (auto &example : *this->dat_)
+  for (auto &example : dat)
     if (const auto res(oracle.tag(example.input)); res.label == label(example))
     {
-      const auto scale(static_cast<double>(this->dat_->classes() - 1));
+      const auto scale(static_cast<double>(dat.classes() - 1));
       // Note:
       // * `(1.0 - res.sureness)` is the sum of the errors;
       // * `(res.sureness - 1.0)` is the opposite (standardized fitness);
@@ -278,8 +271,9 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
     {
       // Note:
       // * the maximum single class error is `1.0`;
-      // * the maximum average class error is `1.0 / dat_->classes()`;
-      // So -1.0 is like to say that we have a complete failure.
+      // * the maximum average class error is
+      //   `1.0 / dat_->selected().classes()`;
+      // So `-1.0` is like to say that we have a complete failure.
       d -= 1.0;
     }
 
@@ -294,7 +288,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 template<Individual P>
 std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
 {
-  return std::make_unique<gaussian_oracle<P>>(prg, *this->dat_);
+  return std::make_unique<gaussian_oracle<P>>(prg, this->dat_->selected());
 }
 
 #endif  // include guard

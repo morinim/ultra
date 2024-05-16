@@ -40,7 +40,7 @@ int main()
 
   // PREDICTION
   const auto oracle(s.oracle(result.best_individual));
-  const auto example(random::element(prob.data()));
+  const auto example(random::element(prob.data.selected()));
   const auto prediction(oracle->tag(example.input));
 
   std::cout << "Correct class: " << src::label(example)

@@ -44,8 +44,8 @@ TEST_CASE("Cardinality")
   src::problem prob(is);
   CHECK(!!prob);
 
-  const auto orig(prob.data());
-  const auto examples(prob.data().size());
+  const auto orig(prob.data.selected());
+  const auto examples(prob.data.selected().size());
 
   for (unsigned perc_train(1); perc_train < 100; ++perc_train)
     for (unsigned perc_val(0); perc_val + perc_train <= 100; ++perc_val)
@@ -57,22 +57,22 @@ TEST_CASE("Cardinality")
 
       src::holdout_validation v(prob, params);
 
-      CHECK(near_integers(prob.data(src::dataset_t::training).size(),
+      CHECK(near_integers(prob.data[src::dataset_t::training].size(),
                           examples * perc_train / 100));
 
-      CHECK(near_integers(prob.data(src::dataset_t::validation).size(),
+      CHECK(near_integers(prob.data[src::dataset_t::validation].size(),
                           examples * perc_val / 100));
 
-      CHECK(near_integers(prob.data(src::dataset_t::test).size(),
+      CHECK(near_integers(prob.data[src::dataset_t::test].size(),
                           examples * (100 - perc_train - perc_val) / 100));
 
-      CHECK(prob.data(src::dataset_t::training).size()
-            + prob.data(src::dataset_t::validation).size()
-            + prob.data(src::dataset_t::test).size() == examples);
+      CHECK(prob.data[src::dataset_t::training].size()
+            + prob.data[src::dataset_t::validation].size()
+            + prob.data[src::dataset_t::test].size() == examples);
 
-      prob.data(src::dataset_t::training) = orig;
-      prob.data(src::dataset_t::validation).clear();
-      prob.data(src::dataset_t::test).clear();
+      prob.data[src::dataset_t::training] = orig;
+      prob.data[src::dataset_t::validation].clear();
+      prob.data[src::dataset_t::test].clear();
     }
 }
 
@@ -86,10 +86,10 @@ TEST_CASE("Probabilities")
 
   // Output value changed to be used as unique key for example identification.
   int i(0);
-  for (auto &e : prob.data())
+  for (auto &e : prob.data.selected())
     e.output = i++;
 
-  const auto orig(prob.data());
+  const auto orig(prob.data.selected());
   const auto examples(orig.size());
 
   std::vector<unsigned> count(examples);
@@ -106,12 +106,12 @@ TEST_CASE("Probabilities")
   {
     src::holdout_validation v(prob, params);
 
-    for (const auto &e : prob.data(src::dataset_t::validation))
+    for (const auto &e : prob.data[src::dataset_t::validation])
       ++count[std::get<int>(e.output)];
 
-    prob.data(src::dataset_t::training) = orig;
-    prob.data(src::dataset_t::validation).clear();
-    prob.data(src::dataset_t::test).clear();
+    prob.data[src::dataset_t::training] = orig;
+    prob.data[src::dataset_t::validation].clear();
+    prob.data[src::dataset_t::test].clear();
   }
 
   const auto expected(extractions * validation_perc / 100);
@@ -134,7 +134,7 @@ TEST_CASE("Stratify")
   src::problem prob(is);
   CHECK(!!prob);
 
-  const auto orig(prob.data());
+  const auto orig(prob.data.selected());
   const auto examples(orig.size());
 
   src::holdout_validation::params params;
@@ -146,11 +146,11 @@ TEST_CASE("Stratify")
   {
     src::holdout_validation v(prob, params);
 
-    CHECK(near_integers(prob.data(src::dataset_t::training).size(),
+    CHECK(near_integers(prob.data[src::dataset_t::training].size(),
                         examples * params.training_perc / 100));
-    CHECK(near_integers(prob.data(src::dataset_t::validation).size(),
+    CHECK(near_integers(prob.data[src::dataset_t::validation].size(),
                         examples * params.validation_perc / 100));
-    CHECK(near_integers(prob.data(src::dataset_t::test).size(),
+    CHECK(near_integers(prob.data[src::dataset_t::test].size(),
                         examples
                         * (100 - params.training_perc - params.validation_perc)
                         / 100));
@@ -161,28 +161,28 @@ TEST_CASE("Stratify")
     std::vector<std::map<value_t, double>> count(indices.size());
 
     for (auto index : indices)
-      for (auto example : prob.data(index))
+      for (auto example : prob.data[index])
         ++count[as_integer(index)][example.output];
 
     for (auto pair : count[0])
     {
       const double ref_perc(pair.second
-                            / prob.data(src::dataset_t::training).size());
+                            / prob.data[src::dataset_t::training].size());
 
       const double perc_v(count[1][pair.first]
-                          / prob.data(src::dataset_t::validation).size());
+                          / prob.data[src::dataset_t::validation].size());
 
       CHECK(perc_v == doctest::Approx(ref_perc));
 
       const double perc_t(count[2][pair.first]
-                          / prob.data(src::dataset_t::test).size());
+                          / prob.data[src::dataset_t::test].size());
 
       CHECK(perc_t == doctest::Approx(ref_perc));
     }
 
-    prob.data(src::dataset_t::training) = orig;
-    prob.data(src::dataset_t::validation).clear();
-    prob.data(src::dataset_t::test).clear();
+    prob.data[src::dataset_t::training] = orig;
+    prob.data[src::dataset_t::validation].clear();
+    prob.data[src::dataset_t::test].clear();
   }
 }
 

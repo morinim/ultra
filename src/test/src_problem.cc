@@ -57,8 +57,8 @@ TEST_CASE("setup_terminals")
 
     CHECK(!p.classification());
 
-    CHECK(p.data().size() == debug::WINE_COUNT);
-    CHECK(p.data(src::dataset_t::validation).empty());
+    CHECK(p.data.selected().size() == debug::WINE_COUNT);
+    CHECK(p.data[src::dataset_t::validation].empty());
   }
 
   SUBCASE("Strong typing - Symbolic regression")
@@ -78,8 +78,8 @@ TEST_CASE("setup_terminals")
 
     CHECK(!p.classification());
 
-    CHECK(p.data().size() == debug::WINE_COUNT);
-    CHECK(p.data(src::dataset_t::validation).empty());
+    CHECK(p.data.selected().size() == debug::WINE_COUNT);
+    CHECK(p.data[src::dataset_t::validation].empty());
   }
 
   SUBCASE("Weak typing - Classification")
@@ -98,8 +98,8 @@ TEST_CASE("setup_terminals")
 
     CHECK(p.classification());
 
-    CHECK(p.data().size() == debug::IRIS_COUNT);
-    CHECK(p.data(src::dataset_t::validation).empty());
+    CHECK(p.data.selected().size() == debug::IRIS_COUNT);
+    CHECK(p.data[src::dataset_t::validation].empty());
   }
 
   SUBCASE("Strong typing - Classification")
@@ -118,8 +118,8 @@ TEST_CASE("setup_terminals")
 
     CHECK(p.classification());
 
-    CHECK(p.data().size() == debug::IRIS_COUNT);
-    CHECK(p.data(src::dataset_t::validation).empty());
+    CHECK(p.data.selected().size() == debug::IRIS_COUNT);
+    CHECK(p.data[src::dataset_t::validation].empty());
   }
 }
 

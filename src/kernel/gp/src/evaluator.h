@@ -15,16 +15,11 @@
 
 #include "kernel/evaluator.h"
 #include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/multi_dataset.h"
 #include "kernel/gp/src/oracle.h"
 
 namespace ultra::src
 {
-
-/// A sized range that contains a series of examples.
-template<class DAT> concept DataSet = std::ranges::range<DAT> && requires(DAT d)
-{
-  typename DAT::difference_type;
-};
 
 /// An error function/functor returns a measurement of the error that a program
 /// commits in a given training case.
@@ -42,13 +37,10 @@ template<class ERRF, class DAT> concept ErrorFunction
 template<DataSet DAT>
 class evaluator
 {
-public:
-  void dataset(DAT &);
-
 protected:
-  explicit evaluator(DAT &);
+  explicit evaluator(multi_dataset<DAT> &) noexcept;
 
-  DAT *dat_ {nullptr};
+  multi_dataset<DAT> *dat_ {nullptr};
 };
 
 ///
@@ -65,7 +57,7 @@ requires ErrorFunction<ERRF<P>, DAT>
 class sum_of_errors_evaluator : public evaluator<DAT>
 {
 public:
-  explicit sum_of_errors_evaluator(DAT &);
+  explicit sum_of_errors_evaluator(multi_dataset<DAT> &);
 
   [[nodiscard]] auto operator()(const P &) const;
   [[nodiscard]] auto fast(const P &) const;
@@ -256,7 +248,7 @@ template<Individual P>
 class gaussian_evaluator : public evaluator<dataframe>
 {
 public:
-  explicit gaussian_evaluator(dataframe &);
+  explicit gaussian_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
   [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;

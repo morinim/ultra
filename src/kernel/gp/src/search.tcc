@@ -87,7 +87,8 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
   if ((metrics_ & metric_flags::accuracy))
   {
     const auto prg_oracle(oracle(prg));
-    ret.accuracy = prg_oracle->measure(accuracy_metric(), prob().data());
+    ret.accuracy = prg_oracle->measure(accuracy_metric(),
+                                       prob().data.selected());
   }
 
   return ret;
@@ -136,7 +137,7 @@ void basic_search<ES, E>::tune_parameters()
 
   ultra::basic_search<ES, E>::tune_parameters();
 
-  const auto d_size(prob().data().size());
+  const auto d_size(prob().data.selected().size());
   Expects(d_size);
 
   if (!constrained.population.init_subgroups)
@@ -305,7 +306,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
 {
   const auto search_scheme([&]<Evaluator E>()
   {
-    basic_search<alps_es, E> alps(prob_, E(prob_.data()), metrics_);
+    basic_search<alps_es, E> alps(prob_, E(prob_.data), metrics_);
 
     if (vs_)
       alps.validation_strategy(*vs_);
@@ -324,9 +325,9 @@ template<Individual P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
   if (prob_.classification())
-    return class_evaluator_t(prob_.data()).oracle(prg);
+    return class_evaluator_t(prob_.data).oracle(prg);
   else
-    return reg_evaluator_t(prob_.data()).oracle(prg);
+    return reg_evaluator_t(prob_.data).oracle(prg);
 }
 
 ///

@@ -194,7 +194,7 @@ std::string basic_class_oracle<N>::name(const value_t &a) const
 ///
 template<class I, bool S, bool N>
 basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(const I &ind,
-                                                      dataframe &d)
+                                                      const dataframe &d)
   : basic_class_oracle<N>(d), oracle_(ind), gauss_dist_(d.classes())
 {
   static_assert(Individual<I>);
@@ -248,7 +248,7 @@ basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(std::istream &in,
 /// \param[in] d the training set
 ///
 template<class I, bool S, bool N>
-void basic_gaussian_oracle<I, S, N>::fill_vector(dataframe &d)
+void basic_gaussian_oracle<I, S, N>::fill_vector(const dataframe &d)
 {
   Expects(d.classes() > 1);
 
@@ -363,7 +363,7 @@ template<Individual I, bool S, bool N, template<class, bool, bool> class L,
          team_composition C>
 template<class... Args>
 team_class_oracle<I, S, N, L, C>::team_class_oracle(const gp::team<I> &t,
-                                                    dataframe &d,
+                                                    const dataframe &d,
                                                     Args&&... args)
   : basic_class_oracle<N>(d), classes_(d.classes())
 {

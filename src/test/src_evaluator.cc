@@ -29,8 +29,6 @@ TEST_CASE("Concepts")
 {
   using namespace ultra;
 
-  CHECK(src::DataSet<src::dataframe>);
-
   CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
                            src::dataframe>);
   CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
@@ -68,7 +66,7 @@ TEST_CASE("Evaluators")
 )");
 
   ultra::src::problem pr(sr);
-  CHECK(!pr.data().empty());
+  CHECK(!pr.data.selected().empty());
 
   pr.params.init();
   pr.setup_symbols();
@@ -150,21 +148,21 @@ TEST_CASE("Evaluators")
   {
     {
       const src::reg_oracle oracle(delphi);
-      for (std::size_t i(0); const auto &e : pr.data())
+      for (std::size_t i(0); const auto &e : pr.data.selected())
         CHECK(std::get<D_DOUBLE>(oracle(e.input))
               == doctest::Approx(out[i++]));
     }
 
     {
       const src::reg_oracle oracle(delta1);
-      for (std::size_t i(0); const auto &e : pr.data())
+      for (std::size_t i(0); const auto &e : pr.data.selected())
         CHECK(std::get<D_DOUBLE>(oracle(e.input))
               == doctest::Approx(out[i++] + 1));
     }
 
     {
       const src::reg_oracle oracle(delta2);
-      for (std::size_t i(0); const auto &e : pr.data())
+      for (std::size_t i(0); const auto &e : pr.data.selected())
         CHECK(std::get<D_DOUBLE>(oracle(e.input))
               == doctest::Approx(out[i++] + 2));
     }
@@ -172,7 +170,7 @@ TEST_CASE("Evaluators")
 
   SUBCASE("MAE Evaluator")
   {
-    src::mae_evaluator<gp::individual> mae(pr.data());
+    src::mae_evaluator<gp::individual> mae(pr.data);
     CHECK(mae(delphi) == doctest::Approx(0.0));
     CHECK(mae(delta1) == doctest::Approx(-1.0));
     CHECK(mae(delta2) == doctest::Approx(-2.0));
@@ -182,7 +180,7 @@ TEST_CASE("Evaluators")
 
   SUBCASE("RMAE Evaluator")
   {
-    src::rmae_evaluator<gp::individual> rmae(pr.data());
+    src::rmae_evaluator<gp::individual> rmae(pr.data);
     CHECK(rmae(delphi) == doctest::Approx(0.0));
     CHECK(rmae(delta1) == doctest::Approx(-0.118876));
     CHECK(rmae(delta2) == doctest::Approx(-0.23666));
@@ -192,7 +190,7 @@ TEST_CASE("Evaluators")
 
   SUBCASE("MSE Evaluator")
   {
-    src::mse_evaluator<gp::individual> mse(pr.data());
+    src::mse_evaluator<gp::individual> mse(pr.data);
     CHECK(mse(delphi) == doctest::Approx(0.0));
     CHECK(mse(delta1) == doctest::Approx(-1.0));
     CHECK(mse(delta2) == doctest::Approx(-4.0));
@@ -202,12 +200,12 @@ TEST_CASE("Evaluators")
 
   SUBCASE("Count Evaluator")
   {
-    src::count_evaluator<gp::individual> count(pr.data());
+    src::count_evaluator<gp::individual> count(pr.data);
     CHECK(count(delphi) == doctest::Approx(0.0));
     CHECK(count(delta1) == doctest::Approx(-1.0));
     CHECK(count(delta2) == doctest::Approx(-1.0));
-    CHECK(count(huge1) == doctest::Approx(-1.0 / pr.data().size()));
-    CHECK(count(huge2) == doctest::Approx(-2.0 / pr.data().size()));
+    CHECK(count(huge1) == doctest::Approx(-1.0 / pr.data.selected().size()));
+    CHECK(count(huge2) == doctest::Approx(-2.0 / pr.data.selected().size()));
   }
 }
 

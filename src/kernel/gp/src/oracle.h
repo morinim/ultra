@@ -222,7 +222,7 @@ template<class I, bool S, bool N>
 class basic_gaussian_oracle : public basic_class_oracle<N>
 {
 public:
-  basic_gaussian_oracle(const I &, dataframe &);
+  basic_gaussian_oracle(const I &, const dataframe &);
   basic_gaussian_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -236,7 +236,7 @@ public:
 
 private:
   // *** Private support methods ***
-  void fill_vector(dataframe &);
+  void fill_vector(const dataframe &);
   bool load_(std::istream &, const symbol_set &, std::true_type);
   bool load_(std::istream &, const symbol_set &, std::false_type);
 
@@ -269,8 +269,8 @@ template<Individual I, bool S, bool N,
 class team_class_oracle : public basic_class_oracle<N>
 {
 public:
-  template<class... Args> team_class_oracle(const gp::team<I> &, dataframe &,
-                                            Args &&...);
+  template<class... Args> team_class_oracle(const gp::team<I> &,
+                                            const dataframe &, Args &&...);
   team_class_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -323,9 +323,9 @@ class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
 public:
   using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
 };
-template<Individual P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
+template<Individual P> gaussian_oracle(const P &, const dataframe &) -> gaussian_oracle<P>;
 
-template<class P> gaussian_oracle(const P &, dataframe &) -> gaussian_oracle<P>;
+template<class P> gaussian_oracle(const P &, const dataframe &) -> gaussian_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"
 }  // namespace src

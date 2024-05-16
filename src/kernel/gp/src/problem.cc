@@ -26,16 +26,16 @@ namespace ultra::src
 problem::problem(dataframe d) : problem()
 {
   ultraINFO << "Importing dataset...";
-  data(dataset_t::training) = std::move(d);
+  data[dataset_t::training] = std::move(d);
   ultraINFO << "...dataset imported";
 
-  ultraINFO << "Examples: " << data(dataset_t::training).size()
+  ultraINFO << "Examples: " << data[dataset_t::training].size()
             << ", features: " << variables()
             << ", classes: " << classes();
 
 
-  dataset_[1].clone_schema(dataset_[0]);
-  dataset_[2].clone_schema(dataset_[0]);
+  data[dataset_t::validation].clone_schema(data[dataset_t::training]);
+  data[dataset_t::test].clone_schema(data[dataset_t::training]);
 
   setup_terminals();
 }
@@ -83,7 +83,7 @@ problem::problem(std::istream &ds, const dataframe::params &p)
 ///
 bool problem::operator!() const
 {
-  return !data(dataset_t::training).size() || !sset.enough_terminals();
+  return !data[dataset_t::training].size() || !sset.enough_terminals();
 }
 
 ///
@@ -100,7 +100,7 @@ void problem::setup_terminals()
 {
   ultraINFO << "Setting up terminals...";
 
-  const auto &columns(data(dataset_t::training).columns);
+  const auto &columns(data[dataset_t::training].columns);
   if (columns.size() <= 1)
     throw exception::insufficient_data("Cannot generate the terminal set");
 
@@ -199,11 +199,11 @@ void problem::setup_symbols()
     setup_terminals();
 
   for (const auto used_categories(
-         data(dataset_t::training).columns.used_categories());
+         data[dataset_t::training].columns.used_categories());
        auto category : used_categories)
   {
     if (const auto domain(
-          data(dataset_t::training).columns.domain_of_category(category));
+          data[dataset_t::training].columns.domain_of_category(category));
         numerical_data_type(domain))
     {
       add_symbol(insert<real::abs>(category));
@@ -230,7 +230,7 @@ void problem::setup_symbols()
   for (const auto categories(sset.categories_missing_terminal());
        auto category : categories)
     if (const auto domain(
-          data(dataset_t::training).columns.domain_of_category(category));
+          data[dataset_t::training].columns.domain_of_category(category));
         numerical_data_type(domain))
     {
       if (domain == d_double)
@@ -269,7 +269,7 @@ bool problem::compatible(const function::param_data_types &instance,
 {
   Expects(instance.size() == pattern.size());
 
-  const auto &columns(data(dataset_t::training).columns);
+  const auto &columns(data[dataset_t::training].columns);
 
   const auto sup(instance.size());
   for (std::size_t i(0); i < sup; ++i)
@@ -306,7 +306,7 @@ std::size_t problem::categories() const noexcept
 ///
 std::size_t problem::classes() const noexcept
 {
-  return data(dataset_t::training).classes();
+  return data[dataset_t::training].classes();
 }
 
 ///
@@ -315,65 +315,7 @@ std::size_t problem::classes() const noexcept
 ///
 std::size_t problem::variables() const noexcept
 {
-  return data(dataset_t::training).variables();
-}
-
-///
-/// \return a reference to the active dataset
-///
-dataframe &problem::data() noexcept
-{
-  return data(selected_);
-}
-
-///
-/// \return a const reference to the active dataset
-///
-const dataframe &problem::data() const noexcept
-{
-  return data(selected_);
-}
-
-///
-/// \param[in] t a dataset type
-/// \return      a reference to the specified dataset
-///
-dataframe &problem::data(dataset_t t)
-{
-  Expects(dataset_t::training <= t && t <= dataset_t::test);
-
-  return dataset_[as_integer(t)];
-}
-
-///
-/// \param[in] t a dataset type
-/// \return      a const reference to the specified dataset
-///
-const dataframe &problem::data(dataset_t t) const
-{
-  Expects(dataset_t::training <= t && t <= dataset_t::test);
-  return dataset_[as_integer(t)];
-}
-
-///
-/// Selects the active dataset.
-///
-/// \param[in] t the selected dataset
-///
-/// When calling `data()` without parameters the last selected dataset is used.
-///
-void problem::set_dataset(dataset_t t)
-{
-  Expects(dataset_t::training <= t && t <= dataset_t::test);
-  selected_ = t;
-}
-
-///
-/// \return index of the currently selected dataset
-///
-[[nodiscard]] dataset_t problem::dataset() const noexcept
-{
-  return selected_;
+  return data[dataset_t::training].variables();
 }
 
 ///
@@ -384,8 +326,12 @@ bool problem::is_valid() const
   if (!ultra::problem::is_valid())
     return false;
 
-  return std::ranges::all_of(dataset_,
-                             [](const auto &d) { return d.is_valid(); });
+  for (auto i : std::vector{dataset_t::training, dataset_t::validation,
+                            dataset_t::test})
+    if (!data[i].is_valid())
+      return false;
+
+  return true;
 }
 
 }  // namespace ultra::src

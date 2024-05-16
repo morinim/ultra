@@ -60,7 +60,7 @@ void test_serialization(ultra::src::problem &pr)
   for (unsigned cycles(256); cycles; --cycles)
   {
     const T ind(pr);
-    const auto oracle1(build<L, T, P>()(ind, pr.data()));
+    const auto oracle1(build<L, T, P>()(ind, pr.data.selected()));
 
     std::stringstream ss;
 
@@ -69,7 +69,7 @@ void test_serialization(ultra::src::problem &pr)
     REQUIRE(oracle2);
     REQUIRE(oracle2->is_valid());
 
-    for (const auto &e : pr.data())
+    for (const auto &e : pr.data.selected())
     {
       const auto out1(oracle1.name(oracle1(e)));
       const auto out2(oracle2->name((*oracle2)(e)));
@@ -87,12 +87,13 @@ void test_team_of_one(ultra::src::problem &pr)
   for (unsigned i(0); i < 1000; ++i)
   {
     const gp::individual ind(pr);
-    const auto li(build<L, gp::individual, P>()(ind, pr.data()));
+    const auto li(build<L, gp::individual, P>()(ind, pr.data.selected()));
 
     const gp::team<gp::individual> t{{ind}};
-    const auto lt(build<L, gp::team<gp::individual>, P>()(t, pr.data()));
+    const auto lt(build<L, gp::team<gp::individual>, P>()(t,
+                                                          pr.data.selected()));
 
-    for (const auto &e : pr.data())
+    for (const auto &e : pr.data.selected())
     {
       const auto out_i(li(e.input)), out_t(lt(e.input));
 
@@ -120,15 +121,16 @@ void test_team(ultra::src::problem &pr)
     const gp::individual ind2(pr);
     const gp::individual ind3(pr);
 
-    const auto oracle1(build<L, gp::individual, P>()(ind1, pr.data()));
-    const auto oracle2(build<L, gp::individual, P>()(ind2, pr.data()));
-    const auto oracle3(build<L, gp::individual, P>()(ind3, pr.data()));
+    const auto oracle1(build<L, gp::individual, P>()(ind1, pr.data.selected()));
+    const auto oracle2(build<L, gp::individual, P>()(ind2, pr.data.selected()));
+    const auto oracle3(build<L, gp::individual, P>()(ind3, pr.data.selected()));
 
     const gp::team<gp::individual> t{{ind1, ind2, ind3}};
     const auto ts(t.size());
-    const auto oracle_t(build<L, gp::team<gp::individual>, P>()(t, pr.data()));
+    const auto oracle_t(build<L, gp::team<gp::individual>, P>()(
+                          t, pr.data.selected()));
 
-    for (const auto &example : pr.data())
+    for (const auto &example : pr.data.selected())
     {
       const std::vector out =
       {
@@ -200,7 +202,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::sr);
-  CHECK(pr.data().read_csv(is) == debug::SR_COUNT);
+  CHECK(pr.data.selected().read_csv(is) == debug::SR_COUNT);
   pr.setup_symbols();
 
   // TEAM OF ONE INDIVIDUAL.
@@ -215,7 +217,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     const gp::team<gp::individual> t{{ind, ind, ind, ind}};
     const src::reg_oracle lt(t);
 
-    for (const auto &e : pr.data())
+    for (const auto &e : pr.data.selected())
     {
       const auto out_i(li(e.input)), out_t(lt(e.input));
 
@@ -247,7 +249,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
     const gp::team<gp::individual> t({i1, i2, i3, i4});
     const src::reg_oracle oracle_team(t);
 
-    for (const auto &e : pr.data())
+    for (const auto &e : pr.data.selected())
     {
       const auto out1(oracle1(e.input));
       const auto out2(oracle2(e.input));
@@ -303,7 +305,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::sr);
-  CHECK(pr.data().read_csv(is) == debug::SR_COUNT);
+  CHECK(pr.data.selected().read_csv(is) == debug::SR_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -319,7 +321,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
     REQUIRE(oracle2);
     REQUIRE(oracle2->is_valid());
 
-    for (const auto &e : pr.data())
+    for (const auto &e : pr.data.selected())
     {
       const auto out1(oracle1(e.input));
       const auto out2((*oracle2)(e.input));
@@ -339,7 +341,7 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::iris_full);
-  CHECK(pr.data().read_csv(is) == debug::IRIS_FULL_COUNT);
+  CHECK(pr.data.selected().read_csv(is) == debug::IRIS_FULL_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 

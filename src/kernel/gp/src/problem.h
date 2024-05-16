@@ -18,17 +18,10 @@
 
 #include "kernel/problem.h"
 #include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/multi_dataset.h"
 
 namespace ultra::src
 {
-
-/// Data/simulations are categorised in three sets:
-/// - *training* used directly for learning;
-/// - *validation* for controlling overfitting and measuring the performance
-///   of an individual;
-/// - *test* for a forecast of how well an individual will do in the real
-///   world.
-enum class dataset_t {training, validation, test};
 
 ///
 /// Provides a GP-specific interface to the generic `problem` class.
@@ -54,14 +47,6 @@ public:
                    const dataframe::params & = {});
   explicit problem(std::istream &, const dataframe::params & = {});
 
-  // ---- Data access ----
-  [[nodiscard]] const dataframe &data() const noexcept;
-  [[nodiscard]] dataframe &data() noexcept;
-  [[nodiscard]] const dataframe &data(dataset_t) const;
-  [[nodiscard]] dataframe &data(dataset_t);
-  void set_dataset(dataset_t);
-  [[nodiscard]] dataset_t dataset() const noexcept;
-
   // ---- Information about the problem ----
   /// Just a shorthand for checking number of classes.
   [[nodiscard]] bool classification() const noexcept { return classes() > 1; }
@@ -76,14 +61,13 @@ public:
   void setup_terminals();
   [[nodiscard]] bool is_valid() const override;
 
+  // ---- Public data members ----
+  multi_dataset<dataframe> data;
+
 private:
   // Private support methods.
   [[nodiscard]] bool compatible(const function::param_data_types &,
                                 const std::vector<std::string> &) const;
-
-  // Private data members.
-  std::vector<dataframe> dataset_ { {}, {}, {} };
-  dataset_t selected_ {dataset_t::training};
 };
 
 }  // namespace ultra::src
