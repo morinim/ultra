@@ -123,8 +123,7 @@ There is a [comprehensive wiki][wiki]. You should probably start with the [tutor
 ## BUILD REQUIREMENTS
 
 Ultra is designed to have fairly minimal requirements to build and use with your projects, but there are some. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
-However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the
-[issue tracking system][issue]; patches for fixing them are even more welcome!
+However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
 
 ### Mandatory
 
@@ -165,6 +164,7 @@ ultra/
   CONTRIBUTING.md
   LICENSE
   README.md
+  SECURITY.md
 ```
 
 ## SETTING UP THE BUILD
@@ -182,12 +182,12 @@ CXX=clang++ cmake -B build/ src/
 
 You're now ready to build using the underlying build system tool:
 
-* everything: `cmake --build build/`
-* kernel library (`libultra.a`): `cmake --build build/ --target ultra`
-* `sr` tool: `cmake --build build/ --target sr`
-* tests: `cmake --build build/ --target tests`
-* the *ABC* example: `cmake --build build/ --target ABC`
-* for a list of valid targets: `cmake --build build/ --target help`
+- everything: `cmake --build build/`
+- kernel library (`libultra.a`): `cmake --build build/ --target ultra`
+- `sr` tool: `cmake --build build/ --target sr`
+- tests: `cmake --build build/ --target tests`
+- the *ABC* example: `cmake --build build/ --target ABC`
+- for a list of valid targets: `cmake --build build/ --target help`
 
 The output files are stored in subdirectories of `build/` (out of source build).
 
@@ -235,7 +235,7 @@ So don't be afraid of a different *MAJOR* version and read the release notes for
 [agent]: https://github.com/morinim/ultra
 [best_practices]: https://www.bestpractices.dev/projects/8725
 [build_status]: https://github.com/morinim/ultra/actions/workflows/build_release.yml
-[classification]: https://github.com/morinim/ultra
+[classification]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [cmake]: https://cmake.org/
 [download]: https://github.com/morinim/ultra/archive/master.zip
 [eos]: https://www.eosdev.it/
