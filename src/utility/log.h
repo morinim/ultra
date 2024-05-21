@@ -48,9 +48,7 @@ public:
   /// Messages with a lower level aren't logged / printed.
   static level reporting_level;
 
-  /// Optional log stream.
-  static std::unique_ptr<std::ostream> stream;
-  static void setup_stream(const std::string &base);
+  static void setup_stream(const std::string & = "ultra");
 
   log() = default;
   log(const log &) = delete;
@@ -64,6 +62,8 @@ protected:
   std::ostringstream os {};
 
 private:
+  static std::unique_ptr<std::ostream> stream_;  // long term log stream
+
   level level_ {lOUTPUT};  // current log level
 };
 
@@ -105,9 +105,9 @@ private:
                           else ultra::log().get(level)
 #endif
 
-#define ultraFATAL   ultraPRINT(log::lFATAL)
 #define ultraDEBUG   ultraPRINT(log::lDEBUG)
 #define ultraERROR   ultraPRINT(log::lERROR)
+#define ultraFATAL   ultraPRINT(log::lFATAL)
 #define ultraINFO    ultraPRINT(log::lINFO)
 #define ultraOUTPUT  ultraPRINT(log::lOUTPUT)
 #define ultraWARNING ultraPRINT(log::lWARNING)

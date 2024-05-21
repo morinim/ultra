@@ -21,7 +21,7 @@ namespace ultra
 {
 
 log::level log::reporting_level = log::lINFO;
-std::unique_ptr<std::ostream> log::stream = nullptr;
+std::unique_ptr<std::ostream> log::stream_ = nullptr;
 
 ///
 /// Sets the logging level of a message.
@@ -51,14 +51,14 @@ log::~log()
     "ALL", "DEBUG", "INFO", "", "WARNING", "ERROR", "FATAL", ""
   };
 
-  if (stream)  // `stream`, if available, gets all the messages
+  if (stream_)  // `stream_`, if available, gets all the messages
   {
     using namespace std::chrono;
     const std::time_t t_c(system_clock::to_time_t(system_clock::now()));
 
-    std::osyncstream(*stream) << std::put_time(std::localtime(&t_c), "%F %T")
-                              << '\t' << tags[level_]
-                              << '\t' << os.str() << std::endl;
+    std::osyncstream(*stream_) << std::put_time(std::localtime(&t_c), "%F %T")
+                               << '\t' << tags[level_]
+                               << '\t' << os.str() << std::endl;
   }
 
   if (level_ >= reporting_level)  // `cout` is selective
@@ -72,7 +72,7 @@ log::~log()
 }
 
 ///
-/// Sets the `log::stream` variable with a convenient value.
+/// Sets the output stream for logging.
 ///
 /// \param[in] base base filepath of the log (e.g. `/home/doe/app`)
 ///
@@ -88,7 +88,7 @@ void log::setup_stream(const std::string &base)
   std::ostringstream fn;
   fn << base << std::put_time(std::localtime(&t_c), "_%j_%H_%M_%S") << ".log";
 
-  stream = std::make_unique<std::ofstream>(fn.str());
+  stream_ = std::make_unique<std::ofstream>(fn.str());
 }
 
 }  // namespace ultra
