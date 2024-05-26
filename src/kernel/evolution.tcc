@@ -300,7 +300,7 @@ evolution<S>::run()
         ultraDEBUG << "Sending closing message to tasks";
       }
 
-      std::this_thread::yield();
+      std::this_thread::sleep_for(500ms);
     }
 
     print_and_update_if_better(sum_.best());
