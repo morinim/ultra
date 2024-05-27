@@ -106,7 +106,8 @@ public:
   void clear();
   iterator erase(iterator, iterator);
   void push_back(const src::example &);
-  template<class InputIt> iterator insert(const_iterator, InputIt, InputIt);
+  template<std::input_iterator InputIt> iterator insert(const_iterator,
+                                                        InputIt, InputIt);
   void swap(dataframe &);
 
   // ---- Convenience ----
@@ -231,7 +232,7 @@ std::ostream &operator<<(std::ostream &, const dataframe &);
 /// otherwise, only the iterators and references before the insertion point
 /// remain valid.
 ///
-template<class InputIt>
+template<std::input_iterator InputIt>
 dataframe::iterator dataframe::insert(dataframe::const_iterator pos,
                                       InputIt first, InputIt last)
 {
