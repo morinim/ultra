@@ -71,8 +71,8 @@ void test_serialization(ultra::src::problem &pr)
 
     for (const auto &e : pr.data.selected())
     {
-      const auto out1(oracle1.name(oracle1(e)));
-      const auto out2(oracle2->name((*oracle2)(e)));
+      const auto out1(oracle1.name(oracle1(e.input)));
+      const auto out2(oracle2->name((*oracle2)(e.input)));
 
       CHECK(out1 == out2);
     }
@@ -350,6 +350,23 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle")
 
   // GAUSSIAN ORACLE TEAM OF RANDOM INDIVIDUALS.
   test_team<src::gaussian_oracle>(pr);
+}
+
+TEST_CASE_FIXTURE(fixture, "gaussian_oracle serialization")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream is(debug::iris_full);
+  CHECK(pr.data.selected().read_csv(is) == debug::IRIS_FULL_COUNT);
+  pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
+
+  // GAUSSIAN_ORACLE SERIALIZATION - INDIVIDUAL.
+  test_serialization<src::gaussian_oracle, gp::individual>(pr);
+
+  // GAUSSIAN_ORACLE SERIALIZATION - TEAM.
+  test_serialization<src::gaussian_oracle, gp::team<gp::individual>>(pr);
 }
 
 }  // TEST_SUITE("ORACLE")
