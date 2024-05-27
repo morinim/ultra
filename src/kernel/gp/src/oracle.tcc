@@ -17,19 +17,13 @@
 #if !defined(ULTRA_ORACLE_TCC)
 #define      ULTRA_ORACLE_TCC
 
+// ***********************************************************************
+// *  basic_reg_oracle                                                   *
+// ***********************************************************************
+
 template<Individual P, bool S>
 const std::string basic_reg_oracle<P, S>::SERIALIZE_ID(
   gp::Team<P> ? "TEAM_REG_ORACLE" : "REG_ORACLE");
-
-template<class I, bool S, bool N>
-const std::string basic_gaussian_oracle<I, S, N>::SERIALIZE_ID(
-  "GAUSSIAN_ORACLE");
-
-template<Individual I, bool S, bool N,
-         template<class, bool, bool> class L,
-         team_composition C>
-const std::string team_class_oracle<I, S, N, L, C>::SERIALIZE_ID(
-  "TEAM_" + L<I, S, N>::SERIALIZE_ID);
 
 ///
 /// \param[in] prg the program (individual/team) to be lambdified
@@ -91,7 +85,8 @@ value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 ///
 /// \return a *failed* status
 ///
-/// \warning This function is useful only for classification tasks.
+/// \warning
+/// This function is useful only for classification tasks.
 ///
 template<Individual P, bool S>
 classification_result basic_reg_oracle<P, S>::tag(
@@ -145,6 +140,10 @@ bool basic_reg_oracle<P, S>::save(std::ostream &out) const
   return internal::reg_oracle_storage<P, S>::save(out);
 }
 
+// ***********************************************************************
+// *  basic_class_oracle                                                 *
+// ***********************************************************************
+
 ///
 /// \param[in] d the training set
 ///
@@ -188,6 +187,14 @@ std::string basic_class_oracle<N>::name(const value_t &a) const
   return internal::class_names<N>::string(a);
 }
 
+// ***********************************************************************
+// *  basic_gaussian_oracle                                              *
+// ***********************************************************************
+
+template<class I, bool S, bool N>
+const std::string basic_gaussian_oracle<I, S, N>::SERIALIZE_ID(
+  "GAUSSIAN_ORACLE");
+
 ///
 /// \param[in] ind program "to be transformed" into an oracle
 /// \param[in] d   the training set
@@ -198,7 +205,6 @@ basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(const I &ind,
   : basic_class_oracle<N>(d), oracle_(ind), gauss_dist_(d.classes())
 {
   static_assert(Individual<I>);
-
   Expects(!ind.empty());
   Expects(d.classes() > 1);
 
@@ -351,8 +357,102 @@ bool basic_gaussian_oracle<I, S, N>::save(std::ostream &out) const
 template<class I, bool S, bool N>
 bool basic_gaussian_oracle<I, S, N>::is_valid() const
 {
-  return true;
+  return oracle_.is_valid();
 }
+
+// ***********************************************************************
+// *  basic_binary_oracle                                                *
+// ***********************************************************************
+
+template<class I, bool S, bool N>
+const std::string basic_binary_oracle<I, S, N>::SERIALIZE_ID(
+  "BINARY_ORACLE");
+
+///
+/// \param[in] ind individual "to be transformed" into an oracle
+/// \param[in] d   the training set
+///
+template<class I, bool S, bool N>
+basic_binary_oracle<I, S, N>::basic_binary_oracle(const I &ind,
+                                                  const dataframe &d)
+  : basic_class_oracle<N>(d), oracle_(ind)
+{
+  static_assert(Individual<I>);
+  Expects(!ind.empty());
+  Expects(d.classes() == 2);
+
+  Ensures(is_valid());
+}
+
+///
+/// Constructs the object reading data from an input stream.
+///
+/// \param[in] in input stream
+/// \param[in] ss active symbol set
+///
+template<class I, bool S, bool N>
+basic_binary_oracle<I, S, N>::basic_binary_oracle(std::istream &in,
+                                                  const symbol_set &ss)
+  : basic_class_oracle<N>(), oracle_(in, ss)
+{
+  static_assert(
+    S, "binary_oracle requires storage space for de-serialization");
+
+  if (!internal::class_names<N>::load(in))
+      throw exception::data_format(
+        "Cannot read binary_oracle class_names component");
+
+  Ensures(is_valid());
+}
+
+///
+/// \param[in] ex input example for the lambda function
+/// \return       the class of `e` (numerical id) and the confidence level (in
+///               the `[0,1]` interval)
+///
+template<class I, bool S, bool N>
+classification_result basic_binary_oracle<I, S, N>::tag(
+  const std::vector<value_t> &ex) const
+{
+  const auto res(oracle_(ex));
+  const double val(has_value(res) ? std::get<D_DOUBLE>(res) : 0.0);
+
+  return {val > 0.0 ? 1u : 0u, 2*std::atan(val)};
+}
+
+///
+/// \return `true` if the object passes the internal consistency check
+///
+template<class I, bool S, bool N>
+bool basic_binary_oracle<I, S, N>::is_valid() const
+{
+  return oracle_.is_valid();
+}
+
+///
+/// Saves the oracle on persistent storage.
+///
+/// \param[out] out output stream
+/// \return         `true` on success
+///
+template<class I, bool S, bool N>
+bool basic_binary_oracle<I, S, N>::save(std::ostream &out) const
+{
+  if (!oracle_.save(out))
+    return false;
+
+  return internal::class_names<N>::save(out);
+}
+
+// ***********************************************************************
+// *  team_class_oracle                                                  *
+// ***********************************************************************
+
+template<Individual I, bool S, bool N,
+         template<class, bool, bool> class L,
+         team_composition C>
+const std::string team_class_oracle<I, S, N, L, C>::SERIALIZE_ID(
+  "TEAM_" + L<I, S, N>::SERIALIZE_ID);
 
 ///
 /// \param[in] t    team "to be transformed" into an oracle
@@ -535,7 +635,7 @@ std::unique_ptr<basic_oracle> load(std::istream &in, const symbol_set &ss)
     insert<reg_oracle<T>>(reg_oracle<T>::SERIALIZE_ID);
     //insert<dyn_slot_lambda_f<T>>(dyn_slot_lambda_f<T>::SERIALIZE_ID);
     insert<gaussian_oracle<T>>(gaussian_oracle<T>::SERIALIZE_ID);
-    //insert<binary_lambda_f<T>>(binary_lambda_f<T>::SERIALIZE_ID);
+    insert<binary_oracle<T>>(binary_oracle<T>::SERIALIZE_ID);
   }
 
   std::string id;

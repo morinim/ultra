@@ -97,7 +97,7 @@ public:
     const std::vector<value_t> &) const = 0;
 
 private:
-  // *** Serialization ***
+  // ---- Serialization ----
   [[nodiscard]] virtual std::string serialize_id() const = 0;
   virtual bool save(std::ostream &) const = 0;
 
@@ -141,7 +141,7 @@ public:
 
   [[nodiscard]] bool is_valid() const final;
 
-  // *** Serialization ***
+  // ---- Serialization ----
   static const std::string SERIALIZE_ID;
   bool save(std::ostream &) const final;
 
@@ -216,7 +216,7 @@ protected:
 /// \tparam N stores the name of the classes vs doesn't store the names
 ///
 /// \see
-/// ultra::src::::gaussian_evaluator for further details.
+/// ultra::src::gaussian_evaluator for further details.
 ///
 template<class I, bool S, bool N>
 class basic_gaussian_oracle : public basic_class_oracle<N>
@@ -230,24 +230,56 @@ public:
 
   [[nodiscard]] bool is_valid() const final;
 
-  // *** Serialization ***
+  // ---- Serialization ----
   static const std::string SERIALIZE_ID;
   bool save(std::ostream &) const final;
 
 private:
-  // *** Private support methods ***
+  // ---- Private support methods ----
   void fill_vector(const dataframe &);
   bool load_(std::istream &, const symbol_set &, std::true_type);
   bool load_(std::istream &, const symbol_set &, std::false_type);
 
   [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
 
-  // *** Private data members ***
+  // ---- Private data members ----
   basic_reg_oracle<I, S> oracle_;
 
   // `gauss_dist[i]` contains the gaussian distribution of the i-th class of
   // the classification problem.
   std::vector<distribution<double>> gauss_dist_ {};
+};
+
+///
+/// Oracle for Binary Classification.
+///
+/// \tparam I individual
+/// \tparam S stores the individual inside vs keep a reference only
+/// \tparam N stores the name of the classes vs doesn't store the names
+///
+/// This class transforms individuals into oracles that can be used for
+/// binary classification tasks.
+///
+template<class I, bool S, bool N>
+class basic_binary_oracle : public basic_class_oracle<N>
+{
+public:
+  basic_binary_oracle(const I &, const dataframe &);
+  basic_binary_oracle(std::istream &, const symbol_set &);
+
+  [[nodiscard]] classification_result tag(
+    const std::vector<value_t> &) const final;
+
+  [[nodiscard]] bool is_valid() const final;
+
+  // ---- Serialization ----
+  static const std::string SERIALIZE_ID;
+  bool save(std::ostream &) const final;
+
+private:
+  [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+
+  basic_reg_oracle<I, S> oracle_;
 };
 
 // ***********************************************************************
@@ -306,6 +338,21 @@ public:
   using basic_gaussian_oracle::team_class_oracle::team_class_oracle;
 };
 
+///
+/// Binary Classification specialization for teams.
+///
+/// \tparam I type of individual
+/// \tparam S stores the individual inside vs keep a reference only
+/// \tparam N stores the name of the classes vs doesn't store the names
+///
+template<class I, bool S, bool N>
+class basic_binary_oracle<gp::team<I>, S, N>
+  : public team_class_oracle<I, S, N, basic_binary_oracle>
+{
+public:
+  using basic_binary_oracle::team_class_oracle::team_class_oracle;
+};
+
 // ***********************************************************************
 // *  Template aliases to simplify the syntax and help the user          *
 // ***********************************************************************
@@ -323,9 +370,17 @@ class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
 public:
   using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
 };
-template<Individual P> gaussian_oracle(const P &, const dataframe &) -> gaussian_oracle<P>;
+template<Individual P> gaussian_oracle(const P &, const dataframe &)
+  -> gaussian_oracle<P>;
 
-template<class P> gaussian_oracle(const P &, const dataframe &) -> gaussian_oracle<P>;
+template<Individual P>
+class binary_oracle : public basic_binary_oracle<P, true, true>
+{
+public:
+  using binary_oracle::basic_binary_oracle::basic_binary_oracle;
+};
+template<class P> binary_oracle(const P &, const dataframe &)
+  -> binary_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"
 }  // namespace src

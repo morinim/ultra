@@ -369,4 +369,38 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle serialization")
   test_serialization<src::gaussian_oracle, gp::team<gp::individual>>(pr);
 }
 
+TEST_CASE_FIXTURE(fixture, "binary_oracle")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream is(debug::gender);
+  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_COUNT);
+  pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
+
+  // BINARY LAMBDA TEAM OF ONE INDIVIDUAL.
+  test_team_of_one<src::binary_oracle>(pr);
+
+  // BINARY LAMBDA TEAM OF RANDOM INDIVIDUALS.
+  test_team<src::binary_oracle>(pr);
+}
+
+TEST_CASE_FIXTURE(fixture, "binary_oracle serialization")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream is(debug::gender);
+  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_COUNT);
+  pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
+
+  // BINARY_LAMBDA_F SERIALIZATION - INDIVIDUAL.
+  test_serialization<src::binary_oracle, gp::individual>(pr);
+
+  // BINARY_LAMBDA_F SERIALIZATION - TEAM.
+  test_serialization<src::binary_oracle, gp::team<gp::individual>>(pr);
+}
+
 }  // TEST_SUITE("ORACLE")
