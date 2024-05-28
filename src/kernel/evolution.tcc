@@ -273,6 +273,8 @@ evolution<S>::run()
   term::set();
   es_.init(pop_);  // customizatin point for strategy-specific initialization
 
+  bool use_sleep(false);
+
   for (bool stop(false); !stop; ++sum_.generation)
   {
     if (shake_)
@@ -290,6 +292,8 @@ evolution<S>::run()
     {
       if (from_last_msg.elapsed() > 2s)
       {
+        use_sleep = true;
+
         if (!print_and_update_if_better(sum_.best()))
           print(false, from_start.elapsed(), &from_last_msg);
       }
@@ -300,7 +304,10 @@ evolution<S>::run()
         ultraDEBUG << "Sending closing message to tasks";
       }
 
-      std::this_thread::sleep_for(500ms);
+      if (use_sleep)
+        std::this_thread::sleep_for(5ms);
+      else
+        std::this_thread::yield();
     }
 
     print_and_update_if_better(sum_.best());
