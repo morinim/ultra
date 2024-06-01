@@ -8,7 +8,7 @@
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
 ## UNDER DEVELOPMENT ##
-There is still an ongoing transferring process from Vita and many features aren't available or don't completely work.
+The transfer process from Vita is still ongoing, and many features are either unavailable or not fully functional.
 
 This framework will be a major breakthrough but at the moment is far from being production ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
 
@@ -20,7 +20,7 @@ Source has been made available for people / companies:
 
 Ultra is a scalable, high performance evolutionary algorithms framework.
 
-It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control. Main features:
+It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control, [mathematical optimization][rastrigin] and scheduling. Main features:
 
 - concurrency support
 - modern, standard ISO C++20 source code
@@ -118,11 +118,12 @@ Many additional information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
-There is a [comprehensive wiki][wiki]. You should probably start with the [tutorials][tutorials].
+There is [comprehensive documentation][ultrasite] on the official site. You should probably start with the [tutorials].
+Also, consider that the wiki on GitHub is the source for the ultraevolution.org site but may contain information regarding features not yet available in official releases.
 
 ## BUILD REQUIREMENTS
 
-Ultra is designed to have fairly minimal requirements to build and use with your projects, but there are some. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
+Ultra is designed to have minimal requirements for building and use with your projects, though some are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
 However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
 
 ### Mandatory
@@ -251,8 +252,8 @@ So don't be afraid of a different *MAJOR* version and read the release notes for
 [semver]: https://semver.org/
 [sonar]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
-[tutorials]: https://github.com/morinim/ultra/wiki/tutorials
+[tutorials]: https://ultraevolution.org/wiki/tutorials
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
-[wiki]: https://github.com/morinim/ultra/wiki
+[ultrasite]: https://ultraevolution.org
 [windows]: https://github.com/morinim/ultra/wiki/win_build
