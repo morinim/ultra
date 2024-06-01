@@ -6,7 +6,7 @@ There are several ways you can help the development:
 
 #### Improve the documentation
 
-Did you find a typo? Do you think that something should be clarified? Go ahead and suggest a documentation patch! *Your help in this area is much much appreciated since English is not our mother tongue*.
+Did you find a typo? Do you think that something should be clarified? Go ahead and suggest a documentation patch! *Your help in this area is much much appreciated since English isn't our mother tongue*.
 
 #### Blog about Ultra
 
@@ -25,7 +25,7 @@ Before reporting a bug or requesting a new feature please consider these general
 If a ticket is unreviewed and reports a bug, try and reproduce it. If you can reproduce it and it seems valid, make a note that you confirmed the bug and accept the ticket. Make sure the ticket is filed under the correct component area. Consider writing a patch that adds a test for the bug’s behavior, even if you don't fix the bug itself.
 
 #### Submit patches for new and/or fixed behavior
-(requires to sign a [CLA](https://github.com/morinim/ultra/wiki/cla))
+(requires to sign a [CLA][cla])
 
 - If you're looking for an easy way to start contributing to Ultra, have a look at the easy pickings tickets. If you're going to engage in a big task, make sure that your idea has support first. This means getting someone else to confirm that a bug is real before you fix the issue and ensuring that the core team supports a proposed feature before you go implementing it;
 - browse the [development cycle][development_cycle] to find out how to give your code patches the best chances to be included in Ultra core.
@@ -42,10 +42,12 @@ The general strategic line is drawn by the project owner (currently Manlio Morin
 
 It's his job to resolve disputes within the community and to ensure that the project is able to progress in a coordinated way.
 
-The lead’s job is then to ensure that the committers (see below) make the right decisions on behalf of the project. Generally speaking, as long as the committers are aligned with the project’s strategy, the project lead will allow them to proceed as they desire.
+The lead's job is then to ensure that the committers (see below) make the right decisions on behalf of the project. Generally speaking, as long as the committers are aligned with the project’s strategy, the project lead will allow them to proceed as they desire.
 
-In turn, it is the community’s job to guide the decisions of the project owner through active engagement and contribution.
+In turn, it is the community's job to guide the decisions of the project owner through active engagement and contribution.
 
+
+[cla]: https://github.com/morinim/ultra/wiki/cla
 [development_cycle]: https://github.com/morinim/ultra/wiki/development_cycle
 [donation]: https://github.com/sponsors/morinim
 [security_label]: https://github.com/morinim/ultra/labels/security
