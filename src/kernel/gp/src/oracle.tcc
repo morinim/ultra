@@ -417,7 +417,8 @@ classification_result basic_binary_oracle<I, S, N>::tag(
   const auto res(oracle_(ex));
   const double val(has_value(res) ? std::get<D_DOUBLE>(res) : 0.0);
 
-  return {val > 0.0 ? 1u : 0u, std::fabs(2.0 * std::atan(val))};
+  return {val > 0.0 ? 1u : 0u,
+          std::fabs(2.0 * std::numbers::inv_pi * std::atan(val))};
 }
 
 ///

@@ -13,6 +13,8 @@
 #if !defined(ULTRA_ORACLE_H)
 #define      ULTRA_ORACLE_H
 
+#include <numbers>
+
 #include "kernel/exceptions.h"
 #include "kernel/gp/src/calculate_metrics.h"
 #include "kernel/gp/src/dataframe.h"
