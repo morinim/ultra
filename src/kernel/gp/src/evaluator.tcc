@@ -272,7 +272,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
       // Note:
       // * the maximum single class error is `1.0`;
       // * the maximum average class error is
-      //   `1.0 / dat_->selected().classes()`;
+      //   `1.0 / dat.classes()`;
       // So `-1.0` is like to say that we have a complete failure.
       d -= 1.0;
     }
@@ -289,6 +289,32 @@ template<Individual P>
 std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
 {
   return std::make_unique<gaussian_oracle<P>>(prg, this->dat_->selected());
+}
+
+template<Individual P>
+binary_evaluator<P>::binary_evaluator(multi_dataset<dataframe> &d)
+  : evaluator(d)
+{
+}
+
+///
+/// \param[in] prg program used for class recognition
+/// \return        the fitness (greater is better, max is `0`)
+///
+template<Individual P>
+double binary_evaluator<P>::operator()(const P &prg) const
+{
+  Expects(this->dat_->selected().classes() == 2);
+  const auto &dat(this->dat_->selected());
+  basic_binary_oracle<P, false, false> oracle(prg, dat);
+
+  double err(0.0);
+
+  for (auto &example : dat)
+    if (const auto res(oracle.tag(example.input)); res.label != label(example))
+      err += 1.0 + res.sureness;
+
+  return -err;
 }
 
 #endif  // include guard

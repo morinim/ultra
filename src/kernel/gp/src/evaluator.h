@@ -159,11 +159,11 @@ public:
 /// of illegal values).
 ///
 /// \note
-/// Real data always have noise (sampling/measurement errors) and noise
-/// tends to follow a Gaussian distribution. It can be shown that when we
-/// have a bunch of data with errors drawn from such a distribution you are
-/// most likely to find the "correct" underlying model if you seek to
-/// minimize the sum of squared errors.
+/// Real data always have noise (sampling/measurement errors), and this noise
+/// tends to follow a Gaussian distribution. It can be shown that when we have
+/// a set of data with errors drawn from such a distribution, we're most likely
+/// to find the 'correct' underlying model by minimizing the sum of squared
+/// errors.
 ///
 /// \remark
 /// When the dataset contains outliers, the mse_error_functor will heavily
@@ -249,6 +249,19 @@ class gaussian_evaluator : public evaluator<dataframe>
 {
 public:
   explicit gaussian_evaluator(multi_dataset<dataframe> &);
+
+  [[nodiscard]] double operator()(const P &) const;
+  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
+};
+
+///
+/// Single class evaluator for classification problems.
+///
+template<Individual P>
+class binary_evaluator : public evaluator<dataframe>
+{
+public:
+  explicit binary_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
   [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
