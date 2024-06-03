@@ -16,8 +16,10 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/gp/team.h"
+#include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/oracle.h"
 #include "kernel/gp/src/problem.h"
+#include "kernel/gp/src/variable.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -401,6 +403,32 @@ TEST_CASE_FIXTURE(fixture, "binary_oracle serialization")
 
   // BINARY_LAMBDA_F SERIALIZATION - TEAM.
   test_serialization<src::binary_oracle, gp::team<gp::individual>>(pr);
+}
+
+TEST_CASE_FIXTURE(fixture, "Perfect binary_oracle")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream is(debug::gender_trick);
+  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_TRICK_COUNT);
+  pr.setup_symbols();
+  CHECK(pr.sset.enough_terminals());
+
+  const auto *easy(static_cast<const src::variable *>(
+                     pr.sset.decode("EASY")));
+  CHECK(easy);
+
+  const function *f_add(pr.insert<ultra::real::add>());
+
+  const gp::individual delphi(
+    {
+      {f_add, {easy, easy}}
+    });
+
+  const src::binary_oracle oracle(delphi, pr.data.selected());
+  for (const auto &e : pr.data.selected())
+    CHECK(oracle.tag(e.input).label == label(e));
 }
 
 }  // TEST_SUITE("ORACLE")

@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "test/debug_datasets.h"
+
 #include "kernel/gp/src/evaluator.h"
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/real.h"
@@ -48,7 +50,7 @@ TEST_CASE("Concepts")
   CHECK(Evaluator<src::count_evaluator<gp::team<gp::individual>>>);
 }
 
-TEST_CASE("Evaluators")
+TEST_CASE("Sum of errors evaluators")
 {
   using namespace ultra;
 
@@ -207,6 +209,32 @@ TEST_CASE("Evaluators")
     CHECK(count(huge1) == doctest::Approx(-1.0 / pr.data.selected().size()));
     CHECK(count(huge2) == doctest::Approx(-2.0 / pr.data.selected().size()));
   }
+}
+
+TEST_CASE("binary_evaluator")
+{
+  using namespace ultra;
+
+  std::istringstream is(debug::gender_trick);
+  ultra::src::problem pr(is);
+  CHECK(!pr.data.selected().empty());
+
+  pr.setup_symbols();
+
+  const auto *easy(static_cast<const src::variable *>(
+                     pr.sset.decode("EASY")));
+  CHECK(easy);
+
+  const function *f_add(pr.insert<ultra::real::add>());
+
+  const gp::individual delphi(
+    {
+      {f_add, {easy, easy}}
+    });
+
+  src::binary_evaluator<gp::individual> eva(pr.data);
+
+  CHECK(eva(delphi) == doctest::Approx(0.0));
 }
 
 }  // SRC::EVALUATOR
