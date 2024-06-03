@@ -317,4 +317,15 @@ double binary_evaluator<P>::operator()(const P &prg) const
   return -err;
 }
 
+///
+/// \param[in] prg program (individual/team) to be transformed in an oracle
+/// \return        the oracle associated with `prg` (`nullptr` in case of
+///                errors).
+///
+template<Individual P>
+std::unique_ptr<basic_oracle> binary_evaluator<P>::oracle(const P &prg) const
+{
+  return std::make_unique<binary_oracle<P>>(prg, this->dat_->selected());
+}
+
 #endif  // include guard
