@@ -41,7 +41,7 @@ public:
   using individual_t = typename ultra::basic_search<ES, E>::individual_t;
   using fitness_t = typename ultra::basic_search<ES, E>::fitness_t;
 
-  basic_search(problem &, E, metric_flags = metric_flags::nothing);
+  basic_search(problem &, metric_flags = metric_flags::accuracy);
 
   std::unique_ptr<basic_oracle> oracle(const individual_t &) const;
 

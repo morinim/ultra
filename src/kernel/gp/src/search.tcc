@@ -26,15 +26,14 @@
 ///
 /// Builds a new search class, user chooses the evaluator.
 ///
-/// \param[in] p   the problem we're working on. The lifetime of `p` must
-///                exceed the lifetime of `this` class
-/// \param[in] eva evaluator used during evolution. Must be copyable
-/// \param[in] m   a bit field used to specify matrics we have to calculate
-///                while searching
+/// \param[in] p the problem we're working on. The lifetime of `p` must exceed
+///              the lifetime of `this` class
+/// \param[in] m a bit field used to specify matrics we have to calculate while
+///              searching
 ///
 template<template<class> class ES, Evaluator E>
-basic_search<ES, E>::basic_search(problem &p, E eva, metric_flags m)
-  : ultra::basic_search<ES, E>(p, eva), metrics_(m)
+basic_search<ES, E>::basic_search(problem &p, metric_flags m)
+  : ultra::basic_search<ES, E>(p, E(p.data)), metrics_(m)
 {
   Ensures(this->is_valid());
 }
@@ -306,7 +305,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
 {
   const auto search_scheme([&]<Evaluator E>()
   {
-    basic_search<alps_es, E> alps(prob_, E(prob_.data), metrics_);
+    basic_search<alps_es, E> alps(prob_, metrics_);
 
     if (vs_)
       alps.validation_strategy(*vs_);
