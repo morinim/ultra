@@ -76,8 +76,8 @@ private:
   mutable M mutex_ {};
   T val_;
 
-  auto lock() const { return RL<M>(mutex_); }
-  auto lock() { return WL<M>(mutex_); }
+  [[nodiscard]] auto lock() const { return RL<M>(mutex_); }
+  [[nodiscard]] auto lock() { return WL<M>(mutex_); }
 };
 
 }  // namespace ultra
