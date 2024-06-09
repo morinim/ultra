@@ -54,6 +54,13 @@ public:
       other.read([this](const T &other_val) { val_ = other_val; });
   }
 
+  mutex_guarded &operator=(const mutex_guarded &other)
+  {
+    if (this != &other)
+      other.read([this](const T &other_val) { val_ = other_val; });
+    return *this;
+  }
+
   mutex_guarded &operator=(T in)
   {
     write([in = std::move(in)](auto &val) { val = in; });
@@ -74,7 +81,7 @@ public:
 
 private:
   mutable M mutex_ {};
-  T val_;
+  T val_ {};
 
   [[nodiscard]] auto lock() const { return RL<M>(mutex_); }
   [[nodiscard]] auto lock() { return WL<M>(mutex_); }
