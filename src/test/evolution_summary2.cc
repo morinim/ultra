@@ -34,7 +34,12 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
 
   summary<gp::individual, fitnd> s;
 
+  std::cout << "Building scored individual" << std::endl;
+
   const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
+
+  std::cout << "Updating scored individual" << std::endl;
+
   CHECK(s.update_if_better(si1));
 }
 
