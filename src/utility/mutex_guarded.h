@@ -48,17 +48,13 @@ public:
 
   explicit mutex_guarded(T in) : val_(std::move(in)) {}
 
+  /// \warning
+  /// Assumes there is no need of locking the mutex of the source object to
+  /// ensure the value is safely read.
   mutex_guarded(const mutex_guarded &other)
   {
     if (this != &other)
       other.read([this](const T &other_val) { val_ = other_val; });
-  }
-
-  mutex_guarded &operator=(const mutex_guarded &other)
-  {
-    if (this != &other)
-      other.read([this](const T &other_val) { val_ = other_val; });
-    return *this;
   }
 
   mutex_guarded &operator=(T in)
@@ -69,22 +65,19 @@ public:
 
   auto read(auto f) const
   {
-    auto l(lock());
+    RL<M> lock(mutex_);
     return f(val_);
   }
 
   auto write(auto f)
   {
-    auto l(lock());
+    WL<M> lock(mutex_);
     return f(val_);
   }
 
 private:
   mutable M mutex_ {};
   T val_ {};
-
-  [[nodiscard]] auto lock() const { return RL<M>(mutex_); }
-  [[nodiscard]] auto lock() { return WL<M>(mutex_); }
 };
 
 }  // namespace ultra
