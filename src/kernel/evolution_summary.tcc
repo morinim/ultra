@@ -59,6 +59,8 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 template<Individual I, Fitness F>
 bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
+  std::cout << "Start UIF" << std::endl;
+
   return data_.write([this, prg](auto &dt)
   {
     std::cout << "Check UIF" << std::endl;
