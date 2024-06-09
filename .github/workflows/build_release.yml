@@ -26,8 +26,6 @@ jobs:
            cxx: msvc
          - os: windows-latest
            cxx: g++
-         - os: windows-latest
-           build_type: Release
 
     steps:
       - uses: actions/checkout@v4
