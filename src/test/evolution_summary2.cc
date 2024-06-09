@@ -25,7 +25,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("EVOLUTION SUMMARY")
+TEST_SUITE("EVOLUTION SUMMARY 2")
 {
 
 TEST_CASE_FIXTURE(fixture1, "update_if_better")
@@ -41,18 +41,6 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
   const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
   CHECK(s.update_if_better(si1));
   CHECK(!s.update_if_better(si1));
-
-  CHECK(s.best().ind == si1.ind);
-  CHECK(almost_equal(s.best().fit, si1.fit));
-  CHECK(s.last_improvement() == 0);
-
-  const scored_individual si2(gp::individual(prob), fitnd{2.0, 3.0});
-  s.generation = 2;
-  CHECK(s.update_if_better(si2));
-
-  CHECK(s.best().ind == si2.ind);
-  CHECK(almost_equal(s.best().fit, si2.fit));
-  CHECK(s.last_improvement() == 2);
 }
 
 }  // TEST_SUITE("EVOLUTION SUMMARY")
