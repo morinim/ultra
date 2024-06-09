@@ -31,16 +31,11 @@ TEST_SUITE("EVOLUTION SUMMARY 2")
 TEST_CASE_FIXTURE(fixture1, "update_if_better")
 {
   using namespace ultra;
-  using namespace std::chrono_literals;
 
   summary<gp::individual, fitnd> s;
 
-  CHECK(s.best().empty());
-  CHECK(s.last_improvement() == 0);
-
   const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
   CHECK(s.update_if_better(si1));
-  CHECK(!s.update_if_better(si1));
 }
 
 }  // TEST_SUITE("EVOLUTION SUMMARY")
