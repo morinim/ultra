@@ -15,7 +15,7 @@ jobs:
     name: ${{ matrix.config.name }}
     env:
       BUILD_TYPE: Release
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.config.os }}
     matrix:
     strategy:
       fail-fast: false
