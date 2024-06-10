@@ -48,7 +48,8 @@ evolution_status<I, F> summary<I, F>::starting_status()
 template<Individual I, Fitness F>
 typename summary<I, F>::data summary<I, F>::data_snapshot() const
 {
-  return data_.read([](const auto &snapshot) { return snapshot; });
+  std::lock_guard lock(mutex_);
+  return data_;
 }
 
 ///
@@ -59,17 +60,16 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 template<Individual I, Fitness F>
 bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  return data_.write([generation = this->generation, &prg](auto &dt)
-  {
-    if (prg > dt.best)
-    {
-      dt.best = prg;
-      dt.last_improvement = generation;
-      return true;
-    }
+  std::lock_guard lock(mutex_);
 
-    return false;
-  });
+  if (prg > data_.best)
+  {
+    data_.best = prg;
+    data_.last_improvement = generation;
+    return true;
+  }
+
+  return false;
 }
 
 ///

@@ -18,8 +18,6 @@
 #include "kernel/analyzer.h"
 #include "kernel/evolution_status.h"
 
-#include "utility/mutex_guarded.h"
-
 namespace ultra
 {
 ///
@@ -60,6 +58,7 @@ public:
   unsigned generation {0};
 
 private:
+  mutable ignore_copy<std::shared_mutex> mutex_ {};
   struct data
   {
     scored_individual<I, F> best {};
@@ -68,7 +67,7 @@ private:
 
   [[nodiscard]] data data_snapshot() const;
 
-  mutex_guarded<data> data_ {};
+  data data_ {};
 };
 
 #include "kernel/evolution_summary.tcc"
