@@ -18,6 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config:
         - {
             name: "Windows Latest MSVC",
             artifact: "windows-msvc.txz",
