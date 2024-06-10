@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-test:
-    name: ${{ matrix.config.name }}
+    name: ${{ matrix.config.name }} ${{ matrix.build_type }}
     env:
       BUILD_TYPE: Release
     runs-on: ${{ matrix.config.os }}
@@ -22,16 +22,19 @@ jobs:
         build_type: [Debug, Release]
         config:
         - {
+            name: "Windows Latest MSVC",
             artifact: "windows-msvc.txz",
             os: windows-latest,
             cc: "cl", cxx: "cl"
           }
         - {
+            name: "Ubuntu Latest GCC",
             artifact: "linux.txz",
             os: ubuntu-latest,
             cc: "gcc", cxx: "g++"
           }
         #- {
+        #    name: "macOS Latest Clang",
         #    artifact: "macos.txz",
         #    os: macos-latest,
         #    cc: "clang", cxx: "clang++"
