@@ -18,15 +18,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-       cxx: [g++, cl]
-       os: [ubuntu-latest, windows-latest]
-       build_type: [Debug, Release]
-       exclude:
-         - os: ubuntu-latest
-           cxx: cl
-         - os: windows-latest
-           cxx: g++
-
+        - {
+            name: "Windows Latest MSVC",
+            artifact: "windows-msvc.txz",
+            os: windows-latest,
+            build_type: [Debug, Release],
+            cc: "cl", cxx: "cl"
+          }
+        - {
+            name: "Ubuntu Latest GCC",
+            artifact: "linux.txz",
+            os: ubuntu-latest,
+            build_type: [Debug, Release],
+            cc: "gcc", cxx: "g++"
+          }
+        #- {
+        #    name: "macOS Latest Clang",
+        #    artifact: "macos.txz",
+        #    os: macos-latest,
+        #    build_type: [Debug, Release],
+        #    cc: "clang", cxx: "clang++"
+        #  }
     steps:
       - uses: actions/checkout@v4
 
