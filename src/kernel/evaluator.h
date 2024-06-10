@@ -20,6 +20,7 @@
 #include "kernel/fitness.h"
 #include "kernel/random.h"
 
+#include "utility/log.h"
 #include "utility/misc.h"
 
 namespace ultra
