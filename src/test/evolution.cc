@@ -29,6 +29,7 @@ TEST_SUITE("EVOLUTION")
 TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 {
   using namespace ultra;
+  log::reporting_level = log::lDEBUG;
 
   prob.params.population.individuals    = 30;
   prob.params.population.init_subgroups =  4;

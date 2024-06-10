@@ -25,6 +25,8 @@ evolution<S>::evolution(S strategy) : pop_(strategy.get_problem()),
                                       es_(std::move(strategy))
 {
   Ensures(is_valid());
+
+  ultraDEBUG << "Creating a new instance of evolution class";
 }
 
 ///
@@ -271,6 +273,8 @@ evolution<S>::run()
     });
 
   term::set();
+
+  ultraDEBUG << "Calling evolution_strategy init method";
   es_.init(pop_);  // customizatin point for strategy-specific initialization
 
   bool use_sleep(false);
@@ -287,6 +291,8 @@ evolution<S>::run()
     std::vector<std::future<void>> tasks;
     for (auto l(range.begin()); l != range.end(); ++l)
       tasks.push_back(std::async(std::launch::async, evolve_subpop, l));
+
+    ultraDEBUG << "Tasks running";
 
     while (!std::ranges::all_of(tasks, task_completed))
     {
