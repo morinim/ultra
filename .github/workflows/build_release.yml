@@ -24,7 +24,7 @@ jobs:
             os: windows-latest,
             build_type: "Debug",
             cc: "cl", cxx: "cl",
-            shell: "cmd"
+            shell_type: "cmd"
           }
         - {
             name: "Windows Latest MSVC Release",
@@ -32,7 +32,7 @@ jobs:
             os: windows-latest,
             build_type: "Release",
             cc: "cl", cxx: "cl",
-            shell: "cmd"
+            shell_type: "cmd"
           }
         - {
             name: "Ubuntu Latest GCC Debug",
@@ -40,7 +40,7 @@ jobs:
             os: ubuntu-latest,
             build_type: "Debug",
             cc: "gcc", cxx: "g++",
-            shell: "bash"
+            shell_type: "bash"
           }
         - {
             name: "Ubuntu Latest GCC Releas",
@@ -48,7 +48,7 @@ jobs:
             os: ubuntu-latest,
             build_type: "Release",
             cc: "gcc", cxx: "g++",
-            shell: "bash"
+            shell_type: "bash"
           }
         #- {
         #    name: "macOS Latest Clang",
@@ -66,15 +66,19 @@ jobs:
         # Use bash so we can use the same syntax for environment variable
         # access regardless of the host operating system
         working-directory: ${{github.workspace}}
-        shell: ${{matrix.config.shell}}
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
+        shell: ${{matrix.config.shell_type}}
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          fi
+          cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
       - name: Build
         working-directory: ${{github.workspace}}
-        shell: ${{matrix.config.shell}}
+        shell: ${{matrix.config.shell_type}}
         run: cmake --build build/ --config ${{matrix.config.build_type}}
       - name: Test
         working-directory: ${{github.workspace}}/build/test
-        shell: ${{matrix.config.shell}}
+        shell: ${{matrix.config.shell_type}}
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       #- name: Pack
