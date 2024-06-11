@@ -25,13 +25,13 @@ jobs:
             build_type: "Debug",
             cc: "cl", cxx: "cl"
           }
-        - {
-            name: "Windows Latest MSVC Release",
-            artifact: "windows-msvc-release.txz",
-            os: windows-latest,
-            build_type: "Release",
-            cc: "cl", cxx: "cl"
-          }
+        #- {
+        #    name: "Windows Latest MSVC Release",
+        #    artifact: "windows-msvc-release.txz",
+        #    os: windows-latest,
+        #    build_type: "Release",
+        #    cc: "cl", cxx: "cl"
+        #  }
         - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
@@ -46,12 +46,13 @@ jobs:
             build_type: "Release",
             cc: "gcc", cxx: "g++"
           }
-        #- {
-        #    name: "macOS Latest Clang",
-        #    artifact: "macos.txz",
-        #    os: macos-latest,
-        #    cc: "clang", cxx: "clang++"
-        #  }
+        - {
+            name: "macOS Latest Clang",
+            artifact: "macos.txz",
+            os: macos-latest,
+            build_type: "Release",
+            cc: "clang", cxx: "clang++"
+          }
 
     steps:
       - uses: actions/checkout@v4
