@@ -23,32 +23,28 @@ jobs:
             artifact: "windows-msvc-debug.txz",
             os: windows-latest,
             build_type: "Debug",
-            cc: "cl", cxx: "cl",
-            shell_type: "cmd"
+            cc: "cl", cxx: "cl"
           }
         - {
             name: "Windows Latest MSVC Release",
             artifact: "windows-msvc-release.txz",
             os: windows-latest,
             build_type: "Release",
-            cc: "cl", cxx: "cl",
-            shell_type: "cmd"
+            cc: "cl", cxx: "cl"
           }
         - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
             os: ubuntu-latest,
             build_type: "Debug",
-            cc: "gcc", cxx: "g++",
-            shell_type: "bash"
+            cc: "gcc", cxx: "g++"
           }
         - {
             name: "Ubuntu Latest GCC Releas",
             artifact: "linux-release.txz",
             os: ubuntu-latest,
             build_type: "Release",
-            cc: "gcc", cxx: "g++",
-            shell_type: "bash"
+            cc: "gcc", cxx: "g++"
           }
         #- {
         #    name: "macOS Latest Clang",
@@ -65,7 +61,7 @@ jobs:
           CXX: ${{matrix.config.cxx}}
         # Use bash so we can use the same syntax for environment variable
         # access regardless of the host operating system
-        shell: ${{matrix.config.shell_type}}
+        shell: bash
         working-directory: ${{github.workspace}}
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
@@ -73,11 +69,11 @@ jobs:
           fi
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
       - name: Build
-        shell: ${{matrix.config.shell_type}}
+        shell: bash
         working-directory: ${{github.workspace}}
         run: cmake --build build/ --config ${{matrix.config.build_type}}
       - name: Test
-        shell: ${{matrix.config.shell_type}}
+        shell: bash
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
