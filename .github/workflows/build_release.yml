@@ -65,20 +65,20 @@ jobs:
           CXX: ${{matrix.config.cxx}}
         # Use bash so we can use the same syntax for environment variable
         # access regardless of the host operating system
-        working-directory: ${{github.workspace}}
         shell: ${{matrix.config.shell_type}}
+        working-directory: ${{github.workspace}}
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
             "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           fi
           cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
       - name: Build
-        working-directory: ${{github.workspace}}
         shell: ${{matrix.config.shell_type}}
+        working-directory: ${{github.workspace}}
         run: cmake --build build/ --config ${{matrix.config.build_type}}
       - name: Test
-        working-directory: ${{github.workspace}}/build/test
         shell: ${{matrix.config.shell_type}}
+        working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       #- name: Pack
