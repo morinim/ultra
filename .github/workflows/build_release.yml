@@ -23,28 +23,32 @@ jobs:
             artifact: "windows-msvc-debug.txz",
             os: windows-latest,
             build_type: "Debug",
-            cc: "cl", cxx: "cl"
+            cc: "cl", cxx: "cl",
+            shell: "cmd"
           }
         - {
             name: "Windows Latest MSVC Release",
             artifact: "windows-msvc-release.txz",
             os: windows-latest,
-            build_type: "RelWithDebInfo",
-            cc: "cl", cxx: "cl"
+            build_type: "Release",
+            cc: "cl", cxx: "cl",
+            shell: "cmd"
           }
         - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
             os: ubuntu-latest,
             build_type: "Debug",
-            cc: "gcc", cxx: "g++"
+            cc: "gcc", cxx: "g++",
+            shell: "bash"
           }
         - {
             name: "Ubuntu Latest GCC Releas",
             artifact: "linux-release.txz",
             os: ubuntu-latest,
             build_type: "Release",
-            cc: "gcc", cxx: "g++"
+            cc: "gcc", cxx: "g++",
+            shell: "bash"
           }
         #- {
         #    name: "macOS Latest Clang",
@@ -62,16 +66,15 @@ jobs:
         # Use bash so we can use the same syntax for environment variable
         # access regardless of the host operating system
         working-directory: ${{github.workspace}}
-        shell: bash
+        shell: ${{matrix.config.shell}}
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
-      - name: Print Environment Variables
-        run: printenv
       - name: Build
         working-directory: ${{github.workspace}}
-        shell: bash
+        shell: ${{matrix.config.shell}}
         run: cmake --build build/ --config ${{matrix.config.build_type}}
       - name: Test
         working-directory: ${{github.workspace}}/build/test
+        shell: ${{matrix.config.shell}}
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       #- name: Pack
