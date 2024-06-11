@@ -39,6 +39,9 @@ jobs:
         #    os: macos-latest,
         #    cc: "clang", cxx: "clang++"
         #  }
+        exclude:
+        - os: windows-latest
+          build_type: Release
 
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +66,7 @@ jobs:
 
       - name: Pack
         working-directory: ${{github.workspace}}/build
-        run: cmake -E tar cfv ../${{ matrix.config.artifact }} -J .
+        run: cmake -E tar -Jcfv ../${{ matrix.config.artifact }} .
 
       - name: Upload
         uses: actions/upload-artifact@v4
