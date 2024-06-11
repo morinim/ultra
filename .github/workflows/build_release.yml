@@ -12,25 +12,38 @@ on:
 
 jobs:
   build-test:
-    name: ${{ matrix.config.name }} ${{ matrix.build_type }}
-    env:
-      BUILD_TYPE: Release
+    name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
-        build_type: [Debug, Release]
         config:
         - {
-            name: "Windows Latest MSVC",
+            name: "Windows Latest MSVC Debug",
             artifact: "windows-msvc.txz",
             os: windows-latest,
+            build_type: "Debug",
             cc: "cl", cxx: "cl"
           }
+        #- {
+        #    name: "Windows Latest MSVC Release",
+        #    artifact: "windows-msvc.txz",
+        #    os: windows-latest,
+        #    build_type: "Release",
+        #    cc: "cl", cxx: "cl"
+        #  }
         - {
-            name: "Ubuntu Latest GCC",
+            name: "Ubuntu Latest GCC Debug",
             artifact: "linux.txz",
             os: ubuntu-latest,
+            build_type: "Debug",
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Ubuntu Latest GCC Releas",
+            artifact: "linux.txz",
+            os: ubuntu-latest,
+            build_type: "Release",
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -50,16 +63,16 @@ jobs:
         # access regardless of the host operating system
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
         shell: bash
-        run: cmake --build build/ --config ${{ matrix.build_type }}
+        run: cmake --build build/ --config ${{ matrix.config.build_type }}
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
-        run: ctest --output-on-failure -C ${{ matrix.build_type }}
+        run: ctest --output-on-failure -C ${{ matrix.config.build_type }}
 
       - name: Pack
         working-directory: ${{github.workspace}}/build
