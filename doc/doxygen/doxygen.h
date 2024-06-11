@@ -16,7 +16,7 @@
  *  Welcome to the Ultra project.
  *
  *  This is the reference guide for the APIs. Introductory documentation is
- *  available at the [repository's Wiki](https://github.com/morinim/ultra/wiki).
+ *  available at the [official site](https://ultraevolution.org).
  *
  *  \section note_sec Notes
  *  New versions of this framework will be available at
@@ -33,8 +33,8 @@
  *  - [Do it yourself](https://github.com/morinim/ultra/wiki/diy)
  *
  *  \page page2 Contributor guidelines
- *  - [Coding style](https://github.com/morinim/ultra/wiki/coding_style)
- *  - [Development cycle](https://github.com/morinim/ultra/wiki/development_cycle)
+ *  - [Coding style](https://ultraevolution.org/wiki/coding_style/)
+ *  - [Development cycle](https://ultraevolution.org/wiki/development_cycle/)
  */
 
 /**
