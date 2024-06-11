@@ -33,6 +33,13 @@ jobs:
         #    cc: "cl", cxx: "cl"
         #  }
         - {
+            name: "Windows Latest MinGW Release",
+            artifact: "windows-mingw-release.7z",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "gcc", cxx: "g++"
+          }
+        - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
             os: ubuntu-latest,
@@ -46,13 +53,13 @@ jobs:
             build_type: "Release",
             cc: "gcc", cxx: "g++"
           }
-        - {
-            name: "macOS Latest Clang",
-            artifact: "macos.txz",
-            os: macos-latest,
-            build_type: "Release",
-            cc: "clang", cxx: "clang++"
-          }
+        #- {
+        #    name: "macOS Latest Clang",
+        #    artifact: "macos.txz",
+        #    os: macos-latest,
+        #    build_type: "Release",
+        #    cc: "clang", cxx: "clang++"
+        #  }
 
     steps:
       - uses: actions/checkout@v4
