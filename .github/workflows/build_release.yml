@@ -39,9 +39,6 @@ jobs:
         #    os: macos-latest,
         #    cc: "clang", cxx: "clang++"
         #  }
-        exclude:
-        - {config: {os: windows-latest}}
-          build_type: Release
 
     steps:
       - uses: actions/checkout@v4
