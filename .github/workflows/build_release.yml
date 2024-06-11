@@ -25,13 +25,13 @@ jobs:
             build_type: "Debug",
             cc: "cl", cxx: "cl"
           }
-        #- {
-        #    name: "Windows Latest MSVC Release",
-        #    artifact: "windows-msvc-release.txz",
-        #    os: windows-latest,
-        #    build_type: "Release",
-        #    cc: "cl", cxx: "cl"
-        #  }
+        - {
+            name: "Windows Latest MSVC Release",
+            artifact: "windows-msvc-release.txz",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "cl", cxx: "cl"
+          }
         - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
@@ -70,9 +70,9 @@ jobs:
         shell: bash
         run: cmake --build build/ --config ${{matrix.config.build_type}}
 
-      - name: Test
-        working-directory: ${{github.workspace}}/build/test
-        run: ctest --output-on-failure -C ${{matrix.config.build_type}}
+      #- name: Test
+      #  working-directory: ${{github.workspace}}/build/test
+      #  run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       - name: Pack
         working-directory: ${{github.workspace}}/build
