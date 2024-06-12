@@ -37,5 +37,6 @@ GPATH
 GRTAGS
 GTAGS
 
-# Clone of Github's Ultra Wiki
+# Copies of documentation
 doc/ultra.wiki/
+doc/doxygen/html/
