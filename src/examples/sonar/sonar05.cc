@@ -36,7 +36,7 @@ int main()
   prob.params.team.individuals = 3;
 
   // SEARCHING
-  src::search<gp::team<gp::individual>> s(prob);
+  src::basic_search<alps_es, src::binary_evaluator<gp::individual>> s(prob);
   s.validation_strategy<src::holdout_validation>(prob);
 
   const auto result(s.run(5));
