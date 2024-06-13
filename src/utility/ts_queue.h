@@ -15,7 +15,11 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <queue>
+
+namespace ultra
+{
 
 ///
 /// Allows multiple threads to aenqueue and dequeue elements concurrently.
@@ -26,15 +30,19 @@ template <class T>
 class ts_queue
 {
 public:
-  using container_type = std::queue<T>;
-  using value_type = container_type::value_type;
-  using size_type = container_type::size_type;
-  using reference = container_type::reference;
-  using const_reference = container_type::const_reference;
+  // ---- Member types ----
+  using container_type = typename std::queue<T>;
+  using value_type = typename container_type::value_type;
+  using size_type = typename container_type::size_type;
+  using reference = typename container_type::reference;
+  using const_reference = typename container_type::const_reference;
 
+  // ---- Constructors ----
+  ts_queue() = default;
   ts_queue(const ts_queue &) = delete;
   ts_queue &operator=(const ts_queue &) = delete;
 
+  // ---- Modifiers ----
   /// Pushes the given element to the end of the queue.
   ///
   /// \\param[in] value the value of the element to push
@@ -106,6 +114,7 @@ public:
     return item;
   }
 
+  // ---- Capacity ----
   /// Checks if the container has no elements.
   ///
   /// \return `true` if the container is empty, `false` otherwise
@@ -116,16 +125,43 @@ public:
   /// the time the client queries `empty()` and the time `pop()` is called,
   /// making the point entirely moot, and this code a potential source of
   /// intermittent (read: hard to pin) bugs:
+  ///
   /// ```c++
   /// if (!queue.empty())
   /// {
   ///   // What could possibly go wrong? A lot, it turns out.
   ///   auto elem = queue.pop();
   /// }
+  /// ```
+  ///
   [[nodiscard]] bool empty() const
   {
     std::lock_guard lock(mutex_);
     return queue_.empty();
+  }
+
+  ///
+  /// \return the number of elements in the container
+  ///
+  /// \warning
+  /// Should only be used in a multiple producer single consumer environment.
+  /// In general the queue cannot guarantee that matters won't change between
+  /// the time the client queries `size()` and the time `pop()` is called,
+  /// making the point entirely moot, and this code a potential source of
+  /// intermittent (read: hard to pin) bugs:
+  ///
+  /// ```c++
+  /// if (queue.size())
+  /// {
+  ///   // What could possibly go wrong? A lot, it turns out.
+  ///   auto elem = queue.pop();
+  /// }
+  /// ```
+  ///
+  [[nodiscard]] std::size_t size() const
+  {
+    std::lock_guard lock(mutex_);
+    return queue_.size();
   }
 
 private:
@@ -133,3 +169,7 @@ private:
   mutable std::mutex mutex_ {};      // for thread synchronization
   std::condition_variable cond_ {};  // for signaling
 };  // class ts_queue
+
+}  // namespace ultra
+
+#endif // include guard
