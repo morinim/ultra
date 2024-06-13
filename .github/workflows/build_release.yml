@@ -25,13 +25,13 @@ jobs:
             build_type: "Debug",
             cc: "cl", cxx: "cl"
           }
-        #- {
-        #    name: "Windows Latest MSVC Release",
-        #    artifact: "windows-msvc-release.txz",
-        #    os: windows-latest,
-        #    build_type: "Release",
-        #    cc: "cl", cxx: "cl"
-        #  }
+        - {
+            name: "Windows Latest MSVC Release",
+            artifact: "windows-msvc-release.txz",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "cl", cxx: "cl"
+          }
         - {
             name: "Ubuntu Latest GCC Debug",
             artifact: "linux-debug.txz",
