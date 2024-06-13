@@ -20,8 +20,8 @@ namespace ultra::de
 /// (uniform, same range) parameters.
 ///
 /// \param[in] nparam   number of parameters (aka genes in the chromosome)
-/// \param[in] interval a half-open interval (the value of each parameter
-///                     falls within this range)
+/// \param[in] interval a half-open interval (the value of each parameter falls
+///                     within this range)
 ///
 /// The typical solution of a numerical optimization problem can often be
 /// represented as a sequence of real numbers in a given range (and this is the
@@ -34,6 +34,8 @@ problem::problem(std::size_t nparam, const interval_t<double> &interval)
 
   while (nparam--)
     insert(interval);
+
+  Ensures(is_valid());
 }
 
 ///
@@ -53,8 +55,13 @@ problem::problem(const std::vector<interval_t<double>> &intervals)
 
   for (const auto &interval : intervals)
     insert(interval);
+
+  Ensures(is_valid());
 }
 
+///
+/// \return genome size / number of parameters / elements in the container
+///
 std::size_t problem::parameters() const noexcept
 {
   return sset.categories();

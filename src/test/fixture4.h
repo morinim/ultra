@@ -18,7 +18,7 @@
 
 struct fixture4
 {
-  fixture4(unsigned n = 4) : prob()
+  fixture4(unsigned n = 4)
   {
     prob.params.init();
 
@@ -30,7 +30,7 @@ struct fixture4
     }
   }
 
-  ultra::de::problem prob;
+  ultra::de::problem prob {};
 };
 
 struct fixture4_no_init : fixture4

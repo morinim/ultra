@@ -28,6 +28,7 @@ namespace ultra::de
 class problem : public ultra::problem
 {
 public:
+  // ---- Constructors ----
   problem() = default;
   problem(std::size_t, const interval_t<double> &);
   explicit problem(const std::vector<interval_t<double>> &);

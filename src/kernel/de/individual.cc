@@ -31,8 +31,8 @@ namespace ultra::de
 /// implemented so as to ensure that they don't violate the type system's
 /// constraints.
 ///
-individual::individual(const ultra::problem &p)
-  : ultra::individual(), genome_(p.sset.categories())
+individual::individual(const ultra::problem &p) : ultra::individual(),
+                                                  genome_(p.sset.categories())
 {
   Expects(parameters());
 
@@ -78,6 +78,16 @@ individual::iterator individual::end()
   return genome_.end();
 }
 
+///
+/// Returns a reference to the gene at specified location.
+///
+/// \param[in] i position of the gene to return
+/// \return      the requested gene
+///
+/// \warning
+/// Accessing a nonexistent element through this operator is undefined
+/// behavior.
+///
 individual::value_type individual::operator[](std::size_t i) const
 {
   Expects(i < parameters());
@@ -114,6 +124,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 
   genome_ = v;
 
+  Ensures(is_valid());
   return *this;
 }
 
@@ -219,7 +230,7 @@ std::size_t active_slots(const individual &ind) noexcept
 ///
 /// \return the signature of this individual
 ///
-/// Identical individuals, at genotypic level, have the same signature
+/// Identical individuals, at genotypic level, have same signature.
 ///
 hash_t individual::signature() const
 {
@@ -348,7 +359,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &)
   if (!(in >> sz))
     return false;
 
-  decltype(genome_) v(sz);
+  genome_t v(sz);
   for (auto &g : v)
     if (!load_float_from_stream(in, &g))
       return false;
