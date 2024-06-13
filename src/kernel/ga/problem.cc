@@ -34,6 +34,8 @@ problem::problem(std::size_t nparam, const interval_t<int> &interval)
 
   while (nparam--)
     insert(interval);
+
+  Ensures(is_valid());
 }
 
 ///
@@ -53,6 +55,16 @@ problem::problem(const std::vector<interval_t<int>> &intervals)
 
   for (const auto &interval : intervals)
     insert(interval);
+
+  Ensures(is_valid());
+}
+
+///
+/// \return genome size / number of parameters / elements in the container
+///
+std::size_t problem::parameters() const noexcept
+{
+  return sset.categories();
 }
 
 }  // namespace vita
