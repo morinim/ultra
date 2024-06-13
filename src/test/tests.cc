@@ -30,6 +30,7 @@
 #include "test/evolution_summary.cc"
 #include "test/fitness.cc"
 #include "test/function.cc"
+#include "test/ga_individual.cc"
 #include "test/gene.cc"
 #include "test/gp_individual.cc"
 #include "test/hash_t.cc"
