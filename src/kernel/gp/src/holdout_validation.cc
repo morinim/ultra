@@ -165,9 +165,10 @@ void holdout_validation::training_setup(unsigned)
   prob_.data.select(dataset_t::training);
 }
 
-void holdout_validation::validation_setup(unsigned)
+bool holdout_validation::validation_setup(unsigned)
 {
   prob_.data.select(dataset_t::validation);
+  return true;
 }
 
 std::unique_ptr<validation_strategy> holdout_validation::clone() const

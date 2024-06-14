@@ -47,8 +47,12 @@ public:
 
   /// Prepares the data structures / environment needed for validation
   ///
-  /// \note Called at the end of the evolution (one time per run).
-  virtual void validation_setup(unsigned /* run */) = 0;
+  /// \return `true` if a validation environment can be set up; `false`
+  ///         otherwise
+  ///
+  /// \note
+  /// Called at the end of the evolution (one time per run).
+  virtual bool validation_setup(unsigned /* run */) = 0;
 
   [[nodiscard]] virtual std::unique_ptr<validation_strategy> clone() const = 0;
 };
@@ -66,7 +70,7 @@ class as_is_validation final : public validation_strategy
 public:
   void training_setup(unsigned) override {}
   bool shake(unsigned) override { return false; }
-  void validation_setup(unsigned) override {}
+  bool validation_setup(unsigned) override { return false; }
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override
   {

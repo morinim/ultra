@@ -66,7 +66,7 @@ public:
 
   void training_setup(unsigned) override;
   bool shake(unsigned) override { return false; }
-  void validation_setup(unsigned) override;
+  bool validation_setup(unsigned) override;
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override;
 
