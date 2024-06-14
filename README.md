@@ -8,36 +8,36 @@
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
 ## UNDER DEVELOPMENT ##
-The transfer process from Vita is still ongoing, and many features are either unavailable or not fully functional.
+There is an ongoing transfer process from Vita, and many features aren't available or fully functional.
 
-This framework will be a major breakthrough but at the moment is far from being production ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
+This framework will be a major breakthrough but is currently far from being production-ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
 
-Source has been made available for people / companies:
-- already using [Vita][vita] to be able to experience the new library;
-- who would like to sponsor the project.
+The source code is available for:
+- people or companies already using [Vita][vita] who want experience the new library;
+- those who would like to sponsor the project.
 
 ## OVERVIEW
 
 Ultra is a scalable, high performance evolutionary algorithms framework.
 
-It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control, [mathematical optimization][rastrigin] and scheduling. Main features:
+It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control, [mathematical optimization][rastrigin] and scheduling. Main features include:
 
 - concurrency support
 - modern, standard ISO C++20 source code
-- flexible and fast
+- flexibility and speed
 - easy integration with other systems
 - simple addition of features and modules
 - fast experimentation with detailed run-log
 - [more][features]
 
-This software is the result of a complete rewriting of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it maintains all the useful stuffs of the original project and **concurrency is fully supported**. If you're coming from Vita take a look at the [migration notes][migrating].
+This software is a complete rewrite of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it retains all the useful aspects of the original project and **fully supports concurrency**. If you're transitioning from Vita, take a look at the [migration notes][migrating].
 
 ## EXAMPLES
 
 ### Mathematical optimization
 <img src="https://github.com/morinim/ultra/wiki/img/rastrigin.png" width="300">
 
-The core of the operation is:
+The core operation is:
 
 ```C++
 de::problem prob(dimensions, {-5.12, 5.12});
@@ -114,7 +114,7 @@ This is a machine learning examples that classifies sonar data into two categori
   const auto result(s.run());
 ```
 
-Many additional information in the [specific tutorial][sonar].
+More information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
@@ -175,7 +175,7 @@ cd ultra
 cmake -B build/ src/
 ```
 
-To suggest a specific compiler you can write:
+To specify a specific compiler, you can write:
 
 ```shell
 CXX=clang++ cmake -B build/ src/
@@ -190,9 +190,9 @@ You're now ready to build using the underlying build system tool:
 - the *ABC* example: `cmake --build build/ --target ABC`
 - for a list of valid targets: `cmake --build build/ --target help`
 
-The output files are stored in subdirectories of `build/` (out of source build).
+The output files are stored in subdirectories of `build/` (out-of-source build).
 
-Windows may need various expedients about which you can read in the [Windows walkthrough][windows].
+For Windows-specific instructions, refer to the [Windows walkthrough][windows].
 
 ## INSTALLING ULTRA
 
@@ -203,17 +203,17 @@ cmake --install build/
 ```
 (requires superuser, i.e. root, privileges)
 
-Manually installing is also very easy. There are just two files, both inside the `build/kernel` directory:
+Manual installation is also straightforward. There are just two files, both inside the `build/kernel` directory:
 
 - a static library (e.g. `libultra.a` under Unix);
 - an automatically generated global/single header (`auto_ultra.h` which can be renamed).
 
-As a side note, the command to build the global header is:
+As a side note, to build the global header manually, use:
 
 ```shell
 ./tools/single_include.py --src-include-dir src/ --src-include kernel/ultra.h --dst-include mysingleheaderfile.h
 ```
-(must be executed from the repository main directory)
+(must be executed from the main directory of the repository)
 
 ## LICENSE
 
@@ -224,9 +224,9 @@ As a side note, the command to build the global header is:
 
 Ultra uses [semantic versioning][semver]. Releases are tagged.
 
-When a release cannot be backward compatible, because an API is changing, modifications required for upgrading aren't (usually) too difficult.
+When a release is not backward compatible due to API changes, the required modifications for upgrading are usually not too difficult.
 
-So don't be afraid of a different *MAJOR* version and read the release notes for details about the breaking changes.
+So, don't be afraid of a different *MAJOR* version and read the release notes for details about the breaking changes.
 
 ---
 
