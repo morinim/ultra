@@ -21,9 +21,11 @@
 #define      ULTRA_ULTRA_H
 
 #include "kernel/de/individual.h"
-#include "kernel/de/primitive.h"
 #include "kernel/de/problem.h"
 #include "kernel/de/search.h"
+#include "kernel/ga/individual.h"
+#include "kernel/ga/problem.h"
+#include "kernel/ga/search.h"
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
