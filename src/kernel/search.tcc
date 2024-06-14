@@ -183,16 +183,15 @@ basic_search<ES, E>::run(unsigned n,
 
     if (const auto prg(run_summary.best().ind); !prg.empty())
     {
-      const auto prg_train_metrics(calculate_metrics(prg));
+      std::vector metrics = { calculate_metrics(prg) };  // training metrics
 
-      vs_->validation_setup(r);
+      if (vs_->validation_setup(r))
+        metrics.push_back(calculate_metrics(prg));  // validation metrics
 
-      const auto prg_val_metrics(calculate_metrics(prg));
-
-      after_evolution(r, {prg_train_metrics, prg_val_metrics});
+      after_evolution(r, metrics);
 
       // Update the search statistics (possibly using the validation setup).
-      stats.update(prg, prg_val_metrics, run_summary.elapsed, threshold);
+      stats.update(prg, metrics.back(), run_summary.elapsed, threshold);
     }
   }
 
