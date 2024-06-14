@@ -81,6 +81,7 @@ private:
 
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
+[[nodiscard]] std::size_t active_slots(const individual &) noexcept;
 
 // Recombination operators.
 [[nodiscard]] individual crossover(const individual &, const individual &);

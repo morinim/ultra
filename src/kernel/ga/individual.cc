@@ -316,6 +316,17 @@ hash_t individual::hash() const
 }
 
 ///
+/// Completely equivalent to `parameters()`.
+///
+/// \param[in] ind individual we're interested in
+/// \return        number of parameters stored in the individual
+///
+std::size_t active_slots(const individual &ind) noexcept
+{
+  return ind.parameters();
+}
+
+///
 /// \return `true` if the individual passes the internal consistency check
 ///
 bool individual::is_valid() const
