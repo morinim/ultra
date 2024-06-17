@@ -102,7 +102,7 @@ void print_solution(const ultra::ga::individual &x)
       if (board(row, col))
         std::cout << '#';
       else
-        std::cout << ' ';
+        std::cout << '.';
     }
 
     std::cout << '\n';
