@@ -1,5 +1,5 @@
 /*
- *  \remark This file is part of VITA.
+ *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
@@ -34,6 +34,7 @@ struct nonogram_problem
                            {
                              return sum + v.size();
                            });
+
   }
 
   ultra::matrix<bool> board(const ultra::ga::individual &x) const
@@ -79,12 +80,10 @@ struct nonogram_problem
 
 const nonogram_problem np(
   {
-    {1, 1, 1}, {2, 1, 1}, {3, 1, 1}, {1, 4}, {4},
-    {1, 1, 2}, {3, 1, 3}, {1, 1}, {3, 2}, {1, 3}
+    {2,9},{2,10},{2,11},{2,12},{3,13},{3,13},{8,14},{8,14},{9,14},{2,11,14},{29},{29},{29},{29},{29},{29},{16,13},{16,13},{16,12},{14,12},{14,11},{14,10},{15,9},{15,7},{15,4},{16,3,2},{16,5},{18},{5,5},{3}
   },
   {
-    {2}, {1, 1}, {2, 1, 1}, {2, 1, 2}, {3, 1},
-    {3, 1}, {6}, {4, 1, 2}, {1, 1, 2, 1}, {2, 1, 1}
+    {5},{1,14},{2,15},{2,14},{3,17},{4,19},{23},{22},{21},{22},{22},{22},{22},{21},{10,7},{9,7},{10,6},{14,5},{17,5},{19,4},{21,2},{23,1},{23,3},{24,5},{24,5},{24,5},{25,3},{25},{26},{26}
   }
 );
 
@@ -117,8 +116,8 @@ int main()
   // `[0, np.rows()[` interval.
   ga::problem prob(np.blocks(), {0u, np.rows()});
 
-  prob.params.population.individuals = 3000;
-  prob.params.evolution.generations  =  100;
+  prob.params.population.individuals = 30000;
+  prob.params.evolution.generations  =   500;
 
   // The fitness function.
   auto f = [](const ga::individual &x)
