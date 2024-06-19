@@ -23,7 +23,7 @@ jobs:
             name: "Windows Latest MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
-            shell: bash,
+            shell: powershell,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -37,7 +37,7 @@ jobs:
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
-            shell: bash,
+            shell: cmd,
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -61,7 +61,7 @@ jobs:
       - name: Configure CMake / Build
         working-directory: ${{github.workspace}}
         run: |
-          CXX=${{ matrix.config.cxx }} cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+          cmake -DCMAKE_CXX_COMPILER=${{matrix.config.cxx}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
           cmake --build build/ --config ${{matrix.build_type}}
       - name: Test
         working-directory: ${{github.workspace}}/build/test
