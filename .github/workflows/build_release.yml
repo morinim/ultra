@@ -63,13 +63,13 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
-        if: ${{matrix.generator == 'default'}}
+        if: ${{matrix.config.generator == 'default'}}
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
-        if: ${{matrix.generator != 'default'}}  
-        run: cmake -G${{matrix.generator}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+        if: ${{matrix.config.generator != 'default'}}  
+        run: cmake -G${{matrix.config.generator}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
