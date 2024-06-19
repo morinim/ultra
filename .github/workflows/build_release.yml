@@ -37,7 +37,7 @@ jobs:
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
-            shell: 'msys2 {0}',
+            shell: cmd,
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -61,7 +61,7 @@ jobs:
       - name: Configure CMake / Build
         working-directory: ${{github.workspace}}
         run: |
-          cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+          CXX=${{ matrix.config.cxx }} cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
           cmake --build build/ --config ${{matrix.build_type}}
       - name: Test
         working-directory: ${{github.workspace}}/build/test
