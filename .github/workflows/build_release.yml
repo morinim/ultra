@@ -37,7 +37,7 @@ jobs:
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
-            shell: msys2 {0},
+            shell: 'msys2 {0}',
             cc: "gcc", cxx: "g++"
           }
         #- {
