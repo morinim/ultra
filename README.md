@@ -123,7 +123,7 @@ Also, consider that the wiki on GitHub is the source for the ultraevolution.org 
 
 ## BUILD REQUIREMENTS
 
-Ultra is designed to have minimal requirements for building and use with your projects, though some are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. Mac OS X, Solaris, AIX).
+Ultra is designed to have minimal requirements for building and use with your projects, though some are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. macOS, BSD).
 However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
 
 ### Mandatory
