@@ -23,7 +23,7 @@ jobs:
             name: "Windows Latest MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
-            shell: powershell,
+            shell: bash,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -37,7 +37,7 @@ jobs:
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
-            shell: cmd,
+            shell: bash,
             cc: "gcc", cxx: "g++"
           }
         #- {
