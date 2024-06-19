@@ -70,7 +70,7 @@ jobs:
         if: ${{matrix.config.generator != 'default'}}  
         working-directory: ${{github.workspace}}
         run: |
-          $env:PATH = "C:\msys64\usr\bin;$env:PATH"
+          echo "C:\msys64\usr\bin" >> $GITHUB_PATH
           cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
