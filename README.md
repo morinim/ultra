@@ -183,14 +183,13 @@ CXX=clang++ cmake -B build/ src/
 
 You're now ready to build using the underlying build system tool:
 
-- everything: `cmake --build build/`
-- kernel library (`libultra.a`): `cmake --build build/ --target ultra`
-- the *ABC* example: `cmake --build build/ --target ABC`
-- for a list of valid targets: `cmake --build build/ --target help`
+```Shell
+cmake --build build/
+```
 
 The output files are stored in sub-directories of `build/` (out-of-source build).
 
-For Windows-specific instructions, refer to the [Windows walkthrough][windows].
+Further details are available in the [build walkthrough][build].
 
 ## INSTALLING ULTRA
 
@@ -212,6 +211,7 @@ As a side note, to build the global header manually, use:
 ./tools/single_include.py --src-include-dir src/ --src-include kernel/ultra.h --dst-include mysingleheaderfile.h
 ```
 (must be executed from the main directory of the repository)
+
 
 ## LICENSE
 
@@ -254,4 +254,4 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
 [ultrasite]: https://ultraevolution.org
-[windows]: https://github.com/morinim/ultra/wiki/win_build
+[windows]: https://github.com/morinim/ultra/wiki/build
