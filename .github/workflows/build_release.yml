@@ -43,14 +43,14 @@ jobs:
         #    generator: "MinGW Makefiles",
         #    cc: "gcc", cxx: "g++"
         #  }
-        - {
-            name: "macOS Latest GCC ",
-            artifact: "macos.txz",
-            os: macos-latest,
-            shell: bash,
-            generator: default,
-            cc: "gcc", cxx: "g++"
-          }
+        #- {
+        #    name: "macOS Latest GCC ",
+        #    artifact: "macos.txz",
+        #    os: macos-latest,
+        #    shell: bash,
+        #    generator: default,
+        #    cc: "gcc", cxx: "g++"
+        #  }
 
     defaults:
       run:
