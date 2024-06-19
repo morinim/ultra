@@ -67,8 +67,9 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Configure CMake (specific generator)
-        working-directory: ${{github.workspace}}
         if: ${{matrix.config.generator != 'default'}}  
+        working-directory: ${{github.workspace}}
+        run: Install-Mingw64.ps1
         run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
