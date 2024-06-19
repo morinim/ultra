@@ -20,26 +20,14 @@ jobs:
         build_type: ["Debug", "Release"]
         config:
         - {
-            name: "Windows Latest MSVC Debug",
+            name: "Windows Latest MSVC ",
             artifact: "windows-msvc-debug.txz",
             os: windows-latest,
             cc: "cl", cxx: "cl"
           }
         - {
-            name: "Windows Latest MSVC Release",
-            artifact: "windows-msvc-release.txz",
-            os: windows-latest,
-            cc: "cl", cxx: "cl"
-          }
-        - {
-            name: "Ubuntu Latest GCC Debug",
+            name: "Ubuntu Latest GCC ",
             artifact: "linux-debug.txz",
-            os: ubuntu-latest,
-            cc: "gcc", cxx: "g++"
-          }
-        - {
-            name: "Ubuntu Latest GCC Releas",
-            artifact: "linux-release.txz",
             os: ubuntu-latest,
             cc: "gcc", cxx: "g++"
           }
