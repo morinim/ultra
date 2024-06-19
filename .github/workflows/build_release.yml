@@ -47,19 +47,21 @@ jobs:
         #    cc: "clang", cxx: "clang++"
         #  }
 
+    defaults:
+      run:
+        shell: ${{ matrix.config.shell }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure CMake / Build
         env:
           CXX: ${{matrix.config.cxx}}
-        shell: ${{matrix.config.shell}}
         working-directory: ${{github.workspace}}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
           cmake --build build/ --config ${{matrix.build_type}}
       - name: Test
-        shell: ${{matrix.config.shell}}
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.build_type}}
 
