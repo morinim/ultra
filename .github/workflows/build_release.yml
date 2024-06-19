@@ -39,7 +39,7 @@ jobs:
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
-            shell: powershell,
+            shell: cmd,
             generator: "MinGW Makefiles",
             cc: "gcc", cxx: "g++"
           }
@@ -70,7 +70,7 @@ jobs:
         if: ${{matrix.config.generator != 'default'}}  
         working-directory: ${{github.workspace}}
         run: |
-          Install-Mingw64.ps1
+          $env:PATH = "C:\msys64\usr\bin;$env:PATH"
           cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
