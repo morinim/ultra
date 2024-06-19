@@ -175,12 +175,6 @@ cd ultra
 cmake -B build/ src/
 ```
 
-To specify a specific compiler, you can write:
-
-```shell
-CXX=clang++ cmake -B build/ src/
-```
-
 You're now ready to build using the underlying build system tool:
 
 ```Shell
@@ -211,7 +205,6 @@ As a side note, to build the global header manually, use:
 ./tools/single_include.py --src-include-dir src/ --src-include kernel/ultra.h --dst-include mysingleheaderfile.h
 ```
 (must be executed from the main directory of the repository)
-
 
 ## LICENSE
 
