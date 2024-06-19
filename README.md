@@ -233,6 +233,7 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 
 [agent]: https://github.com/morinim/ultra
 [best_practices]: https://www.bestpractices.dev/projects/8725
+[build]: https://github.com/morinim/ultra/wiki/build
 [build_status]: https://github.com/morinim/ultra/actions/workflows/build_release.yml
 [classification]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [cmake]: https://cmake.org/
@@ -254,4 +255,3 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 [twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
 [ultrasite]: https://ultraevolution.org
-[windows]: https://github.com/morinim/ultra/wiki/build
