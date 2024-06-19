@@ -23,18 +23,21 @@ jobs:
             name: "Windows Latest MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
+            shell: powershell,
             cc: "cl", cxx: "cl"
           }
         - {
             name: "Ubuntu Latest GCC ",
             artifact: "ubuntu.txz",
             os: ubuntu-latest,
+            shell: bash,
             cc: "gcc", cxx: "g++"
           }
         - {
             name: "Windows Latest MINGW ",
             artifact: "windows-mingw.txz",
             os: windows-latest,
+            shell: cmd,
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -50,15 +53,13 @@ jobs:
       - name: Configure CMake / Build
         env:
           CXX: ${{matrix.config.cxx}}
-        # Use bash so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
+        shell: ${{matrix.config.shell}}
         working-directory: ${{github.workspace}}
         run: |
           cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
           cmake --build build/ --config ${{matrix.build_type}}
       - name: Test
-        shell: bash
+        shell: ${{matrix.config.shell}}
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.build_type}}
 
