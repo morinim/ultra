@@ -24,6 +24,7 @@ jobs:
             artifact: "windows-msvc.txz",
             os: windows-latest,
             shell: powershell,
+            generator: default,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -31,6 +32,7 @@ jobs:
             artifact: "ubuntu.txz",
             os: ubuntu-latest,
             shell: bash,
+            generator: default,
             cc: "gcc", cxx: "g++"
           }
         - {
@@ -38,6 +40,7 @@ jobs:
             artifact: "windows-mingw.txz",
             os: windows-latest,
             shell: cmd,
+            generator: "MinGW Makefiles",
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -49,19 +52,24 @@ jobs:
 
     defaults:
       run:
-        shell: ${{ matrix.config.shell }}
+        shell: ${{matrix.config.shell}}
 
     env:
-      CC: ${{ matrix.config.cc }}
-      CXX: ${{ matrix.config.cxx }}
+      CC: ${{matrix.config.cc}}
+      CXX: ${{matrix.config.cxx}}
       
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure CMake / Build
         working-directory: ${{github.workspace}}
+        if: ${{matrix.generator == 'default'}}
         run: |
-          cmake -DCMAKE_CXX_COMPILER=${{matrix.config.cxx}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+          cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+          cmake --build build/ --config ${{matrix.build_type}}
+        if: ${{matrix.generator != 'default'}}  
+        run: |
+          cmake -G${{matrix.generator}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
           cmake --build build/ --config ${{matrix.build_type}}
       - name: Test
         working-directory: ${{github.workspace}}/build/test
