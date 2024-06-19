@@ -21,14 +21,20 @@ jobs:
         config:
         - {
             name: "Windows Latest MSVC ",
-            artifact: "windows-msvc-debug.txz",
+            artifact: "windows-msvc.txz",
             os: windows-latest,
             cc: "cl", cxx: "cl"
           }
         - {
             name: "Ubuntu Latest GCC ",
-            artifact: "linux-debug.txz",
+            artifact: "ubuntu.txz",
             os: ubuntu-latest,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Windows Latest MINGW ",
+            artifact: "windows-mingw.txz",
+            os: windows-latest,
             cc: "gcc", cxx: "g++"
           }
         #- {
@@ -58,10 +64,10 @@ jobs:
 
       #- name: Pack
       #  working-directory: ${{github.workspace}}/build
-      #  run: cmake -E tar -Jcfv ../${{matrix.config.artifact}} .
+      #  run: cmake -E tar -Jcfv ../${{matrix.build_type}}${{matrix.config.artifact}} .
 
       #- name: Upload
       #  uses: actions/upload-artifact@v4
       #  with:
-      #    path: ./${{matrix.config.artifact}}
-      #    name: ${{matrix.config.artifact}}
+      #    path: ./${{matrix.build_type}}${{matrix.config.artifact}}
+      #    name: ${{matrix.build_type}}${{matrix.config.artifact}}
