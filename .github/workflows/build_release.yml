@@ -61,15 +61,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure CMake
+      - name: Configure CMake (default generator)
         working-directory: ${{github.workspace}}
         if: ${{matrix.config.generator == 'default'}}
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
-      - name: Configure CMake
+      - name: Configure CMake (specific generator)
         working-directory: ${{github.workspace}}
         if: ${{matrix.config.generator != 'default'}}  
-        run: cmake -G${{matrix.config.generator}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
