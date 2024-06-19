@@ -185,12 +185,10 @@ You're now ready to build using the underlying build system tool:
 
 - everything: `cmake --build build/`
 - kernel library (`libultra.a`): `cmake --build build/ --target ultra`
-- `sr` tool: `cmake --build build/ --target sr`
-- tests: `cmake --build build/ --target tests`
 - the *ABC* example: `cmake --build build/ --target ABC`
 - for a list of valid targets: `cmake --build build/ --target help`
 
-The output files are stored in subdirectories of `build/` (out-of-source build).
+The output files are stored in sub-directories of `build/` (out-of-source build).
 
 For Windows-specific instructions, refer to the [Windows walkthrough][windows].
 
