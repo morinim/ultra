@@ -28,6 +28,14 @@
             }
         },
 		{
+			"name": "sanitize_thread",
+			"environment":
+			{
+				"SPECIFIC_LINKER_FLAGS": "-fsanitize=thread",
+				"SPECIFIC_OTHER_FLAGS": "-fsanitize=thread"
+			}
+		},
+		{
 			"name": "gcc",
 			"inherits": "base",
 			"environment":
@@ -47,6 +55,10 @@
         {
             "name": "gcc_sanitize_address",
             "inherits": ["gcc", "sanitize_address"]
+        },
+        {
+            "name": "gcc_sanitize_thread",
+            "inherits": ["gcc", "sanitize_thread"]
         },
 		{
 			"name": "clang",
@@ -68,6 +80,10 @@
         {
             "name": "clang_sanitize_address",
             "inherits": ["clang", "sanitize_address"]
+        },
+        {
+            "name": "clang_sanitize_thread",
+            "inherits": ["clang", "sanitize_thread"]
         },
 		{
 			"name": "msvc",
