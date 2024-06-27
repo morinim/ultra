@@ -28,8 +28,8 @@ evaluator<DAT>::evaluator(multi_dataset<DAT> &d) noexcept : dat_(&d)
 ///
 /// \param[in] d the training dataset
 ///
-template<Individual P, template<class> class ERRF, class DAT>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT>
+requires ErrorFunction<ERRF, DAT>
 sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(
   multi_dataset<DAT> &d)
   : evaluator<DAT>(d)
@@ -43,8 +43,8 @@ sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_evaluator(
 /// \param[in] step consider just `1` example every `step`
 /// \return         the fitness (greater is better, max is `0`)
 ///
-template<Individual P, template<class> class ERRF, class DAT>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT>
+requires ErrorFunction<ERRF, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
   const P &prg, typename DAT::difference_type step) const
 {
@@ -52,7 +52,7 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
 
   Expects(std::distance(std::begin(dat), std::end(dat)) >= step);
 
-  const ERRF<P> err_fctr(prg);
+  const ERRF err_fctr(prg);
 
   auto it(std::begin(dat));
   auto average_error(err_fctr(*it));
@@ -76,8 +76,8 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::sum_of_errors_impl(
 /// \param[in] prg program (individual/team) used for fitness evaluation
 /// \return        the fitness (greater is better, max is `0`)
 ///
-template<Individual P, template<class> class ERRF, class DAT>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT>
+requires ErrorFunction<ERRF, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::operator()(const P &prg) const
 {
   return sum_of_errors_impl(prg, 1);
@@ -90,8 +90,8 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::operator()(const P &prg) const
 /// This function is similar to operator()() but will skip `4` out of `5`
 /// training instances, so it's faster.
 ///
-template<Individual P, template<class> class ERRF, class DAT>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT>
+requires ErrorFunction<ERRF, DAT>
 auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 {
   Expects(std::distance(this->dat_->begin(), this->dat_->end()) >= 100);
@@ -103,8 +103,8 @@ auto sum_of_errors_evaluator<P, ERRF, DAT>::fast(const P &prg) const
 /// \return        the oracle associated with `prg` (`nullptr` in case of
 ///                errors).
 ///
-template<Individual P, template<class> class ERRF, class DAT>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT>
+requires ErrorFunction<ERRF, DAT>
 std::unique_ptr<basic_oracle>
 sum_of_errors_evaluator<P, ERRF, DAT>::oracle(const P &prg) const
 {

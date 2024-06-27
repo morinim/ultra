@@ -52,8 +52,8 @@ protected:
 /// \see
 /// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
 ///
-template<Individual P, template<class> class ERRF, class DAT = dataframe>
-requires ErrorFunction<ERRF<P>, DAT>
+template<Individual P, class ERRF, class DAT = dataframe>
+requires ErrorFunction<ERRF, DAT>
 class sum_of_errors_evaluator : public evaluator<DAT>
 {
 public:
@@ -100,7 +100,7 @@ private:
 /// mae_error_functor
 ///
 template<Individual P>
-class mae_evaluator : public sum_of_errors_evaluator<P, mae_error_functor>
+class mae_evaluator : public sum_of_errors_evaluator<P, mae_error_functor<P>>
 {
 public:
   using mae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
@@ -143,7 +143,7 @@ private:
 /// \see rmae_error_functor
 ///
 template<Individual P>
-class rmae_evaluator : public sum_of_errors_evaluator<P, rmae_error_functor>
+class rmae_evaluator : public sum_of_errors_evaluator<P, rmae_error_functor<P>>
 {
 public:
   using rmae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
@@ -192,7 +192,7 @@ private:
 /// mse_error_functor
 ///
 template<Individual P>
-class mse_evaluator : public sum_of_errors_evaluator<P, mse_error_functor>
+class mse_evaluator : public sum_of_errors_evaluator<P, mse_error_functor<P>>
 {
 public:
   using mse_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
@@ -227,7 +227,8 @@ private:
 /// count_error_functor
 ///
 template<Individual P>
-class count_evaluator : public sum_of_errors_evaluator<P, count_error_functor>
+class count_evaluator : public sum_of_errors_evaluator<P,
+                                                       count_error_functor<P>>
 {
 public:
   using count_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
