@@ -32,5 +32,6 @@
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/holdout_validation.h"
 #include "kernel/gp/src/search.h"
+#include "kernel/gp/src/variable.h"
 
 #endif  // include guard

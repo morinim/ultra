@@ -32,13 +32,22 @@ TEST_CASE("Concepts")
   using namespace ultra;
 
   CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
-                           src::dataframe>);
+        src::dataframe>);
   CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
-                           src::dataframe>);
+        src::dataframe>);
   CHECK(src::ErrorFunction<src::mse_error_functor<gp::individual>,
-                           src::dataframe>);
+        src::dataframe>);
   CHECK(src::ErrorFunction<src::count_error_functor<gp::individual>,
-                           src::dataframe>);
+        src::dataframe>);
+
+  CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
+        src::multi_dataset<src::dataframe>>);
+  CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
+        src::multi_dataset<src::dataframe>>);
+  CHECK(src::ErrorFunction<src::mse_error_functor<gp::individual>,
+        src::multi_dataset<src::dataframe>>);
+  CHECK(src::ErrorFunction<src::count_error_functor<gp::individual>,
+        src::multi_dataset<src::dataframe>>);
 
   CHECK(Evaluator<src::mae_evaluator<gp::individual>>);
   CHECK(Evaluator<src::mae_evaluator<gp::team<gp::individual>>>);

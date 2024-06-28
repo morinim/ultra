@@ -21,11 +21,20 @@
 namespace ultra::src
 {
 
+template<class Derived, template<class...> class Base>
+concept derived_from_template = requires(Derived &d)
+{
+  []<class... Ts>(Base<Ts...> &) {}(d);
+};
+
 /// An error function/functor returns a measurement of the error that a program
 /// commits in a given training case.
-template<class ERRF, class DAT> concept ErrorFunction
-  = DataSet<DAT>
-    && std::invocable<ERRF, decltype(*std::declval<DAT>().begin())>;
+template<class F, class D> concept ErrorFunction =
+  (derived_from_template<D, multi_dataset>
+   && DataSet<decltype(std::declval<D>().selected())>
+   && std::invocable<F, decltype(*std::declval<D>().selected().begin())>)
+  || (std::invocable<F, decltype(*std::declval<D>().begin())>
+      && DataSet<D>);
 
 ///
 /// An evaluator specialized for symbolic regression / classification problems.
@@ -34,13 +43,16 @@ template<class ERRF, class DAT> concept ErrorFunction
 /// to group common factors of more specialized symbolic regression or
 /// classification classes.
 ///
-template<DataSet DAT>
+template<class D>
 class evaluator
 {
 protected:
-  explicit evaluator(multi_dataset<DAT> &) noexcept;
+  explicit evaluator(D &) noexcept;
 
-  multi_dataset<DAT> *dat_ {nullptr};
+  [[nodiscard]] auto *data() const noexcept;
+
+private:
+  D *dat_ {nullptr};
 };
 
 ///
@@ -52,12 +64,12 @@ protected:
 /// \see
 /// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
 ///
-template<Individual P, class ERRF, class DAT = dataframe>
-requires ErrorFunction<ERRF, DAT>
-class sum_of_errors_evaluator : public evaluator<DAT>
+template<Individual P, class F, class D = multi_dataset<dataframe>>
+requires ErrorFunction<F, D>
+class sum_of_errors_evaluator : public evaluator<D>
 {
 public:
-  explicit sum_of_errors_evaluator(multi_dataset<DAT> &);
+  explicit sum_of_errors_evaluator(D &);
 
   [[nodiscard]] auto operator()(const P &) const;
   [[nodiscard]] auto fast(const P &) const;
@@ -65,8 +77,7 @@ public:
   [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
 
 private:
-  [[nodiscard]] auto sum_of_errors_impl(const P &,
-                                        typename DAT::difference_type) const;
+  [[nodiscard]] auto sum_of_errors_impl(const P &, std::ptrdiff_t) const;
 };
 
 ///
@@ -246,7 +257,7 @@ public:
 /// https://github.com/morinim/ultra/wiki/bibliography#13
 ///
 template<Individual P>
-class gaussian_evaluator : public evaluator<dataframe>
+class gaussian_evaluator : public evaluator<multi_dataset<dataframe>>
 {
 public:
   explicit gaussian_evaluator(multi_dataset<dataframe> &);
@@ -259,7 +270,7 @@ public:
 /// Single class evaluator for classification problems.
 ///
 template<Individual P>
-class binary_evaluator : public evaluator<dataframe>
+class binary_evaluator : public evaluator<multi_dataset<dataframe>>
 {
 public:
   explicit binary_evaluator(multi_dataset<dataframe> &);

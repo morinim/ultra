@@ -32,10 +32,7 @@ enum class dataset_t {training, validation, test};
 ///
 /// A sized range that contains a series of examples.
 ///
-template<class DAT> concept DataSet = std::ranges::range<DAT> && requires(DAT d)
-{
-  typename DAT::difference_type;
-};
+template<class DAT> concept DataSet = std::ranges::range<DAT>;
 
 template<DataSet D>
 class multi_dataset
