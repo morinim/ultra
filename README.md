@@ -8,13 +8,10 @@
 [![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
 ## UNDER DEVELOPMENT ##
-There is an ongoing transfer process from Vita, and many features aren't available or fully functional.
 
-This framework will be a major breakthrough but is currently far from being production-ready ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
+There is an ongoing transfer process from Vita. However, many features are available and fully functional.
 
-The source code is available for:
-- people or companies already using [Vita][vita] who want experience the new library;
-- those who would like to sponsor the project.
+Compared to Vita, this framework a major breakthrough but it isn't production-ready yet ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
 
 ## OVERVIEW
 
