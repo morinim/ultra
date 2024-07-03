@@ -284,6 +284,12 @@ bool linear_population<I>::save(std::ostream &out) const
   return out.good();
 }
 
+///
+/// \return a numerical unique ID of this population
+///
+/// \note
+/// The ID is unique considering the current application instance.
+///
 template<Individual I>
 population_uid linear_population<I>::uid() const noexcept
 {
