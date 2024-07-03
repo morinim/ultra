@@ -90,6 +90,84 @@ TEST_CASE("Base")
   CHECK(e2 < d.entropy());
 }
 
+TEST_CASE("Merge")
+{
+  using namespace ultra;
+
+  SUBCASE("Same distribution")
+  {
+    const std::vector<std::pair<double, unsigned>> elems =
+    {
+      {2.0, 1},
+      {4.0, 3},
+      {5.0, 2},
+      {7.0, 1},
+      {9.0, 1}
+    };
+
+    distribution<double> d;
+    for (const auto &e : elems)
+      for (unsigned n(e.second); n; --n)
+        d.add(e.first);
+
+    const auto mean_before(d.mean());
+    const auto variance_before(d.variance());
+    const auto min_before(d.min());
+    const auto max_before(d.max());
+
+    auto d2(d);
+
+    d.merge(std::move(d2));
+
+    CHECK(d.mean() == doctest::Approx(mean_before));
+    CHECK(d.min() == doctest::Approx(min_before));
+    CHECK(d.max() == doctest::Approx(max_before));
+    CHECK(d.variance() == doctest::Approx(variance_before));
+  }
+
+  SUBCASE("Single element distribution")
+  {
+    distribution<double> d1;
+    d1.add(-1.0);
+
+    distribution<double> d2;
+    d2.add(+1.0);
+
+    d1.merge(std::move(d2));
+
+    CHECK(d1.mean() == doctest::Approx(0.0));
+    CHECK(d1.variance() == doctest::Approx(1.0));
+    CHECK(d1.min() == doctest::Approx(-1.0));
+    CHECK(d1.max() == doctest::Approx(+1.0));
+  }
+
+  SUBCASE("General case")
+  {
+    distribution<double> d, d1, d2;
+
+    for (unsigned cycles(100); cycles; --cycles)
+    {
+      const auto elem(random::between(-1000.0, 1000.0));
+      d.add(elem);
+
+      if (cycles < 500)
+        d1.add(elem);
+      else
+        d2.add(elem);
+    }
+
+    CHECK(d1.min() >= -1000.0);
+    CHECK(d1.max() < 1000.0);
+
+    d1.merge(std::move(d2));
+
+    CHECK(d.mean() == doctest::Approx(d1.mean()));
+    CHECK(d.min() == doctest::Approx(d1.min()));
+    CHECK(d.max() == doctest::Approx(d1.max()));
+    CHECK(d.variance() == doctest::Approx(d1.variance()));
+  }
+}
+
 TEST_CASE("Serialization")
 {
   using namespace ultra;

@@ -47,7 +47,9 @@ public:
   [[nodiscard]] T standard_deviation() const;
   [[nodiscard]] T variance() const;
 
-  bool is_valid() const;
+  void merge(distribution<T>);
+
+  [[nodiscard]] bool is_valid() const;
 
 public:   // Serialization
   bool load(std::istream &);

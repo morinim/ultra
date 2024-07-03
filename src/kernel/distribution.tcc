@@ -114,6 +114,7 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 ///
 /// \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
 ///
+/// \note
 /// We use an offline algorithm
 /// (https://en.wikipedia.org/wiki/Online_algorithm).
 ///
@@ -294,6 +295,56 @@ bool distribution<T>::is_valid() const
   }
 
   return true;
+}
+
+///
+/// Updates the this distribution considering data from another distribution.
+///
+/// \param[in] d2 distribution to be merged with `*this`
+///
+/// \see
+/// - https://math.stackexchange.com/q/453113
+/// - https://stats.stackexchange.com/q/43159
+///
+template<ArithmeticFloatingType T>
+void distribution<T>::merge(distribution<T> d2)
+{
+  if (!d2.size())
+    return;
+
+  const auto max1(max());
+  const auto max2(d2.max());
+
+  const auto min1(min());
+  const auto min2(d2.min());
+
+  const auto size1(size());
+  const auto size2(d2.size());
+
+  const auto new_size(size1 + size2);
+
+  const auto mean1(mean());
+  const auto mean2(d2.mean());
+
+  const auto new_mean((size1*mean1 + size2*mean2) / new_size);
+
+  const auto variance1(variance());
+  const auto variance2(d2.variance());
+
+  const auto new_variance(
+    ((variance1 + mean1*mean1)*size1
+     + (variance2 + mean2*mean2)*size2) / new_size
+    - new_mean*new_mean);
+
+  mean_ = new_mean;
+  m2_ = new_variance * new_size;
+
+  max_ = std::max(max1, max2);
+  min_ = std::min(min1, min2);
+
+  size_ = new_size;
+
+  seen_.merge(d2.seen_);
 }
 
 #endif  // include guard
