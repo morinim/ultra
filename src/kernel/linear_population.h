@@ -58,7 +58,7 @@ public:
   [[nodiscard]] unsigned max_age() const noexcept;
   void max_age(unsigned) noexcept;
 
-  [[nodiscard]] app_level_uid uid() const noexcept;
+  [[nodiscard]] population_uid uid() const noexcept;
 
   void clear() noexcept;
 

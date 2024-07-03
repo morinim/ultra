@@ -21,6 +21,11 @@
 namespace ultra
 {
 
+///
+/// The numerical type used for population unique ID.
+///
+using population_uid = unsigned;
+
 template<class P>
 concept RandomAccessIndividuals =
   std::ranges::random_access_range<P>

@@ -285,7 +285,7 @@ bool linear_population<I>::save(std::ostream &out) const
 }
 
 template<Individual I>
-app_level_uid linear_population<I>::uid() const noexcept
+population_uid linear_population<I>::uid() const noexcept
 {
   return uid_;
 }
