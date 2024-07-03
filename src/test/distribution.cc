@@ -114,6 +114,7 @@ TEST_CASE("Merge")
     const auto variance_before(d.variance());
     const auto min_before(d.min());
     const auto max_before(d.max());
+    const auto size_before(d.size());
 
     auto d2(d);
 
@@ -122,6 +123,7 @@ TEST_CASE("Merge")
     CHECK(d.mean() == doctest::Approx(mean_before));
     CHECK(d.min() == doctest::Approx(min_before));
     CHECK(d.max() == doctest::Approx(max_before));
+    CHECK(d.size() == doctest::Approx(2 * size_before));
     CHECK(d.variance() == doctest::Approx(variance_before));
   }
 
@@ -138,6 +140,7 @@ TEST_CASE("Merge")
     CHECK(d1.mean() == doctest::Approx(0.0));
     CHECK(d1.variance() == doctest::Approx(1.0));
     CHECK(d1.min() == doctest::Approx(-1.0));
+    CHECK(d1.size() == 2);
     CHECK(d1.max() == doctest::Approx(+1.0));
   }
 
@@ -164,6 +167,7 @@ TEST_CASE("Merge")
     CHECK(d.mean() == doctest::Approx(d1.mean()));
     CHECK(d.min() == doctest::Approx(d1.min()));
     CHECK(d.max() == doctest::Approx(d1.max()));
+    CHECK(d.size() == d1.size());
     CHECK(d.variance() == doctest::Approx(d1.variance()));
   }
 }
