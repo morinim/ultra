@@ -17,6 +17,72 @@
 #if !defined(ULTRA_ANALYZER_TCC)
 #define      ULTRA_ANALYZER_TCC
 
+template<Individual I, Fitness F>
+group_stat<I, F>::group_stat(population_uid id) : uid(id)
+{
+}
+
+///
+/// Adds a new individual to the pool used to calculate statistics.
+///
+/// \param[in] ind new individual
+/// \param[in] f   fitness of the new individual
+///
+template<Individual I, Fitness F>
+void group_stat<I, F>::add(const I &ind, const F &f)
+{
+  age.add(ind.age());
+
+  using de::active_slots;
+  using gp::active_slots;
+
+  const std::size_t len(active_slots(ind));
+
+  length.add(len);
+
+  using std::isfinite;
+  if (isfinite(f))
+    fitness.add(f);
+}
+
+template<Individual I, Fitness F>
+void group_stat<I, F>::merge(group_stat gs)
+{
+  group_stat<I, F> ret;
+
+  age.merge(gs.age);
+  fitness.merge(gs.fitness);
+  length.merge(gs.length);
+}
+
+///
+/// Calculates statistics about a layered population.
+///
+/// \param[in] pop the layered population
+///
+template<Individual I, Fitness F>
+template<LayeredPopulation P, Evaluator E> analyzer<I, F>::analyzer(
+  const P &pop, const E &eva)
+{
+  const auto subgroup_stats([&eva](auto layer_iter)
+  {
+    group_stat<I, F> ret(layer_iter->uid());
+
+    for (const auto &ind : *layer_iter)
+      ret.add(ind, eva(ind));
+
+    return ret;
+  });
+
+  const auto range(pop.range_of_layers());
+  std::vector<std::future<group_stat<I, F>>> tasks;
+  for (auto l(range.begin()); l != range.end(); ++l)
+    tasks.push_back(std::async(std::launch::async, subgroup_stats, l));
+
+  for (auto &task : tasks)
+    group_stat_.push_back(task.get());
+}
+
 ///
 /// Resets gathered statics.
 ///
@@ -26,13 +92,65 @@ void analyzer<I, F>::clear()
   *this = {};
 }
 
+template<Individual I, Fitness F>
+const group_stat<I, F> *analyzer<I, F>::group(population_uid uid) const
+{
+  const auto iter(std::ranges::find_if(group_stat_,
+                                       [uid](const auto &grp)
+                                       {
+                                         return grp.uid == uid;
+                                       }));
+
+  return iter == group_stat_.end() ? nullptr : std::addressof(*iter);
+}
+
+template<Individual I, Fitness F>
+group_stat<I, F> *analyzer<I, F>::group(population_uid uid)
+{
+  // My goodness... however, nobody ever got fired for following Scott Meyers.
+  return const_cast<group_stat<I, F> *>(std::as_const(*this).group(uid));
+}
+
 ///
-/// \return statistics about the age distribution of the individuals
+/// \return aggregate `group_stat` considering every subgroup of the population
 ///
 template<Individual I, Fitness F>
-const distribution<double> &analyzer<I, F>::age_dist() const
+group_stat<I, F> analyzer<I, F>::overall_group_stat() const
 {
-  return age_;
+  group_stat<I, F> ret;
+
+  for (const auto &gs : group_stat_)
+    ret.merge(gs);
+
+  return ret;
+}
+
+///
+/// \return statistics about the age distribution of the individuals (entire
+///         population)
+///
+template<Individual I, Fitness F>
+distribution<double> analyzer<I, F>::age_dist() const
+{
+  distribution<double> ret;
+  for (const auto &gs : group_stat_)
+    ret.merge(gs.age);
+
+  return ret;
+}
+
+///
+/// \param[in] g the UID of a population / subpopulation
+/// \return      statistics about the age distribution of individuals in group
+///              `g`
+///
+template<Individual I, Fitness F>
+const distribution<double> &analyzer<I, F>::age_dist(population_uid g) const
+{
+  const auto *ptr(group(g));
+  assert(ptr);
+
+  return ptr->age;
 }
 
 ///
@@ -44,19 +162,35 @@ template<Individual I, Fitness F>
 template<Population P>
 const distribution<double> &analyzer<I, F>::age_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g.uid()));
-  assert(gi != group_stat_.end());
-
-  return gi->second.age;
+  return age_dist(g.uid());
 }
 
 ///
 /// \return statistics about the fitness distribution of the individuals
+///         (entire population)
 ///
 template<Individual I, Fitness F>
-const distribution<F> &analyzer<I, F>::fit_dist() const
+distribution<F> analyzer<I, F>::fit_dist() const
 {
-  return fit_;
+  distribution<F> ret;
+  for (const auto &gs : group_stat_)
+    ret.merge(gs.fitness);
+
+  return ret;
+}
+
+///
+/// \param[in] g the UID of a population / subpopulation
+/// \return      statistics about the fitness distribution of individuals in
+///              group `g`
+///
+template<Individual I, Fitness F>
+const distribution<F> &analyzer<I, F>::fit_dist(population_uid g) const
+{
+  const auto *ptr(group(g));
+  assert(ptr);
+
+  return ptr->fitness;
 }
 
 ///
@@ -68,19 +202,35 @@ template<Individual I, Fitness F>
 template<Population P>
 const distribution<F> &analyzer<I, F>::fit_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g.uid()));
-  assert(gi != group_stat_.end());
-
-  return gi->second.fitness;
+  return fit_dist(g.uid());
 }
 
 ///
 /// \return statistic about the length distribution of the individuals
+///         (entire population)
 ///
 template<Individual I, Fitness F>
-const distribution<double> &analyzer<I, F>::length_dist() const
+distribution<double> analyzer<I, F>::length_dist() const
 {
-  return length_;
+  distribution<double> ret;
+  for (const auto &gs : group_stat_)
+    ret.merge(gs.length);
+
+  return ret;
+}
+
+///
+/// \param[in] g the UID a population / subpopulation
+/// \return      statistics about the length distribution of individuals in
+///              group `g`
+///
+template<Individual I, Fitness F>
+const distribution<double> &analyzer<I, F>::length_dist(population_uid g) const
+{
+  const auto *ptr(group(g));
+  assert(ptr);
+
+  return ptr->length;
 }
 
 ///
@@ -92,10 +242,7 @@ template<Individual I, Fitness F>
 template<Population P>
 const distribution<double> &analyzer<I, F>::length_dist(const P &g) const
 {
-  const auto gi(group_stat_.find(g.uid()));
-  assert(gi != group_stat_.end());
-
-  return gi->second.length;
+  return length_dist(g.uid());
 }
 
 ///
@@ -112,47 +259,20 @@ bool analyzer<I, F>::is_valid() const
 ///
 /// \param[in] ind new individual
 /// \param[in] f   fitness of the new individual
-/// \param[in] g   a group of the population
+/// \param[in] uid a group of the population
 ///
-/// The optional `g` parameter can be used to group information (e.g. for the
-/// ALPS algorithm it's used for layer specific statistics).
+/// The optional `uid` parameter is used to split information.
 ///
 template<Individual I, Fitness F>
-void analyzer<I, F>::add(const I &ind, const F &f, unsigned g)
+void analyzer<I, F>::add(const I &ind, const F &f, population_uid uid)
 {
-  age_.add(ind.age());
-  group_stat_[g].age.add(ind.age());
-
-  using de::active_slots;
-  using gp::active_slots;
-
-  const std::size_t len(active_slots(ind));
-
-  length_.add(len);
-  group_stat_[g].length.add(len);
-
-  using std::isfinite;
-  if (isfinite(f))
+  if (auto *selected = group(uid))
+    selected->add(ind, f);
+  else
   {
-    fit_.add(f);
-    group_stat_[g].fitness.add(f);
+    group_stat_.emplace_back(uid);
+    group_stat_.back().add(ind, f);
   }
-}
-
-///
-/// \param[in] pop a population
-/// \param[in] eva an evaluator
-/// \return        compiled analyzer for the given population
-///
-template<Population P, Evaluator E>
-[[nodiscard]] auto analyze(const P &pop, const E &eva)
-{
-  analyzer<evaluator_individual_t<E>, evaluator_fitness_t<E>> az;
-
-  for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
-    az.add(*it, eva(*it), it.uid());
-
-  return az;
 }
 
 #endif  // include guard

@@ -27,10 +27,19 @@ void distribution<T>::clear()
 }
 
 ///
+/// \return `true` if the distribution is empty
+///
+template<ArithmeticFloatingType T>
+bool distribution<T>::empty() const noexcept
+{
+  return size_ == 0;
+}
+
+///
 /// \return number of elements of the distribution
 ///
 template<ArithmeticFloatingType T>
-std::size_t distribution<T>::size() const
+std::size_t distribution<T>::size() const noexcept
 {
   return size_;
 }
@@ -309,6 +318,12 @@ bool distribution<T>::is_valid() const
 template<ArithmeticFloatingType T>
 void distribution<T>::merge(distribution<T> d2)
 {
+  if (empty())
+  {
+    *this = std::move(d2);
+    return;
+  }
+
   if (!d2.size())
     return;
 

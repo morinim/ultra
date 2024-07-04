@@ -211,7 +211,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
   SUBCASE("Typical")
   {
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
 
     alps.after_generation(pop, sum);
 
@@ -231,7 +231,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   {
     pop.front() = pop.layer(1);
 
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
     CHECK(almost_equal(sum.az.fit_dist(pop.front()).mean(),
                        sum.az.fit_dist(pop.layer(1)).mean()));
 
@@ -253,7 +253,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     auto &layer1(pop.layer(1));
     std::ranges::fill(layer1, clone);
 
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
     CHECK(issmall(sum.az.fit_dist(layer1).standard_deviation()));
 
     alps.after_generation(pop, sum);
@@ -272,7 +272,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     for (unsigned i(1); i <= diff; ++i)
     {
       sum.generation += prob.params.alps.age_gap;
-      sum.az = analyze(pop, eva);
+      sum.az = analyzer(pop, eva);
       alps.after_generation(pop, sum);
 
       CHECK(pop.layers() == prob.params.population.init_subgroups + i);
@@ -286,7 +286,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
     backup_pop = pop;
 
     sum.generation += prob.params.alps.age_gap;
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
     alps.after_generation(pop, sum);
 
     CHECK(pop.layers() == prob.params.alps.max_layers);
@@ -442,7 +442,7 @@ TEST_CASE_FIXTURE(fixture1, "Default init / after_generation")
 
   SUBCASE("Typical")
   {
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
 
     const auto before(pop);
     es.after_generation(pop, sum);
@@ -458,7 +458,7 @@ TEST_CASE_FIXTURE(fixture1, "Default init / after_generation")
     std::ranges::fill(pop, clone);
 
     prob.params.evolution.max_stuck_gen = 10;
-    sum.az = analyze(pop, eva);
+    sum.az = analyzer(pop, eva);
     sum.generation = prob.params.evolution.max_stuck_gen + 1;
 
     const auto before(pop);

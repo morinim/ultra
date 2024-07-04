@@ -38,7 +38,8 @@ public:
 
   void add(T);
 
-  [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] bool empty() const noexcept;
+  [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] double entropy() const;
   [[nodiscard]] T max() const;
   [[nodiscard]] T mean() const;

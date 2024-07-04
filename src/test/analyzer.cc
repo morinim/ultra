@@ -52,7 +52,7 @@ TEST_CASE_FIXTURE(fixture1, "Base")
         CHECK(az.fit_dist().size() == n);
         CHECK(az.length_dist().size() == n);
 
-        for (const auto range = pop.range_of_layers();
+        for (const auto range(pop.range_of_layers());
              const auto &layer : range)
         {
           CHECK(az.age_dist(layer).size() == i);

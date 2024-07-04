@@ -14,7 +14,8 @@
 #define      ULTRA_ANALYZER_H
 
 #include <concepts>
-#include <map>
+#include <future>
+#include <vector>
 
 #include "kernel/distribution.h"
 #include "kernel/evaluator.h"
@@ -25,6 +26,21 @@
 
 namespace ultra
 {
+
+template<Individual I, Fitness F>
+struct group_stat
+{
+  explicit group_stat(population_uid);
+
+  void add(const I &, const F &);
+  void merge(group_stat);
+
+  population_uid uid;
+
+  distribution<double>    age {};
+  distribution<F>     fitness {};
+  distribution<double> length {};
+};
 
 ///
 /// Analyzer takes a statistics snapshot of a population.
@@ -43,14 +59,22 @@ class analyzer
 {
 public:
   analyzer() = default;
+  template<LayeredPopulation P, Evaluator E> explicit analyzer(
+    const P &, const E &);
 
-  void add(const I &, const F &, unsigned = 0);
+  void add(const I &, const F &, population_uid);
 
   void clear();
 
-  [[nodiscard]] const distribution<double> &age_dist() const;
-  [[nodiscard]] const distribution<F> &fit_dist() const;
-  [[nodiscard]] const distribution<double> &length_dist() const;
+  [[nodiscard]] group_stat<I, F> overall_group_stat() const;
+
+  [[nodiscard]] distribution<double> age_dist() const;
+  [[nodiscard]] distribution<F> fit_dist() const;
+  [[nodiscard]] distribution<double> length_dist() const;
+
+  [[nodiscard]] const distribution<double> &age_dist(population_uid) const;
+  [[nodiscard]] const distribution<F> &fit_dist(population_uid) const;
+  [[nodiscard]] const distribution<double> &length_dist(population_uid) const;
 
   template<Population P> [[nodiscard]] const distribution<double> &age_dist(
     const P &) const;
@@ -62,18 +86,15 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
-  struct group_stat
-  {
-    distribution<double>    age {};
-    distribution<F>     fitness {};
-    distribution<double> length {};
-  };
-  std::map<unsigned, group_stat> group_stat_ {};
+  [[nodiscard]] group_stat<I, F> *group(population_uid);
+  [[nodiscard]] const group_stat<I, F> *group(population_uid) const;
 
-  distribution<F>         fit_ {};
-  distribution<double>    age_ {};
-  distribution<double> length_ {};
+  std::vector<group_stat<I, F>> group_stat_ {};
 };  // analyzer
+
+template<LayeredPopulation P, Evaluator E>
+analyzer(const P &, const E &) -> analyzer<typename P::value_type,
+                                           evaluator_fitness_t<E>>;
 
 #include "kernel/analyzer.tcc"
 

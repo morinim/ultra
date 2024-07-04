@@ -318,7 +318,7 @@ evolution<S>::run()
 
     print_and_update_if_better(sum_.best());
 
-    sum_.az = analyze(pop_, es_.evaluator());
+    sum_.az = analyzer(pop_, es_.evaluator());
     log_evolution();
 
     es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
