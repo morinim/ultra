@@ -59,7 +59,7 @@ bool evolution<S>::stop_condition() const
 ///     ...
 ///     [BLOCK_x]
 ///
-/// where each block is a set of line like this:
+/// where each block is a set of lines such as this:
 ///
 ///     data_1 [space] data_2 [space] ... [space] data_n
 ///
@@ -69,7 +69,7 @@ bool evolution<S>::stop_condition() const
 /// GNU Plot.
 ///
 template<Strategy S>
-void evolution<S>::log_evolution() const
+void evolution<S>::save_snapshot() const
 {
   static unsigned run_count(-1);
 
@@ -140,7 +140,7 @@ void evolution<S>::log_evolution() const
     }
   }
 
-  es_.log_strategy(pop_, sum_);
+  es_.save_snapshot(pop_, sum_);
 }
 
 template<Strategy S>
@@ -319,7 +319,7 @@ evolution<S>::run()
     print_and_update_if_better(sum_.best());
 
     sum_.az = analyzer(pop_, es_.evaluator());
-    log_evolution();
+    save_snapshot();
 
     es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
     if (after_generation_callback_)

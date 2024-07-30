@@ -215,7 +215,7 @@ parameters alps_es<E>::shape(parameters params)
 ///
 template<Evaluator E>
 template<Population P>
-void alps_es<E>::log_strategy(
+void alps_es<E>::save_snapshot(
   const P &pop, const summary<individual_t, fitness_t> &sum) const
 {
   Expects(&pop.problem() == &this->get_problem());

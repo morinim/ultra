@@ -187,7 +187,7 @@ struct parameters
     /// A single log file can overwrite this path specifying an absolute path.
     std::filesystem::path dir {};
 
-    /// Name of the log file used to save "real-time" information.
+    /// Name of the file used to save "real-time" information.
     /// \note
     /// An empty string disable logging.
     std::filesystem::path dynamic_file {};

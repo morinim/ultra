@@ -64,7 +64,7 @@ template<Individual I, Fitness F>
 template<LayeredPopulation P, Evaluator E> analyzer<I, F>::analyzer(
   const P &pop, const E &eva)
 {
-  const auto subgroup_stats([&eva](auto layer_iter)
+  const auto gather_subgroup_stats([&eva](auto layer_iter)
   {
     group_stat<I, F> ret(layer_iter->uid());
 
@@ -77,7 +77,7 @@ template<LayeredPopulation P, Evaluator E> analyzer<I, F>::analyzer(
   const auto range(pop.range_of_layers());
   std::vector<std::future<group_stat<I, F>>> tasks;
   for (auto l(range.begin()); l != range.end(); ++l)
-    tasks.push_back(std::async(std::launch::async, subgroup_stats, l));
+    tasks.push_back(std::async(std::launch::async, gather_subgroup_stats, l));
 
   for (auto &task : tasks)
     group_stat_.push_back(task.get());

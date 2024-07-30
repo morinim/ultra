@@ -48,7 +48,7 @@ public:
 
   /// Evolution strategy specific log function (it's called by the
   /// `evolution::log` method).
-  template<Population P> void log_strategy(
+  template<Population P> void save_snapshot(
     const P &, const summary<individual_t, fitness_t> &) const
   {}
 
@@ -134,7 +134,7 @@ public:
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
-  template<Population P> void log_strategy(
+  template<Population P> void save_snapshot(
     const P &, const summary<individual_t, fitness_t> &) const;
 
   static parameters shape(parameters);
