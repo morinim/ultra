@@ -40,6 +40,7 @@ public:
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
 
+  // ---- Capacity ----
   [[nodiscard]] symbol::category_t categories() const;
   [[nodiscard]] bool empty() const;
   [[nodiscard]] locus::index_t size() const;

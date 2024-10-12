@@ -113,23 +113,28 @@ private:
 class symbol_set
 {
 public:
+  // ---- Member types ----
   using weight_t = internal::w_symbol::weight_t;
   static constexpr weight_t default_weight = internal::w_symbol::base_weight;
 
+  // ---- Constructor ----
   symbol_set() = default;
 
+  // ---- Modifiers ----
   void clear();
 
   symbol *insert(std::unique_ptr<symbol>, weight_t = default_weight);
   template<Symbol S, weight_t = default_weight, class ...Args>
   std::add_pointer_t<S> insert(Args &&...);
 
+  // ---- Capacity ----
   [[nodiscard]] symbol::category_t categories() const noexcept;
   [[nodiscard]] std::size_t functions(
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] std::size_t terminals(
     symbol::category_t = symbol::default_category) const;
 
+  // ---- Lookup / symbol access ----
   [[nodiscard]] const symbol *roulette(
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] const function *roulette_function(
@@ -144,10 +149,12 @@ public:
   [[nodiscard]] const symbol *decode(symbol::opcode_t) const;
   [[nodiscard]] const symbol *decode(const std::string &) const;
 
+  // ---- Misc ----
   [[nodiscard]] weight_t weight(const symbol &) const;
 
   [[nodiscard]] std::set<symbol::category_t>
     categories_missing_terminal() const;
+
   [[nodiscard]] bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
