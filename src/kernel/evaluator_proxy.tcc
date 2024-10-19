@@ -52,9 +52,7 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
   if (!cache_.bits())
     return eva_(prg);
 
-  auto cached_fit(cache_.find(prg.signature()));
-
-  if (cached_fit)
+  if (const auto cached_fit(cache_.find(prg.signature())); cached_fit)
   {
     // Hash collision checking code can severely slow down the program.
 #if !defined(NDEBUG)
@@ -82,21 +80,15 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
     // have the same signature, the same stored "score" but distinct
     // effective size and so distinct fitnesses.
 #endif
-  }
-  else  // not found in cache
-  {
-    const auto effective_fit(eva_(prg));
 
-    cache_.insert(prg.signature(), effective_fit);
-    cached_fit = cache_.find(prg.signature());
-
-#if !defined(NDEBUG)
-    assert(cached_fit);
-    assert(almost_equal(*cached_fit, effective_fit));
-#endif
+    return *cached_fit;
   }
 
-  return *cached_fit;
+  // Not found in cache.
+  const auto effective_fit(eva_(prg));
+  cache_.insert(prg.signature(), effective_fit);
+
+  return effective_fit;
 }
 
 ///
