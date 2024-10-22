@@ -64,9 +64,8 @@ bool evolution<S>::stop_condition() const
 ///     data_1 [space] data_2 [space] ... [space] data_n
 ///
 /// We use this format, instead of XML, because statistics are produced
-/// incrementally and so it's simple and fast to append new data to a
-/// CSV-like file. Note also that it's simple to extract and plot data with
-/// GNU Plot.
+/// incrementally, making it easy and fast to append new data to a CSV-like
+/// file. Additionally, extracting and plotting data with GNU Plot is simple.
 ///
 template<Strategy S>
 void evolution<S>::save_snapshot() const
