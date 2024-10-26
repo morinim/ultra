@@ -9,13 +9,16 @@ add_library(ultra ${FRAMEWORK_SRC})
 
 target_link_libraries(ultra tinyxml2)
 
-#add_custom_command(TARGET ultra POST_BUILD
-#                   COMMAND ../tools/single_include.py --src-include-dir ./ --src-include kernel/ultra.h --dst-include ${CMAKE_CURRENT_BINARY_DIR}/auto_ultra.h
-#				   WORKING_DIRECTORY ${ULTRA_SOURCE_DIR}
-#				   VERBATIM)
+add_custom_command(TARGET ultra POST_BUILD
+                   COMMAND ../tools/single_include.py --src-include-dir ./ --src-include kernel/ultra.h --dst-include ${CMAKE_CURRENT_BINARY_DIR}/auto_ultra.h
+                   WORKING_DIRECTORY ${ULTRA_SOURCE_DIR}
+                   VERBATIM)
 
-#include(GNUInstallDirs)
-#install(TARGETS ultra)
-#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/auto_ultra.h
-#        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#		RENAME ultra.h)
+# Define GNU standard installation directories.
+include(GNUInstallDirs)
+
+# Installation rules for the project.
+install(TARGETS ultra)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/auto_ultra.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        RENAME ultra.h)
