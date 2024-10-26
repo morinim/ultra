@@ -59,9 +59,16 @@ jobs:
     env:
       CC: ${{matrix.config.cc}}
       CXX: ${{matrix.config.cxx}}
-      
+
     steps:
       - uses: actions/checkout@v4
+
+      - uses: libsdl-org/setup-sdl@main
+        id: sdl
+        with:
+          install-linux-dependencies: true
+          version: 2-latest
+          version-sdl-image: 2-latest
 
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
@@ -69,14 +76,14 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Configure CMake (specific generator)
-        if: ${{matrix.config.generator != 'default'}}  
+        if: ${{matrix.config.generator != 'default'}}
         working-directory: ${{github.workspace}}
         run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
         run: cmake --build build/ --config ${{matrix.build_type}}
-          
+
       - name: Test
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.build_type}}
