@@ -63,13 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: libsdl-org/setup-sdl@main
-        id: sdl
-        with:
-          install-linux-dependencies: true
-          version: 2-latest
-          version-sdl-image: 2-latest
-
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
         working-directory: ${{github.workspace}}
