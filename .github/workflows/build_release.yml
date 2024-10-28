@@ -61,10 +61,6 @@ jobs:
       CXX: ${{matrix.config.cxx}}
 
     steps:
-      - uses: github/codeql-action/init@v3
-        with:
-          config-file: ./.github/codeql-config.yml
-
       - uses: actions/checkout@v4
 
       - name: Configure CMake (default generator)
