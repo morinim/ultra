@@ -12,11 +12,14 @@
 
 #include <cassert>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
+
+#include "argh/argh.h"
+#include "utility/log.h"
 
 #include "wopr.h"
 #include "imgui_app.h"
-#include "utility/log.h"
 
 void read_file(const std::filesystem::path &filename)
 {
@@ -53,8 +56,32 @@ void read_file(const std::filesystem::path &filename)
   }
 }
 
-int main()
+std::filesystem::path data_path {"./"};
+
+bool parse_args(int argc, char *argv[])
 {
+  argh::parser cmdl;
+  cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+  if (cmdl(1))
+  {
+    if (std::filesystem::exists(cmdl[1]))
+      data_path = cmdl[1];
+    else
+    {
+      std::cerr << "Data directory doesn't exist\n";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+int main(int argc, char *argv[])
+{
+  if (!parse_args(argc, argv))
+    return EXIT_FAILURE;
+
   imgui_app::program prg{"WOPR"};
 
   const auto render_gui([]
@@ -72,4 +99,6 @@ int main()
   });
 
   prg.run(render_gui, render_arena);
+
+  return EXIT_SUCCESS;
 }
