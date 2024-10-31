@@ -46,12 +46,6 @@ public:
   using fitness_t = evaluator_fitness_t<E>;
   using individual_t = evaluator_individual_t<E>;
 
-  /// Evolution strategy specific log function (it's called by the
-  /// `evolution::log` method).
-  template<Population P> void save_snapshot(
-    const P &, const summary<individual_t, fitness_t> &) const
-  {}
-
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified parameters.
   /// Some evolution strategies force parameters to specific values.
@@ -133,9 +127,6 @@ public:
   template<Population P> void init(P &);
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
-
-  template<Population P> void save_snapshot(
-    const P &, const summary<individual_t, fitness_t> &) const;
 
   static parameters shape(parameters);
 

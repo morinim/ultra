@@ -16,8 +16,8 @@
 #include <future>
 
 #include "kernel/evolution_strategy.h"
-#include "kernel/evolution_summary.h"
 #include "kernel/layered_population.h"
+#include "kernel/search_log.h"
 
 #include "utility/term.h"
 #include "utility/timer.h"
@@ -57,7 +57,6 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
-  void save_snapshot() const;
   void print(bool, std::chrono::milliseconds, timer *) const;
   [[nodiscard]] bool stop_condition() const;
 
@@ -69,6 +68,8 @@ private:
   std::function<bool(unsigned)> shake_ {};
 
   after_generation_callback_t after_generation_callback_ {};
+
+  mutable search_log search_log_ {};
 };
 
 #include "kernel/evolution.tcc"

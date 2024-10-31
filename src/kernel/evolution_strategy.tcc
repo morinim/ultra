@@ -204,62 +204,6 @@ parameters alps_es<E>::shape(parameters params)
   return params;
 }
 
-///
-/// Saves working / statistical informations about layer status.
-///
-/// \param[in] pop complete evolved population
-/// \param[in] sum up to date evolution summary
-///
-/// Used parameters:
-/// * `stat.layers_file` if empty the method will not write any data.
-///
-template<Evaluator E>
-template<Population P>
-void alps_es<E>::save_snapshot(
-  const P &pop, const summary<individual_t, fitness_t> &sum) const
-{
-  Expects(&pop.problem() == &this->get_problem());
-  const auto &params(pop.problem().params);
-
-  if (!params.stat.layers_file.empty())
-    return;
-
-  std::ofstream f_lys(params.stat.dir / params.stat.layers_file,
-                      std::ios_base::app);
-  if (!f_lys.good())
-    return;
-
-  if (sum.generation == 0)
-    f_lys << "\n\n";
-
-  const auto layers(pop.layers());
-  for (std::size_t l(0); l < layers; ++l)
-  {
-    f_lys << sum.generation << ' ' << l << " <";
-
-    if (const auto ma(params.alps.max_age(l, layers));
-        ma == std::numeric_limits<decltype(ma)>::max())
-      f_lys << "inf";
-    else
-      f_lys << ma + 1;
-
-    const auto &current_layer(pop.layer(l));
-
-    const auto &age_dist(sum.az.age_dist(current_layer));
-    const auto &fit_dist(sum.az.fit_dist(current_layer));
-
-    f_lys << ' ' << age_dist.mean()
-          << ' ' << age_dist.standard_deviation()
-          << ' ' << static_cast<unsigned>(age_dist.min())
-          << '-' << static_cast<unsigned>(age_dist.max())
-          << ' ' << fit_dist.mean()
-          << ' ' << fit_dist.standard_deviation()
-          << ' ' << fit_dist.min()
-          << '-' << fit_dist.max()
-          << ' ' << current_layer.size() << '\n';
-  }
-}
-
 template<Evaluator E>
 std_es<E>::std_es(const problem &prob, const E &eva)
   : evolution_strategy<E>(prob, eva),
