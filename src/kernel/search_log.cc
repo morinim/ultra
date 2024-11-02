@@ -29,29 +29,15 @@ bool search_log::open()
     return false;
   }
 
-  if (!dynamic_file_path.empty() && !dynamic_file_path.has_filename())
-  {
-    ultraERROR << "`dynamic_file_path` must specify a file ("
-               << dynamic_file_path << ")";
-    return false;
-  }
-
-  if (!layers_file_path.empty() && !layers_file_path.has_filename())
-  {
-    ultraERROR << "`layers_file_path` must specify a file ("
-               << layers_file_path << ")";
-    return false;
-  }
-
-  if (!population_file_path.empty() && !population_file_path.has_filename())
-  {
-    ultraERROR << "`population_file_path` must specify a file ("
-               << population_file_path << ")";
-    return false;
-  }
-
   if (!dynamic_file_path.empty())
   {
+    if (!dynamic_file_path.has_filename())
+    {
+      ultraERROR << "`dynamic_file_path` must specify a file ("
+                 << dynamic_file_path << ")";
+      return false;
+    }
+
     const auto path(build_path(dynamic_file_path));
     dynamic_file.open(path, std::ios_base::app);
     if (!dynamic_file.is_open())
@@ -63,6 +49,13 @@ bool search_log::open()
 
   if (!population_file_path.empty())
   {
+    if (!population_file_path.has_filename())
+    {
+      ultraERROR << "`population_file_path` must specify a file ("
+                 << population_file_path << ")";
+      return false;
+    }
+
     const auto path(build_path(population_file_path));
     population_file.open(path, std::ios_base::app);
     if (!population_file.is_open())
@@ -74,6 +67,13 @@ bool search_log::open()
 
   if (!layers_file_path.empty())
   {
+    if (!layers_file_path.has_filename())
+    {
+      ultraERROR << "`layers_file_path` must specify a file ("
+                 << layers_file_path << ")";
+      return false;
+    }
+
     const auto path(build_path(layers_file_path));
     layers_file.open(path, std::ios_base::app);
     if (!layers_file.is_open())
