@@ -16,6 +16,7 @@
 #include <stdexcept>
 
 #include "argh/argh.h"
+#include "kernel/search_log.h"
 #include "utility/log.h"
 
 #include "wopr.h"
@@ -56,7 +57,7 @@ void read_file(const std::filesystem::path &filename)
   }
 }
 
-std::filesystem::path data_path {"./"};
+ultra::search_log slog;
 
 bool parse_args(int argc, char *argv[])
 {
@@ -66,7 +67,7 @@ bool parse_args(int argc, char *argv[])
   if (cmdl(1))
   {
     if (std::filesystem::exists(cmdl[1]))
-      data_path = cmdl[1];
+      slog.base_dir = cmdl[1];
     else
     {
       std::cerr << "Data directory doesn't exist\n";
@@ -74,8 +75,49 @@ bool parse_args(int argc, char *argv[])
     }
   }
 
+  const auto build_path([base_dir = slog.base_dir]
+                        (const std::filesystem::path &f,
+                         const std::string &default_filename)
+  {
+    if (f.is_absolute())
+    {
+      if (std::filesystem::exists(f))
+        return f;
+
+      std::cerr << "File " << f << "doesn't exist\n";
+    }
+    else if (!f.empty())
+    {
+      if (const auto bf(base_dir / f); std::filesystem::exists(bf))
+        return bf;
+      else
+        std::cerr << "File " << bf << "doesn't exist\n";
+    }
+    else
+    {
+      if (const auto bf(base_dir / default_filename);
+          std::filesystem::exists(bf))
+        return bf;
+    }
+
+    return std::filesystem::path{};
+  });
+
+  using namespace ultra;
+  slog.dynamic_file_path = build_path(cmdl("dynamic", "").str(),
+                                      search_log::default_dynamic_file);
+  slog.layers_file_path = build_path(cmdl("layers", "").str(),
+                                     search_log::default_layers_file);
+  slog.population_file_path = build_path(cmdl("population", "").str(),
+                                         search_log::default_population_file);
+
+  std::cout << "Dynamic file path: " << slog.dynamic_file_path
+            << "\nLayers file path: " << slog.layers_file_path
+            << "\nPopulation file path: " << slog.population_file_path << '\n';
+
   return true;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -84,9 +126,12 @@ int main(int argc, char *argv[])
 
   imgui_app::program prg{"WOPR"};
 
-  const auto render_gui([]
+  const auto render_dynamic([]
   {
-    ImGui::Begin("Simulation Data");
+    if (slog.dynamic_file_path.empty())
+      return;
+
+    ImGui::Begin("Dynamics");
 
     //if (!ImGui::Button("Pause"))
     //  arena.simulate();
@@ -94,11 +139,11 @@ int main(int argc, char *argv[])
     ImGui::End();
   });
 
-  const auto render_arena([&](imgui_app::program &prg)
+  const auto render_arena([&](imgui_app::program &)
   {
   });
 
-  prg.run(render_gui, render_arena);
+  prg.run(render_dynamic, render_arena);
 
   return EXIT_SUCCESS;
 }
