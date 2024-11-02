@@ -180,31 +180,6 @@ struct parameters
     interval_t<double> weight {0.5, 1.0};
   } de;
 
-  struct statistics
-  {
-    /// A base common path for the log files.
-    /// \note
-    /// A single log file can overwrite this path specifying an absolute path.
-    std::filesystem::path dir {};
-
-    /// Name of the file used to save "real-time" information.
-    /// \note
-    /// An empty string disable logging.
-    std::filesystem::path dynamic_file {};
-
-    /// Name of the log file used to save layer-specific information.
-    /// \note
-    /// An empty string disable logging.
-    std::filesystem::path layers_file {};
-
-    /// Name of the log file used to save population-specific information.
-    /// \note
-    /// An empty string disable logging.
-    /// \warning
-    /// Enabling this log with large populations has a big performance impact.
-    std::filesystem::path population_file {};
-  } stat;
-
   struct cache_parameters
   {
     /// `2^size` is the number of elements of the cache. `0` disables caching.

@@ -48,100 +48,6 @@ bool evolution<S>::stop_condition() const
   return false;
 }
 
-///
-/// Saves working / statistical informations in a log file.
-///
-/// Data are written in a CSV-like fashion and are partitioned in blocks
-/// separated by two blank lines:
-///
-///     [BLOCK_1]\n\n
-///     [BLOCK_2]\n\n
-///     ...
-///     [BLOCK_x]
-///
-/// where each block is a set of lines such as this:
-///
-///     data_1 [space] data_2 [space] ... [space] data_n
-///
-/// We use this format, instead of XML, because statistics are produced
-/// incrementally, making it easy and fast to append new data to a CSV-like
-/// file. Additionally, extracting and plotting data with GNU Plot is simple.
-///
-template<Strategy S>
-void evolution<S>::save_snapshot() const
-{
-  static unsigned run_count(-1);
-
-  if (sum_.generation == 0)
-    ++run_count;
-
-  const auto &params(pop_.problem().params);
-
-  const auto stat_stream([&params](const std::filesystem::path &f)
-                         {
-                           return std::ofstream(params.stat.dir / f,
-                                                std::ios_base::app);
-                         });
-
-  if (!params.stat.dynamic_file.empty())
-  {
-    if (auto f_dyn(stat_stream(params.stat.dynamic_file)); f_dyn.good())
-    {
-      if (sum_.generation == 0)
-        f_dyn << "\n\n";
-
-      f_dyn << run_count << ' ' << sum_.generation;
-
-      const auto best(sum_.best());
-      if (best.ind.empty())
-        f_dyn << " ?";
-      else
-        f_dyn << ' ' << best.fit;
-
-      f_dyn << ' ' << sum_.az.fit_dist().mean()
-            << ' ' << sum_.az.fit_dist().standard_deviation()
-            << ' ' << sum_.az.fit_dist().entropy()
-            << ' ' << sum_.az.fit_dist().min()
-            << ' ' << static_cast<unsigned>(sum_.az.length_dist().mean())
-            << ' ' << sum_.az.length_dist().standard_deviation()
-            << ' ' << static_cast<unsigned>(sum_.az.length_dist().max());
-
-      if (best.ind.empty())
-        f_dyn << " ?";
-      else
-        f_dyn << " \"" << out::in_line << best.ind << '"';
-
-      f_dyn << '\n';
-    }
-    else
-    {
-      ultraWARNING << "Cannot open dynamic file " << params.stat.dynamic_file;
-    }
-  }
-
-  if (!params.stat.population_file.empty())
-  {
-    if (auto f_pop(stat_stream(params.stat.population_file)); f_pop.good())
-    {
-      if (sum_.generation == 0)
-        f_pop << "\n\n";
-
-      for (const auto &f : sum_.az.fit_dist().seen())
-        // f.first: value, f.second: frequency
-        f_pop << run_count << ' ' << sum_.generation << ' '
-              << std::fixed << std::scientific
-              << f.first << ' ' << f.second << '\n';
-    }
-    else
-    {
-      ultraWARNING << "Cannot open population file "
-                   << params.stat.population_file;
-    }
-  }
-
-  es_.save_snapshot(pop_, sum_);
-}
-
 template<Strategy S>
 void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
                          timer *from_last_msg) const
@@ -318,7 +224,7 @@ evolution<S>::run()
     print_and_update_if_better(sum_.best());
 
     sum_.az = analyzer(pop_, es_.evaluator());
-    save_snapshot();
+    search_log_.save_snapshot(pop_, sum_);
 
     es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
     if (after_generation_callback_)
