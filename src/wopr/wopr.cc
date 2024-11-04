@@ -11,16 +11,36 @@
  */
 
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 #include "argh/argh.h"
 #include "kernel/search_log.h"
 #include "utility/log.h"
+#include "utility/ts_queue.h"
 
-#include "wopr.h"
 #include "imgui_app.h"
+
+
+ultra::search_log slog;
+ultra::ts_queue<std::string> buffer_;
+
+struct dynamic_data
+{
+  ultra::fitnd fit_mean;
+  ultra::fitnd fit_std_dev;
+  ultra::fitnd fit_entropy;
+  ultra::fitnd fit_min;
+
+  unsigned len_mean;
+  double len_std_dev;
+  unsigned len_max;
+
+  std::string best_prg;
+};
 
 void read_file(const std::filesystem::path &filename)
 {
@@ -57,8 +77,6 @@ void read_file(const std::filesystem::path &filename)
   }
 }
 
-ultra::search_log slog;
-
 bool parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
@@ -84,14 +102,14 @@ bool parse_args(int argc, char *argv[])
       if (std::filesystem::exists(f))
         return f;
 
-      std::cerr << "File " << f << "doesn't exist\n";
+      std::cerr << "File " << f << " doesn't exist\n";
     }
     else if (!f.empty())
     {
       if (const auto bf(base_dir / f); std::filesystem::exists(bf))
         return bf;
       else
-        std::cerr << "File " << bf << "doesn't exist\n";
+        std::cerr << "File " << bf << " doesn't exist\n";
     }
     else
     {
