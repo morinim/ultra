@@ -79,8 +79,9 @@ TEST_CASE("Serialization")
 {
   using namespace ultra;
 
-  const fitnd f{1.0, 2.0, 3.0,
-                std::numeric_limits<fitnd::value_type>::lowest()};
+  const fitnd f{0.0, 1.0, 2.0,
+                std::numeric_limits<fitnd::value_type>::lowest(),
+                std::numeric_limits<fitnd::value_type>::infinity()};
 
   std::stringstream ss;
 
@@ -90,7 +91,7 @@ TEST_CASE("Serialization")
   CHECK(f2.size() == 0);
   CHECK(load(ss, &f2));
 
-  CHECK(f2.size() == 4);
+  CHECK(f2.size() == f.size());
   CHECK(f == f2);
 }
 

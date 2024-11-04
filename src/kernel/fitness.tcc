@@ -18,13 +18,13 @@
 #define      ULTRA_FITNESS_TCC
 
 template<Fitness F>
-[[nodiscard]] constexpr F lowest()
+[[nodiscard]] constexpr F lowest() noexcept
 {
   return std::numeric_limits<F>::lowest();
 }
 
 template<std::integral F>
-[[nodiscard]] bool isfinite(F)
+[[nodiscard]] bool isfinite(F) noexcept
 {
   return true;
 }
@@ -42,7 +42,7 @@ template<std::floating_point F>
 template<MultiDimFitness F>
 [[nodiscard]] bool isfinite(const F &f)
 {
-  return std::ranges::all_of(f, [](auto v) { return std::isfinite(v); });
+  return std::ranges::all_of(f, [](auto v) { return isfinite(v); });
 }
 
 ///
@@ -147,10 +147,15 @@ template<std::integral F>
 template<MultiDimFitness F>
 [[nodiscard]] bool save(std::ostream &out, const F &f)
 {
-  for (const auto &i : f)
+  if (auto it(f.begin()); it != f.end())
   {
-    save_float_to_stream(out, i);
-    out << ' ';
+    save_float_to_stream(out, *it);
+
+    while (++it != f.end())
+    {
+      out << ' ';
+      save_float_to_stream(out, *it);
+    }
   }
 
   out << '\n';

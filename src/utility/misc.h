@@ -376,22 +376,30 @@ template<std::integral T>
 }
 
 ///
+/// Serialises a floating point value.
+///
 /// \param[out] out the output stream
 /// \param[in]  i   the floating-point value to be saved
 /// \return         a reference to the output stream
 ///
+/// Serialisation uses hexadecimal format for precision and performance:
+/// - no rounding occurs in writing or reading a value formatted in this way;
+/// - reading and writing such values can be faster with a well tuned I/O
+///   library;
+/// - fewer digits are required to represent values exactly.
+///
 template<std::floating_point T>
 std::ostream &save_float_to_stream(std::ostream &out, T i)
 {
-  SAVE_FLAGS(out);
-
-  out << std::fixed << std::scientific
-      << std::setprecision(std::numeric_limits<T>::digits10 + 1)
-      << i;
-
+  /// The `std::hexfloat` format is intended to dump out the exact
+  /// representation of a floating point value so no truncation is performed in
+  /// any way based on any stream setting.
+  out << std::hexfloat << i;
   return out;
 }
 
+///
+/// Deserialises a floating point value.
 ///
 /// \param[in]  in the input stream
 /// \param[out] i  the floating-point value to be loaded
@@ -400,11 +408,8 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 template<std::floating_point T>
 bool load_float_from_stream(std::istream &in, T *i)
 {
-  // This doesn't support `inf` and `NaN`
-  // SAVE_FLAGS(in);
-  //return !!(in >> std::fixed >> std::scientific
-  //             >> std::setprecision(std::numeric_limits<T>::digits10 + 1)
-  //             >> *i);
+  // Do NOT use `in >> std::hexfloat >> *i` for deserialisation (see
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81122).
 
   std::string str;
   if (!(in >> str))
