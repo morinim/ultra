@@ -28,8 +28,6 @@ public:
   static constexpr auto default_layers_file {"layers.txt"};
   static constexpr auto default_population_file {"population.txt"};
 
-  bool open();
-
   template<Population P, Fitness F> void save_snapshot(
     const P &, const summary<std::ranges::range_value_t<P>, F> &);
 
@@ -56,6 +54,8 @@ public:
   std::filesystem::path population_file_path {};
 
 private:
+  bool open();
+
   template<Individual I, Fitness F> void save_dynamic(
     const summary<I, F> &, const distribution<F> &);
   template<Population P, Fitness F> void save_layers(

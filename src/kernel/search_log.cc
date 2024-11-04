@@ -29,7 +29,7 @@ bool search_log::open()
     return false;
   }
 
-  if (!dynamic_file_path.empty())
+  if (!dynamic_file_path.empty() && !dynamic_file.is_open())
   {
     if (!dynamic_file_path.has_filename())
     {
@@ -47,7 +47,7 @@ bool search_log::open()
     }
   }
 
-  if (!population_file_path.empty())
+  if (!population_file_path.empty() && !population_file.is_open())
   {
     if (!population_file_path.has_filename())
     {
@@ -65,7 +65,7 @@ bool search_log::open()
     }
   }
 
-  if (!layers_file_path.empty())
+  if (!layers_file_path.empty() && !layers_file.is_open())
   {
     if (!layers_file_path.has_filename())
     {
