@@ -391,6 +391,8 @@ template<std::integral T>
 template<std::floating_point T>
 std::ostream &save_float_to_stream(std::ostream &out, T i)
 {
+  SAVE_FLAGS(out);
+
   /// The `std::hexfloat` format is intended to dump out the exact
   /// representation of a floating point value so no truncation is performed in
   /// any way based on any stream setting.
@@ -404,6 +406,9 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 /// \param[in]  in the input stream
 /// \param[out] i  the floating-point value to be loaded
 /// \return        `true` if the operation is successful
+///
+/// Supports both decimal and hexadecimal floating point expressions, as well
+/// as infinity and Nan.
 ///
 template<std::floating_point T>
 bool load_float_from_stream(std::istream &in, T *i)
