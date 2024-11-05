@@ -21,50 +21,50 @@ template<Individual I, Fitness F>
 void search_log::save_dynamic(const summary<I, F> &sum,
                               const distribution<F> &fit_dist)
 {
-  if (dynamic_file.is_open())
-  {
-    if (sum.generation == 0)
-      dynamic_file << "\n\n";
+  if (!dynamic_file.is_open())
+    return;
 
-    dynamic_file << sum.generation;
+  if (sum.generation == 0)
+    dynamic_file << "\n\n";
 
-    const auto best(sum.best());
-    if (best.ind.empty())
-      dynamic_file << " ?";
-    else
-      dynamic_file << ' ' << best.fit;
+  dynamic_file << sum.generation;
 
-    const auto length_dist(sum.az.length_dist());
-    dynamic_file << ' ' << fit_dist.mean()
-                 << ' ' << fit_dist.standard_deviation()
-                 << ' ' << fit_dist.entropy()
-                 << ' ' << fit_dist.min()
-                 << ' ' << static_cast<unsigned>(length_dist.mean())
-                 << ' ' << length_dist.standard_deviation()
-                 << ' ' << static_cast<unsigned>(length_dist.max());
+  const auto best(sum.best());
+  if (best.ind.empty())
+    dynamic_file << " ?";
+  else
+    dynamic_file << ' ' << best.fit;
 
-    if (best.ind.empty())
-      dynamic_file << " ?";
-    else
-      dynamic_file << " \"" << out::in_line << best.ind << '"';
+  const auto length_dist(sum.az.length_dist());
+  dynamic_file << ' ' << fit_dist.mean()
+               << ' ' << fit_dist.standard_deviation()
+               << ' ' << fit_dist.entropy()
+               << ' ' << fit_dist.min()
+               << ' ' << static_cast<unsigned>(length_dist.mean())
+               << ' ' << length_dist.standard_deviation()
+               << ' ' << static_cast<unsigned>(length_dist.max());
 
-    dynamic_file << '\n';
-  }
+  if (best.ind.empty())
+    dynamic_file << " ?";
+  else
+    dynamic_file << " \"" << out::in_line << best.ind << '"';
+
+  dynamic_file << '\n';
 }
 
 template<Fitness F>
 void search_log::save_population(unsigned generation,
                                  const distribution<F> &fit_dist)
 {
-  if (population_file.is_open())
-  {
-    if (generation == 0)
-      population_file << "\n\n";
+  if (!population_file.is_open())
+    return;
 
-    for (const auto &[fit, freq] : fit_dist.seen())
-      population_file << generation << ' ' << std::fixed << std::scientific
-                      << fit << ' ' << freq << '\n';
-  }
+  if (generation == 0)
+    population_file << "\n\n";
+
+  for (const auto &[fit, freq] : fit_dist.seen())
+    population_file << generation << ' ' << std::fixed << std::scientific
+                    << fit << ' ' << freq << '\n';
 }
 
 ///
@@ -77,39 +77,39 @@ template<Population P, Fitness F>
 void search_log::save_layers(
   const P &pop, const summary<std::ranges::range_value_t<P>, F> &sum)
 {
+  if (!layers_file.is_open())
+    return;
+
   const auto &params(pop.problem().params);
 
-  if (layers_file.is_open())
+  if (sum.generation == 0)
+    layers_file << "\n\n";
+
+  const auto layers(pop.layers());
+  for (std::size_t l(0); l < layers; ++l)
   {
-    if (sum.generation == 0)
-      layers_file << "\n\n";
+    layers_file << sum.generation << ' ' << l << " <";
 
-    const auto layers(pop.layers());
-    for (std::size_t l(0); l < layers; ++l)
-    {
-      layers_file << sum.generation << ' ' << l << " <";
+    if (const auto ma(params.alps.max_age(l, layers));
+        ma == std::numeric_limits<decltype(ma)>::max())
+      layers_file << "inf";
+    else
+      layers_file << ma + 1;
 
-      if (const auto ma(params.alps.max_age(l, layers));
-          ma == std::numeric_limits<decltype(ma)>::max())
-        layers_file << "inf";
-      else
-        layers_file << ma + 1;
+    const auto &current_layer(pop.layer(l));
 
-      const auto &current_layer(pop.layer(l));
+    const auto &age_dist(sum.az.age_dist(current_layer));
+    const auto &fit_dist(sum.az.fit_dist(current_layer));
 
-      const auto &age_dist(sum.az.age_dist(current_layer));
-      const auto &fit_dist(sum.az.fit_dist(current_layer));
-
-      layers_file << ' ' << age_dist.mean()
-                  << ' ' << age_dist.standard_deviation()
-                  << ' ' << static_cast<unsigned>(age_dist.min())
-                  << '-' << static_cast<unsigned>(age_dist.max())
-                  << ' ' << fit_dist.mean()
-                  << ' ' << fit_dist.standard_deviation()
-                  << ' ' << fit_dist.min()
-                  << '-' << fit_dist.max()
-                  << ' ' << current_layer.size() << '\n';
-    }
+    layers_file << ' ' << age_dist.mean()
+                << ' ' << age_dist.standard_deviation()
+                << ' ' << static_cast<unsigned>(age_dist.min())
+                << '-' << static_cast<unsigned>(age_dist.max())
+                << ' ' << fit_dist.mean()
+                << ' ' << fit_dist.standard_deviation()
+                << ' ' << fit_dist.min()
+                << '-' << fit_dist.max()
+                << ' ' << current_layer.size() << '\n';
   }
 }
 
