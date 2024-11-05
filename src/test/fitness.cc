@@ -75,7 +75,7 @@ TEST_CASE("Comparison")
           fitnd{std::numeric_limits<fitnd::value_type>::infinity()}));
 }
 
-TEST_CASE("Serialization")
+TEST_CASE("Serialisation")
 {
   using namespace ultra;
 
@@ -93,6 +93,53 @@ TEST_CASE("Serialization")
 
   CHECK(f2.size() == f.size());
   CHECK(f == f2);
+}
+
+TEST_CASE("Input/Output")
+{
+  using namespace ultra;
+
+  std::stringstream ss;
+
+  SUBCASE("Multidimensional fitness")
+  {
+    const fitnd f{0.0, 1.0, 2.5,
+                  std::numeric_limits<fitnd::value_type>::infinity()};
+
+    ss << f;
+
+    const auto str(ss.str());
+    CHECK(str == "(0, 1, 2.5, inf)");
+
+    fitnd f1;
+    ss >> f1;
+    CHECK(f1.size() == f.size());
+    CHECK(almost_equal(f1, f));
+  }
+
+  SUBCASE("Scalar fitness")
+  {
+    const auto val(std::numeric_limits<fitnd::value_type>::lowest());
+    const fitnd f{val};
+    ss << f;
+
+    // Value between parentheses.
+    const auto str(ss.str());
+    CHECK(str.front() == '(');
+    CHECK(str.back() == ')');
+
+    fitnd f1;
+    ss >> f1;
+    CHECK(f1.size() == f.size());
+    CHECK(almost_equal(f1, f));
+
+    // Value without parentheses.
+    ss << val;
+    fitnd f2;
+    ss >> f2;
+    CHECK(f2.size() == f.size());
+    CHECK(almost_equal(f2, f));
+  }
 }
 
 TEST_CASE("Operators")

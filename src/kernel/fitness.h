@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -143,6 +143,7 @@ private:
 [[nodiscard]] fitnd sqrt(fitnd);
 [[nodiscard]] fitnd combine(const fitnd &, const fitnd &);
 std::ostream &operator<<(std::ostream &, const fitnd &);
+std::istream &operator>>(std::istream &, fitnd &);
 
 #include "kernel/fitness.tcc"
 

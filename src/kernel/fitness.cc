@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -110,6 +110,8 @@ fitnd::const_iterator fitnd::end() const
 }
 
 ///
+/// Deserialises a `fitnd` value.
+///
 /// \param[in]  in input stream
 /// \param[out] f  load the fitness here
 /// \return       `true` if the object has been loaded correctly
@@ -136,7 +138,14 @@ bool load(std::istream &in, fitnd *f)
 }
 
 ///
-/// Standard output operator for fitnd.
+/// Standard output operator for `fitnd`.
+///
+/// \param[out] o output stream to print data to
+/// \param[in]  f constant reference to a fitness to insert
+/// \return       `o`
+///
+/// This function is used for displaying values / debugging. For serialisation
+/// use the `save` function.
 ///
 /// \relates fitnd
 ///
@@ -144,15 +153,51 @@ std::ostream &operator<<(std::ostream &o, const fitnd &f)
 {
   o << '(';
 
-  if (f.begin() != f.end())
+  if (auto it(f.begin()); it != f.end())
   {
-    o << *f.begin();
+    o << *it;
 
-    for (auto it(std::next(f.begin())); it != f.end(); ++it)
+    while (++it != f.end())
       o << ", " << *it;
   }
 
   return o << ')';
+}
+
+///
+/// Standard input operator for `fitnd`.
+///
+/// \param[in]  in a character input stream
+/// \param[out] f  a fitness to be extracted
+/// \return        `in`
+///
+/// \warning
+/// For deserialisation use the `load` function.
+///
+/// \relates fitnd
+///
+std::istream &operator>>(std::istream &in, fitnd &f)
+{
+  in >> std::ws;
+
+  std::string values;
+
+  if (in.peek() == '(')
+  {
+    in.get();  // discards the open parenthesis
+
+    std::getline(in >> std::ws, values, ')');
+    std::ranges::replace(values, ',', ' ');
+
+  }
+  else
+    in >> values;
+
+  fitnd tmp;
+  if (std::istringstream ss(values); load(ss, &tmp))
+    f = tmp;
+
+  return in;
 }
 
 ///
