@@ -52,6 +52,7 @@ public:
   summary<individual_t, fitness_t> run();
 
   evolution &after_generation(after_generation_callback_t);
+  evolution &logger(const search_log &);
   evolution &shake_function(const std::function<bool(unsigned)> &);
 
   [[nodiscard]] bool is_valid() const;

@@ -86,6 +86,24 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
 }
 
 ///
+/// Sets the search/evolution logger.
+///
+/// \param[in] sl logger
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// \remark
+/// Logger must be set before calling `run`. The default setting doesn't
+/// provide for data logging.
+///
+template<Strategy S>
+evolution<S> &evolution<S>::logger(const search_log &sl)
+{
+  search_log_ = sl;
+  return *this;
+}
+
+///
 /// Sets the shake function.
 ///
 /// \param[in] f the shaking function
