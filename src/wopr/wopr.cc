@@ -18,6 +18,7 @@
 #include <stdexcept>
 
 #include "argh/argh.h"
+#include "kernel/exceptions.h"
 #include "kernel/search_log.h"
 #include "utility/log.h"
 #include "utility/ts_queue.h"
@@ -26,27 +27,55 @@
 
 
 ultra::search_log slog;
-ultra::ts_queue<std::string> buffer_;
 
 struct dynamic_data
 {
-  ultra::fitnd fit_mean;
-  ultra::fitnd fit_std_dev;
-  ultra::fitnd fit_entropy;
-  ultra::fitnd fit_min;
+  explicit dynamic_data(const std::string &);
 
-  unsigned len_mean;
-  double len_std_dev;
-  unsigned len_max;
+  bool new_run {false};
+  unsigned generation {0};
 
-  std::string best_prg;
+  ultra::fitnd fit_best {};
+  ultra::fitnd fit_mean {};
+  ultra::fitnd fit_std_dev {};
+  ultra::fitnd fit_entropy {};
+  ultra::fitnd fit_min {};
+
+  unsigned len_mean {};
+  double len_std_dev {};
+  unsigned len_max {};
+
+  std::string best_prg {};
 };
 
-void read_file(const std::filesystem::path &filename)
+dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
+{
+  if (new_run)
+  {
+    std::istringstream ss(line);
+    if (!(ss >> generation)
+        || !(ss >> fit_best)
+        || !(ss >> fit_mean)
+        || !(ss >> fit_std_dev)
+        || !(ss >> fit_best)
+        || !(ss >> fit_entropy)
+        || !(ss >> fit_min)
+        || !(ss >> len_mean)
+        || !(ss >> len_std_dev)
+        || !(ss >> len_max)
+        || !std::getline(ss, best_prg))
+      throw ultra::exception::data_format("Cannot parse dynamic file line");
+  }
+}
+
+ultra::ts_queue<dynamic_data> dynamic_queue;
+
+void read_file(const std::filesystem::path &filename,
+               ultra::ts_queue<std::string> &buffer)
 {
   std::ifstream file(filename);
   if (!file)
-      throw std::runtime_error("Failed to open file for reading.");
+    throw std::runtime_error("Failed to open file for reading");
 
   std::streampos position(0);
 
@@ -64,7 +93,7 @@ void read_file(const std::filesystem::path &filename)
         // Update the position for the next read.
         position = file.tellg();
 
-        buffer_.push(line);
+        buffer.push(line);
       }
 
     if (file.bad())
@@ -74,6 +103,23 @@ void read_file(const std::filesystem::path &filename)
 
     // Small delay before checking for new data.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
+void get_data()
+{
+  assert(!slog.dynamic_file_path.empty() || !slog.layers_file_path.empty()
+         || !slog.population_file_path.empty());
+
+  ultra::ts_queue<std::string> dynamic_buffer;
+  if (!slog.dynamic_file_path.empty())
+    std::jthread read_dynamic(read_file, slog.dynamic_file_path,
+                              std::ref(dynamic_buffer));
+
+  while (true)
+  {
+    if (const auto line(dynamic_buffer.try_pop()); line)
+      dynamic_queue.push(dynamic_data(*line));
   }
 }
 
@@ -136,11 +182,22 @@ bool parse_args(int argc, char *argv[])
   return true;
 }
 
-
 int main(int argc, char *argv[])
 {
   if (!parse_args(argc, argv))
+  {
+    std::cerr << "Cannot parse command line\n";
     return EXIT_FAILURE;
+  }
+
+  if (slog.dynamic_file_path.empty() && slog.layers_file_path.empty()
+      && slog.population_file_path.empty())
+  {
+    std::cerr << "No data file available\n";
+    return EXIT_FAILURE;
+  }
+
+  std::jthread t_data(get_data);
 
   imgui_app::program prg{"WOPR"};
 
