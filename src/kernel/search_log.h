@@ -62,9 +62,9 @@ private:
     const P &, const summary<std::ranges::range_value_t<P>, F> &);
   template<Fitness F> void save_population(unsigned, const distribution<F> &);
 
-  std::ofstream dynamic_file;
-  std::ofstream layers_file;
-  std::ofstream population_file;
+  ignore_copy<std::ofstream> dynamic_file;
+  ignore_copy<std::ofstream> layers_file;
+  ignore_copy<std::ofstream> population_file;
 };  // search_log
 
 #include "kernel/search_log.tcc"
