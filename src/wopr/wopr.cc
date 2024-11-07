@@ -69,6 +69,7 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 }
 
 ultra::ts_queue<dynamic_data> dynamic_queue;
+std::vector<std::vector<dynamic_data>> dynamic_sequences;
 
 void read_file(const std::filesystem::path &filename,
                ultra::ts_queue<std::string> &buffer)
@@ -210,6 +211,17 @@ int main(int argc, char *argv[])
 
     //if (!ImGui::Button("Pause"))
     //  arena.simulate();
+
+    if (const auto data(dynamic_queue.try_pop()); data)
+    {
+      if (data->new_run)
+        dynamic_sequences.push_back({});
+      else
+        dynamic_sequences.back().push_back(*data);
+
+      //std::vector<double> fit;
+      //Imgui::PlotLines("Fitness", );
+    }
 
     ImGui::End();
   });
