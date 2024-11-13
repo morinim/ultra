@@ -71,7 +71,8 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 ultra::ts_queue<dynamic_data> dynamic_queue;
 std::vector<std::vector<dynamic_data>> dynamic_sequences;
 
-void read_file(const std::filesystem::path &filename,
+void read_file(std::stop_token stoken,
+               const std::filesystem::path &filename,
                ultra::ts_queue<std::string> &buffer)
 {
   std::ifstream file(filename);
@@ -80,7 +81,7 @@ void read_file(const std::filesystem::path &filename,
 
   std::streampos position(0);
 
-  while (true)
+  while (!stoken.stop_requested())
   {
     std::string line;
 
@@ -107,7 +108,7 @@ void read_file(const std::filesystem::path &filename,
   }
 }
 
-void get_data()
+void get_data(std::stop_token stoken)
 {
   assert(!slog.dynamic_file_path.empty() || !slog.layers_file_path.empty()
          || !slog.population_file_path.empty());
@@ -117,7 +118,7 @@ void get_data()
     std::jthread read_dynamic(read_file, slog.dynamic_file_path,
                               std::ref(dynamic_buffer));
 
-  while (true)
+  while (!stoken.stop_requested())
   {
     if (const auto line(dynamic_buffer.try_pop()); line)
       dynamic_queue.push(dynamic_data(*line));
