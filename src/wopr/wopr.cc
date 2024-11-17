@@ -50,7 +50,7 @@ struct dynamic_data
 
 dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 {
-  if (new_run)
+  if (!new_run)
   {
     std::istringstream ss(line);
     if (!(ss >> generation)
@@ -69,7 +69,8 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 }
 
 ultra::ts_queue<dynamic_data> dynamic_queue;
-std::vector<std::vector<dynamic_data>> dynamic_sequences;
+
+std::vector<std::vector<float>> implot_fit_best;
 
 void read_file(std::stop_token stoken,
                const std::filesystem::path &filename,
@@ -92,9 +93,7 @@ void read_file(std::stop_token stoken,
     while (std::getline(file, line))
       if (!file.eof())
       {
-        // Update the position for the next read.
-        position = file.tellg();
-
+        position = file.tellg();  // update the position for the next read
         buffer.push(line);
       }
 
@@ -113,10 +112,11 @@ void get_data(std::stop_token stoken)
   assert(!slog.dynamic_file_path.empty() || !slog.layers_file_path.empty()
          || !slog.population_file_path.empty());
 
+  std::jthread read_dynamic;
   ultra::ts_queue<std::string> dynamic_buffer;
   if (!slog.dynamic_file_path.empty())
-    std::jthread read_dynamic(read_file, slog.dynamic_file_path,
-                              std::ref(dynamic_buffer));
+    read_dynamic = std::jthread(read_file, slog.dynamic_file_path,
+                                std::ref(dynamic_buffer));
 
   while (!stoken.stop_requested())
   {
@@ -216,12 +216,21 @@ int main(int argc, char *argv[])
     if (const auto data(dynamic_queue.try_pop()); data)
     {
       if (data->new_run)
-        dynamic_sequences.push_back({});
+      {
+        // Skip multiple empty lines.
+        if (implot_fit_best.empty() || implot_fit_best.back().size())
+          implot_fit_best.push_back({});
+      }
       else
-        dynamic_sequences.back().push_back(*data);
+        implot_fit_best.back().push_back(data->fit_best[0]);
+    }
 
-      //std::vector<double> fit;
-      //Imgui::PlotLines("Fitness", );
+    for (std::size_t run(0); run < implot_fit_best.size(); ++run)
+    {
+      const std::string run_string("Run " + std::to_string(run));
+      if (ImGui::CollapsingHeader(run_string.c_str()))
+        ImGui::PlotLines("Fitness", implot_fit_best[run].data(),
+                         implot_fit_best[run].size());
     }
 
     ImGui::End();
