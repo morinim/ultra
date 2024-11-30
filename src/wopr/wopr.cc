@@ -57,7 +57,6 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
         || !(ss >> fit_best)
         || !(ss >> fit_mean)
         || !(ss >> fit_std_dev)
-        || !(ss >> fit_best)
         || !(ss >> fit_entropy)
         || !(ss >> fit_min)
         || !(ss >> len_mean)
@@ -70,7 +69,38 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 
 ultra::ts_queue<dynamic_data> dynamic_queue;
 
-std::vector<std::vector<float>> implot_fit_best;
+struct dynamic_sequence
+{
+  std::vector<float> xs {};
+  std::vector<float> fit_best {};
+  std::vector<float> fit_mean {};
+  std::vector<float> fit_std_dev {};
+
+  [[nodiscard]] std::size_t size() const { return xs.size(); }
+
+  void push_back(const dynamic_data &dd)
+  {
+    xs.push_back(xs.size());
+    fit_best.push_back(dd.fit_best[0]);
+    fit_mean.push_back(dd.fit_mean[0]);
+    fit_std_dev.push_back(dd.fit_std_dev[0]);
+  }
+};
+
+struct run_sequence
+{
+  dynamic_sequence ds {};
+
+  [[nodiscard]] bool empty() const { return ds.xs.empty(); }
+  [[nodiscard]] std::size_t size() const { return ds.size(); }
+
+  void push_back(const dynamic_data &dd)
+  {
+    ds.push_back(dd);
+  }
+};
+
+std::vector<run_sequence> plot_data;
 
 void read_file(std::stop_token stoken,
                const std::filesystem::path &filename,
@@ -123,6 +153,62 @@ void get_data(std::stop_token stoken)
     if (const auto line(dynamic_buffer.try_pop()); line)
       dynamic_queue.push(dynamic_data(*line));
   }
+}
+
+void render()
+{
+  if (slog.dynamic_file_path.empty())
+    return;
+
+  ImGui::Begin("Dynamics");
+
+  //if (!ImGui::Button("Pause"))
+  //  arena.simulate();
+
+  if (const auto data(dynamic_queue.try_pop()); data)
+  {
+    if (data->new_run)
+    {
+      // Skip multiple empty lines.
+      if (plot_data.empty() || !plot_data.back().empty())
+        plot_data.push_back({});
+    }
+    else
+      plot_data.back().push_back(*data);
+  }
+
+  for (std::size_t run(0); run < plot_data.size(); ++run)
+  {
+    const std::string run_string("Run " + std::to_string(run));
+    if (ImGui::CollapsingHeader(run_string.c_str()))
+    {
+      //ImGui::PlotLines("Fitness", plot_data[run].ds.fit_best.data(),
+      //                 plot_data[run].ds.size());
+      if (ImPlot::BeginPlot("Fitness"))
+      {
+        const auto &pdr(plot_data[run]);
+        const auto &xs(pdr.ds.xs);
+
+        //ImPlot::SetupAxesLimits(0, plot_data[run].size(),
+        //                        plot_data[run].ds.seq_min,
+        //                        plot_data[run].ds.seq_max);
+        ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
+        ImPlot::PlotErrorBars("Line",
+                              xs.data(),
+                              pdr.ds.fit_mean.data(),
+                              pdr.ds.fit_std_dev.data(),
+                              xs.size());
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+        ImPlot::PlotLine("Line",
+                         xs.data(),
+                         pdr.ds.fit_mean.data(),
+                         xs.size());
+        ImPlot::EndPlot();
+      }
+    }
+  }
+
+  ImGui::End();
 }
 
 bool parse_args(int argc, char *argv[])
@@ -203,44 +289,7 @@ int main(int argc, char *argv[])
 
   imgui_app::program prg{"WOPR"};
 
-  const auto render_dynamic([]
-  {
-    if (slog.dynamic_file_path.empty())
-      return;
-
-    ImGui::Begin("Dynamics");
-
-    //if (!ImGui::Button("Pause"))
-    //  arena.simulate();
-
-    if (const auto data(dynamic_queue.try_pop()); data)
-    {
-      if (data->new_run)
-      {
-        // Skip multiple empty lines.
-        if (implot_fit_best.empty() || implot_fit_best.back().size())
-          implot_fit_best.push_back({});
-      }
-      else
-        implot_fit_best.back().push_back(data->fit_best[0]);
-    }
-
-    for (std::size_t run(0); run < implot_fit_best.size(); ++run)
-    {
-      const std::string run_string("Run " + std::to_string(run));
-      if (ImGui::CollapsingHeader(run_string.c_str()))
-        ImGui::PlotLines("Fitness", implot_fit_best[run].data(),
-                         implot_fit_best[run].size());
-    }
-
-    ImGui::End();
-  });
-
-  const auto render_arena([&](imgui_app::program &)
-  {
-  });
-
-  prg.run(render_dynamic, render_arena);
+  prg.run(render);
 
   return EXIT_SUCCESS;
 }

@@ -24,6 +24,8 @@
 #include "imgui/backends/imgui_impl_sdl2.h"
 #include "imgui/backends/imgui_impl_sdlrenderer2.h"
 
+#include "implot/implot.h"
+
 namespace imgui_app
 {
 
@@ -91,7 +93,7 @@ public:
   program &operator=(program) = delete;
   program& operator=(program &&) = delete;
 
-  void run(std::function<void()>, std::function<void(program &)>);
+  void run(std::function<void()>);
   void stop();
 
   window &get_window() { return *window_; }

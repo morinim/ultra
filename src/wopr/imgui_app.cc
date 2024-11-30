@@ -79,17 +79,18 @@ program::~program()
 {
   ImGui_ImplSDLRenderer2_Shutdown();
   ImGui_ImplSDL2_Shutdown();
+  ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
   SDL_Quit();
 }
 
-void program::run(std::function<void ()> render_gui,
-                  std::function<void (program &)> render_arena)
+void program::run(std::function<void ()> render_gui)
 {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   ImGuiIO &io(ImGui::GetIO());
 
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -176,18 +177,14 @@ void program::run(std::function<void ()> render_gui,
 
     // Rendering
     ImGui::Render();
-
     SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
                            SDL_ALPHA_OPAQUE);
     SDL_RenderClear(window_->get_native_renderer());
 
-    render_arena(*this);
-
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(),
                                           window_->get_native_renderer());
 
-    SDL_RenderPresent(window_->get_native_renderer());
-  }
+    SDL_RenderPresent(window_->get_native_renderer());  }
 }
 
 SDL_Rect program::free_area() const
