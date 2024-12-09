@@ -11,7 +11,7 @@
 
 There is an ongoing transfer process from Vita. However, many features are available and fully functional.
 
-Compared to Vita, this framework a major breakthrough but it isn't production-ready yet ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
+Compared to Vita, this framework is a major breakthrough but it isn't production-ready yet ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
 
 ## OVERVIEW
 
