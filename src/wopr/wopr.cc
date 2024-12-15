@@ -177,32 +177,52 @@ void render()
       plot_data.back().push_back(*data);
   }
 
-  for (std::size_t run(0); run < plot_data.size(); ++run)
+  static bool show_best = true;
+
+  for (std::size_t run(plot_data.size()); run--;)
   {
+    if (run == plot_data.size() - 1)
+      ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
     const std::string run_string("Run " + std::to_string(run));
     if (ImGui::CollapsingHeader(run_string.c_str()))
     {
-      //ImGui::PlotLines("Fitness", plot_data[run].ds.fit_best.data(),
-      //                 plot_data[run].ds.size());
+      ImGui::Checkbox("Best", &show_best);
+      //ImGui::SameLine();
+
       if (ImPlot::BeginPlot("Fitness"))
       {
         const auto &pdr(plot_data[run]);
         const auto &xs(pdr.ds.xs);
 
-        //ImPlot::SetupAxesLimits(0, plot_data[run].size(),
-        //                        plot_data[run].ds.seq_min,
-        //                        plot_data[run].ds.seq_max);
+        ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+        ImPlot::SetupAxes(
+          "Generation", "Fit",
+          ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
+          ImPlotAxisFlags_AutoFit);
+
         ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-        ImPlot::PlotErrorBars("Line",
+        ImPlot::PlotErrorBars("Avg & StdDev",
                               xs.data(),
                               pdr.ds.fit_mean.data(),
                               pdr.ds.fit_std_dev.data(),
                               xs.size());
         ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-        ImPlot::PlotLine("Line",
+        ImPlot::PlotLine("Avg & StdDev",
                          xs.data(),
                          pdr.ds.fit_mean.data(),
                          xs.size());
+
+        if (show_best)
+        {
+          ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+          ImPlot::PlotLine("Best",
+                           xs.data(),
+                           pdr.ds.fit_best.data(),
+                           xs.size());
+        }
+
         ImPlot::EndPlot();
       }
     }
