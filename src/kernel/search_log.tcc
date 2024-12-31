@@ -88,11 +88,11 @@ void search_log::save_layers(
   const auto layers(pop.layers());
   for (std::size_t l(0); l < layers; ++l)
   {
-    layers_file << sum.generation << ' ' << l << " <";
+    layers_file << sum.generation << ' ' << l << ' ';
 
     if (const auto ma(params.alps.max_age(l, layers));
         ma == std::numeric_limits<decltype(ma)>::max())
-      layers_file << "inf";
+      layers_file << '0';
     else
       layers_file << ma + 1;
 
@@ -104,11 +104,11 @@ void search_log::save_layers(
     layers_file << ' ' << age_dist.mean()
                 << ' ' << age_dist.standard_deviation()
                 << ' ' << static_cast<unsigned>(age_dist.min())
-                << '-' << static_cast<unsigned>(age_dist.max())
+                << ' ' << static_cast<unsigned>(age_dist.max())
                 << ' ' << fit_dist.mean()
                 << ' ' << fit_dist.standard_deviation()
                 << ' ' << fit_dist.min()
-                << '-' << fit_dist.max()
+                << ' ' << fit_dist.max()
                 << ' ' << current_layer.size() << '\n';
   }
 }

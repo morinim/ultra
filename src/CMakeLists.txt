@@ -51,8 +51,14 @@ include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party)
 # Recurse into the following subdirectories (this does not actually cause
 # another cmake executable to run. The same process will walk through the
 # project's entire directory structure).
-add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/tinyxml2)
 add_subdirectory(kernel)
 add_subdirectory(examples)
 add_subdirectory(test)
+
+find_package(SDL2 CONFIG COMPONENTS SDL2)
+if (SDL2_FOUND)
+  add_subdirectory(third_party/imgui)
+  add_subdirectory(third_party/implot)
+  add_subdirectory(wopr)
+endif()
