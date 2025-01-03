@@ -133,6 +133,9 @@ struct population_sequence
 {
   std::vector<double> fit {};
   std::vector<double> freq {};
+
+  std::vector<double> fit_entropy {};
+
   unsigned generation {0};
 
   [[nodiscard]] bool empty() const { return fit.empty(); }
@@ -142,12 +145,38 @@ struct population_sequence
   {
     if (generation < pd.generation)
     {
-      *this = {};
+      fit_entropy.push_back(calculate_entropy());
+
+      fit = {};
+      freq = {};
+
       generation = pd.generation;
     }
 
     fit.push_back(pd.fit[0]);
     freq.push_back(pd.freq);
+  }
+
+  // Returns the entropy of the distribution.
+  //
+  // \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
+  //
+  // Offline algorithm: https://en.wikipedia.org/wiki/Online_algorithm.
+  [[nodiscard]] double calculate_entropy() const
+  {
+    const double c(1.0 / std::log(2.0));
+
+    const auto pop_size(std::accumulate(freq.begin(), freq.end(), 0.0));
+
+    double h(0.0);
+    for (auto x : freq)
+    {
+      const auto p(x / pop_size);
+
+      h -= p * std::log(p) * c;
+    }
+
+    return h;
   }
 };
 
@@ -409,10 +438,10 @@ void render_dynamic()
     const std::string run_string("Run " + std::to_string(run));
     if (ImGui::CollapsingHeader(run_string.c_str()))
     {
-      if (ImPlot::BeginPlot("Fitness dynamic", ImVec2(-1, 0)))
-      {
-        const auto &xs(dr.xs);
+      const auto &xs(dr.xs);
 
+      if (ImPlot::BeginPlot("Fitness dynamic"))
+      {
         ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
 
         ImPlot::SetupAxes(
@@ -486,25 +515,61 @@ void render_population()
     {
       const auto &pr(population_runs[run]);
 
-      const std::string title("Population - Generation "
-                              + std::to_string(pr.generation));
-      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, 0), ImPlotFlags_NoLegend))
+      if (ImGui::BeginTabBar("PopulationTabBar"))
       {
-        ImPlot::SetupAxes("Fitness", "Individuals",
-                          ImPlotAxisFlags_AutoFit,
-                          ImPlotAxisFlags_AutoFit);
+        if (ImGui::BeginTabItem("Scattered plot"))
+        {
+          const std::string title("Population at generation "
+                                  + std::to_string(pr.generation));
+          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, 0),
+                                ImPlotFlags_NoLegend))
+          {
+            ImPlot::SetupAxes("Fitness", "Individuals",
+                              ImPlotAxisFlags_AutoFit,
+                              ImPlotAxisFlags_AutoFit);
 
-        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-        ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 6,
-                                   ImPlot::GetColormapColor(1), IMPLOT_AUTO,
-                                   ImPlot::GetColormapColor(1));
+            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 6,
+                                       ImPlot::GetColormapColor(1), IMPLOT_AUTO,
+                                       ImPlot::GetColormapColor(1));
 
-        ImPlot::PlotScatter("Distribution",
-                            pr.fit.data(), pr.freq.data(),
-                            pr.size());
+            ImPlot::PlotScatter("Distribution",
+                                pr.fit.data(), pr.freq.data(),
+                                pr.size());
 
-        ImPlot::PopStyleVar();
-        ImPlot::EndPlot();
+            ImPlot::PopStyleVar();
+            ImPlot::EndPlot();
+          }
+
+          ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Population entropy"))
+        {
+          if (ImPlot::BeginPlot("", ImVec2(-1, 0),
+                                ImPlotFlags_NoLegend))
+          {
+            std::vector<double> xs(pr.fit_entropy.size());
+            std::iota(xs.begin(), xs.end(), 0.0);
+
+            ImPlot::SetupAxes("Generation", "Entropy",
+                              ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+            ImPlot::PlotShaded("Entropy", xs.data(),
+                               pr.fit_entropy.data(), xs.size(),
+                               -std::numeric_limits<double>::infinity());
+            ImPlot::PlotLine("Entropy", xs.data(), pr.fit_entropy.data(),
+                             xs.size());
+            ImPlot::PopStyleVar();
+
+            ImPlot::EndPlot();
+          }
+
+          ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
       }
     }
   }
