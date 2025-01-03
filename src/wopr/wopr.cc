@@ -27,7 +27,8 @@
 #include "imgui_app.h"
 
 
-ultra::search_log slog;
+ultra::search_log slog {};
+bool imgui_demo_panel{false};
 
 /*********************************************************************
  * Dynamic file - related data structures
@@ -408,7 +409,7 @@ void render_dynamic()
     const std::string run_string("Run " + std::to_string(run));
     if (ImGui::CollapsingHeader(run_string.c_str()))
     {
-      if (ImPlot::BeginPlot("Fitness dynamic"))
+      if (ImPlot::BeginPlot("Fitness dynamic", ImVec2(-1, 0)))
       {
         const auto &xs(dr.xs);
 
@@ -773,12 +774,12 @@ void render(const imgui_app::program &prg)
 bool parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
-  cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+  cmdl.parse(argc, argv);
 
-  if (cmdl(1))
+  if (const auto &pos_args(cmdl.pos_args()); pos_args.size() > 1)
   {
-    if (std::filesystem::exists(cmdl[1]))
-      slog.base_dir = cmdl[1];
+    if (std::filesystem::exists(pos_args.back()))
+      slog.base_dir = pos_args.back();
     else
     {
       std::cerr << "Data directory doesn't exist\n";
@@ -826,6 +827,8 @@ bool parse_args(int argc, char *argv[])
             << "\nLayers file path: " << slog.layers_file_path
             << "\nPopulation file path: " << slog.population_file_path << '\n';
 
+  imgui_demo_panel = cmdl["imguidemo"];
+
   return true;
 }
 
@@ -852,7 +855,8 @@ void cmdl_usage()
     << "\n\n"
     << "            `path` can refer either to a specific file or to a\n"
     << "            directory; in the latter case, the default filenames are\n"
-    << "            used."
+    << "            used.\n"
+    << "-imguidemo"
     << "\n\n"
     << "SHALL WE PLAY A GAME?\n\n";
 }
@@ -878,8 +882,10 @@ int main(int argc, char *argv[])
 
   std::jthread t_data(get_data);
 
-  imgui_app::program prg{"WOPR"};
-
+  imgui_app::program::settings settings;
+  settings.window.title = "WOPR";
+  settings.demo = imgui_demo_panel;
+  imgui_app::program prg(settings);
   prg.run(render);
 
   return EXIT_SUCCESS;

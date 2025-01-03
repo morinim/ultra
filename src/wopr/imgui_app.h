@@ -41,8 +41,9 @@ public:
   struct settings
   {
     std::string title {};
-    int width     {1000};
-    int height     {720};
+
+    int width  {1000};
+    int height  {720};
   };
 
   explicit window(const settings &settings);
@@ -85,7 +86,14 @@ namespace resources
 class program
 {
 public:
-  explicit program(const std::string &);
+  struct settings
+  {
+    window::settings window {};
+
+    bool demo {false};
+  };
+
+  explicit program(const settings &);
   ~program();
 
   program(const program &) = delete;
@@ -107,6 +115,8 @@ public:
 
  private:
   std::unique_ptr<window> window_ {nullptr};
+
+  settings settings_ {};
 
   int menu_height_ {0};
 

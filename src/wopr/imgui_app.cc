@@ -64,7 +64,7 @@ SDL_Renderer *window::get_native_renderer() const
   return renderer_;
 }
 
-program::program(const std::string &title)
+program::program(const settings &s) : settings_(s)
 {
   const unsigned flags(SDL_INIT_VIDEO | SDL_INIT_TIMER
                        | SDL_INIT_GAMECONTROLLER);
@@ -72,7 +72,7 @@ program::program(const std::string &title)
   if (SDL_Init(flags) != 0)
     throw std::runtime_error(SDL_GetError());
 
-  window_ = std::make_unique<window>(window::settings{title});
+  window_ = std::make_unique<window>(settings_.window);
 }
 
 program::~program()
@@ -157,7 +157,8 @@ void program::run(std::function<void (const program &)> render_main)
         if (ImGui::BeginMenu("View"))
         {
           ImGui::MenuItem("Main", nullptr, &show_main_panel_);
-          ImGui::MenuItem("ImGui Demo Panel", nullptr, &show_demo_panel_);
+          if (settings_.demo)
+            ImGui::MenuItem("ImGui Demo Panel", nullptr, &show_demo_panel_);
           ImGui::EndMenu();
         }
 
