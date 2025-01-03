@@ -667,14 +667,14 @@ void render_layers_age()
 
       std::vector<unsigned> ys(lr.size());
       std::vector<ultra::individual::age_t> bottom(lr.size()), mean(lr.size()),
-        top(lr.size());
+                                            top(lr.size());
 
       for (std::size_t layer(0); layer < lr.size(); ++layer)
       {
         ys[layer] = layer;
-        bottom[layer] = lr.age_mean[layer] - lr.age_min[layer];
-        top[layer] = lr.age_max[layer] - lr.age_mean[layer];
-        mean[layer] = lr.age_mean[layer];
+        mean[layer] = static_cast<ultra::individual::age_t>(lr.age_mean[layer]);
+        bottom[layer] = mean[layer] - lr.age_min[layer];
+        top[layer] = lr.age_max[layer] - mean[layer];
       }
 
       const std::string title("Age by layer - Generation "
@@ -692,6 +692,8 @@ void render_layers_age()
                               ImPlotErrorBarsFlags_Horizontal);
         ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
                             ys.size());
+        ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(),
+                             ys.size());
         ImPlot::EndPlot();
       }
     }
