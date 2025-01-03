@@ -101,7 +101,7 @@ public:
   program &operator=(program) = delete;
   program& operator=(program &&) = delete;
 
-  void run(std::function<void(const program &)>);
+  void run(std::function<void(const program &, bool *)>);
   void stop();
 
   window &get_window() { return *window_; }

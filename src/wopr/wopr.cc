@@ -698,7 +698,7 @@ void render_layers_age()
   }
 }
 
-void render(const imgui_app::program &prg)
+void render(const imgui_app::program &prg, bool *p_open)
 {
   static bool show_dynamic(true);
   static bool show_population(true);
@@ -708,7 +708,7 @@ void render(const imgui_app::program &prg)
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y)/*, ImGuiCond_Once*/);
   ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h)/*, ImGuiCond_Once*/);
-  if (ImGui::Begin("Main"))
+  if (ImGui::Begin("Main", p_open))
   {
     ImGui::Checkbox("Dynamic", &show_dynamic);
     ImGui::SameLine();

@@ -85,7 +85,7 @@ program::~program()
   SDL_Quit();
 }
 
-void program::run(std::function<void (const program &)> render_main)
+void program::run(std::function<void (const program &, bool *)> render_main)
 {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -169,7 +169,7 @@ void program::run(std::function<void (const program &)> render_main)
 
       // Whatever GUI to implement here ...
       if (show_main_panel_)
-        render_main(*this);
+        render_main(*this, &show_main_panel_);
 
       // ImGUI demo panel
       if (show_demo_panel_)
