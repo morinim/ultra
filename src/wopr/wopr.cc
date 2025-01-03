@@ -757,6 +757,16 @@ void render_layers_age()
                             ys.size());
         ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(),
                              ys.size());
+
+        for (std::size_t layer(0); layer < lr.age_sup.size(); ++layer)
+          if (lr.age_sup[layer])
+          {
+            const std::string ln("L" + std::to_string(layer));
+            const std::string lt("<" + std::to_string(lr.age_sup[layer]));
+            ImPlot::TagX(lr.age_sup[layer], ImVec4(1,1,0,0.1),
+                         "\n%s\n%s", ln.c_str(), lt.c_str());
+          }
+
         ImPlot::EndPlot();
       }
     }
