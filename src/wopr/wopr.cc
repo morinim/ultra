@@ -101,36 +101,48 @@ std::vector<dynamic_sequence> dynamic_runs;
 /*********************************************************************
  * Population-related data structures
  ********************************************************************/
-struct population_data
+struct population_line
 {
-  explicit population_data(const std::string &);
+  explicit population_line(const std::string &);
 
   bool new_run {false};
   unsigned generation {0};
 
-  ultra::fitnd fit {};
-  std::size_t freq {};
+  std::vector<double> fit {};
+  std::vector<double> obs {};
 };
 
-population_data::population_data(const std::string &line)
+population_line::population_line(const std::string &line)
   : new_run(line.empty())
 {
   if (!new_run)
   {
     std::istringstream ss(line);
-    if (!(ss >> generation)
-        || !(ss >> fit)
-        || !(ss >> freq))
-      throw ultra::exception::data_format("Cannot parse population file line");
+    if (!(ss >> generation))
+      throw ultra::exception::data_format(
+        "Cannot parse population file line (missing generation)");
+
+    ultra::fitnd fit_val;
+    std::size_t obs_val;
+
+    while (ss >> fit_val)
+    {
+      if (!(ss >> obs_val))
+        throw ultra::exception::data_format(
+          "Cannot parse population file line (missing observations)");
+
+      fit.push_back(fit_val[0]);
+      obs.push_back(obs_val);
+    }
   }
 }
 
-ultra::ts_queue<population_data> population_queue;
+ultra::ts_queue<population_line> population_queue;
 
 struct population_sequence
 {
   std::vector<double> fit {};
-  std::vector<double> freq {};
+  std::vector<double> obs {};
 
   std::vector<double> fit_entropy {};
 
@@ -139,20 +151,14 @@ struct population_sequence
   [[nodiscard]] bool empty() const { return fit.empty(); }
   [[nodiscard]] std::size_t size() const { return fit.size(); }
 
-  void push_back(const population_data &pd)
+  void push_back(population_line &pl)
   {
-    if (generation < pd.generation)
-    {
-      fit_entropy.push_back(calculate_entropy());
+    generation = pl.generation;
 
-      fit = {};
-      freq = {};
+    fit = std::move(pl.fit);
+    obs = std::move(pl.obs);
 
-      generation = pd.generation;
-    }
-
-    fit.push_back(pd.fit[0]);
-    freq.push_back(pd.freq);
+    fit_entropy.push_back(calculate_entropy());
   }
 
   // Returns the entropy of the distribution.
@@ -164,10 +170,10 @@ struct population_sequence
   {
     const double c(1.0 / std::log(2.0));
 
-    const auto pop_size(std::accumulate(freq.begin(), freq.end(), 0.0));
+    const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
 
     double h(0.0);
-    for (auto x : freq)
+    for (auto x : obs)
     {
       const auto p(x / pop_size);
 
@@ -391,7 +397,7 @@ void get_data(std::stop_token stoken)
 
     if (const auto line(population_buffer.try_pop()); line)
     {
-      population_queue.push(population_data(*line));
+      population_queue.push(population_line(*line));
       last_read.restart();
     }
 
@@ -491,7 +497,7 @@ void render_population()
 {
   ImGui::Text("POPULATION");
 
-  if (const auto data(population_queue.try_pop()); data)
+  if (auto data(population_queue.try_pop()); data)
   {
     if (data->new_run)
     {
@@ -532,8 +538,7 @@ void render_population()
                                        ImPlot::GetColormapColor(1));
 
             ImPlot::PlotScatter("Distribution",
-                                pr.fit.data(), pr.freq.data(),
-                                pr.size());
+                                pr.fit.data(), pr.obs.data(), pr.size());
 
             ImPlot::PopStyleVar();
             ImPlot::EndPlot();

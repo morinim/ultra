@@ -61,9 +61,13 @@ void search_log::save_population(unsigned generation,
   if (generation == 0)
     population_file << "\n\n";
 
+  population_file << generation;
+
   for (const auto &[fit, freq] : fit_dist.seen())
-    population_file << generation << ' ' << std::fixed << std::scientific
-                    << fit << ' ' << freq << '\n';
+    population_file << ' ' << std::fixed << std::scientific << fit << ' '
+                    << freq;
+
+  population_file << '\n';
 }
 
 ///
