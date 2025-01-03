@@ -38,7 +38,6 @@ void search_log::save_dynamic(const summary<I, F> &sum,
   const auto length_dist(sum.az.length_dist());
   dynamic_file << ' ' << fit_dist.mean()
                << ' ' << fit_dist.standard_deviation()
-               << ' ' << fit_dist.entropy()
                << ' ' << fit_dist.min()
                << ' ' << static_cast<unsigned>(length_dist.mean())
                << ' ' << length_dist.standard_deviation()

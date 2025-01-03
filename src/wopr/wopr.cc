@@ -43,7 +43,6 @@ struct dynamic_data
   ultra::fitnd fit_best {};
   ultra::fitnd fit_mean {};
   ultra::fitnd fit_std_dev {};
-  ultra::fitnd fit_entropy {};
   ultra::fitnd fit_min {};
 
   unsigned len_mean {};
@@ -62,7 +61,6 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
         || !(ss >> fit_best)
         || !(ss >> fit_mean)
         || !(ss >> fit_std_dev)
-        || !(ss >> fit_entropy)
         || !(ss >> fit_min)
         || !(ss >> len_mean)
         || !(ss >> len_std_dev)
