@@ -78,6 +78,9 @@ struct dynamic_sequence
   std::vector<double> fit_best {};
   std::vector<double> fit_mean {};
   std::vector<double> fit_std_dev {};
+  std::vector<double> len_mean {};
+  std::vector<double> len_std_dev {};
+  std::vector<double> len_max {};
 
   std::vector<std::string> best_prg {};
 
@@ -90,6 +93,9 @@ struct dynamic_sequence
     fit_best.push_back(dd.fit_best[0]);
     fit_mean.push_back(dd.fit_mean[0]);
     fit_std_dev.push_back(dd.fit_std_dev[0]);
+    len_mean.push_back(dd.len_mean);
+    len_std_dev.push_back(dd.len_std_dev);
+    len_max.push_back(dd.len_max);
 
     if (best_prg.empty() || best_prg.back() != dd.best_prg)
       best_prg.push_back(dd.best_prg);
@@ -432,6 +438,7 @@ void render_dynamic()
   }
 
   static bool show_best(true);
+  static bool show_longer(true);
 
   for (std::size_t run(dynamic_runs.size()); run--;)
   {
@@ -445,51 +452,102 @@ void render_dynamic()
     {
       const auto &xs(dr.xs);
 
-      if (ImPlot::BeginPlot("Fitness dynamic"))
+      if (ImGui::BeginTabBar("DynamicTabBar"))
       {
-        ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-        ImPlot::SetupAxes(
-          "Generation", "Fit",
-          ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
-          ImPlotAxisFlags_AutoFit);
-
-        ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-        ImPlot::PlotErrorBars("Avg & StdDev",
-                              xs.data(),
-                              dr.fit_mean.data(),
-                              dr.fit_std_dev.data(),
-                              xs.size());
-        ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-        ImPlot::PlotLine("Avg & StdDev",
-                         xs.data(),
-                         dr.fit_mean.data(),
-                         xs.size());
-
-        if (show_best)
+        if (ImGui::BeginTabItem("Fitness dynamic"))
         {
-          ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-          ImPlot::PlotLine("Best",
-                           xs.data(),
-                           dr.fit_best.data(),
-                           xs.size());
+          if (ImPlot::BeginPlot("Fitness by generation", ImVec2(-1, 0),
+                                ImPlotFlags_NoTitle))
+          {
+            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+            ImPlot::SetupAxes(
+              "Generation", "Fit",
+              ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
+              ImPlotAxisFlags_AutoFit);
+
+            ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
+            ImPlot::PlotErrorBars("Avg & StdDev",
+                                  xs.data(),
+                                  dr.fit_mean.data(),
+                                  dr.fit_std_dev.data(),
+                                  xs.size());
+            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+            ImPlot::PlotLine("Avg & StdDev",
+                             xs.data(),
+                             dr.fit_mean.data(),
+                             xs.size());
+
+            if (show_best)
+            {
+              ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+              ImPlot::PlotLine("Best",
+                               xs.data(),
+                               dr.fit_best.data(),
+                               xs.size());
+            }
+
+            ImPlot::EndPlot();
+          }
+
+          static int current_best_prg_index(0);
+          if (!dr.best_prg.empty())
+          {
+            std::string best_prg;
+            for (std::size_t i(dr.best_prg.size()); i; --i)
+              best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
+
+            ImGui::Combo("Best programs", &current_best_prg_index,
+                         best_prg.data());
+          }
+          ImGui::Checkbox("Best", &show_best);
+
+          ImGui::EndTabItem();
         }
 
-        ImPlot::EndPlot();
+        if (ImGui::BeginTabItem("Length dynamic"))
+        {
+          if (ImPlot::BeginPlot("Length by generation", ImVec2(-1, 0),
+                                ImPlotFlags_NoTitle))
+          {
+            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+            ImPlot::SetupAxes(
+              "Generation", "Length",
+              ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
+              ImPlotAxisFlags_AutoFit);
+
+            ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
+            ImPlot::PlotErrorBars("Len Avg & StdDev",
+                                  xs.data(),
+                                  dr.len_mean.data(),
+                                  dr.len_std_dev.data(),
+                                  xs.size());
+            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+            ImPlot::PlotLine("Len Avg & StdDev",
+                             xs.data(),
+                             dr.len_mean.data(),
+                             xs.size());
+
+            if (show_longer)
+            {
+              ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+              ImPlot::PlotLine("Longer",
+                               xs.data(),
+                               dr.len_max.data(),
+                               xs.size());
+            }
+
+            ImPlot::EndPlot();
+          }
+
+          ImGui::Checkbox("Longer", &show_longer);
+
+          ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
       }
-
-      static int current_best_prg_index(0);
-      if (!dr.best_prg.empty())
-      {
-        std::string best_prg;
-        for (std::size_t i(dr.best_prg.size()); i; --i)
-          best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
-
-        ImGui::Combo("Best programs", &current_best_prg_index,
-                     best_prg.data());
-      }
-
-      ImGui::Checkbox("Best", &show_best);
     }
   }
 }
