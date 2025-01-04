@@ -39,7 +39,8 @@ struct locus
             std::numeric_limits<std::size_t>::max()};
   }
 
-  [[nodiscard]] bool operator==(const locus &) const = default;
+  [[nodiscard]] friend bool operator==(const locus &,
+                                       const locus &) noexcept = default;
 };
 
 ///
@@ -48,7 +49,7 @@ struct locus
 /// \return       `true` if `l1` precedes `l2` in lexicographic order
 ///               (https://en.wikipedia.org/wiki/Lexicographical_order)
 ///
-[[nodiscard]] inline bool operator<(const locus &l1, const locus &l2)
+[[nodiscard]] inline bool operator<(const locus &l1, const locus &l2) noexcept
 {
   return l1.index < l2.index ||
          (l1.index == l2.index && l1.category < l2.category);
@@ -60,7 +61,7 @@ struct locus
 /// \return       `true` if `l2` precedes `l1` in lexicographic order
 ///               (https://en.wikipedia.org/wiki/Lexicographical_order)
 ///
-[[nodiscard]] inline bool operator>(const locus &l1, const locus &l2)
+[[nodiscard]] inline bool operator>(const locus &l1, const locus &l2) noexcept
 {
   return l1.index > l2.index ||
          (l1.index == l2.index && l1.category > l2.category);
@@ -72,7 +73,7 @@ struct locus
 /// \return      a new locus obtained from `l` incrementing index component by
 ///              `i` (and not changing the category component)
 ///
-[[nodiscard]] inline locus operator+(const locus &l, locus::index_t i)
+[[nodiscard]] inline locus operator+(const locus &l, locus::index_t i) noexcept
 {
   return {l.index + i, l.category};
 }
