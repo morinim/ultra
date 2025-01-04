@@ -88,10 +88,12 @@ void search_log::save_layers(
   if (sum.generation == 0)
     layers_file << "\n\n";
 
+  layers_file << sum.generation;
+
   const auto layers(pop.layers());
   for (std::size_t l(0); l < layers; ++l)
   {
-    layers_file << sum.generation << ' ' << l << ' ';
+    layers_file << ' ';
 
     if (const auto ma(params.alps.max_age(l, layers));
         ma == std::numeric_limits<decltype(ma)>::max())
@@ -112,8 +114,10 @@ void search_log::save_layers(
                 << ' ' << fit_dist.standard_deviation()
                 << ' ' << fit_dist.min()
                 << ' ' << fit_dist.max()
-                << ' ' << current_layer.size() << '\n';
+                << ' ' << current_layer.size();
   }
+
+  layers_file << '\n';
 }
 
 ///

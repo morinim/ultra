@@ -28,7 +28,11 @@
 
 
 ultra::search_log slog {};
-bool imgui_demo_panel{false};
+bool imgui_demo_panel {false};
+
+
+[[nodiscard]] std::string random_string();
+
 
 /*********************************************************************
  * Dynamic file - related data structures
@@ -84,8 +88,8 @@ struct dynamic_sequence
 
   std::vector<std::string> best_prg {};
 
-  [[nodiscard]] bool empty() const { return xs.empty(); }
-  [[nodiscard]] std::size_t size() const { return xs.size(); }
+  [[nodiscard]] bool empty() const noexcept { return xs.empty(); }
+  [[nodiscard]] std::size_t size() const noexcept { return xs.size(); }
 
   void push_back(const dynamic_data &dd)
   {
@@ -121,26 +125,29 @@ struct population_line
 population_line::population_line(const std::string &line)
   : new_run(line.empty())
 {
-  if (!new_run)
+  if (new_run)
+    return;
+
+  std::istringstream ss(line);
+  if (!(ss >> generation))
   {
-    std::istringstream ss(line);
-    if (!(ss >> generation))
+    std::cout << line << std::endl;
+    throw ultra::exception::data_format(
+      "Cannot parse population file line (missing generation)");
+  }
+
+  ultra::fitnd fit_val;
+  std::size_t obs_val;
+
+  while (ss >> fit_val)
+  {
+    if (!(ss >> obs_val))
       throw ultra::exception::data_format(
-        "Cannot parse population file line (missing generation)");
+        "Cannot parse population file line (missing observations)");
 
-    ultra::fitnd fit_val;
-    std::size_t obs_val;
-
-    while (ss >> fit_val)
-    {
-      if (!(ss >> obs_val))
-        throw ultra::exception::data_format(
-          "Cannot parse population file line (missing observations)");
-
-      for (std::size_t i(0); i < obs_val; ++i)
-        fit.push_back(fit_val[0]);
-      obs.push_back(obs_val);
-    }
+    for (std::size_t i(0); i < obs_val; ++i)
+      fit.push_back(fit_val[0]);
+    obs.push_back(obs_val);
   }
 }
 
@@ -155,8 +162,8 @@ struct population_sequence
 
   unsigned generation {0};
 
-  [[nodiscard]] bool empty() const { return fit.empty(); }
-  [[nodiscard]] std::size_t size() const { return fit.size(); }
+  [[nodiscard]] bool empty() const noexcept { return fit.empty(); }
+  [[nodiscard]] std::size_t size() const noexcept { return fit.size(); }
 
   void push_back(population_line &pl)
   {
@@ -196,54 +203,105 @@ std::vector<population_sequence> population_runs;
 /*********************************************************************
  * Layer-related data structures
  ********************************************************************/
-struct layers_data
+struct layers_line
 {
-  explicit layers_data(const std::string &);
+  explicit layers_line(const std::string &);
 
   bool new_run {false};
   unsigned generation {};
-  unsigned layer {};
 
-  ultra::individual::age_t age_sup {};
-  double age_mean {};
-  double age_std_dev {};
-  ultra::individual::age_t age_min {};
-  ultra::individual::age_t age_max {};
+  std::vector<ultra::individual::age_t> age_sup {};
+  std::vector<double> age_mean {};
+  std::vector<double> age_std_dev {};
+  std::vector<ultra::individual::age_t> age_min {};
+  std::vector<ultra::individual::age_t> age_max {};
 
-  ultra::fitnd fit_mean {};
-  ultra::fitnd fit_std_dev {};
-  ultra::fitnd fit_min {};
-  ultra::fitnd fit_max {};
+  std::vector<double> fit_mean {};
+  std::vector<double> fit_std_dev {};
+  std::vector<double> fit_min {};
+  std::vector<double> fit_max {};
 
-  std::size_t individuals {};
+  std::vector<std::size_t> individuals {};
 };
 
-layers_data::layers_data(const std::string &line)
-  : new_run(line.empty())
+layers_line::layers_line(const std::string &line) : new_run(line.empty())
 {
-  if (!new_run)
+  if (new_run)
+    return;
+
+  std::istringstream ss(line);
+  if (!(ss >> generation))
   {
-    std::istringstream ss(line);
-    if (!(ss >> generation)
-        || !(ss >> layer)
-        || !(ss >> age_sup)
-        || !(ss >> age_mean)
-        || !(ss >> age_std_dev)
-        || !(ss >> age_min)
-        || !(ss >> age_max)
-        || !(ss >> fit_mean)
-        || !(ss >> fit_std_dev)
-        || !(ss >> fit_min)
-        || !(ss >> fit_max)
-        || !(ss >> individuals))
-    {
-      std::cout << line << std::endl;
-      throw ultra::exception::data_format("Cannot parse layers file line");
-    }
+    std::cout << line << std::endl;
+    throw ultra::exception::data_format(
+      "Cannot parse layers file line (missing generation)");
+  }
+
+  decltype(age_sup)::value_type age_sup_val;
+  decltype(age_mean)::value_type age_mean_val;
+  decltype(age_std_dev)::value_type age_std_dev_val;
+  decltype(age_min)::value_type age_min_val;
+  decltype(age_max)::value_type age_max_val;
+  ultra::fitnd fit_mean_val;
+  ultra::fitnd fit_std_dev_val;
+  ultra::fitnd fit_min_val;
+  ultra::fitnd fit_max_val;
+  decltype(individuals)::value_type individuals_val;
+
+  while (ss >> age_sup_val)
+  {
+    if (!(ss >> age_mean_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing age mean)");
+
+    if (!(ss >> age_std_dev_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing age standard deviation)");
+
+    if (!(ss >> age_min_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing age minimum)");
+
+    if (!(ss >> age_max_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing age maximum)");
+
+    if (!(ss >> fit_mean_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing fitness mean)");
+
+    if (!(ss >> fit_std_dev_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing fitness standard deviation)");
+
+    if (!(ss >> fit_min_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing fitness minimum)");
+
+    if (!(ss >> fit_max_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing fitness maximum)");
+
+    if (!(ss >> individuals_val))
+      throw ultra::exception::data_format(
+        "Cannot parse layers file line (missing number of individuals)");
+
+    age_sup.push_back(age_sup_val);
+    age_mean.push_back(age_mean_val);
+    age_std_dev.push_back(age_std_dev_val);
+    age_min.push_back(age_min_val);
+    age_max.push_back(age_max_val);
+
+    fit_mean.push_back(fit_mean_val[0]);
+    fit_std_dev.push_back(fit_std_dev_val[0]);
+    fit_min.push_back(fit_min_val[0]);
+    fit_max.push_back(fit_max_val[0]);
+
+    individuals.push_back(individuals_val);
   }
 }
 
-ultra::ts_queue<layers_data> layers_queue;
+ultra::ts_queue<layers_line> layers_queue;
 
 struct layers_sequence
 {
@@ -265,162 +323,30 @@ struct layers_sequence
   [[nodiscard]] bool empty() const noexcept { return age_sup.empty(); }
   [[nodiscard]] std::size_t size() const noexcept { return age_sup.size(); }
 
-  void push_back(const layers_data &ld)
+  void push_back(layers_line &ld)
   {
-    if (generation < ld.generation)
-    {
-      *this = {};
-      generation = ld.generation;
-    }
+    generation = ld.generation;
 
-    age_sup.push_back(ld.age_sup);
-    age_mean.push_back(ld.age_mean);
-    age_std_dev.push_back(ld.age_std_dev);
-    age_min.push_back(ld.age_min);
-    age_max.push_back(ld.age_max);
+    age_sup = std::move(ld.age_sup);
+    age_mean = std::move(ld.age_mean);
+    age_std_dev = std::move(ld.age_std_dev);
+    age_min = std::move(ld.age_min);
+    age_max = std::move(ld.age_max);
 
-    fit_mean.push_back(ld.fit_mean[0]);
-    fit_std_dev.push_back(ld.fit_std_dev[0]);
-    fit_min.push_back(ld.fit_min[0]);
-    fit_max.push_back(ld.fit_max[0]);
+    fit_mean = std::move(ld.fit_mean);
+    fit_std_dev = std::move(ld.fit_std_dev);
+    fit_min = std::move(ld.fit_min);
+    fit_max = std::move(ld.fit_max);
 
-    individuals.push_back(ld.individuals);
+    individuals = std::move(ld.individuals);
   }
 };
 
 std::vector<layers_sequence> layers_runs;
 
 /*********************************************************************
- * Misc
+ * Rendering
  ********************************************************************/
-[[nodiscard]] std::string random_string()
-{
-  constexpr std::size_t length(10);
-
-  static const std::string charset =
-    "0123456789"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";
-
-  static std::minstd_rand g;
-
-  static std::string fixed(length, char(0));
-  static std::size_t fixed_count(0);
-
-  if (fixed_count >= length)
-  {
-    fixed = std::string(length, char(0));
-    fixed_count = 0;
-  }
-
-  std::string result;
-  result.reserve(length);
-
-  for (std::size_t i(0); i < length; ++i)
-    result += fixed[i] ? fixed[i] : charset[g() % charset.size()];
-
-  if (g() % 1000 == 0)
-  {
-    std::size_t next_fix(g() % length);
-    while (fixed[next_fix])
-      next_fix = (next_fix + 1) % length;
-
-    fixed[next_fix] = result[next_fix];
-    ++fixed_count;
-  }
-
-  return result;
-}
-
-void read_file(std::stop_token stoken,
-               const std::filesystem::path &filename,
-               ultra::ts_queue<std::string> &buffer)
-{
-  std::ifstream file(filename);
-  if (!file)
-    throw std::runtime_error("Failed to open file for reading");
-
-  std::streampos position(0);
-
-  while (!stoken.stop_requested())
-  {
-    std::string line;
-
-    // Seek to the last known position.
-    file.clear();
-    file.seekg(position);
-
-    while (std::getline(file, line))
-      if (!file.eof())
-      {
-        position = file.tellg();  // update the position for the next read
-        buffer.push(line);
-      }
-
-    if (file.bad())
-      throw std::runtime_error("Error occurred while reading the file.");
-
-    assert(file.eof());
-
-    // Small delay before checking for new data.
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(150ms);
-  }
-}
-
-void get_data(std::stop_token stoken)
-{
-  assert(!slog.dynamic_file_path.empty()
-         || !slog.layers_file_path.empty()
-         || !slog.population_file_path.empty());
-
-  std::jthread read_dynamic;
-  ultra::ts_queue<std::string> dynamic_buffer;
-  if (!slog.dynamic_file_path.empty())
-    read_dynamic = std::jthread(read_file, slog.dynamic_file_path,
-                                std::ref(dynamic_buffer));
-
-  std::jthread read_population;
-  ultra::ts_queue<std::string> population_buffer;
-  if (!slog.population_file_path.empty())
-    read_population = std::jthread(read_file, slog.population_file_path,
-                                   std::ref(population_buffer));
-
-  std::jthread read_layers;
-  ultra::ts_queue<std::string> layers_buffer;
-  if (!slog.layers_file_path.empty())
-    read_layers = std::jthread(read_file, slog.layers_file_path,
-                               std::ref(layers_buffer));
-
-  ultra::timer last_read;
-
-  while (!stoken.stop_requested())
-  {
-    if (const auto line(dynamic_buffer.try_pop()); line)
-    {
-      dynamic_queue.push(dynamic_data(*line));
-      last_read.restart();
-    }
-
-    if (const auto line(population_buffer.try_pop()); line)
-    {
-      population_queue.push(population_line(*line));
-      last_read.restart();
-    }
-
-    if (const auto line(layers_buffer.try_pop()); line)
-    {
-      layers_queue.push(layers_data(*line));
-      last_read.restart();
-    }
-
-    using namespace std::chrono_literals;
-    const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         last_read.elapsed()));
-    std::this_thread::sleep_for(std::min(3000ms, elapsed));
-  }
-}
-
 void render_dynamic()
 {
   ImGui::Text("DYNAMICS");
@@ -643,7 +569,7 @@ void render_layers_fit()
 {
   ImGui::Text("FITNESS BY LAYER");
 
-  if (const auto data(layers_queue.try_pop()); data)
+  if (auto data(layers_queue.try_pop()); data)
   {
     if (data->new_run)
     {
@@ -746,8 +672,8 @@ void render_layers_fit()
         ImPlot::SetupAxes(
           nullptr, nullptr,
           ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks,
-          ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoGridLines
-          |ImPlotAxisFlags_NoTickMarks);
+          ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks
+          |ImPlotAxisFlags_NoGridLines);
 
         ImPlot::SetupAxisTicks(ImAxis_Y1, 1 - 0.5/max_layers, 0.5/max_layers,
                                max_layers, y_labels_chr.data());
@@ -767,7 +693,7 @@ void render_layers_age()
 {
   ImGui::Text("AGE BY LAYER");
 
-  if (const auto data(layers_queue.try_pop()); data)
+  if (auto data(layers_queue.try_pop()); data)
   {
     if (data->new_run)
     {
@@ -912,6 +838,9 @@ void render(const imgui_app::program &prg, bool *p_open)
   ImGui::End();
 }
 
+/*********************************************************************
+ * Command line
+ ********************************************************************/
 bool parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
@@ -1002,6 +931,140 @@ void cmdl_usage()
     << "SHALL WE PLAY A GAME?\n\n";
 }
 
+/*********************************************************************
+ * Misc
+ ********************************************************************/
+std::string random_string()
+{
+  constexpr std::size_t length(10);
+
+  static const std::string charset =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+
+  static std::minstd_rand g;
+
+  static std::string fixed(length, char(0));
+  static std::size_t fixed_count(0);
+
+  if (fixed_count >= length)
+  {
+    fixed = std::string(length, char(0));
+    fixed_count = 0;
+  }
+
+  std::string result;
+  result.reserve(length);
+
+  for (std::size_t i(0); i < length; ++i)
+    result += fixed[i] ? fixed[i] : charset[g() % charset.size()];
+
+  if (g() % 1000 == 0)
+  {
+    std::size_t next_fix(g() % length);
+    while (fixed[next_fix])
+      next_fix = (next_fix + 1) % length;
+
+    fixed[next_fix] = result[next_fix];
+    ++fixed_count;
+  }
+
+  return result;
+}
+
+void read_file(std::stop_token stoken,
+               const std::filesystem::path &filename,
+               ultra::ts_queue<std::string> &buffer)
+{
+  std::ifstream file(filename);
+  if (!file)
+    throw std::runtime_error("Failed to open file for reading");
+
+  std::streampos position(0);
+
+  while (!stoken.stop_requested())
+  {
+    std::string line;
+
+    // Seek to the last known position.
+    file.clear();
+    file.seekg(position);
+
+    while (std::getline(file, line))
+      if (!file.eof())
+      {
+        position = file.tellg();  // update the position for the next read
+        buffer.push(line);
+      }
+
+    if (file.bad())
+      throw std::runtime_error("Error occurred while reading the file.");
+
+    assert(file.eof());
+
+    // Small delay before checking for new data.
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(150ms);
+  }
+}
+
+void get_data(std::stop_token stoken)
+{
+  assert(!slog.dynamic_file_path.empty()
+         || !slog.layers_file_path.empty()
+         || !slog.population_file_path.empty());
+
+  std::jthread read_dynamic;
+  ultra::ts_queue<std::string> dynamic_buffer;
+  if (!slog.dynamic_file_path.empty())
+    read_dynamic = std::jthread(read_file, slog.dynamic_file_path,
+                                std::ref(dynamic_buffer));
+
+  std::jthread read_population;
+  ultra::ts_queue<std::string> population_buffer;
+  if (!slog.population_file_path.empty())
+    read_population = std::jthread(read_file, slog.population_file_path,
+                                   std::ref(population_buffer));
+
+  std::jthread read_layers;
+  ultra::ts_queue<std::string> layers_buffer;
+  if (!slog.layers_file_path.empty())
+    read_layers = std::jthread(read_file, slog.layers_file_path,
+                               std::ref(layers_buffer));
+
+  ultra::timer last_read;
+
+  while (!stoken.stop_requested())
+  {
+    if (const auto line(dynamic_buffer.try_pop()); line)
+    {
+      dynamic_queue.push(dynamic_data(*line));
+      last_read.restart();
+    }
+
+    if (const auto line(population_buffer.try_pop()); line)
+    {
+      population_queue.push(population_line(*line));
+      last_read.restart();
+    }
+
+    if (const auto line(layers_buffer.try_pop()); line)
+    {
+      layers_queue.push(layers_line(*line));
+      last_read.restart();
+    }
+
+    using namespace std::chrono_literals;
+    const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
+                         last_read.elapsed()));
+    std::this_thread::sleep_for(std::min(3000ms, elapsed));
+  }
+}
+
+/*********************************************************************
+ * MAIN
+ ********************************************************************/
 int main(int argc, char *argv[])
 {
   if (!parse_args(argc, argv))
