@@ -131,7 +131,8 @@ population_line::population_line(const std::string &line)
         throw ultra::exception::data_format(
           "Cannot parse population file line (missing observations)");
 
-      fit.push_back(fit_val[0]);
+      for (std::size_t i(0); i < obs_val; ++i)
+        fit.push_back(fit_val[0]);
       obs.push_back(obs_val);
     }
   }
@@ -532,15 +533,17 @@ void render_population()
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
 
-            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 6,
-                                       ImPlot::GetColormapColor(1), IMPLOT_AUTO,
-                                       ImPlot::GetColormapColor(1));
+            //ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+            //ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 6,
+            //                           ImPlot::GetColormapColor(1), IMPLOT_AUTO,
+            //                           ImPlot::GetColormapColor(1));
 
-            ImPlot::PlotScatter("Distribution",
-                                pr.fit.data(), pr.obs.data(), pr.size());
+            //ImPlot::PlotScatter("Distribution",
+            //                    pr.fit.data(), pr.obs.data(), pr.size());
 
-            ImPlot::PopStyleVar();
+            //ImPlot::PopStyleVar();
+            ImPlot::PlotHistogram("Empirical", pr.fit.data(), pr.size(),
+                                  std::min<std::size_t>(50, pr.size()/10));
             ImPlot::EndPlot();
           }
 
