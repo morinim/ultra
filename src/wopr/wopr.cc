@@ -349,8 +349,6 @@ std::vector<layers_sequence> layers_runs;
  ********************************************************************/
 void render_dynamic()
 {
-  ImGui::Text("DYNAMICS");
-
   if (const auto data(dynamic_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -382,7 +380,20 @@ void render_dynamic()
       {
         if (ImGui::BeginTabItem("Fitness dynamic"))
         {
-          if (ImPlot::BeginPlot("Fitness by generation", ImVec2(-1, 0),
+          static int current_best_prg_index(0);
+          if (!dr.best_prg.empty())
+          {
+            std::string best_prg;
+            for (std::size_t i(dr.best_prg.size()); i; --i)
+              best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
+
+            ImGui::Combo("Best programs", &current_best_prg_index,
+                         best_prg.data());
+          }
+          ImGui::SameLine();
+          ImGui::Checkbox("Best", &show_best);
+
+          if (ImPlot::BeginPlot("##Fitness by generation", ImVec2(-1, -1),
                                 ImPlotFlags_NoTitle))
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
@@ -416,24 +427,14 @@ void render_dynamic()
             ImPlot::EndPlot();
           }
 
-          static int current_best_prg_index(0);
-          if (!dr.best_prg.empty())
-          {
-            std::string best_prg;
-            for (std::size_t i(dr.best_prg.size()); i; --i)
-              best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
-
-            ImGui::Combo("Best programs", &current_best_prg_index,
-                         best_prg.data());
-          }
-          ImGui::Checkbox("Best", &show_best);
-
           ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Length dynamic"))
         {
-          if (ImPlot::BeginPlot("Length by generation", ImVec2(-1, 0),
+          ImGui::Checkbox("Longer", &show_longer);
+
+          if (ImPlot::BeginPlot("##Length by generation", ImVec2(-1, -1),
                                 ImPlotFlags_NoTitle))
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
@@ -467,8 +468,6 @@ void render_dynamic()
             ImPlot::EndPlot();
           }
 
-          ImGui::Checkbox("Longer", &show_longer);
-
           ImGui::EndTabItem();
         }
 
@@ -480,8 +479,6 @@ void render_dynamic()
 
 void render_population()
 {
-  ImGui::Text("POPULATION");
-
   if (auto data(population_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -506,11 +503,12 @@ void render_population()
 
       if (ImGui::BeginTabBar("PopulationTabBar"))
       {
-        if (ImGui::BeginTabItem("Scattered plot"))
+        if (ImGui::BeginTabItem("Fitness histogram"))
         {
-          const std::string title("Population at generation "
-                                  + std::to_string(pr.generation));
-          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, 0),
+          const std::string title("Generation "
+                                  + std::to_string(pr.generation)
+                                  + "##Population");
+          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
             ImPlot::SetupAxes("Fitness", "Individuals",
@@ -526,7 +524,8 @@ void render_population()
             //                    pr.fit.data(), pr.obs.data(), pr.size());
 
             //ImPlot::PopStyleVar();
-            ImPlot::PlotHistogram("Empirical", pr.fit.data(), pr.size(),
+            ImPlot::PlotHistogram("##Population fitness histogram",
+                                  pr.fit.data(), pr.size(),
                                   std::min<std::size_t>(50, pr.size()/10));
             ImPlot::EndPlot();
           }
@@ -534,9 +533,9 @@ void render_population()
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Population entropy"))
+        if (ImGui::BeginTabItem("Fitness entropy"))
         {
-          if (ImPlot::BeginPlot("", ImVec2(-1, 0),
+          if (ImPlot::BeginPlot("", ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
             std::vector<double> xs(pr.fit_entropy.size());
@@ -567,8 +566,6 @@ void render_population()
 
 void render_layers_fit()
 {
-  ImGui::Text("FITNESS BY LAYER");
-
   if (auto data(layers_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -663,10 +660,9 @@ void render_layers_fit()
       const std::string title("Fitness by layer - Generation "
                               + std::to_string(lr.generation));
 
-      ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(60, 0));
+      ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(80, -1));
       ImGui::SameLine();
-      if (ImPlot::BeginPlot(title.c_str(),
-                            ImVec2(-1, 0),
+      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                             ImPlotFlags_NoLegend|ImPlotFlags_NoMouseText))
       {
         ImPlot::SetupAxes(
@@ -691,8 +687,6 @@ void render_layers_fit()
 
 void render_layers_age()
 {
-  ImGui::Text("AGE BY LAYER");
-
   if (auto data(layers_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -734,7 +728,8 @@ void render_layers_age()
 
       const std::string title("Age by layer - Generation "
                               + std::to_string(lr.generation));
-      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, 0), ImPlotFlags_NoLegend))
+      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
+                            ImPlotFlags_NoLegend))
       {
         ImPlot::SetupAxes("Age", "Layer",
                           ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -767,70 +762,143 @@ void render_layers_age()
 
 void render(const imgui_app::program &prg, bool *p_open)
 {
-  static bool show_dynamic(true);
-  static bool show_population(true);
-  static bool show_layers_fit(true);
-  static bool show_layers_age(true);
-
   const auto fa(prg.free_area());
-  ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y)/*, ImGuiCond_Once*/);
-  ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h)/*, ImGuiCond_Once*/);
-  if (ImGui::Begin("Main", p_open))
+  ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
+  ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
+
+  static bool show_dynamic_check(true);
+  static bool show_population_check(true);
+  static bool show_layers_fit_check(true);
+  static bool show_layers_age_check(true);
+
+  static bool mxz_dynamic(false);
+  static bool mxz_population(false);
+  static bool mxz_layers_fit(false);
+  static bool mxz_layers_age(false);
+
+  if (ImGui::Begin("Main##Window", p_open))
   {
-    ImGui::Checkbox("Dynamic", &show_dynamic);
+    ImGui::Checkbox("Dynamic", &show_dynamic_check);
     ImGui::SameLine();
-    ImGui::Checkbox("Population", &show_population);
+    ImGui::Checkbox("Population", &show_population_check);
     ImGui::SameLine();
-    ImGui::Checkbox("Layers fit.", &show_layers_fit);
+    ImGui::Checkbox("Layers fit.", &show_layers_fit_check);
     ImGui::SameLine();
-    ImGui::Checkbox("Layers age", &show_layers_age);
+    ImGui::Checkbox("Layers age", &show_layers_age_check);
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
                        "%s", random_string().c_str());
     ImGui::Separator();
 
-    if (unsigned columns = 0u + show_dynamic + show_population)
+    const bool show_dynamic(
+      !slog.dynamic_file_path.empty() && show_dynamic_check
+      && !(mxz_population && show_population_check)
+      && !(mxz_layers_fit && show_layers_fit_check)
+      && !(mxz_layers_age && show_layers_age_check));
+    const bool show_population(
+      !slog.population_file_path.empty() && show_population_check
+      && !(mxz_dynamic && show_dynamic_check)
+      && !(mxz_layers_fit && show_layers_fit_check)
+      && !(mxz_layers_age && show_layers_age_check));
+    const bool show_layers_fit(
+      !slog.layers_file_path.empty() && show_layers_fit_check
+      && !(mxz_dynamic && show_dynamic_check)
+      && !(mxz_population && show_population_check)
+      && !(mxz_layers_age && show_layers_age_check));
+    const bool show_layers_age(
+      !slog.layers_file_path.empty() && show_layers_age_check
+      && !(mxz_dynamic && show_dynamic_check)
+      && !(mxz_population && show_population_check)
+      && !(mxz_layers_fit && show_layers_fit_check));
+
+    const int available_width(ImGui::GetContentRegionAvail().x - 4);
+    const int available_height(ImGui::GetContentRegionAvail().y - 4);
+
+    const int w1(show_dynamic && show_population ? available_width/2
+                                                 : available_width);
+    const int h1(show_layers_fit || show_layers_age ? available_height/2
+                                                    : available_height);
+    if (show_dynamic)
     {
-      ImGui::Columns(columns, nullptr, true);
+      const auto w(mxz_dynamic ? available_width : w1);
+      const auto h(mxz_dynamic ? available_height : h1);
 
-      if (!slog.dynamic_file_path.empty() && show_dynamic)
-      {
-        render_dynamic();
-        --columns;
-      }
+      ImGui::BeginChild("Dynamic##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("DYNAMICS");
+      ImGui::SameLine();
+      const std::string bs(mxz_dynamic ? "Minimize##Dyn" : "Maximize##Dyn");
+      if (ImGui::Button(bs.c_str()))
+        mxz_dynamic = !mxz_dynamic;
 
-      if (columns)
-        ImGui::NextColumn();
-
-      if (!slog.population_file_path.empty() && show_population)
-        render_population();
+      render_dynamic();
+      ImGui::EndChild();
     }
 
-    if ((show_dynamic || show_population)
-        && (show_layers_fit + show_layers_age))
+    if (show_population)
     {
-      ImGui::Columns(1);
-      ImGui::Separator();
+      if (show_dynamic)
+        ImGui::SameLine();
+
+      const auto w(mxz_population ? available_width : w1);
+      const auto h(mxz_population ? available_height : h1);
+
+      ImGui::BeginChild("Population##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("POPULATION");
+      ImGui::SameLine();
+      const std::string bs(mxz_population ? "Minimize##Pop" : "Maximize##Pop");
+      if (ImGui::Button(bs.c_str()))
+        mxz_population = !mxz_population;
+
+      render_population();
+      ImGui::EndChild();
     }
 
-    if (unsigned columns = 0u + show_layers_fit + show_layers_age)
+    const int w2(show_layers_fit && show_layers_age ? available_width/2
+                                                    : available_width);
+    const int h2(show_dynamic || show_population ? available_height/2
+                                                 : available_height);
+
+    if (show_layers_fit)
     {
-      ImGui::Columns(columns, nullptr, true);
+      const auto w(mxz_layers_fit ? available_width : w2);
+      const auto h(mxz_layers_fit ? available_height : h2);
 
-      if (!slog.layers_file_path.empty())
-      {
-        if (show_layers_fit)
-        {
-          render_layers_fit();
-          --columns;
-        }
+      ImGui::BeginChild("LayersFitness##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("FITNESS BY LAYER");
+      ImGui::SameLine();
+      const std::string bs(mxz_layers_fit ? "Minimize##LFt" : "Maximize##LFt");
+      if (ImGui::Button(bs.c_str()))
+        mxz_layers_fit = !mxz_layers_fit;
 
-        if (columns)
-          ImGui::NextColumn();
+      render_layers_fit();
+      ImGui::EndChild();
+    }
 
-        if (show_layers_age)
-          render_layers_age();
-      }
+    if (show_layers_age)
+    {
+      if (show_layers_fit)
+        ImGui::SameLine();
+
+      const auto w(mxz_layers_age ? available_width : w2);
+      const auto h(mxz_layers_age ? available_height : h2);
+
+      ImGui::BeginChild("LayersAge##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("AGE BY LAYER");
+      ImGui::SameLine();
+      const std::string bs(mxz_layers_fit ? "Minimize##LAg" : "Maximize##LAg");
+      if (ImGui::Button(bs.c_str()))
+        mxz_layers_age = !mxz_layers_age;
+
+      render_layers_age();
+      ImGui::EndChild();
     }
   }
 
