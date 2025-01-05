@@ -115,7 +115,7 @@ typename matrix<T>::reference matrix<T>::operator()(std::size_t r,
 /// \return `true` if the matrix is empty (`cols() == 0`)
 ///
 template<class T>
-bool matrix<T>::empty() const
+bool matrix<T>::empty() const noexcept
 {
   return data_.empty();
 }
@@ -124,7 +124,7 @@ bool matrix<T>::empty() const
 /// \return number of elements of the matrix
 ///
 template<class T>
-std::size_t matrix<T>::size() const
+std::size_t matrix<T>::size() const noexcept
 {
   return data_.size();
 }
@@ -133,7 +133,7 @@ std::size_t matrix<T>::size() const
 /// \return number of rows of the matrix
 ///
 template<class T>
-std::size_t matrix<T>::rows() const
+std::size_t matrix<T>::rows() const noexcept
 {
   return cols() ? data_.size() / cols() : 0;
 }
@@ -142,7 +142,7 @@ std::size_t matrix<T>::rows() const
 /// \return number of columns of the matrix
 ///
 template<class T>
-std::size_t matrix<T>::cols() const
+std::size_t matrix<T>::cols() const noexcept
 {
   return cols_;
 }
@@ -152,7 +152,7 @@ std::size_t matrix<T>::cols() const
 /// \return      `true` if `m` is equal to `*this`
 ///
 template<class T>
-bool matrix<T>::operator==(const matrix &m) const
+bool matrix<T>::operator==(const matrix &m) const noexcept
 {
   return cols() == m.cols() && data_ == m.data_;
 }

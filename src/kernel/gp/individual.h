@@ -41,16 +41,16 @@ public:
   explicit individual(const std::vector<gene> &);
 
   // ---- Capacity ----
-  [[nodiscard]] symbol::category_t categories() const;
-  [[nodiscard]] bool empty() const;
-  [[nodiscard]] locus::index_t size() const;
+  [[nodiscard]] symbol::category_t categories() const noexcept;
+  [[nodiscard]] bool empty() const noexcept;
+  [[nodiscard]] locus::index_t size() const noexcept;
 
   [[nodiscard]] hash_t signature() const;
 
   [[nodiscard]] const gene &operator[](const locus &) const;
-  [[nodiscard]] locus start() const;
+  [[nodiscard]] locus start() const noexcept;
 
-  [[nodiscard]] bool operator==(const individual &) const;
+  [[nodiscard]] bool operator==(const individual &) const noexcept;
 
   [[nodiscard]] bool is_valid() const;
 

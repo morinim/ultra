@@ -86,7 +86,7 @@ individual::individual(const std::vector<gene> &gv)
 ///
 /// \return the total number of categories the individual is using
 ///
-symbol::category_t individual::categories() const
+symbol::category_t individual::categories() const noexcept
 {
   return static_cast<symbol::category_t>(genome_.cols());
 }
@@ -94,7 +94,7 @@ symbol::category_t individual::categories() const
 ///
 /// \return `true` if the individual isn't initialized
 ///
-bool individual::empty() const
+bool individual::empty() const noexcept
 {
   return genome_.empty();
 }
@@ -107,7 +107,7 @@ bool individual::empty() const
 ///
 /// \see eff_size()
 ///
-locus::index_t individual::size() const
+locus::index_t individual::size() const noexcept
 {
   return static_cast<locus::index_t>(genome_.rows());
 }
@@ -264,7 +264,7 @@ const gene &individual::operator[](const locus &l) const
 /// \return the first gene of the individual (the first instruction of the
 ///         program)
 ///
-locus individual::start() const
+locus individual::start() const noexcept
 {
   return {size() - 1, symbol::default_category};
 }
@@ -277,7 +277,7 @@ locus individual::start() const
 /// \note
 /// Age is not checked.
 ///
-bool individual::operator==(const individual &rhs) const
+bool individual::operator==(const individual &rhs) const noexcept
 {
   const bool eq(genome_ == rhs.genome_);
 

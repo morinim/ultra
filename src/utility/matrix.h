@@ -56,11 +56,11 @@ public:
 
   void fill(const T &);
 
-  [[nodiscard]] bool operator==(const matrix &) const;
+  [[nodiscard]] bool operator==(const matrix &) const noexcept;
 
-  [[nodiscard]] bool empty() const;
-  [[nodiscard]] std::size_t rows() const;
-  [[nodiscard]] std::size_t cols() const;
+  [[nodiscard]] bool empty() const noexcept;
+  [[nodiscard]] std::size_t rows() const noexcept;
+  [[nodiscard]] std::size_t cols() const noexcept;
 
   matrix &operator+=(const matrix &);
 
@@ -79,7 +79,7 @@ public:
 
 private:
   // *** Private support functions ***
-  [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] std::size_t index(std::size_t, std::size_t) const;
 
   // *** Private data members ***
