@@ -221,8 +221,7 @@ class_t dataframe::classes() const noexcept
 /// \return input vector dimension
 ///
 /// \note
-/// Data class supports just one output for every instance, so, if the dataset
-/// is not empty, `variables() + 1 == columns.size()`.
+/// If the dataset is not empty, `variables() + 1 == columns.size()`.
 ///
 unsigned dataframe::variables() const
 {

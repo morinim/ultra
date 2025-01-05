@@ -38,7 +38,8 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
 
 ///
 /// \param[in] i ordinal of an argument
-/// \return      the locus that `i`-th argument of the current function refers to
+/// \return      the locus that `i`-th argument of the current function refers
+///              to
 ///
 locus gene::locus_of_argument(std::size_t i) const
 {
