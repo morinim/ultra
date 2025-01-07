@@ -12,6 +12,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <thread>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -90,6 +91,89 @@ TEST_CASE_FIXTURE(fixture1, "Collision detection")
       const auto f1{has_value(val) ? std::get<D_DOUBLE>(val) : 0.0};
       CHECK(almost_equal(*f, f1));
     }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Concurrent access")
+{
+  using namespace ultra;
+
+  constexpr std::size_t sup(1000);
+  constexpr unsigned cycles(100);
+
+  // Automatically scales to system capabilities while ensuring at least one
+  // thread for reads and writes.
+  const auto n_threads(
+    std::max<unsigned>(std::thread::hardware_concurrency(), 2));
+  const auto r_threads(n_threads / 2);
+  const auto w_threads(n_threads - r_threads);
+
+  std::vector<std::uint64_t> reads(r_threads, 0), writes(w_threads, 0);
+
+  cache<double> cache(14);
+
+  std::vector<std::pair<hash_t, double>> ind_db;
+  ind_db.reserve(sup);
+
+  for (std::size_t i(0); i < sup; ++i)
+  {
+    const hash_t sig(i, i);
+    const auto fit(static_cast<double>(i));
+    ind_db.emplace_back(sig, fit);
+
+    // Cache warm-up.
+    cache.insert(sig, fit);
+  }
+
+  const auto writer([&](unsigned idx)
+  {
+    for (unsigned j(0); j < cycles; ++j)
+      for (unsigned i(0); i < sup; ++i)
+      {
+        cache.insert(ind_db[i].first, ind_db[i].second);
+        ++writes[idx];
+      }
+  });
+
+  const auto reader([&](unsigned idx)
+  {
+    for (unsigned j(0); j < cycles; ++j)
+      for (unsigned i(0); i < sup; ++i)
+        if (const auto fit(cache.find(ind_db[i].first)); fit)
+        {
+          ++reads[idx];
+
+          CHECK(almost_equal(*fit, ind_db[i].second));
+        }
+  });
+
+  std::vector<std::thread> threads;
+
+  for (unsigned i(0); i < std::max(r_threads, w_threads); ++i)
+  {
+    // Alternating between reader and writer thread creation could smooth
+    // resource usage.
+    if (i < r_threads)
+      threads.emplace_back(reader, i);
+    if (i < w_threads)
+      threads.emplace_back(writer, i);
+  }
+
+  for (auto &thread: threads)
+    thread.join();
+
+  for (auto w : writes)
+    CHECK(w == sup * cycles);
+
+  const auto base(reads.front());
+  for (auto r : reads)
+  {
+    const auto min(base - base * 0.05);
+    const auto max(base + base * 0.05);
+    const bool in_range(min <= r && r <= max);
+    CHECK(in_range);
+
+    CHECK(r <= sup * cycles);
+  }
 }
 
 TEST_CASE_FIXTURE(fixture1, "Serialization")
