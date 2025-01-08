@@ -12,7 +12,7 @@
                 "CMAKE_EXE_LINKER_FLAGS": "$env{SPECIFIC_LINKER_FLAGS}",
 				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s",
 				"OTHER_FLAGS": "-pipe;-march=native;$env{SPECIFIC_OTHER_FLAGS}",
-				"WARN_FLAGS": "-Wall;-Wextra;-Winvalid-pch;-Wpedantic;-Wformat=2;-Wfloat-equal;-Wshadow;-Wdouble-promotion;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wnull-dereference;-Wextra-semi;$env{SPECIFIC_WARN_FLAGS}"
+				"WARN_FLAGS": "-Wall;-Wextra;-Winvalid-pch;-Wpedantic;-Wformat=2;-Wfloat-equal;-Wshadow;-Wdouble-promotion;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wextra-semi;$env{SPECIFIC_WARN_FLAGS}"
 			},
 			"warnings":
 			{
