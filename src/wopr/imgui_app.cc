@@ -24,14 +24,14 @@ static const std::string BASE_PATH(SDL_GetBasePath());
 namespace imgui_app
 {
 
-window::window(const window::settings &settings)
+window::window(const window::settings &s)
 {
   const auto w_flags(static_cast<SDL_WindowFlags>(
                        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
 
-  const window_size size(dpi_handler::get_dpi_aware_window_size(settings));
+  const window_size size(dpi_handler::get_dpi_aware_window_size(s));
 
-  window_ = SDL_CreateWindow(settings.title.c_str(),
+  window_ = SDL_CreateWindow(s.title.c_str(),
                              SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                              size.width, size.height,
                              w_flags);
@@ -72,7 +72,7 @@ program::program(const settings &s) : settings_(s)
   if (SDL_Init(flags) != 0)
     throw std::runtime_error(SDL_GetError());
 
-  window_ = std::make_unique<window>(settings_.window);
+  window_ = std::make_unique<window>(settings_.w_related);
 }
 
 program::~program()

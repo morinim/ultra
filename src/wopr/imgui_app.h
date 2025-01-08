@@ -88,7 +88,7 @@ class program
 public:
   struct settings
   {
-    window::settings window {};
+    window::settings w_related {};
 
     bool demo {false};
   };

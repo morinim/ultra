@@ -1155,7 +1155,7 @@ int main(int argc, char *argv[])
   std::jthread t_data(get_data);
 
   imgui_app::program::settings settings;
-  settings.window.title = "WOPR";
+  settings.w_related.title = "WOPR";
   settings.demo = imgui_demo_panel;
   imgui_app::program prg(settings);
   prg.run(render);
