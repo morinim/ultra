@@ -58,7 +58,7 @@ int main()
 
   std::cout << "\nBest result";
   for (std::size_t i(0); i < result.parameters(); ++i)
-    if (result[i])
+    if (result[i] > 0.0)
       std::cout << ' ' << file_sizes[i];
 
   std::cout << "\nFitness: " << static_cast<std::intmax_t>(fitness(result))
