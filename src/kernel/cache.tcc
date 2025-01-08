@@ -18,12 +18,30 @@
 #define      ULTRA_CACHE_TCC
 
 ///
+/// Fast ceiling integer division.
+///
+/// \param[in] x dividend
+/// \param[in] y divisor
+/// \return      ceiling of the quotient
+///
+inline std::size_t div_ceil(std::size_t x, std::size_t y)
+{
+  // Most common architecture's divide instruction also includes remainder in
+  // its result so this really needs only one division and would be very fast.
+  return x/y + (x%y != 0);
+
+  // `(x + y - 1) / y` is an alternative (but could overflow).
+}
+
+///
 /// Creates a new, not empty, hash table.
 ///
 /// \param[in] n `2^n` is the number of elements of the table
 ///
-template<Fitness F>
-cache<F>::cache(bitwidth n) : table_(1ull << n), k_mask((1ull << n) - 1)
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+cache<F, LOCK_GROUP_SIZE>::cache(bitwidth n)
+  : table_(1ull << n), locks_(div_ceil(table_.size(), LOCK_GROUP_SIZE)),
+    k_mask((1ull << n) - 1)
 {
   Expects(n);
   Ensures(is_valid());
@@ -35,15 +53,19 @@ cache<F>::cache(bitwidth n) : table_(1ull << n), k_mask((1ull << n) - 1)
 /// \param[in] n `2^n` is the new number of elements of the table
 ///
 /// \warning
-/// This is a destructive operation: content of the cache will be lost.
+/// - This is a destructive operation: content of the cache will be lost.
+/// - Not concurrency-safe.
 ///
-template<Fitness F>
-void cache<F>::resize(bitwidth n)
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+void cache<F, LOCK_GROUP_SIZE>::resize(bitwidth n)
 {
   Expects(n);
 
-  table_ = decltype(table_)(1ull << n);
-  k_mask = (1ull << n) - 1;
+  const std::size_t nelem(1ull << n);
+
+  table_ = decltype(table_)(nelem);
+  locks_ = decltype(locks_)(div_ceil(nelem, LOCK_GROUP_SIZE));
+  k_mask = nelem - 1;
 
   Ensures(is_valid());
 }
@@ -52,23 +74,40 @@ void cache<F>::resize(bitwidth n)
 /// \param[in] h the signature of an individual
 /// \return      an index in the hash table
 ///
-template<Fitness F>
-inline std::size_t cache<F>::index(const hash_t &h) const noexcept
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+std::size_t cache<F, LOCK_GROUP_SIZE>::index(const hash_t &h) const noexcept
 {
   Expects(k_mask);
   return h.data[0] & k_mask;
 }
 
 ///
+/// \param[in] idx index in the hash table
+/// \return        index of the mutex that protects the slot interval
+///                containing `idx`
+///
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+std::size_t cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
+{
+  return idx / LOCK_GROUP_SIZE;
+}
+
+///
 /// Clears the content and the statistical informations of the table.
+///
+///
+/// \warning
+/// Not concurrency-safe.
 ///
 /// \note
 /// Allocated size isn't changed.
 ///
-template<Fitness F>
-void cache<F>::clear()
+/// \warning
+/// Not concurrency-safe.
+///
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+void cache<F, LOCK_GROUP_SIZE>::clear()
 {
-  std::lock_guard lock(mutex_);
   ++seal_;
 }
 
@@ -77,10 +116,13 @@ void cache<F>::clear()
 ///
 /// \param[in] h individual's signature whose informations we have to clear
 ///
-template<Fitness F>
-void cache<F>::clear(const hash_t &h)
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+void cache<F, LOCK_GROUP_SIZE>::clear(const hash_t &h)
 {
-  std::lock_guard lock(mutex_);
+  const auto idx(index(h));
+  auto &mutex(locks_[lock_index(idx)]);
+
+  std::lock_guard lock(mutex);
 
   // Invalidates the slot since the first valid value for seal is `1`.
   table_[index(h)].seal = 0;
@@ -93,13 +135,16 @@ void cache<F>::clear(const hash_t &h)
 /// \return      the fitness of the individual. If the individuals isn't
 ///              present returns an empty `std::optional`
 ///
-template<Fitness F>
-std::optional<F> cache<F>::find(const hash_t &h) const
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+std::optional<F> cache<F, LOCK_GROUP_SIZE>::find(const hash_t &h) const
 {
-  std::shared_lock lock(mutex_);
+  const auto idx(index(h));
+  auto &mutex(locks_[lock_index(idx)]);
 
-  if (const slot &s(table_[index(h)]); s.seal == seal_ && s.hash == h)
-    return s.fitness;
+    std::shared_lock lock(mutex);
+
+    if (const slot &s(table_[index(h)]); s.seal == seal_ && s.hash == h)
+      return s.fitness;
 
   return std::nullopt;
 }
@@ -111,13 +156,15 @@ std::optional<F> cache<F>::find(const hash_t &h) const
 ///                    the table
 /// \param[in] fitness the fitness of the individual
 ///
-template<Fitness F>
-void cache<F>::insert(const hash_t &h, const F &fitness)
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+void cache<F, LOCK_GROUP_SIZE>::insert(const hash_t &h, const F &fitness)
 {
-  std::lock_guard lock(mutex_);
+  const auto idx(index(h));
+  auto &mutex(locks_[lock_index(idx)]);
 
-  const slot s{h, fitness, seal_};
-  table_[index(s.hash)] = s;
+  std::lock_guard lock(mutex);
+
+  table_[idx] = {h, fitness, seal_};
 }
 
 ///
@@ -127,11 +174,12 @@ void cache<F>::insert(const hash_t &h, const F &fitness)
 /// \note
 /// If the load operation isn't successful the current object isn't changed.
 ///
-template<Fitness F>
-bool cache<F>::load(std::istream &in)
+/// \warning
+/// Not concurrency-safe.
+///
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
 {
-  std::lock_guard lock(mutex_);
-
   decltype(seal_) t_seal;
   if (!(in >> t_seal))
     return false;
@@ -164,11 +212,12 @@ bool cache<F>::load(std::istream &in)
 /// \param[out] out output stream
 /// \return         `true` if the object was saved correctly
 ///
-template<Fitness F>
-bool cache<F>::save(std::ostream &out) const
+/// \warning
+/// Not concurrency-safe.
+///
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+bool cache<F, LOCK_GROUP_SIZE>::save(std::ostream &out) const
 {
-  std::shared_lock lock(mutex_);
-
   out << seal_ << ' ' << '\n';
 
   std::size_t num(0);
@@ -192,22 +241,21 @@ bool cache<F>::save(std::ostream &out) const
 ///
 /// \return number of bits used for hash table initialization
 ///
-template<Fitness F>
-bitwidth cache<F>::bits() const
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+bitwidth cache<F, LOCK_GROUP_SIZE>::bits() const
 {
-  std::shared_lock lock(mutex_);
-
   return std::bit_width(k_mask);
 }
 
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<Fitness F>
-bool cache<F>::is_valid() const
+/// \warning
+/// Not concurrency-safe.
+///
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+bool cache<F, LOCK_GROUP_SIZE>::is_valid() const
 {
-  std::shared_lock lock(mutex_);
-
   if (seal_ == 0)
     return false;
 
