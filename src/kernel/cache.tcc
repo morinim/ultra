@@ -87,7 +87,8 @@ std::size_t cache<F, LOCK_GROUP_SIZE>::index(const hash_t &h) const noexcept
 ///                containing `idx`
 ///
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
-std::size_t cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
+std::size_t
+cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
 {
   return idx / LOCK_GROUP_SIZE;
 }
@@ -125,7 +126,7 @@ void cache<F, LOCK_GROUP_SIZE>::clear(const hash_t &h)
   std::lock_guard lock(mutex);
 
   // Invalidates the slot since the first valid value for seal is `1`.
-  table_[index(h)].seal = 0;
+  table_[idx].seal = 0;
 }
 
 ///
@@ -141,10 +142,12 @@ std::optional<F> cache<F, LOCK_GROUP_SIZE>::find(const hash_t &h) const
   const auto idx(index(h));
   auto &mutex(locks_[lock_index(idx)]);
 
+  {
     std::shared_lock lock(mutex);
 
-    if (const slot &s(table_[index(h)]); s.seal == seal_ && s.hash == h)
+    if (const slot &s(table_[idx]); s.seal == seal_ && s.hash == h)
       return s.fitness;
+  }
 
   return std::nullopt;
 }
@@ -171,8 +174,10 @@ void cache<F, LOCK_GROUP_SIZE>::insert(const hash_t &h, const F &fitness)
 /// \param[in] in input stream
 /// \return       `true` if the object is correctly loaded
 ///
-/// \note
-/// If the load operation isn't successful the current object isn't changed.
+/// \remark
+/// Even if the load operation isn't successful, the current object might still
+/// change. A stronger guarantee would require twice the memory allocated for
+/// the cache.
 ///
 /// \warning
 /// Not concurrency-safe.
@@ -180,9 +185,8 @@ void cache<F, LOCK_GROUP_SIZE>::insert(const hash_t &h, const F &fitness)
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
 {
-  decltype(seal_) t_seal;
-  if (!(in >> t_seal))
-    return false;
+  for (auto &s : table_)
+    s.seal = 0;
 
   std::size_t n;
   if (!(in >> n))
@@ -191,7 +195,7 @@ bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
   while (n)
   {
     slot s;
-    s.seal = t_seal;
+    s.seal = 1;
 
     if (!s.hash.load(in))
       return false;
@@ -203,7 +207,7 @@ bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
     --n;
   }
 
-  seal_ = t_seal;
+  seal_ = 1;
 
   return true;
 }
@@ -218,12 +222,9 @@ bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 bool cache<F, LOCK_GROUP_SIZE>::save(std::ostream &out) const
 {
-  out << seal_ << ' ' << '\n';
+  std::size_t num(std::ranges::count_if(
+                    table_, [this](const auto &s) {return s.seal == seal_;}));
 
-  std::size_t num(0);
-  for (const auto &s : table_)
-    if (s.seal == seal_)
-      ++num;
   out << num << '\n';
 
   for (const auto &s : table_)
@@ -233,8 +234,11 @@ bool cache<F, LOCK_GROUP_SIZE>::save(std::ostream &out) const
         return false;
       if (!ultra::save(out, s.fitness))
         return false;
+
+      --num;
     }
 
+  Expects(num == 0);
   return out.good();
 }
 

@@ -83,6 +83,7 @@ private:
 
   std::vector<slot> table_ {};
   mutable std::vector<std::shared_mutex> locks_ {};  // group-level locks
+
   std::uint64_t k_mask {0};
   decltype(slot::seal) seal_ {1};
 
