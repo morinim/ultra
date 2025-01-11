@@ -185,8 +185,7 @@ void cache<F, LOCK_GROUP_SIZE>::insert(const hash_t &h, const F &fitness)
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
 {
-  for (auto &s : table_)
-    s.seal = 0;
+  clear();
 
   std::size_t n;
   if (!(in >> n))
@@ -195,7 +194,7 @@ bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
   while (n)
   {
     slot s;
-    s.seal = 1;
+    s.seal = seal_;
 
     if (!s.hash.load(in))
       return false;
@@ -206,8 +205,6 @@ bool cache<F, LOCK_GROUP_SIZE>::load(std::istream &in)
 
     --n;
   }
-
-  seal_ = 1;
 
   return true;
 }
