@@ -93,7 +93,7 @@ TEST_CASE_FIXTURE(fixture1, "Collision detection")
     }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Concurrent access")
+TEST_CASE("Concurrent access")
 {
   using namespace ultra;
 
@@ -176,30 +176,37 @@ TEST_CASE_FIXTURE(fixture1, "Concurrent access")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Serialization")
+TEST_CASE("Serialization")
 {
   using namespace ultra;
 
-  cache<double> cache1(14), cache2(14);
-  prob.params.slp.code_length = 64;
+  const auto generate_sig([](unsigned i)
+  {
+    return hash_t(i, i);
+  });
+  const auto generate_fit([](unsigned i)
+  {
+    return static_cast<double>(i);
+  });
 
-  const unsigned n(1000);
-  std::vector<gp::individual> vi;
+  cache<double> cache1(14), cache2(14);
+
+  const unsigned n(10000);
+  std::vector<hash_t> signatures;
   for (unsigned i(0); i < n; ++i)
   {
-    gp::individual i1(prob);
-    const auto val(run(i1));
-    const auto f{has_value(val) ? std::get<D_DOUBLE>(val) : 0.0};
+    const auto sig(generate_sig(i));
 
-    cache1.insert(i1.signature(), f);
-    vi.push_back(i1);
+    cache1.insert(sig, generate_fit(i));
+
+    signatures.push_back(sig);
   }
 
   std::vector<std::uint8_t> present(n);
-  std::ranges::transform(vi, present.begin(),
-                         [&cache1](const auto &i)
+  std::ranges::transform(signatures, present.begin(),
+                         [&cache1](const auto &sig)
                          {
-                           return cache1.find(i.signature()).has_value();
+                           return cache1.find(sig).has_value();
                          });
 
   std::stringstream ss;
@@ -209,12 +216,11 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   for (unsigned i(0); i < n; ++i)
     if (present[i])
     {
-      const auto val(run(vi[i]));
-      const auto f1{has_value(val) ? std::get<D_DOUBLE>(val) : 0.0};
+      const auto sig(generate_sig(i));
 
-      const auto f(cache2.find(vi[i].signature()));
-      CHECK(f);
-      CHECK(almost_equal(*f, f1));
+      const auto fit(cache2.find(sig));
+      CHECK(fit);
+      CHECK(almost_equal(*fit, generate_fit(i)));
     }
 }
 
