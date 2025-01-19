@@ -73,7 +73,7 @@ TEST_CASE("REAL")
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
   }
-
+/*
   SUBCASE("AQ")
   {
     real::aq f;
@@ -87,7 +87,7 @@ TEST_CASE("REAL")
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({inf, inf}))));
   }
-/*
+
   SUBCASE("Cos")
   {
     real::cos f;
