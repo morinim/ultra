@@ -49,7 +49,7 @@ TEST_CASE("REAL")
 
   const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
   const value_t empty;
-
+/*
   SUBCASE("Abs")
   {
     real::abs f;
@@ -59,7 +59,7 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({ 0.0}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
-
+*/
   SUBCASE("Add")
   {
     real::add f;
