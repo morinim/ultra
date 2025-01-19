@@ -63,13 +63,13 @@ TEST_CASE("REAL")
   SUBCASE("Add")
   {
     real::add f;
-/*
+
     CHECK(base(f.eval(debug_params({-1.0, 1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({1.0, 1.0}))) == doctest::Approx(2.0));
     CHECK(base(f.eval(debug_params({0.0, 10.0}))) == doctest::Approx(10.0));*/
-    //CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
-    //CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
-    //CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
+    CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
+    CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
+    CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
 /*    CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
       CHECK(!has_value(f.eval(debug_params({0.0, {}}))));*/
   }
