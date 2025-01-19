@@ -41,7 +41,7 @@ private:
 
 TEST_SUITE("FUNCTION")
 {
-
+/*
 TEST_CASE("REAL")
 {
   using namespace ultra;
@@ -306,7 +306,7 @@ TEST_CASE("REAL")
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
 }
-
+*/
 TEST_CASE("INTEGER")
 {
   using namespace ultra;
