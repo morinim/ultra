@@ -41,13 +41,13 @@ private:
 
 TEST_SUITE("FUNCTION")
 {
-/*
+
 TEST_CASE("REAL")
 {
   using namespace ultra;
   using ultra::real::base;
 
-  const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
+  //const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
   const value_t empty;
 
   SUBCASE("Abs")
@@ -59,7 +59,7 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({ 0.0}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
-
+/*
   SUBCASE("Add")
   {
     real::add f;
@@ -305,8 +305,9 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
-}
 */
+}
+
 TEST_CASE("INTEGER")
 {
   using namespace ultra;
