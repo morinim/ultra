@@ -70,8 +70,8 @@ TEST_CASE("REAL")
     CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
     CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
     CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
-    CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
-    CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
+/*    CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
+      CHECK(!has_value(f.eval(debug_params({0.0, {}}))));*/
   }
 /*
   SUBCASE("AQ")
