@@ -42,12 +42,12 @@ private:
 TEST_SUITE("FUNCTION")
 {
 
-TEST_CASE("REAL")
+  TEST_CASE("REAL")
 {
   using namespace ultra;
   using ultra::real::base;
 
-  const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
+  constexpr auto inf(std::numeric_limits<D_DOUBLE>::infinity());
   const value_t empty;
 
   SUBCASE("Abs")
@@ -68,8 +68,8 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({1.0, 1.0}))) == doctest::Approx(2.0));
     CHECK(base(f.eval(debug_params({0.0, 10.0}))) == doctest::Approx(10.0));
     CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
-    //CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
-    //CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
+    CHECK(!has_value(f.eval(debug_params({+inf, inf}))));
+    CHECK(!has_value(f.eval(debug_params({inf, -inf}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
   }
@@ -85,9 +85,9 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({1.0, inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({inf, 1.0}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
-    //CHECK(!has_value(f.eval(debug_params({inf, inf}))));
+    CHECK(!has_value(f.eval(debug_params({inf, inf}))));
   }
-/*
+
   SUBCASE("Cos")
   {
     real::cos f;
@@ -121,7 +121,7 @@ TEST_CASE("REAL")
     CHECK(std::get<D_INT>(f.eval(debug_params({0.0, 1.0}))) == 0);
     CHECK(std::get<D_INT>(f.eval(debug_params({1.0, 0.0}))) != 0);
     CHECK(std::get<D_INT>(f.eval(debug_params({inf, 0.0}))) != 0);
-    CHECK(std::get<D_INT>(f.eval(debug_params({+inf, -inf}))) != 0);
+    CHECK(std::get<D_INT>(f.eval(debug_params({inf, -inf}))) != 0);
     CHECK(std::get<D_INT>(f.eval(debug_params({inf, inf}))) == 0);
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
@@ -163,7 +163,7 @@ TEST_CASE("REAL")
 
     CHECK(base(f.eval(debug_params({0.0, 1.0, 2.0, 3.0})))
           == doctest::Approx(2.0));
-    CHECK(base(f.eval(debug_params({-inf, +inf, 2.0, 3.0})))
+    CHECK(base(f.eval(debug_params({-inf, inf, 2.0, 3.0})))
           == doctest::Approx(2.0));
     CHECK(base(f.eval(debug_params({1.0, 0.0, 2.0, 3.0})))
           == doctest::Approx(3.0));
@@ -214,7 +214,7 @@ TEST_CASE("REAL")
 
     CHECK(std::get<D_INT>(f.eval(debug_params({0.0, 1.0}))) != 0);
     CHECK(std::get<D_INT>(f.eval(debug_params({1.0, 0.0}))) == 0);
-    CHECK(std::get<D_INT>(f.eval(debug_params({-inf, +inf}))) != 0);
+    CHECK(std::get<D_INT>(f.eval(debug_params({-inf, inf}))) != 0);
     CHECK(std::get<D_INT>(f.eval(debug_params({10.0, inf}))) != 0);
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
@@ -290,8 +290,8 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({1.0, 1.0}))) == doctest::Approx(0.0));
     CHECK(base(f.eval(debug_params({0.0, 10.0}))) == doctest::Approx(-10.0));
     CHECK(!has_value(f.eval(debug_params({inf, -1.0}))));
-    CHECK(!has_value(f.eval(debug_params({+inf, -inf}))));
-    CHECK(!has_value(f.eval(debug_params({+inf, +inf}))));
+    CHECK(!has_value(f.eval(debug_params({inf, -inf}))));
+    CHECK(!has_value(f.eval(debug_params({inf, inf}))));
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
   }
@@ -305,7 +305,6 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
-  */
 }
 
 TEST_CASE("INTEGER")
