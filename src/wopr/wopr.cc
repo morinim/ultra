@@ -914,44 +914,50 @@ bool parse_args(int argc, char *argv[])
   argh::parser cmdl;
   cmdl.parse(argc, argv);
 
+  const auto set_log_dir(
+    [](const std::filesystem::path &p)
+    {
+      if (std::filesystem::is_directory(p))
+        slog.base_dir = p;
+      else
+        std::cerr << "Log data directory doesn't exist\n";
+    });
+
   if (const auto &pos_args(cmdl.pos_args()); pos_args.size() > 1)
   {
-    if (std::filesystem::exists(pos_args.back()))
-      slog.base_dir = pos_args.back();
-    else
-    {
-      std::cerr << "Data directory doesn't exist\n";
-      return false;
-    }
+    set_log_dir(pos_args.back());
   }
 
-  const auto build_path([base_dir = slog.base_dir]
-                        (const std::filesystem::path &f,
-                         const std::string &default_filename)
-  {
-    if (f.is_absolute())
-    {
-      if (std::filesystem::exists(f))
-        return f;
+  if (cmdl("--monitor"))
+    set_log_dir(cmdl("--monitor").str());
 
-      std::cerr << "File " << f << " doesn't exist\n";
-    }
-    else if (!f.empty())
+  const auto build_path(
+    [base_dir = slog.base_dir](const std::filesystem::path &f,
+                               const std::string &default_filename)
     {
-      if (const auto bf(base_dir / f); std::filesystem::exists(bf))
-        return bf;
+      if (f.is_absolute())
+      {
+        if (std::filesystem::exists(f))
+          return f;
+
+        std::cerr << "File " << f << " doesn't exist\n";
+      }
+      else if (!f.empty())
+      {
+        if (const auto bf(base_dir / f); std::filesystem::exists(bf))
+          return bf;
+        else
+          std::cerr << "File " << bf << " doesn't exist\n";
+      }
       else
-        std::cerr << "File " << bf << " doesn't exist\n";
-    }
-    else
-    {
-      if (const auto bf(base_dir / default_filename);
-          std::filesystem::exists(bf))
-        return bf;
-    }
+      {
+        if (const auto bf(base_dir / default_filename);
+            std::filesystem::exists(bf))
+          return bf;
+      }
 
-    return std::filesystem::path{};
-  });
+      return std::filesystem::path{};
+    });
 
   using namespace ultra;
   slog.dynamic_file_path = build_path(cmdl("dynamic", "").str(),
@@ -977,25 +983,29 @@ void cmdl_usage()
     << R"(\ \    // / \ | |_) | |_))" << '\n'
     << R"( \_\/\/ \_\_/ |_|   |_| \)"
     << "\n\n"
-    << "GREETINGS PROFESSOR FALKEN."
-    << "\n\n"
-    << "Basic usage:"
-    << "\n\n"
-    << "> wopr data_folder"
-    << "\n\n"
-    << "The data folder must contain at least one search log produced by Ultra."
-    << "\n\n"
-    << "Available commands:"
-    << "\n\n"
-    << "-dynamic    path\n"
-    << "-layers     path\n"
-    << "-population path"
-    << "\n\n"
-    << "            `path` can refer either to a specific file or to a\n"
-    << "            directory; in the latter case, the default filenames are\n"
-    << "            used.\n"
-    << "-imguidemo"
-    << "\n\n"
+    << "GREETINGS PROFESSOR FALKEN.\n"
+    << "\n"
+    << "Basic usage:\n"
+    << "\n"
+    <<
+  "> wopr data_folder\n"
+  "\n"
+  "The data folder must contain at least a search log produced by Ultra or a\n"
+  "test file.\n"
+  "\n"
+  "Available switches:\n"
+  "\n"
+  "-dynamic    path\n"
+  "-layers     path\n"
+  "-population path\n"
+  "            `path` can refer either to a file or to a directory; in the\n"
+  "            latter case `path` replaces `data_folder` for the specific log\n"
+  "            file and the default filename is used.\n"
+  "-monitor    path\n"
+  "            `path` replaces `data_folder` as base directory for all log\n"
+  "            files; default filenames are used.\n"
+  "-imguidemo\n"
+  "\n"
     << "SHALL WE PLAY A GAME?\n\n";
 }
 
