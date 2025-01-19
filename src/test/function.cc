@@ -47,7 +47,7 @@ TEST_CASE("REAL")
   using namespace ultra;
   using ultra::real::base;
 
-  //const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
+  const D_DOUBLE inf(std::numeric_limits<D_DOUBLE>::infinity());
   const value_t empty;
 
   SUBCASE("Abs")
@@ -73,7 +73,7 @@ TEST_CASE("REAL")
     CHECK(!has_value(f.eval(debug_params({{}, 0.0}))));
     CHECK(!has_value(f.eval(debug_params({0.0, {}}))));
   }
-/*
+
   SUBCASE("AQ")
   {
     real::aq f;
@@ -305,7 +305,6 @@ TEST_CASE("REAL")
     CHECK(base(f.eval(debug_params({-inf}))) == doctest::Approx(0.0));
     CHECK(!has_value(f.eval(debug_params({empty}))));
   }
-*/
 }
 
 TEST_CASE("INTEGER")
