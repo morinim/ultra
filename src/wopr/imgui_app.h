@@ -21,6 +21,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include "imgui/backends/imgui_impl_sdl2.h"
 #include "imgui/backends/imgui_impl_sdlrenderer2.h"
 
@@ -54,12 +55,14 @@ public:
   window &operator=(window) = delete;
   window &operator=(window &&) = delete;
 
-  [[nodiscard]] SDL_Window *get_native_window() const;
+  [[nodiscard]] TTF_Font *get_native_font() const;
   [[nodiscard]] SDL_Renderer *get_native_renderer() const;
+  [[nodiscard]] SDL_Window *get_native_window() const;
 
  private:
   SDL_Window *window_ {nullptr};
   SDL_Renderer *renderer_ {nullptr};
+  TTF_Font *font_ {nullptr};
 };
 
 namespace dpi_handler

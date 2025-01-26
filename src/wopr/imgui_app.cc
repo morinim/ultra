@@ -46,12 +46,25 @@ window::window(const window::settings &s)
   SDL_RendererInfo info;
   SDL_GetRendererInfo(renderer_, &info);
   dpi_handler::set_render_scale(renderer_);
+
+  if (const std::filesystem::path ttf_file("/prj/ultra/build/wopr/vectorb.ttf");
+      std::filesystem::exists(ttf_file))
+  {
+    font_ = TTF_OpenFont(ttf_file.string().c_str(), 28);
+    if (!font_)
+      throw std::runtime_error("Font could not be loaded! TTF_Error");
+  }
 }
 
 window::~window()
 {
   SDL_DestroyRenderer(renderer_);
   SDL_DestroyWindow(window_);
+}
+
+TTF_Font *window::get_native_font() const
+{
+  return font_;
 }
 
 SDL_Window *window::get_native_window() const
@@ -83,6 +96,18 @@ program::~program()
   ImGui::DestroyContext();
 
   SDL_Quit();
+}
+
+void render_text(SDL_Renderer *renderer, TTF_Font *font,
+                 const std::string &text, int x, int y, SDL_Color color)
+{
+  SDL_Surface *surface(TTF_RenderText_Solid(font, text.c_str(), color));
+  SDL_Texture *texture(SDL_CreateTextureFromSurface(renderer, surface));
+  SDL_Rect dest = {x, y, surface->w, surface->h};
+
+  SDL_RenderCopy(renderer, texture, nullptr, &dest);
+  SDL_FreeSurface(surface);
+  SDL_DestroyTexture(texture);
 }
 
 void program::run(std::function<void (const program &, bool *)> render_main)
@@ -178,6 +203,7 @@ void program::run(std::function<void (const program &, bool *)> render_main)
 
     // Rendering
     ImGui::Render();
+
     SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
                            SDL_ALPHA_OPAQUE);
     SDL_RenderClear(window_->get_native_renderer());
