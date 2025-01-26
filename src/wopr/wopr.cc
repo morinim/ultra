@@ -20,6 +20,8 @@
 #include "argh/argh.h"
 #include "kernel/exceptions.h"
 #include "kernel/search_log.h"
+#include "kernel/gp/primitive/real.h"
+#include "kernel/gp/src/search.h"
 #include "utility/log.h"
 #include "utility/timer.h"
 #include "utility/ts_queue.h"
@@ -28,6 +30,7 @@
 
 
 ultra::search_log slog {};
+std::set<std::filesystem::path> datasets {};
 bool imgui_demo_panel {false};
 
 
@@ -907,109 +910,6 @@ void render(const imgui_app::program &prg, bool *p_open)
 }
 
 /*********************************************************************
- * Command line
- ********************************************************************/
-bool parse_args(int argc, char *argv[])
-{
-  argh::parser cmdl;
-  cmdl.parse(argc, argv);
-
-  const auto set_log_dir(
-    [](const std::filesystem::path &p)
-    {
-      if (std::filesystem::is_directory(p))
-        slog.base_dir = p;
-      else
-        std::cerr << "Log data directory doesn't exist\n";
-    });
-
-  if (const auto &pos_args(cmdl.pos_args()); pos_args.size() > 1)
-  {
-    set_log_dir(pos_args.back());
-  }
-
-  if (cmdl("--monitor"))
-    set_log_dir(cmdl("--monitor").str());
-
-  const auto build_path(
-    [base_dir = slog.base_dir](const std::filesystem::path &f,
-                               const std::string &default_filename)
-    {
-      if (f.is_absolute())
-      {
-        if (std::filesystem::exists(f))
-          return f;
-
-        std::cerr << "File " << f << " doesn't exist\n";
-      }
-      else if (!f.empty())
-      {
-        if (const auto bf(base_dir / f); std::filesystem::exists(bf))
-          return bf;
-        else
-          std::cerr << "File " << bf << " doesn't exist\n";
-      }
-      else
-      {
-        if (const auto bf(base_dir / default_filename);
-            std::filesystem::exists(bf))
-          return bf;
-      }
-
-      return std::filesystem::path{};
-    });
-
-  using namespace ultra;
-  slog.dynamic_file_path = build_path(cmdl("dynamic", "").str(),
-                                      search_log::default_dynamic_file);
-  slog.layers_file_path = build_path(cmdl("layers", "").str(),
-                                     search_log::default_layers_file);
-  slog.population_file_path = build_path(cmdl("population", "").str(),
-                                         search_log::default_population_file);
-
-  std::cout << "Dynamic file path: " << slog.dynamic_file_path
-            << "\nLayers file path: " << slog.layers_file_path
-            << "\nPopulation file path: " << slog.population_file_path << '\n';
-
-  imgui_demo_panel = cmdl["imguidemo"];
-
-  return true;
-}
-
-void cmdl_usage()
-{
-  std::cout
-    << R"( _       ___   ___   ___ )" << '\n'
-    << R"(\ \    // / \ | |_) | |_))" << '\n'
-    << R"( \_\/\/ \_\_/ |_|   |_| \)"
-    << "\n\n"
-    << "GREETINGS PROFESSOR FALKEN.\n"
-    << "\n"
-    << "Basic usage:\n"
-    << "\n"
-    <<
-  "> wopr data_folder\n"
-  "\n"
-  "The data folder must contain at least a search log produced by Ultra or a\n"
-  "test file.\n"
-  "\n"
-  "Available switches:\n"
-  "\n"
-  "-dynamic    path\n"
-  "-layers     path\n"
-  "-population path\n"
-  "            `path` can refer either to a file or to a directory; in the\n"
-  "            latter case `path` replaces `data_folder` for the specific log\n"
-  "            file and the default filename is used.\n"
-  "-monitor    path\n"
-  "            `path` replaces `data_folder` as base directory for all log\n"
-  "            files; default filenames are used.\n"
-  "-imguidemo\n"
-  "\n"
-    << "SHALL WE PLAY A GAME?\n\n";
-}
-
-/*********************************************************************
  * Misc
  ********************************************************************/
 std::string random_string()
@@ -1141,34 +1041,234 @@ void get_data(std::stop_token stoken)
 }
 
 /*********************************************************************
+ * Command line
+ ********************************************************************/
+enum class cmdl_result {error, help, monitor, test};
+
+void cmdl_usage()
+{
+  std::cout
+    << R"( _       ___   ___   ___ )" << '\n'
+    << R"(\ \    // / \ | |_) | |_))" << '\n'
+    << R"( \_\/\/ \_\_/ |_|   |_| \)"
+    << "\n\n"
+    << "GREETINGS PROFESSOR FALKEN.\n"
+    << "\n"
+    << "Please enter your selection:\n"
+    << "\n"
+    <<
+  "> wopr monitor [data_folder]\n"
+  "    The data folder must contain at least a search log produced by Ultra.\n"
+  "    If missing, the current working directory is used.\n"
+  "\n"
+  "> wopr test    [test_folder]\n"
+  "    The test folder must contain at least a dataset and optionally a test\n"
+  "    configuration file. If missing, the current working directory is used.\n"
+  "\n"
+  "Available switches:\n"
+  "\n"
+  "--dynamic      filename\n"
+  "--layers       filename\n"
+  "--population   filename\n"
+  "    Use a filename different from the default one.\n"
+  "\n"
+  "-help\n"
+  "    Show this help screen.\n"
+  "-imguidemo\n"
+  "    Enable ImGUI demo panel.\n"
+  "\n"
+    << "SHALL WE PLAY A GAME?\n\n";
+}
+
+std::filesystem::path build_path(const std::filesystem::path &base_dir,
+                                 const std::filesystem::path &f,
+                                 const std::string &default_filename)
+{
+  if (f.is_absolute())
+  {
+    if (std::filesystem::exists(f))
+      return f;
+
+    std::cerr << "File " << f << " doesn't exist\n";
+  }
+  else if (!f.empty())
+  {
+    if (const auto bf(base_dir / f); std::filesystem::exists(bf))
+      return bf;
+    else
+      std::cerr << "File " << bf << " doesn't exist\n";
+  }
+  else
+  {
+    if (const auto bf(base_dir / default_filename);
+        std::filesystem::exists(bf))
+      return bf;
+  }
+
+  return std::filesystem::path{};
+}
+
+cmdl_result parse_args(int argc, char *argv[])
+{
+  argh::parser cmdl;
+  cmdl.parse(argc, argv);
+
+  const std::string cmd_monitor("monitor");
+  const std::string cmd_test("test");
+  const std::set<std::string> cmds({cmd_monitor, cmd_test});
+
+  const auto &pos_args(cmdl.pos_args());
+
+  if (pos_args.size() <= 1 || cmdl[{"-h", "--help"}])
+    return cmdl_result::help;
+
+  std::string cmd;
+  std::ranges::transform(pos_args[1], std::back_inserter(cmd),
+                         [](auto c){ return std::tolower(c); });
+
+  if (!cmds.contains(cmd))
+  {
+    std::cerr << "Unknown command.\n";
+    return cmdl_result::error;
+  }
+
+  imgui_demo_panel = cmdl["imguidemo"];
+
+  if (cmd == cmd_monitor)
+  {
+    const std::filesystem::path data_folder(pos_args.size() <= 2
+                                            ? "./" : pos_args[2]);
+
+    if (!std::filesystem::is_directory(data_folder))
+    {
+      std::cerr << data_folder << " isn't a directory\n";
+      return cmdl_result::error;
+    }
+
+    slog.base_dir = data_folder;
+
+    using namespace ultra;
+    slog.dynamic_file_path = build_path(slog.base_dir,
+                                        cmdl("dynamic", "").str(),
+                                        search_log::default_dynamic_file);
+    slog.layers_file_path = build_path(slog.base_dir,
+                                       cmdl("layers", "").str(),
+                                       search_log::default_layers_file);
+    slog.population_file_path = build_path(slog.base_dir,
+                                           cmdl("population", "").str(),
+                                           search_log::default_population_file);
+
+    if (slog.dynamic_file_path.empty()
+        && slog.layers_file_path.empty()
+        && slog.population_file_path.empty())
+    {
+      std::cerr << "No data file available.\n";
+      return cmdl_result::error;
+    }
+
+    std::cout << "Dynamic file path: " << slog.dynamic_file_path
+              << "\nLayers file path: " << slog.layers_file_path
+              << "\nPopulation file path: " << slog.population_file_path
+              << '\n';
+
+    return cmdl_result::monitor;
+  }
+  else if (cmd == cmd_test)
+  {
+    const std::filesystem::path test_folder(pos_args.size() <= 2
+                                            ? "./" : pos_args[2]);
+
+    if (!std::filesystem::is_directory(test_folder))
+    {
+      std::cerr << test_folder << " isn't a directory.\n";
+      return cmdl_result::error;
+    }
+
+    for (const auto &entry : std::filesystem::directory_iterator(test_folder))
+      if (ultra::iequals(entry.path().extension(), ".csv"))
+        datasets.insert(entry.path());
+
+    if (datasets.empty())
+    {
+      std::cerr << "No dataset available.\n";
+      return cmdl_result::error;
+    }
+
+    std::cout << "Datasets:";
+    for (const auto &d : datasets)
+      std::cout << ' ' << d;
+    std::cout << '\n';
+
+    return cmdl_result::test;
+  }
+
+  return cmdl_result::error;
+}
+
+/*********************************************************************
  * MAIN
  ********************************************************************/
+void monitor(const imgui_app::program::settings &settings)
+{
+  std::jthread t_data(get_data);
+
+  imgui_app::program prg(settings);
+  prg.run(render);
+}
+
+void test(const imgui_app::program::settings &)
+{
+  std::stop_source source;
+
+  std::vector<std::jthread> threads;
+
+  const auto test_dataset(
+    [stop_token = source.get_token()](std::filesystem::path dataset)
+    {
+      ultra::src::problem prob(dataset);
+
+      prob.insert<ultra::real::sin>();
+      prob.insert<ultra::real::cos>();
+      prob.insert<ultra::real::add>();
+      prob.insert<ultra::real::sub>();
+      prob.insert<ultra::real::div>();
+      prob.insert<ultra::real::mul>();
+
+      ultra::src::search s(prob);
+      return s.run(-1);
+    });
+
+  std::vector<std::future<ultra::search_stats<ultra::gp::individual,
+                                              double>>> tasks;
+  for (const auto &dataset : datasets)
+    tasks.push_back(std::async(std::launch::async, test_dataset, dataset));
+}
+
 int main(int argc, char *argv[])
 {
-  if (!parse_args(argc, argv))
+  const auto result(parse_args(argc, argv));
+
+  if (result == cmdl_result::error)
   {
-    std::cerr << "Cannot parse command line\n";
-    cmdl_usage();
+    std::cerr << "Use `--help` switch for command line description.\n\n"
+              << "People sometimes make mistakes.\n";
     return EXIT_FAILURE;
   }
 
-  if (slog.dynamic_file_path.empty()
-      && slog.layers_file_path.empty()
-      && slog.population_file_path.empty())
+  if (result == cmdl_result::help)
   {
-    std::cerr << "No data file available\n";
     cmdl_usage();
-
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
   }
-
-  std::jthread t_data(get_data);
 
   imgui_app::program::settings settings;
   settings.w_related.title = "WOPR";
   settings.demo = imgui_demo_panel;
-  imgui_app::program prg(settings);
-  prg.run(render);
+
+  if (result == cmdl_result::monitor)
+    monitor(settings);
+  else if (result == cmdl_result::test)
+    test(settings);
 
   return EXIT_SUCCESS;
 }
