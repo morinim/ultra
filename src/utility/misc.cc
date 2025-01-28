@@ -230,6 +230,27 @@ unsigned app_level_uid::next_id() noexcept
 
 namespace lock_file
 {
+/*
+namespace internal
+{
+
+bool remove_file(const std::filesystem::path &f)
+{
+  namespace fs = std::filesystem;
+
+  std::error_code err_cod;
+  if (fs::remove(f, err_cod))
+    return true;
+
+  if (err_cod)
+  {
+    fs::remove(f, err_cod);
+    return false;
+  }
+}
+
+}*/
+
 ///
 /// Checks if a lock file exists and is not stale.
 ///
@@ -276,7 +297,7 @@ void acquire_write(const std::filesystem::path &f)
 
   // Create write lock.
   const auto write_lock_file(fs::path(f).replace_extension(".write.lock"));
-  std::ofstream(write_lock_file).close();
+  std::fstream(write_lock_file).close();
 
   // Wait for readers to finish.
   // After creating the write lock, the writer waits for all readers to finish
@@ -306,7 +327,7 @@ bool acquire_read(const std::filesystem::path &f)
 
   // Create read lock.
   const auto read_lock_file(fs::path(f).replace_extension(".read.lock"));
-  std::ofstream(read_lock_file).close();
+  std::fstream(read_lock_file).close();
 
   // Recheck for write lock.
   // When the writer creates the write lock, readers that check for the write
@@ -341,6 +362,6 @@ void release_read(std::filesystem::path f)
     fs::remove(lock_file);
 }
 
-}  // namespace lock
+}  // namespace lock file
 
 }  // namespace ultra

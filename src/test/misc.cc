@@ -309,7 +309,6 @@ TEST_CASE("File locking mechanism")
   CHECK(!fs::exists(write_lock_file));
 
   cleanup();
-
 }
 
 }  // TEST_SUITE("MISC")
