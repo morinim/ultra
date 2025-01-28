@@ -178,6 +178,7 @@ basic_search<ES, E>::run(unsigned n,
 
     evolution evo(es_);
     evo.after_generation(after_generation_callback_);
+    evo.logger(search_log_);
     evo.shake_function(shake);
     const auto run_summary(evo.run());
 
@@ -193,6 +194,8 @@ basic_search<ES, E>::run(unsigned n,
       // Update the search statistics (possibly using the validation setup).
       stats.update(prg, metrics.back(), run_summary.elapsed, threshold);
     }
+
+    search_log_.save_summary(stats);
   }
 
   return stats;
@@ -251,7 +254,6 @@ basic_search<ES, E> &basic_search<ES, E>::validation_strategy(
   return *this;
 }
 
-
 ///
 /// Loads the saved evaluation cache from a file (if available).
 ///
@@ -286,43 +288,6 @@ template<template<class> class ES, Evaluator E>
 bool basic_search<ES, E>::is_valid() const
 {
   return true;
-}
-
-///
-/// Updates the search statistics with data from the latest run.
-///
-/// \param[in] lr_best_prg     best individual from the evolution run just
-///                            finished
-/// \param[in] lr_measurements measurements from the last run
-/// \param[in] lr_elapsed      time taken for the last evolutionary run
-/// \param[in] threshold       used to identify good runs
-///
-template<Individual I, Fitness F>
-void search_stats<I, F>::update(const I &lr_best_prg,
-                                const model_measurements<F> &lr_measurements,
-                                std::chrono::milliseconds lr_elapsed,
-                                const model_measurements<F> &threshold)
-{
-  if (lr_measurements > best_measurements)
-  {
-    best_individual = lr_best_prg;
-    best_measurements = lr_measurements;
-    best_run = runs;
-  }
-
-  if ((threshold.fitness.has_value() || threshold.accuracy.has_value())
-      && lr_measurements > threshold)
-    good_runs.insert(runs);
-
-  using std::isfinite;
-  if (const auto fit(*lr_measurements.fitness); isfinite(fit))
-    fitness_distribution.add(fit);
-
-  elapsed += lr_elapsed;
-
-  ++runs;
-
-  Ensures(good_runs.empty() || good_runs.contains(best_run));
 }
 
 #endif  // include guard

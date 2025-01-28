@@ -17,6 +17,8 @@
 #include <fstream>
 
 #include "kernel/evolution_summary.h"
+#include "kernel/search_stats.h"
+#include "tinyxml2/tinyxml2.h"
 
 namespace ultra
 {
@@ -27,9 +29,15 @@ public:
   static constexpr auto default_dynamic_file {"dynamic.txt"};
   static constexpr auto default_layers_file {"layers.txt"};
   static constexpr auto default_population_file {"population.txt"};
+  static constexpr auto default_summary_file {"summary.txt"};
 
   template<Population P, Fitness F> void save_snapshot(
     const P &, const summary<std::ranges::range_value_t<P>, F> &);
+
+  template<Individual I, Fitness F> void save_summary(
+    const search_stats<I, F> &) const;
+
+  [[nodiscard]] bool is_valid() const;
 
   /// A base common path for log files.
   /// \note
@@ -53,7 +61,13 @@ public:
   /// Enabling this log with large populations has a big performance impact.
   std::filesystem::path population_file_path {};
 
+  /// Name of the xml file used to save summary infonmation.
+  /// \note
+  /// An empty string disable logging.
+  std::filesystem::path summary_file_path {};
+
 private:
+  std::filesystem::path build_path(const std::filesystem::path &) const;
   bool open();
 
   template<Individual I, Fitness F> void save_dynamic(
@@ -62,9 +76,9 @@ private:
     const P &, const summary<std::ranges::range_value_t<P>, F> &);
   template<Fitness F> void save_population(unsigned, const distribution<F> &);
 
-  ignore_copy<std::ofstream> dynamic_file;
-  ignore_copy<std::ofstream> layers_file;
-  ignore_copy<std::ofstream> population_file;
+  std::ofstream dynamic_file;
+  std::ofstream layers_file;
+  std::ofstream population_file;
 };  // search_log
 
 #include "kernel/search_log.tcc"

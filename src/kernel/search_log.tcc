@@ -17,6 +17,42 @@
 #if !defined(ULTRA_SEARCH_LOG_TCC)
 #define      ULTRA_SEARCH_LOG_TCC
 
+namespace internal
+{
+
+//
+// A convenient arrangement for inserting stream-aware objects into
+// `XMLDocument`.
+//
+// \tparam T type of the value
+//
+// \param[out] p parent element
+// \param[in]  e new xml element
+// \param[in]  v new xml element's value
+//
+template<class T>
+void set_text(tinyxml2::XMLElement *p, const std::string &e, const T &v)
+{
+  Expects(p);
+
+  std::string str_v;
+
+  if constexpr (!std::is_same_v<T, std::string>)
+  {
+    std::ostringstream ss;
+    ss << v;
+    str_v = ss.str();
+  }
+  else
+    str_v = v;
+
+  auto *pe(p->GetDocument()->NewElement(e.c_str()));
+  pe->SetText(str_v.c_str());
+  p->InsertEndChild(pe);
+}
+
+}  // namespace internal
+
 template<Individual I, Fitness F>
 void search_log::save_dynamic(const summary<I, F> &sum,
                               const distribution<F> &fit_dist)
@@ -153,6 +189,56 @@ void search_log::save_snapshot(
   save_dynamic(sum, fit_dist);
   save_population(sum.generation, fit_dist);
   save_layers(pop, sum);
+}
+
+template<Individual I, Fitness F> void search_log::save_summary(
+  const search_stats<I, F> &stats) const
+{
+  if (!is_valid())
+    return;
+
+  tinyxml2::XMLDocument d(false);
+
+  auto *root(d.NewElement("ultra"));
+  d.InsertFirstChild(root);
+
+  auto *e_summary(d.NewElement("summary"));
+  root->InsertEndChild(e_summary);
+
+  const auto solutions(stats.good_runs.size());
+  const auto success_rate(
+    stats.runs ? static_cast<double>(solutions)
+                 / static_cast<double>(stats.runs)
+               : 0);
+
+  using internal::set_text;
+  set_text(e_summary, "success_rate", success_rate);
+  set_text(e_summary, "elapsed_time", stats.elapsed.count());
+  set_text(e_summary, "mean_fitness", stats.fitness_distribution.mean());
+  set_text(e_summary, "standard_deviation",
+           stats.fitness_distribution.standard_deviation());
+
+  auto *e_best(d.NewElement("best"));
+  e_summary->InsertEndChild(e_best);
+  if (stats.best_measurements.fitness)
+    set_text(e_best, "fitness", *stats.best_measurements.fitness);
+  set_text(e_best, "run", stats.best_run);
+
+  std::ostringstream ss;
+  ss << out::in_line << stats.best_individual;
+  set_text(e_best, "code", ss.str());
+
+  auto *e_solutions(d.NewElement("solutions"));
+  e_summary->InsertEndChild(e_solutions);
+
+  auto *e_runs(d.NewElement("runs"));
+  e_solutions->InsertEndChild(e_runs);
+  for (const auto &gr : stats.good_runs)
+    set_text(e_runs, "run", gr);
+  set_text(e_solutions, "found", solutions);
+
+  const auto path(build_path(summary_file_path));
+  d.SaveFile(path.string().c_str());
 }
 
 #endif  // include guard

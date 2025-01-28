@@ -52,7 +52,7 @@ public:
   summary<individual_t, fitness_t> run();
 
   evolution &after_generation(after_generation_callback_t);
-  evolution &logger(const search_log &);
+  evolution &logger(search_log &);
   evolution &shake_function(const std::function<bool(unsigned)> &);
 
   [[nodiscard]] bool is_valid() const;
@@ -70,7 +70,7 @@ private:
 
   after_generation_callback_t after_generation_callback_ {};
 
-  mutable search_log search_log_ {};
+  mutable search_log *search_log_ {nullptr};
 };
 
 #include "kernel/evolution.tcc"

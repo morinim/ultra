@@ -34,11 +34,14 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
 
   evolution evo(alps_es(prob, eva));
 
+  search_stats<gp::individual, double> stats;
+
   SUBCASE("Default - No log")
   {
     std::filesystem::remove(search_log::default_dynamic_file);
     std::filesystem::remove(search_log::default_layers_file);
     std::filesystem::remove(search_log::default_population_file);
+    std::filesystem::remove(search_log::default_summary_file);
 
     const auto sum(evo.run());
 
@@ -48,6 +51,7 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(!std::filesystem::exists(search_log::default_dynamic_file));
     CHECK(!std::filesystem::exists(search_log::default_layers_file));
     CHECK(!std::filesystem::exists(search_log::default_population_file));
+    CHECK(!std::filesystem::exists(search_log::default_summary_file));
   }
 
   SUBCASE("Default - User specified logs")
@@ -65,6 +69,16 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(std::filesystem::exists(search_log::default_dynamic_file));
     CHECK(std::filesystem::exists(search_log::default_layers_file));
     CHECK(std::filesystem::exists(search_log::default_population_file));
+
+    logger.summary_file_path = search_log::default_summary_file;
+    stats.best_individual = sum.best().ind;
+    stats.best_measurements.fitness = sum.best().fit;
+    stats.fitness_distribution.add(sum.best().fit);
+    stats.good_runs.insert(0);
+    stats.best_run = 0;
+    stats.runs = 1;
+    logger.save_summary(stats);
+    CHECK(std::filesystem::exists(search_log::default_summary_file));
   }
 }
 

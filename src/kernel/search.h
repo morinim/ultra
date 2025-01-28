@@ -17,29 +17,12 @@
 #include "kernel/evolution.h"
 #include "kernel/model_measurements.h"
 #include "kernel/problem.h"
+#include "kernel/search_log.h"
+#include "kernel/search_stats.h"
 #include "kernel/validation_strategy.h"
 
 namespace ultra
 {
-
-template<Individual I, Fitness F>
-struct search_stats
-{
-  void update(const I &, const model_measurements<F> &,
-              std::chrono::milliseconds, const model_measurements<F> &);
-
-  I best_individual {};
-  model_measurements<F> best_measurements {};
-
-  distribution<F> fitness_distribution {};
-  std::set<unsigned> good_runs {};
-
-  /// Time elapsed from search beginning.
-  std::chrono::milliseconds elapsed {0};
-
-  unsigned best_run {0};  /// index of the run giving the best solution
-  unsigned runs     {0};  /// number of runs performed so far
-};
 
 ///
 /// basic_search drives the evolution.
@@ -92,9 +75,10 @@ private:
   // one time just before the first run.
   virtual void init();
 
-  //void log_stats(const search_stats<T> &) const;
   bool load();
   //bool save() const;
+
+  mutable search_log search_log_ {};
 };  // class basic_search
 
 

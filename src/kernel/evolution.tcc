@@ -93,13 +93,13 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
 ///              interface)
 ///
 /// \remark
-/// Logger must be set before calling `run`. The default setting doesn't
-/// provide for data logging.
+/// Logger must be set before calling `run`. By default, data logging is
+/// excluded.
 ///
 template<Strategy S>
-evolution<S> &evolution<S>::logger(const search_log &sl)
+evolution<S> &evolution<S>::logger(search_log &sl)
 {
-  search_log_ = sl;
+  search_log_ = &sl;
   return *this;
 }
 
@@ -242,7 +242,8 @@ evolution<S>::run()
     print_and_update_if_better(sum_.best());
 
     sum_.az = analyzer(pop_, es_.evaluator());
-    search_log_.save_snapshot(pop_, sum_);
+    if (search_log_)
+      search_log_->save_snapshot(pop_, sum_);
 
     es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
     if (after_generation_callback_)
@@ -259,6 +260,9 @@ evolution<S>::run()
   return sum_;
 }
 
+///
+/// \return `true` if the object passes the internal consistency check
+///
 template<Strategy S>
 bool evolution<S>::is_valid() const
 {

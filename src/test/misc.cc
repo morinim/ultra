@@ -290,18 +290,10 @@ TEST_CASE("File locking mechanism")
     file << initial_content << '\n';
   }
 
-  // Use multiple threads to simulate multiple readers and a single writer
-  // accessing the shared resource concurrently.
-  std::vector<std::jthread> threads;
-
-  //for (unsigned i(0); i < 4; ++i)
-    threads.emplace_back(reader);
-
+  std::thread read_thread(reader);
   writer();
 
-  for (auto &thread : threads)
-    if (thread.joinable())
-      thread.join();
+  read_thread.join();
 
   CHECK(fs::exists(main_file));
   CHECK(!fs::exists(read_lock_file));
