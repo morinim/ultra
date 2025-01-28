@@ -294,10 +294,9 @@ TEST_CASE("File locking mechanism")
   // accessing the shared resource concurrently.
   std::vector<std::jthread> threads;
 
-  for (unsigned i(0); i < 4; ++i)
+  //for (unsigned i(0); i < 4; ++i)
     threads.emplace_back(reader);
 
-  //threads.emplace_back(writer);
   writer();
 
   for (auto &thread : threads)

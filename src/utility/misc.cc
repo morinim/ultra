@@ -297,7 +297,7 @@ void acquire_write(const std::filesystem::path &f)
 
   // Create write lock.
   const auto write_lock_file(fs::path(f).replace_extension(".write.lock"));
-  std::fstream(write_lock_file).close();
+  std::ofstream(write_lock_file).close();
 
   // Wait for readers to finish.
   // After creating the write lock, the writer waits for all readers to finish
@@ -327,7 +327,7 @@ bool acquire_read(const std::filesystem::path &f)
 
   // Create read lock.
   const auto read_lock_file(fs::path(f).replace_extension(".read.lock"));
-  std::fstream(read_lock_file).close();
+  std::ofstream(read_lock_file).close();
 
   // Recheck for write lock.
   // When the writer creates the write lock, readers that check for the write
