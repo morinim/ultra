@@ -73,7 +73,7 @@ void set_age(P &pop)
 
 template<LayeredPopulation P>
 std::vector<std::reference_wrapper<typename P::layer_t>>
-replacement_layers(P & pop, typename P::layer_iter l)
+replacement_layers(P &pop, typename P::layer_iter l)
 {
   Expects(pop.layers());
   Expects(iterator_of(l, pop.range_of_layers()));
@@ -86,7 +86,7 @@ replacement_layers(P & pop, typename P::layer_iter l)
 
 template<LayeredPopulation P>
 std::vector<std::reference_wrapper<const typename P::layer_t>>
-selection_layers(const P & pop, typename P::layer_iter l)
+selection_layers(const P &pop, typename P::layer_iter l)
 {
   Expects(pop.layers());
   Expects(iterator_of(l, pop.range_of_layers()));
