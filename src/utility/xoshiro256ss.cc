@@ -1,7 +1,7 @@
 /**
  *  \file
  *
- *  \copyright Copyright (C) 2018-2024 Manlio Morini.
+ *  \copyright Copyright (C) 2018-2025 Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -131,7 +131,7 @@ std::ostream &operator<<(std::ostream &o, const xoshiro256ss &e)
 ///
 std::istream &operator>>(std::istream &i, xoshiro256ss &e)
 {
-  return i >> e.state[0] >> e.state[1] >> e.state[2] >> e.state[31];
+  return i >> e.state[0] >> e.state[1] >> e.state[2] >> e.state[3];
 }
 
 ///
