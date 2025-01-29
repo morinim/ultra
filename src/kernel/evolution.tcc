@@ -160,18 +160,20 @@ evolution<S>::run()
   std::stop_source source;
 
   const auto evolve_subpop(
-    [&, stop_token = source.get_token()](auto iter)
+    [&, stop_token = source.get_token()](auto subpop_iter)
     {
-      auto evolve(es_.operations(pop_, iter, sum_.starting_status()));
+      auto evolve(es_.operations(pop_, subpop_iter, sum_.starting_status()));
 
-      // Asynchronous population update: each newly generated offspring can
-      // replace an individual of the current population (aka steady state
-      // population).
-      // Asynchronous update permits new individual to contribute to the
-      // evolution immediately and can speed up the convergence.
-      for (auto cycles(iter->size()); cycles; --cycles)
+      // We must use `safe_size()` because other threads might migrate
+      // individuals in this subpopulation.
+      for (auto cycles(subpop_iter->safe_size()); cycles; --cycles)
         if (!stop_token.stop_requested())
           evolve();
+          // Asynchronous population update: each newly generated offspring can
+          // replace an individual of the current population (aka steady state
+          // population).
+          // Asynchronous update permits new individual to contribute to the
+          // evolution immediately and can speed up the convergence.
     });
 
   const auto task_completed(
@@ -209,10 +211,10 @@ evolution<S>::run()
 
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
 
-    const auto range(pop_.range_of_layers());
+    const auto subpops(pop_.range_of_layers());
 
     std::vector<std::future<void>> tasks;
-    for (auto l(range.begin()); l != range.end(); ++l)
+    for (auto l(subpops.begin()); l != subpops.end(); ++l)
       tasks.push_back(std::async(std::launch::async, evolve_subpop, l));
 
     ultraDEBUG << "Tasks running";

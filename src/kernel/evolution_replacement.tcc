@@ -95,10 +95,10 @@ void alps<E>::try_move_up_layer(const P &from, P &to)
 }
 
 ///
-/// \param[in] pops     a collection of references to populations. Can contain
-///                     one or two elements. The first one (`pops.front()`) is
-///                     the main/current layer; the second one, if available,
-///                     is the upper level layer
+/// \param[in] pops     a collection of references to sub-populations. Can
+///                     contain one or two elements. The first one
+///                     (`pops.front()`) is the main/current layer; the second
+///                     one, if available, is the upper level layer
 /// \param[in] incoming an individual
 ///
 /// We would like to add `incoming` in layer `pops.front()`. The insertion will

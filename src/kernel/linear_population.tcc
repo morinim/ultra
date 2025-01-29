@@ -76,6 +76,19 @@ std::size_t linear_population<I>::size() const noexcept
 }
 
 ///
+/// \return number of individuals in this layer
+///
+/// \remark
+/// Thread safe version fo size().
+///
+template<Individual I>
+std::size_t linear_population<I>::safe_size() const
+{
+  std::lock_guard lock(mutex_);
+  return members_.size();
+}
+
+///
 /// \return reference max age for current layer
 ///
 template<Individual I>

@@ -50,6 +50,7 @@ public:
   [[nodiscard]] const I &operator[](std::size_t) const;
 
   [[nodiscard]] std::size_t size() const noexcept;
+  [[nodiscard]] std::size_t safe_size() const;
   [[nodiscard]] bool empty() const noexcept;
 
   [[nodiscard]] std::size_t allowed() const;

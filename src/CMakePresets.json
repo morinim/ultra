@@ -58,7 +58,15 @@
         },
         {
             "name": "gcc_sanitize_thread",
-            "inherits": ["gcc", "sanitize_thread"]
+            "inherits": ["gcc", "sanitize_thread"],
+            "cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+        },
+        {
+            "name": "gcc_debug_sanitize_thread",
+            "inherits": ["gcc_debug", "sanitize_thread"]
         },
 		{
 			"name": "clang",
@@ -83,7 +91,11 @@
         },
         {
             "name": "clang_sanitize_thread",
-            "inherits": ["clang", "sanitize_thread"]
+            "inherits": ["clang", "sanitize_thread"],
+            "cacheVariables":
+			{
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
         },
 		{
 			"name": "msvc",
