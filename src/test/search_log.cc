@@ -29,19 +29,17 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
 
   prob.params.population.individuals    = 30;
   prob.params.population.init_subgroups =  4;
+  prob.params.evolution.generations     =  5;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   evolution evo(alps_es(prob, eva));
-
-  search_stats<gp::individual, double> stats;
 
   SUBCASE("Default - No log")
   {
     std::filesystem::remove(search_log::default_dynamic_file);
     std::filesystem::remove(search_log::default_layers_file);
     std::filesystem::remove(search_log::default_population_file);
-    std::filesystem::remove(search_log::default_summary_file);
 
     const auto sum(evo.run());
 
@@ -51,7 +49,6 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(!std::filesystem::exists(search_log::default_dynamic_file));
     CHECK(!std::filesystem::exists(search_log::default_layers_file));
     CHECK(!std::filesystem::exists(search_log::default_population_file));
-    CHECK(!std::filesystem::exists(search_log::default_summary_file));
   }
 
   SUBCASE("Default - User specified logs")
@@ -69,17 +66,30 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(std::filesystem::exists(search_log::default_dynamic_file));
     CHECK(std::filesystem::exists(search_log::default_layers_file));
     CHECK(std::filesystem::exists(search_log::default_population_file));
-
-    logger.summary_file_path = search_log::default_summary_file;
-    stats.best_individual = sum.best().ind;
-    stats.best_measurements.fitness = sum.best().fit;
-    stats.fitness_distribution.add(sum.best().fit);
-    stats.good_runs.insert(0);
-    stats.best_run = 0;
-    stats.runs = 1;
-    logger.save_summary(stats);
-    CHECK(std::filesystem::exists(search_log::default_summary_file));
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Saving summary")
+{
+  using namespace ultra;
+
+  std::filesystem::remove(search_log::default_summary_file);
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  search_log logger;
+  logger.summary_file_path = search_log::default_summary_file;
+
+  search_stats<gp::individual, double> stats;
+  stats.best_individual = gp::individual(prob);
+  stats.best_measurements.fitness = eva(stats.best_individual);
+  stats.fitness_distribution.add(*stats.best_measurements.fitness);
+  stats.good_runs.insert(0);
+  stats.best_run = 0;
+  stats.runs = 1;
+  logger.save_summary(stats);
+
+  CHECK(std::filesystem::exists(search_log::default_summary_file));
 }
 
 }  // TEST_SUITE("SEARCH LOG")
