@@ -25,15 +25,9 @@
 ///
 template<template<class> class ES, Evaluator E>
 basic_search<ES, E>::basic_search(problem &prob, E eva)
-  : es_(prob, evaluator_proxy(eva, prob.params.cache.size)),
-    prob_(prob)
+  : eva_(eva, prob.params.cache.size), prob_(prob)
 {
   Ensures(is_valid());
-}
-
-template<Evaluator E>
-search<E>::search(problem &prob, E eva) : basic_search<alps_es, E>(prob, eva)
-{
 }
 
 ///
@@ -109,7 +103,7 @@ void basic_search<ES, E>::tune_parameters()
 {
   // The `shape` function modifies the default parameters with
   // strategy-specific values.
-  const auto dflt(es_.shape(parameters().init()));
+  const auto dflt(ES<E>::shape(parameters().init()));
   const auto constrained(prob_.params);
 
   if (!constrained.slp.code_length)
@@ -176,11 +170,11 @@ basic_search<ES, E>::run(unsigned n,
   {
     vs_->training_setup(r);
 
-    evolution evo(es_);
+    evolution evo(prob_, eva_);
     evo.after_generation(after_generation_callback_);
     evo.logger(search_log_);
     evo.shake_function(shake);
-    const auto run_summary(evo.run());
+    const auto run_summary(evo.template run<ES>());
 
     if (const auto prg(run_summary.best().ind); !prg.empty())
     {
@@ -221,7 +215,7 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 
   // `calculate_metrics` is called after an environment-switch and must not use
   // a cached value (so using `core()`).
-  ret.fitness = es_.evaluator().core()(prg);
+  ret.fitness = eva_.core()(prg);
 
   return ret;
 }
@@ -271,7 +265,7 @@ bool basic_search<ES, E>::load()
 
   if (prob_.params.cache.size)
   {
-    if (!es_.evaluator().load_cache(in))
+    if (!eva_.load_cache(in))
       return false;
 
     ultraINFO << "Loading cache from "

@@ -18,9 +18,8 @@
 #define      ULTRA_EVOLUTION_STRATEGY_TCC
 
 template<Evaluator E>
-evolution_strategy<E>::evolution_strategy(const ultra::problem &prob,
-                                          E eva)
-  : eva_(std::move(eva)), prob_(&prob)
+evolution_strategy<E>::evolution_strategy(const problem &prob, E &eva)
+  : eva_(eva), prob_(prob)
 {
 }
 
@@ -55,7 +54,7 @@ void evolution_strategy<E>::after_generation(
 }
 
 template<Evaluator E>
-alps_es<E>::alps_es(const problem &prob, const E &eva)
+alps_es<E>::alps_es(const problem &prob, E &eva)
   : evolution_strategy<E>(prob, eva),
     select_(this->eva_, prob.params),
     recombine_(this->eva_, prob),
@@ -205,7 +204,7 @@ parameters alps_es<E>::shape(parameters params)
 }
 
 template<Evaluator E>
-std_es<E>::std_es(const problem &prob, const E &eva)
+std_es<E>::std_es(const problem &prob, E &eva)
   : evolution_strategy<E>(prob, eva),
     select_(this->eva_, prob.params),
     recombine_(this->eva_, prob),
@@ -254,7 +253,7 @@ auto std_es<E>::operations(
 }
 
 template<Evaluator E>
-de_es<E>::de_es(const problem &prob, const E &eva)
+de_es<E>::de_es(const problem &prob, E &eva)
   : evolution_strategy<E>(prob, eva),
     select_(prob.params),
     recombine_(prob),

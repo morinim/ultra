@@ -18,11 +18,11 @@
 #define      ULTRA_EVOLUTION_TCC
 
 ///
-/// \param[in] strategy evolution strategy to be used for evolution
+/// \param[in] prob starting problem for the evolution
+/// \param[in] eva  evaluator to be used
 ///
-template<Strategy S>
-evolution<S>::evolution(S strategy) : pop_(strategy.get_problem()),
-                                      es_(std::move(strategy))
+template<Evaluator E>
+evolution<E>::evolution(const problem &prob, E &eva) : pop_(prob), eva_(eva)
 {
   Ensures(is_valid());
 
@@ -32,8 +32,8 @@ evolution<S>::evolution(S strategy) : pop_(strategy.get_problem()),
 ///
 /// \return `true` when evolution should be interrupted
 ///
-template<Strategy S>
-bool evolution<S>::stop_condition() const
+template<Evaluator E>
+bool evolution<E>::stop_condition() const
 {
   const auto planned_generations(pop_.problem().params.evolution.generations);
   Expects(planned_generations);
@@ -48,8 +48,8 @@ bool evolution<S>::stop_condition() const
   return false;
 }
 
-template<Strategy S>
-void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
+template<Evaluator E>
+void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
                          timer *from_last_msg) const
 {
   if (log::reporting_level <= log::lOUTPUT)
@@ -96,8 +96,8 @@ void evolution<S>::print(bool summary, std::chrono::milliseconds elapsed,
 /// Logger must be set before calling `run`. By default, data logging is
 /// excluded.
 ///
-template<Strategy S>
-evolution<S> &evolution<S>::logger(search_log &sl)
+template<Evaluator E>
+evolution<E> &evolution<E>::logger(search_log &sl)
 {
   search_log_ = &sl;
   return *this;
@@ -114,8 +114,8 @@ evolution<S> &evolution<S>::logger(search_log &sl)
 /// the environment of the evolution (i.e. it could change the points for a
 /// symbolic regression problem, the examples for a classification task...).
 ///
-template<Strategy S>
-evolution<S> &evolution<S>::shake_function(
+template<Evaluator E>
+evolution<E> &evolution<E>::shake_function(
   const std::function<bool(unsigned)> &f)
 {
   shake_ = f;
@@ -129,8 +129,8 @@ evolution<S> &evolution<S>::shake_function(
 /// \return      a reference to *this* object (method chaining / fluent
 ///              interface)
 ///
-template<Strategy S>
-evolution<S> &evolution<S>::after_generation(after_generation_callback_t f)
+template<Evaluator E>
+evolution<E> &evolution<E>::after_generation(after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
   return *this;
@@ -147,9 +147,10 @@ evolution<S> &evolution<S>::after_generation(after_generation_callback_t f)
 /// regression problem). The `src_search` class has a simple scheme to
 /// request the computation of additional metrics.
 ///
-template<Strategy S>
-summary<typename S::individual_t, typename S::fitness_t>
-evolution<S>::run()
+template<Evaluator E>
+template<template<class> class ES>
+summary<typename evolution<E>::individual_t,
+        typename evolution<E>::fitness_t> evolution<E>::run()
 {
   Expects(sum_.generation == 0);
 
@@ -157,12 +158,15 @@ evolution<S>::run()
 
   timer from_start, from_last_msg;
 
+  ES<E> strategy(pop_.problem(), eva_);
+
   std::stop_source source;
 
   const auto evolve_subpop(
     [&, stop_token = source.get_token()](auto subpop_iter)
     {
-      auto evolve(es_.operations(pop_, subpop_iter, sum_.starting_status()));
+      auto evolve(strategy.operations(pop_, subpop_iter,
+                                      sum_.starting_status()));
 
       // We must use `safe_size()` because other threads might migrate
       // individuals in this subpopulation.
@@ -200,7 +204,7 @@ evolution<S>::run()
   term::set();
 
   ultraDEBUG << "Calling evolution_strategy init method";
-  es_.init(pop_);  // customizatin point for strategy-specific initialization
+  strategy.init(pop_);  // strategy-specific customizatin point
 
   bool use_sleep(false);
 
@@ -243,11 +247,11 @@ evolution<S>::run()
 
     print_and_update_if_better(sum_.best());
 
-    sum_.az = analyzer(pop_, es_.evaluator());
+    sum_.az = analyzer(pop_, eva_);
     if (search_log_)
       search_log_->save_snapshot(pop_, sum_);
 
-    es_.after_generation(pop_, sum_);  // strategy-specific bookkeeping
+    strategy.after_generation(pop_, sum_);  // strategy-specific bookkeeping
     if (after_generation_callback_)
       after_generation_callback_(pop_, sum_);
   }
@@ -265,8 +269,8 @@ evolution<S>::run()
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
-template<Strategy S>
-bool evolution<S>::is_valid() const
+template<Evaluator E>
+bool evolution<E>::is_valid() const
 {
   return pop_.is_valid();
 }

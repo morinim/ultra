@@ -35,9 +35,9 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  evolution evo(alps_es(prob, eva));
+  evolution evo(prob, eva);
 
-  const auto sum(evo.run());
+  const auto sum(evo.run<alps_es>());
 
   CHECK(!sum.best().empty());
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
@@ -52,7 +52,7 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  evolution evo(std_es(prob, eva));
+  evolution evo(prob, eva);
   evo.shake_function([i = 0](unsigned gen) mutable
                      {
                        CHECK(gen == i);
@@ -60,7 +60,7 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
                        return true;
                      });
 
-  evo.run();
+  evo.run<std_es>();
 }
 
 TEST_CASE_FIXTURE(fixture4, "DE evolution")
@@ -72,9 +72,9 @@ TEST_CASE_FIXTURE(fixture4, "DE evolution")
 
   test_evaluator<de::individual> eva(test_evaluator_type::realistic);
 
-  evolution evo(de_es(prob, eva));
+  evolution evo(prob, eva);
 
-  const auto sum(evo.run());
+  const auto sum(evo.run<de_es>());
 
   CHECK(!sum.best().empty());
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));

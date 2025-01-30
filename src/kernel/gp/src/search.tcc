@@ -50,8 +50,8 @@ template<template<class> class ES, Evaluator E>
 std::unique_ptr<basic_oracle> basic_search<ES, E>::oracle(
   const individual_t &ind) const
 {
-  if constexpr (requires { this->es_.evaluator().core().oracle(ind); })
-    return this->es_.evaluator().core().oracle(ind);
+  if constexpr (requires { this->eva_.core().oracle(ind); })
+    return this->eva_.core().oracle(ind);
 
   return nullptr;
 }
@@ -126,7 +126,7 @@ void basic_search<ES, E>::tune_parameters()
 {
   // The `shape` function modifies the default parameters with
   // strategy-specific values.
-  const auto dflt(this->es_.shape(parameters().init()));
+  const auto dflt(ES<E>::shape(parameters().init()));
 
   auto &params(prob().params);
 

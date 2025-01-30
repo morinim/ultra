@@ -25,23 +25,18 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
 {
   using namespace ultra;
 
-  log::reporting_level = log::lWARNING;
+  log::reporting_level = log::lALL;
 
   prob.params.population.individuals    = 30;
   prob.params.population.init_subgroups =  4;
-  prob.params.evolution.generations     =  5;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  evolution evo(alps_es(prob, eva));
+  evolution evo(prob, eva);
 
   SUBCASE("Default - No log")
   {
-    std::filesystem::remove(search_log::default_dynamic_file);
-    std::filesystem::remove(search_log::default_layers_file);
-    std::filesystem::remove(search_log::default_population_file);
-
-    const auto sum(evo.run());
+    const auto sum(evo.run<alps_es>());
 
     CHECK(!sum.best().empty());
     CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
@@ -58,7 +53,7 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     logger.layers_file_path = search_log::default_layers_file;
     logger.population_file_path = search_log::default_population_file;
 
-    const auto sum(evo.logger(logger).run());
+    const auto sum(evo.logger(logger).run<alps_es>());
 
     CHECK(!sum.best().empty());
     CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
@@ -67,6 +62,10 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(std::filesystem::exists(search_log::default_layers_file));
     CHECK(std::filesystem::exists(search_log::default_population_file));
   }
+
+  std::filesystem::remove(search_log::default_dynamic_file);
+  std::filesystem::remove(search_log::default_layers_file);
+  std::filesystem::remove(search_log::default_population_file);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Saving summary")

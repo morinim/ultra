@@ -58,14 +58,13 @@ public:
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
-  [[nodiscard]] const E &evaluator() const noexcept { return eva_; }
-  [[nodiscard]] const problem &get_problem() const noexcept { return *prob_; }
+  [[nodiscard]] const problem &get_problem() const noexcept { return prob_; }
 
 protected:
-  evolution_strategy(const ultra::problem &, E);
+  evolution_strategy(const problem &, E &);
 
-  E eva_;
-  const ultra::problem *prob_;  // a pointer since the class must be copyable
+  E &eva_;
+  const problem &prob_;
 };
 
 ///
@@ -118,7 +117,7 @@ public:
   using typename alps_es::evolution_strategy::fitness_t;
   using typename alps_es::evolution_strategy::individual_t;
 
-  alps_es(const problem &, const E &);
+  alps_es(const problem &, E &);
 
   template<Population P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,
@@ -146,7 +145,7 @@ public:
   using typename std_es::evolution_strategy::fitness_t;
   using typename std_es::evolution_strategy::individual_t;
 
-  std_es(const problem &, const E &);
+  std_es(const problem &, E &);
 
   template<Population P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,
@@ -171,7 +170,7 @@ public:
   using typename de_es::evolution_strategy::fitness_t;
   using typename de_es::evolution_strategy::individual_t;
 
-  de_es(const problem &, const E &);
+  de_es(const problem &, E &);
 
   template<Population P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,

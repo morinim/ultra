@@ -60,7 +60,7 @@ protected:
   virtual void tune_parameters();
 
   // ---- Data members ----
-  ES<evaluator_proxy<E>> es_;
+  evaluator_proxy<E> eva_;
 
   std::unique_ptr<ultra::validation_strategy> vs_
     {std::make_unique<as_is_validation>()};
@@ -86,7 +86,7 @@ template<Evaluator E>
 class search : public basic_search<alps_es, E>
 {
 public:
-  search(problem &, E);
+  search(problem &prob, E eva) : basic_search<alps_es, E>(prob, eva) {}
 };
 
 #include "kernel/search.tcc"

@@ -37,18 +37,19 @@ using after_generation_callback_t =
 /// (survival of the fittest) and analogs of various naturally occurring
 /// operations, including crossover (sexual recombination), mutation...
 ///
-template<Strategy S>
+template<Evaluator E>
 class evolution
 {
 public:
-  using individual_t = typename S::individual_t;
-  using fitness_t = typename S::fitness_t;
+  using individual_t = evaluator_individual_t<E>;
+  using fitness_t = evaluator_fitness_t<E>;
 
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
 
-  explicit evolution(S);
+  explicit evolution(const problem &, E &);
 
+  template<template<class> class ES>
   summary<individual_t, fitness_t> run();
 
   evolution &after_generation(after_generation_callback_t);
@@ -62,10 +63,11 @@ private:
   [[nodiscard]] bool stop_condition() const;
 
   // *** Data members ***
+  layered_population<individual_t> pop_;
+  E &eva_;
+
   summary<individual_t, fitness_t> sum_ {};
 
-  layered_population<individual_t> pop_;
-  S es_;
   std::function<bool(unsigned)> shake_ {};
 
   after_generation_callback_t after_generation_callback_ {};
