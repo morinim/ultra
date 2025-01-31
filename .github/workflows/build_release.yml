@@ -45,6 +45,13 @@ jobs:
             generator: default,
             cc: "clang", cxx: "clang++"
           }
+        - {
+            name: "Ubuntu GCC TSan",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++ -fsanitize=thread"
+          }
         #- {
         #    name: "Windows MINGW ",
         #    os: windows-latest,
@@ -59,16 +66,6 @@ jobs:
         #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
-        include:
-          - build_type: "Release"
-            config:
-            - {
-                name: "Ubuntu GCC TSan ",
-                os: ubuntu-latest,
-                shell: bash,
-                generator: default,
-                cc: "gcc", cxx: "g++ -fsanitize=thread"
-              }
 
     defaults:
       run:
