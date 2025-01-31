@@ -22,22 +22,35 @@ jobs:
       fail-fast: false
       matrix:
         build_type: ["Debug", "Release"]
+
         config:
         - {
             name: "Windows MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
-            shell: powershell,
             generator: default,
             cc: "cl", cxx: "cl"
           }
         - {
             name: "Ubuntu GCC ",
-            artifact: "ubuntu.txz",
+            artifact: "ubuntu-gcc.txz",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Ubuntu CLANG ",
+            artifact: "ubuntu-clang.txz",
+            os: ubuntu-latest,
+            generator: default,
+            cc: "clang", cxx: "clang++"
+          }
+        - {
+            name: "Ubuntu GCC TSan ",
+            artifact: "ubuntu-gcc-tsan.txz",
+            os: ubuntu-latest,
+            generator: default,
+            cc: "gcc", cxx: "g++ -fsanitize=thread"
           }
         #- {
         #    name: "Windows MINGW ",
@@ -55,27 +68,6 @@ jobs:
         #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
-        include:
-          - build_type: "Release"
-            config:
-            - {
-                name: "Ubuntu GCC TSan ",
-                artifact: "ubuntu-tsan.txz",
-                os: ubuntu-latest,
-                shell: bash,
-                generator: default,
-                cc: "gcc", cxx: "g++ -fsanitize=thread"
-              }
-          - build_type: "Release"
-            config:
-            - {
-                name: "Ubuntu GCC ASan ",
-                artifact: "ubuntu-asan.txz",
-                os: ubuntu-latest,
-                shell: bash,
-                generator: default,
-                cc: "gcc", cxx: "g++ -fsanitize=address"
-              }
 
     defaults:
       run:
