@@ -24,7 +24,7 @@ jobs:
         build_type: ["Debug", "Release"]
         config:
         - {
-            name: "Windows Latest MSVC ",
+            name: "Windows MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
             shell: powershell,
@@ -32,15 +32,15 @@ jobs:
             cc: "cl", cxx: "cl"
           }
         - {
-            name: "Ubuntu Latest GCC ",
+            name: "Ubuntu GCC ",
             artifact: "ubuntu.txz",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "gcc", cxx: "g++ -fsanitize=thread"
+            cc: "gcc", cxx: "g++"
           }
         #- {
-        #    name: "Windows Latest MINGW ",
+        #    name: "Windows MINGW ",
         #    artifact: "windows-mingw.txz",
         #    os: windows-latest,
         #    shell: cmd,
@@ -48,13 +48,34 @@ jobs:
         #    cc: "gcc", cxx: "g++"
         #  }
         #- {
-        #    name: "macOS Latest GCC ",
+        #    name: "macOS GCC ",
         #    artifact: "macos.txz",
         #    os: macos-latest,
         #    shell: bash,
         #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
+        include:
+          - build_type: "Release"
+            config:
+            - {
+                name: "Ubuntu GCC TSan ",
+                artifact: "ubuntu-tsan.txz",
+                os: ubuntu-latest,
+                shell: bash,
+                generator: default,
+                cc: "gcc", cxx: "g++ -fsanitize=thread"
+              }
+          - build_type: "Release"
+            config:
+            - {
+                name: "Ubuntu GCC ASan ",
+                artifact: "ubuntu-asan.txz",
+                os: ubuntu-latest,
+                shell: bash,
+                generator: default,
+                cc: "gcc", cxx: "g++ -fsanitize=address"
+              }
 
     defaults:
       run:
