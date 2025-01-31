@@ -28,6 +28,7 @@ jobs:
             name: "Windows MSVC ",
             artifact: "windows-msvc.txz",
             os: windows-latest,
+            shell: powershell,
             generator: default,
             cc: "cl", cxx: "cl"
           }
@@ -35,6 +36,7 @@ jobs:
             name: "Ubuntu GCC ",
             artifact: "ubuntu-gcc.txz",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "gcc", cxx: "g++"
           }
@@ -42,6 +44,7 @@ jobs:
             name: "Ubuntu CLANG ",
             artifact: "ubuntu-clang.txz",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "clang", cxx: "clang++"
           }
@@ -49,6 +52,7 @@ jobs:
             name: "Ubuntu GCC TSan ",
             artifact: "ubuntu-gcc-tsan.txz",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "gcc", cxx: "g++ -fsanitize=thread"
           }
