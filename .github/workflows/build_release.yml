@@ -60,9 +60,9 @@ jobs:
         #    cc: "gcc", cxx: "g++"
         #  }
         include:
-          build_type: "Release"
-          config:
-          - {
+          - build_type: "Release"
+            config:
+            {
               name: "Ubuntu GCC TSan ",
               os: ubuntu-latest,
               shell: bash,
