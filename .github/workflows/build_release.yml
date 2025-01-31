@@ -26,7 +26,6 @@ jobs:
         config:
         - {
             name: "Windows MSVC ",
-            artifact: "windows-msvc.txz",
             os: windows-latest,
             shell: powershell,
             generator: default,
@@ -34,7 +33,6 @@ jobs:
           }
         - {
             name: "Ubuntu GCC ",
-            artifact: "ubuntu-gcc.txz",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -42,23 +40,13 @@ jobs:
           }
         - {
             name: "Ubuntu CLANG ",
-            artifact: "ubuntu-clang.txz",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
             cc: "clang", cxx: "clang++"
           }
-        - {
-            name: "Ubuntu GCC TSan ",
-            artifact: "ubuntu-gcc-tsan.txz",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "gcc", cxx: "g++ -fsanitize=thread"
-          }
         #- {
         #    name: "Windows MINGW ",
-        #    artifact: "windows-mingw.txz",
         #    os: windows-latest,
         #    shell: cmd,
         #    generator: "MinGW Makefiles",
@@ -66,12 +54,21 @@ jobs:
         #  }
         #- {
         #    name: "macOS GCC ",
-        #    artifact: "macos.txz",
         #    os: macos-latest,
         #    shell: bash,
         #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
+        include:
+          build_type: "Release"
+          config:
+          - {
+              name: "Ubuntu GCC TSan ",
+              os: ubuntu-latest,
+              shell: bash,
+              generator: default,
+              cc: "gcc", cxx: "g++ -fsanitize=thread"
+            }
 
     defaults:
       run:
@@ -101,13 +98,3 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build/test
         run: ctest -VV --output-on-failure -C ${{matrix.build_type}}
-
-      #- name: Pack
-      #  working-directory: ${{github.workspace}}/build
-      #  run: cmake -E tar -Jcfv ../${{matrix.build_type}}${{matrix.config.artifact}} .
-
-      #- name: Upload
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    path: ./${{matrix.build_type}}${{matrix.config.artifact}}
-      #    name: ${{matrix.build_type}}${{matrix.config.artifact}}
