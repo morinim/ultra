@@ -83,7 +83,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
-        run: ctest --output-on-failure -C ${{matrix.build_type}}
+        run: ctest -VV --output-on-failure -C ${{matrix.build_type}}
 
       #- name: Pack
       #  working-directory: ${{github.workspace}}/build
