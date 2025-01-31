@@ -62,13 +62,13 @@ jobs:
         include:
           - build_type: "Release"
             config:
-            {
-              name: "Ubuntu GCC TSan ",
-              os: ubuntu-latest,
-              shell: bash,
-              generator: default,
-              cc: "gcc", cxx: "g++ -fsanitize=thread"
-            }
+            - {
+                name: "Ubuntu GCC TSan ",
+                os: ubuntu-latest,
+                shell: bash,
+                generator: default,
+                cc: "gcc", cxx: "g++ -fsanitize=thread"
+              }
 
     defaults:
       run:
