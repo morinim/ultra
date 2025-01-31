@@ -63,6 +63,8 @@ jobs:
     env:
       CC: ${{matrix.config.cc}}
       CXX: ${{matrix.config.cxx}}
+      CXXFLAGS: ${{env.CXXFLAGS}} ${{contains(matrix.config.name, 'Ubuntu') && '-fsanitize=thread' || ''}}
+      LDFLAGS: ${{env.LDFLAGS}} ${{contains(matrix.config.name, 'Ubuntu') && '-fsanitize=thread' || ''}}
 
     steps:
       - uses: actions/checkout@v4
