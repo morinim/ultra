@@ -31,7 +31,7 @@ jobs:
             cc: "clang", cxx: "clang++"
           }
         - {
-            name: "Ubuntu CLANG Debug",
+            name: "Ubuntu CLANG Release",
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
@@ -71,12 +71,19 @@ jobs:
             cc: "gcc -fsanitize=thread", cxx: "g++ -fsanitize=thread"
           }
         - {
+            name: "Windows MINGW Release",
+            build_type: "Release",
+            os: windows-latest,
+            shell: cmd,
+            generator: "MinGW Makefiles",
+            cc: "gcc", cxx: "g++"
+          }
+        - {
             name: "Windows MSVC Debug",
             build_type: "Debug",
             os: windows-latest,
             shell: powershell,
             generator: default,
-            sanitizer: none,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -85,16 +92,8 @@ jobs:
             os: windows-latest,
             shell: powershell,
             generator: default,
-            sanitizer: none,
             cc: "cl", cxx: "cl"
           }
-        #- {
-        #    name: "Windows MINGW ",
-        #    os: windows-latest,
-        #    shell: cmd,
-        #    generator: "MinGW Makefiles",
-        #    cc: "gcc", cxx: "g++"
-        #  }
         #- {
         #    name: "macOS GCC ",
         #    os: macos-latest,
@@ -128,6 +127,12 @@ jobs:
         working-directory: ${{github.workspace}}
         run: cmake --build build/ --config ${{matrix.config.build_type}}
 
-      - name: Test
+      - name: Test (ctest)
+        if: ${{matrix.config.generator == 'default'}}
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
+
+      - name: Test (handmade)
+        if: ${{matrix.config.generator != 'default'}}
+        working-directory: ${{github.workspace}}/build/test
+        run: testall.bat
