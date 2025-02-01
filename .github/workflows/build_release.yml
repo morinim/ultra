@@ -16,41 +16,77 @@ on:
 
 jobs:
   build-test:
-    name: ${{matrix.config.name}} ${{matrix.build_type}}
+    name: ${{matrix.config.name}}
     runs-on: ${{matrix.config.os}}
     strategy:
       fail-fast: false
       matrix:
-        build_type: ["Debug", "Release"]
-
         config:
         - {
-            name: "Windows MSVC ",
-            os: windows-latest,
-            shell: powershell,
-            generator: default,
-            cc: "cl", cxx: "cl"
-          }
-        - {
-            name: "Ubuntu GCC ",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "gcc", cxx: "g++"
-          }
-        - {
-            name: "Ubuntu CLANG ",
+            name: "Ubuntu CLANG Debug",
+            build_type: "Debug"
             os: ubuntu-latest,
             shell: bash,
             generator: default,
             cc: "clang", cxx: "clang++"
           }
         - {
-            name: "Ubuntu GCC TSan",
+            name: "Ubuntu CLANG Debug",
+            build_type: "Release"
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "gcc", cxx: "g++ -fsanitize=thread"
+            cc: "clang", cxx: "clang++"
+          }
+        - {
+            name: "Ubuntu CLANG TSan",
+            build_type: "Release"
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "clang -fsanitize=thread", cxx: "clang++ -fsanitize=thread"
+          }
+        - {
+            name: "Ubuntu GCC Debug",
+            build_type: "Debug"
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Ubuntu GCC Release",
+            build_type: "Release"
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Ubuntu GCC TSan",
+            build_type: "Release"
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc -fsanitize=thread", cxx: "g++ -fsanitize=thread"
+          }
+        - {
+            name: "Windows MSVC Debug",
+            build_type: "Debug"
+            os: windows-latest,
+            shell: powershell,
+            generator: default,
+            sanitizer: none,
+            cc: "cl", cxx: "cl"
+          }
+        - {
+            name: "Windows MSVC Release",
+            build_type: "Release"
+            os: windows-latest,
+            shell: powershell,
+            generator: default,
+            sanitizer: none,
+            cc: "cl", cxx: "cl"
           }
         #- {
         #    name: "Windows MINGW ",
@@ -81,17 +117,17 @@ jobs:
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
         working-directory: ${{github.workspace}}
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
 
       - name: Configure CMake (specific generator)
         if: ${{matrix.config.generator != 'default'}}
         working-directory: ${{github.workspace}}
-        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -B build/ src/
+        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
-        run: cmake --build build/ --config ${{matrix.build_type}}
+        run: cmake --build build/ --config ${{matrix.config.build_type}}
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
-        run: ctest -VV --output-on-failure -C ${{matrix.build_type}}
+        run: ctest --output-on-failure -C ${{matrix.config.build_type}}
