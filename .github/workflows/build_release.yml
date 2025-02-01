@@ -24,7 +24,7 @@ jobs:
         config:
         - {
             name: "Ubuntu CLANG Debug",
-            build_type: "Debug"
+            build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -32,7 +32,7 @@ jobs:
           }
         - {
             name: "Ubuntu CLANG Debug",
-            build_type: "Release"
+            build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -40,7 +40,7 @@ jobs:
           }
         - {
             name: "Ubuntu CLANG TSan",
-            build_type: "Release"
+            build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -48,7 +48,7 @@ jobs:
           }
         - {
             name: "Ubuntu GCC Debug",
-            build_type: "Debug"
+            build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -56,7 +56,7 @@ jobs:
           }
         - {
             name: "Ubuntu GCC Release",
-            build_type: "Release"
+            build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -64,7 +64,7 @@ jobs:
           }
         - {
             name: "Ubuntu GCC TSan",
-            build_type: "Release"
+            build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
@@ -72,7 +72,7 @@ jobs:
           }
         - {
             name: "Windows MSVC Debug",
-            build_type: "Debug"
+            build_type: "Debug",
             os: windows-latest,
             shell: powershell,
             generator: default,
@@ -81,7 +81,7 @@ jobs:
           }
         - {
             name: "Windows MSVC Release",
-            build_type: "Release"
+            build_type: "Release",
             os: windows-latest,
             shell: powershell,
             generator: default,
