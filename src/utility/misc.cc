@@ -11,6 +11,7 @@
  */
 
 #include <atomic>
+#include <regex>
 #include <thread>
 
 #include "utility/misc.h"
@@ -363,5 +364,102 @@ void release_read(std::filesystem::path f)
 }
 
 }  // namespace lock file
+
+
+namespace crc32
+{
+
+///
+/// Calculates the CRC-32 checksum of a string as defined by ISO 3309.
+///
+/// \param[in] data input string
+/// \return         CRC checksum of `data`
+///
+/// A cyclic redundancy check (CRC) is an error-detecting code commonly used in
+/// digital networks and storage devices to detect accidental changes to
+/// digital data.
+///
+
+std::uint32_t calculate(const std::string &data) noexcept
+{
+  static constexpr auto table =
+  []
+  {
+    std::array<std::uint32_t, 256> ret {};
+
+    for (std::uint32_t i(0); i < 256; ++i)
+    {
+      std::uint32_t crc(i);
+      for (unsigned j(0); j < 8; ++j)
+        if (crc & 1)
+          crc = std::uint32_t(0xEDB88320) ^ (crc >> 1);
+        else
+          crc >>= 1;
+
+      ret[i] = crc;
+    }
+
+    return ret;
+  }();
+
+  std::uint32_t crc(0xFFFFFFFF);
+
+  for (unsigned char byte : data)
+    crc = (crc >> 8) ^ table[(crc ^ byte) & 0xFF];
+
+  return crc ^ 0xFFFFFFFF;
+}
+
+///
+/// Embeds CRC32 in a XML string.
+///
+/// \param[in] xml a string containing xml data
+/// \return        `xml` with embedded crc (`checksum` tag)
+///
+/// The CRC should be computed excluding the part where it is embedded.
+/// Out approach is to calculate the CRC with a placeholder (`00000000`), then
+/// replace it with the actual value.
+///
+std::string embed_xml_signature(const std::string &xml)
+{
+  std::regex crc_regex(R"(<checksum>\s*[0-9A-Fa-f]*\s*</checksum>)");
+  std::string temp_xml(std::regex_replace(xml, crc_regex,
+                                          "<checksum>00000000</checksum>"));
+
+  std::stringstream ss;
+  ss << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+     << calculate(temp_xml);
+
+  return std::regex_replace(xml, crc_regex,
+                            "<checksum>" + ss.str() + "</checksum>");
+}
+
+///
+/// Verifies CRC32 in XML file.
+///
+/// \param[in] xml a string containing xml data and a checksum
+/// \return        `true` is the checksum is correct
+///
+bool verify_xml_signature(const std::string &xml)
+{
+  std::smatch match;
+  std::regex crc_regex(R"(<checksum>([0-9A-Fa-f]+)</checksum>)");
+
+  if (!std::regex_search(xml, match, crc_regex) || match.size() < 2)
+    return false;  // no checksum found
+
+  const std::string extracted_crc(match[1].str());
+  const std::string temp_xml(std::regex_replace(
+                               xml, crc_regex,
+                               "<checksum>00000000</checksum>"));
+
+  std::stringstream ss;
+  ss << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+     << calculate(temp_xml);
+
+  return extracted_crc == ss.str();
+}
+
+}  // namespace crc32
 
 }  // namespace ultra

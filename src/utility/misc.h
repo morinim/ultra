@@ -224,6 +224,15 @@ private:
 // Functions
 // *******************************************************************
 
+namespace crc32
+{
+
+[[nodiscard]] std::uint32_t calculate(const std::string &) noexcept;
+[[nodiscard]] std::string embed_xml_signature(const std::string &);
+[[nodiscard]] bool verify_xml_signature(const std::string &);
+
+}  // namespace crc32
+
 /// Implements a double-checked locking mechanism, compliant with standard C++,
 /// to ensure safe and reliable coordination between file readers and a writer.
 /// Prevents race conditions using two-step conflict checks, prioritises the
