@@ -10,6 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include <array>
 #include <atomic>
 #include <regex>
 #include <thread>
