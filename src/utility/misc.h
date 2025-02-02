@@ -233,22 +233,6 @@ namespace crc32
 
 }  // namespace crc32
 
-/// Implements a double-checked locking mechanism, compliant with standard C++,
-/// to ensure safe and reliable coordination between file readers and a writer.
-/// Prevents race conditions using two-step conflict checks, prioritises the
-/// writer, and handles stale lock files gracefully.
-///
-/// \see "File locking mechanism" test case for details.
-namespace lock_file
-{
-[[nodiscard]] bool acquire_read(const std::filesystem::path &);
-void acquire_write(const std::filesystem::path &);
-[[nodiscard]] bool is_valid(const std::filesystem::path &,
-                            std::chrono::seconds = 10s);
-void release_read(std::filesystem::path);
-void release_write(std::filesystem::path);
-}
-
 [[nodiscard]] bool is_number(std::string);
 [[nodiscard]] bool iequals(const std::string &, const std::string &);
 [[nodiscard]] std::string replace(std::string, const std::string &,

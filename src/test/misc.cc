@@ -216,92 +216,6 @@ TEST_CASE("app_level_uid")
   CHECK(id1 + 1 == id2);
 }
 
-TEST_CASE("File locking mechanism")
-{
-  using namespace ultra;
-  namespace fs = std::filesystem;
-
-  const std::string initial_content("Initial content");
-  const std::string updated_content("Updated content");
-
-  const fs::path main_file("data.txt");
-  const fs::path read_lock_file("data.read.lock");
-  const fs::path write_lock_file("data.write.lock");
-
-  const auto cleanup([&]()
-  {
-    if (fs::exists(write_lock_file))
-      fs::remove(write_lock_file);
-    if (fs::exists(read_lock_file))
-      fs::remove(read_lock_file);
-    if (fs::exists(main_file))
-      fs::remove(main_file);
-  });
-
-  const auto reader([&]
-  {
-    unsigned reads(100);
-
-    while (reads)
-      if (lock_file::acquire_read(main_file))
-      {
-        // Read the file.
-        std::ifstream file(main_file);
-        CHECK(file);
-
-        std::string line;
-        while (std::getline(file, line))
-        {
-          const bool ok(line == initial_content || line == updated_content);
-          CHECK(ok);
-        }
-
-        lock_file::release_read(main_file);
-
-        --reads;
-      }
-  });
-
-  const auto writer([&]
-  {
-    unsigned writes(10);
-
-    while (writes)
-    {
-      lock_file::acquire_write(main_file);
-
-      // Write to the file.
-      std::ofstream file(main_file);
-      CHECK(file);
-      file << updated_content << '\n';
-
-      lock_file::release_write(main_file);
-
-      --writes;
-      std::this_thread::sleep_for(50ms);
-    }
-  });
-
-  cleanup();
-
-  {
-    std::ofstream file(main_file);
-    CHECK(file);
-    file << initial_content << '\n';
-  }
-
-  std::thread read_thread(reader);
-  writer();
-
-  read_thread.join();
-
-  CHECK(fs::exists(main_file));
-  CHECK(!fs::exists(read_lock_file));
-  CHECK(!fs::exists(write_lock_file));
-
-  cleanup();
-}
-
 TEST_CASE("Base CRC32")
 {
   CHECK(ultra::crc32::calculate("The quick brown fox jumps over the lazy dog")
@@ -362,12 +276,10 @@ TEST_CASE("CRC32 with parallel processes")
     unsigned reads(100);
 
     while (reads)
-    {
-      std::ifstream file(data_file);
-      if (file)
+      if (std::ifstream file(data_file); file)
       {
-        auto data(std::string((std::istreambuf_iterator<char>(file)),
-                              std::istreambuf_iterator<char>()));
+        const std::string data((std::istreambuf_iterator<char>(file)),
+                               std::istreambuf_iterator<char>());
 
         if (crc32::verify_xml_signature(data))
         {
@@ -375,7 +287,6 @@ TEST_CASE("CRC32 with parallel processes")
           --reads;
         }
       }
-    }
   });
 
   const auto writer([&]()
