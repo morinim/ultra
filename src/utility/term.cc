@@ -19,10 +19,15 @@
 // `std::min`/`max` and `std::numeric_limits<T>::min`/`max`.
 // The `NOMINMAX` macro suppresses the `min` and `max` definitions in
 // `Windef.h`. The `undef` limits potential side effects.
-#  define NOMINMAX
-#  include <conio.h>
-#  include <windows.h>
-#  undef NOMINMAX
+#  if defined(NOMINMAX)
+#    include <conio.h>
+#    include <windows.h>
+#  else
+#    define NOMINMAX
+#    include <conio.h>
+#    include <windows.h>
+#    undef NOMINMAX
+#  endif
 #else
 #  include <iostream>
 #  include <termios.h>
