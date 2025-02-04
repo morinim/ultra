@@ -32,14 +32,20 @@ template<std::floating_point T1, std::floating_point T2>
 constexpr auto interval(T1 m, T2 u)
 {
   Expects(m < u);
+
   return interval_t<decltype(m + u)>(m, u);
 }
 
 template<std::integral T1, std::integral T2>
 constexpr auto interval(T1 m, T2 u)
 {
+  using RT = decltype(m + u);
+
   Expects(std::cmp_less(m, u));
-  return interval_t<decltype(m + u)>(m, u);
+  Expects(std::in_range<RT>(m));
+  Expects(std::in_range<RT>(u));
+
+  return interval_t<RT>(m, u);
 }
 
 }  // namespace ultra
