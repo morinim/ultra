@@ -37,7 +37,7 @@ TEST_CASE("Base")
     p.insert(interval(400, 500), 0);
     CHECK(p.parameters() == 1);
 
-    p.insert(interval(-100.0, 100.0));
+    p.insert(interval(-100, 100));
     CHECK(p.parameters() == 2);
   }
 
