@@ -28,10 +28,18 @@ template<class A> concept ArithmeticScalar = std::is_arithmetic_v<A>;
 ///
 template<ArithmeticScalar T> using interval_t = std::pair<T, T>;
 
-template<ArithmeticScalar T1, ArithmeticScalar T2>
-constexpr std::pair<T1, T2> interval(T1 &&m, T2 &&u)
+template<std::floating_point T1, std::floating_point T2>
+constexpr auto interval(T1 m, T2 u)
 {
-  return std::pair<T1, T2>(std::forward<T1>(m), std::forward<T2>(u));
+  Expects(m < u);
+  return interval_t<decltype(m + u)>(m, u);
+}
+
+template<std::integral T1, std::integral T2>
+constexpr auto interval(T1 m, T2 u)
+{
+  Expects(std::cmp_less(m, u));
+  return interval_t<decltype(m + u)>(m, u);
 }
 
 }  // namespace ultra
