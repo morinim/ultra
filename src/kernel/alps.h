@@ -1,6 +1,6 @@
 /**
  *  \file
- *  \remark This file is part of VITA.
+ *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
@@ -97,6 +97,6 @@ selection_layers(const P &pop, typename P::layer_iter l)
   return {std::cref(*l), std::cref(*std::prev(l))};
 }
 
-}  // namespace vita::alps
+}  // namespace ultra::alps
 
 #endif  // include guard

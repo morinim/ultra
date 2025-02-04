@@ -1,6 +1,6 @@
 /**
  *  \file
- *  \remark This file is part of VITA.
+ *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *

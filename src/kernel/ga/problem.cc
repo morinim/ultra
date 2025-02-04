@@ -67,4 +67,4 @@ std::size_t problem::parameters() const noexcept
   return sset.categories();
 }
 
-}  // namespace vita
+}  // namespace ultra
