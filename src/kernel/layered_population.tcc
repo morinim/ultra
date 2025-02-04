@@ -302,9 +302,10 @@ const auto &subgroup(const P &p)
   //
   // isn't appropriate.
 
-  std::vector<std::size_t> s(n_layers);
+  std::vector<double> s(n_layers);
   std::ranges::transform(p.range_of_layers(), s.begin(),
-                         [](const auto &layer) { return layer.size(); });
+                         [](const auto &layer)
+                         { return static_cast<double>(layer.size()); });
 
   std::discrete_distribution dd(s.begin(), s.end());
   return p.layer(dd(random::engine()));
