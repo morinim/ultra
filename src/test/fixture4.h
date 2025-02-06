@@ -25,7 +25,7 @@ struct fixture4
     double v(10.0);
     for (unsigned i(0); i < n; ++i)
     {
-      prob.insert(ultra::interval(-v, +v));
+      prob.insert({-v, +v});
       v *= 10.0;
     }
   }

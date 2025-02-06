@@ -25,16 +25,15 @@ struct fixture5
     int v(10);
     for (unsigned i(0); i < n; ++i)
     {
-      const auto r(ultra::interval(-v, +v));
-      prob.insert(r);
-      intervals.push_back(r);
+      intervals.push_back({-v, +v});
+      prob.insert(intervals.back());
 
       v *= 10;
     }
   }
 
   ultra::ga::problem prob {};
-  std::vector<ultra::interval_t<int>> intervals {};
+  std::vector<ultra::interval<int>> intervals {};
 };
 
 struct fixture5_no_init : fixture5

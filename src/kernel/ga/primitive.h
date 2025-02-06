@@ -42,21 +42,20 @@ public:
   /// - **the problem requires a more complex structure**. The user specifies a
   ///   (possibly) different type for every locus.
   ///
-  explicit integer(interval_t<int> interval = {-1000, 1000},
+  explicit integer(interval<int> interval = {-1000, 1000},
                    symbol::category_t category = symbol::undefined_category)
     : terminal("INTEGER", category), interval_(interval)
   {
-    Expects(interval.first < interval.second);
   }
 
-  [[nodiscard]] int min() const noexcept { return interval_.first; }
-  [[nodiscard]] int sup() const noexcept { return interval_.second; }
+  [[nodiscard]] constexpr int min() const noexcept { return interval_.min; }
+  [[nodiscard]] constexpr int sup() const noexcept { return interval_.sup; }
 
   [[nodiscard]] value_t instance() const final
   { return random::element(interval_); }
 
 private:
-  const interval_t<int> interval_;
+  const interval<int> interval_;
 };
 
 }  // namespace ultra::ga

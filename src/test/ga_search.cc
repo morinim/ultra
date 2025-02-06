@@ -33,7 +33,7 @@ TEST_CASE("Rastrigin")
   const std::string CHARSET =
     " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!";
 
-  ga::problem prob(target.length(), interval(0, CHARSET.size()));
+  ga::problem prob(target.length(), {0, CHARSET.size()});
 
   prob.params.population.individuals = 300;
 

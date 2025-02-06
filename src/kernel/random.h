@@ -125,9 +125,9 @@ template<std::ranges::sized_range C>
 /// \return      a random element of `i`
 ///
 template<ArithmeticScalar A>
-[[nodiscard]] A element(const interval_t<A> &i)
+[[nodiscard]] A element(const interval<A> &i)
 {
-  return between(i.first, i.second);
+  return between(i.min, i.sup);
 }
 
 ///

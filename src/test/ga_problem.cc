@@ -31,13 +31,13 @@ TEST_CASE("Base")
 
     CHECK(p.parameters() == 0);
 
-    p.insert(interval(-100, 100));
+    p.insert({-100, 100});
     CHECK(p.parameters() == 1);
 
-    p.insert(interval(400, 500), 0);
+    p.insert({400, 500}, 0);
     CHECK(p.parameters() == 1);
 
-    p.insert(interval(-100, 100));
+    p.insert({-100, 100});
     CHECK(p.parameters() == 2);
   }
 

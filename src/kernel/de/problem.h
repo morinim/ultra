@@ -30,27 +30,29 @@ class problem : public ultra::problem
 public:
   // ---- Constructors ----
   problem() = default;
-  problem(std::size_t, const interval_t<double> &);
-  explicit problem(const std::vector<interval_t<double>> &);
+  problem(std::size_t, const interval<double> &);
+  explicit problem(const std::vector<interval<double>> &);
 
   [[nodiscard]] std::size_t parameters() const noexcept;
 
-  template<symbol_set::weight_t = symbol_set::default_weight,
-           class ...Args>
-  real *insert(Args &&...);
+  template<symbol_set::weight_t = symbol_set::default_weight>
+  real *insert(const interval<double> &,
+               symbol::category_t = symbol::undefined_category);
 };
 
 ///
-/// Adds a symbol to the internal symbol set.
+/// Adds a `de::real` terminal to the internal symbol set.
 ///
-/// \param[in] args arguments used to build the `de::real` terminal
-/// \return         a raw pointer to the symbol just added (or `nullptr` in
-///                 case of error)
+/// \param[in] itval    the half open interval for the `real` terminal
+/// \param[in] category an optional category
+/// \return             a raw pointer to the symbol just added (or `nullptr` in
+///                     case of error)
 ///
-template<symbol_set::weight_t W, class ...Args>
-real *problem::insert(Args &&... args)
+template<symbol_set::weight_t W>
+real *problem::insert(const interval<double> &itval,
+                      symbol::category_t category)
 {
-  return sset.insert<real, W>(std::forward<Args>(args)...);
+  return sset.insert<real, W>(itval, category);
 }
 
 }  // namespace ultra::de

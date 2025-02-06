@@ -19,21 +19,21 @@ namespace ultra::de
 /// Sets up a DE problem for which a solution has the given number of
 /// (uniform, same range) parameters.
 ///
-/// \param[in] nparam   number of parameters (aka genes in the chromosome)
-/// \param[in] interval a half-open interval (the value of each parameter falls
-///                     within this range)
+/// \param[in] nparam number of parameters (aka genes in the chromosome)
+/// \param[in] itval  a half-open interval (the value of each parameter falls
+///                   within this range)
 ///
 /// The typical solution of a numerical optimization problem can often be
 /// represented as a sequence of real numbers in a given range (and this is the
 /// *raison d'etre* of this constructor).
 ///
-problem::problem(std::size_t nparam, const interval_t<double> &interval)
+problem::problem(std::size_t nparam, const interval<double> &itval)
   : ultra::problem()
 {
   Expects(parameters() == 0);
 
   while (nparam--)
-    insert(interval);
+    insert(itval);
 
   Ensures(is_valid());
 }
@@ -48,13 +48,13 @@ problem::problem(std::size_t nparam, const interval_t<double> &interval)
 /// This is a more flexible form of the other constructor. Each parameter has
 /// its own range.
 ///
-problem::problem(const std::vector<interval_t<double>> &intervals)
+problem::problem(const std::vector<interval<double>> &intervals)
   : ultra::problem()
 {
   Expects(parameters() == 0);
 
-  for (const auto &interval : intervals)
-    insert(interval);
+  for (const auto &itval : intervals)
+    insert(itval);
 
   Ensures(is_valid());
 }

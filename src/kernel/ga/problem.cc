@@ -19,21 +19,21 @@ namespace ultra::ga
 /// Sets up a GA problem for which a solution has the given number of
 /// (uniform, same range) parameters.
 ///
-/// \param[in] nparam   number of parameters (aka genes in the chromosome)
-/// \param[in] interval a half-open interval (the value of each parameter falls
-///                     within this range)
+/// \param[in] nparam number of parameters (aka genes in the chromosome)
+/// \param[in] itval  a half-open interval (the value of each parameter falls
+///                   within this range)
 ///
 /// The typical solution of a combinatorial problem can often be represented as
 /// a sequence of integers in a given range (and this is the *raison d'etre* of
 /// this constructor).
 ///
-problem::problem(std::size_t nparam, const interval_t<int> &interval)
+problem::problem(std::size_t nparam, const interval<int> &itval)
   : ultra::problem()
 {
   Expects(parameters() == 0);
 
   while (nparam--)
-    insert(interval);
+    insert(itval);
 
   Ensures(is_valid());
 }
@@ -48,13 +48,13 @@ problem::problem(std::size_t nparam, const interval_t<int> &interval)
 /// This is a more flexible form of the other constructor. Each parameter has
 /// its own range.
 ///
-problem::problem(const std::vector<interval_t<int>> &intervals)
+problem::problem(const std::vector<interval<int>> &intervals)
   : ultra::problem()
 {
   Expects(parameters() == 0);
 
-  for (const auto &interval : intervals)
-    insert(interval);
+  for (const auto &itval : intervals)
+    insert(itval);
 
   Ensures(is_valid());
 }

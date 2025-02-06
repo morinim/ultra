@@ -169,9 +169,9 @@ int main()
   prob.params.evolution.generations  = 1000;
 
   // The chromosome is a sequence of bounded integers (indices) used to access
-  // the `piece_masks` data structure.
+  // the `piece_masks` dataq structure.
   for (const auto &piece : piece_masks)
-    prob.insert( interval(0, piece.size()) );
+    prob.insert({0, piece.size()});
 
   // The fitness function.
   auto f = [](const ga::individual &ind)

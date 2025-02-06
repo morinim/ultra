@@ -34,10 +34,7 @@ TEST_CASE_FIXTURE(fixture5, "Random creation")
     CHECK(ind.age() == 0);
 
     for (std::size_t j(0); j < ind.parameters(); ++j)
-    {
-      CHECK(intervals[j].first <= ind[j]);
-      CHECK(ind[j] < intervals[j].second);
-    }
+      CHECK(intervals[j].is_valid());
   }
 }
 

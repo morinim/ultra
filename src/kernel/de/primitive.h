@@ -39,21 +39,20 @@ public:
   /// \param[in] i a half open interval
   /// \param[in] c an optional category
   ///
-  explicit real(const interval_t<double> &i = {-1000.0, 1000.0},
+  explicit real(const interval<double> &i = {-1000.0, 1000.0},
                 symbol::category_t c = symbol::undefined_category)
     : terminal("REAL", c), interval_(i)
   {
-    Expects(i.first < i.second);
   }
 
-  [[nodiscard]] double min() const noexcept { return interval_.first; }
-  [[nodiscard]] double sup() const noexcept { return interval_.second; }
+  [[nodiscard]] constexpr double min() const noexcept { return interval_.min; }
+  [[nodiscard]] constexpr double sup() const noexcept { return interval_.sup; }
 
   [[nodiscard]] value_t instance() const final
   { return random::element(interval_); }
 
 private:
-  const interval_t<double> interval_;
+  const interval<double> interval_;
 };
 
 }  // namespace ultra::de

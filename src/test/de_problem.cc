@@ -30,11 +30,11 @@ TEST_CASE("Base")
     CHECK(p.is_valid());
 
     CHECK(p.parameters() == 0);
-    p.insert(interval(-100.0, 100.0));
+    p.insert({-100.0, 100.0});
     CHECK(p.parameters() == 1);
-    p.insert(interval(400.0, 500.0), 0);
+    p.insert({400.0, 500.0}, 0);
     CHECK(p.parameters() == 1);
-    p.insert(interval(-100.0, 100.0));
+    p.insert({-100.0, 100.0});
     CHECK(p.parameters() == 2);
   }
 

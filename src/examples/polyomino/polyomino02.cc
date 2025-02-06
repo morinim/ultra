@@ -217,7 +217,7 @@ int main()
   // The chromosome is a sequence of bounded integers (indices) used to access
   // the `piece_masks` data structure.
   for (const auto &piece : piece_masks)
-    prob.insert( interval(0, piece.size()) );
+    prob.insert( {0, piece.size()} );
 
   // The fitness function.
   auto f = [](const ga::individual &ind)

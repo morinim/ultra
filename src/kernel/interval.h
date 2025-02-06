@@ -15,10 +15,13 @@
 
 #include <utility>
 
+#include "utility/assert.h"
+
 namespace ultra
 {
 
 template<class A> concept ArithmeticScalar = std::is_arithmetic_v<A>;
+
 
 ///
 /// Right-open interval.
@@ -26,27 +29,54 @@ template<class A> concept ArithmeticScalar = std::is_arithmetic_v<A>;
 /// `interval_t{m, u}` specifies the half-open (left-closed, right-open)
 /// interval `[m, u[`.
 ///
-template<ArithmeticScalar T> using interval_t = std::pair<T, T>;
-
-template<std::floating_point T1, std::floating_point T2>
-constexpr auto interval(T1 m, T2 u)
+template<ArithmeticScalar T>
+struct interval
 {
-  Expects(m < u);
+  constexpr interval(T m, T s) : min(m), sup(s)
+  {
+    Expects(m < s);
+  }
 
-  return interval_t<decltype(m + u)>(m, u);
-}
+  template<std::floating_point T1, std::floating_point T2>
+  constexpr interval(T1 m, T2 s) : interval(static_cast<T>(m),
+                                            static_cast<T>(s))
+  {
+    Expects(m < s);
+  }
 
-template<std::integral T1, std::integral T2>
-constexpr auto interval(T1 m, T2 u)
-{
-  using RT = decltype(m + u);
+  template<std::integral T1, std::integral T2>
+  constexpr interval(T1 m, T2 s) : interval(static_cast<T>(m),
+                                            static_cast<T>(s))
+  {
+    Expects(std::cmp_less(m, s));
+    Expects(std::in_range<T>(m));
+    Expects(std::in_range<T>(s));
+  }
 
-  Expects(std::cmp_less(m, u));
-  Expects(std::in_range<RT>(m));
-  Expects(std::in_range<RT>(u));
+  template<std::floating_point T1, std::floating_point T2>
+  constexpr interval(const std::pair<T1, T2> &p)
+    : interval(static_cast<T>(p.first), static_cast<T>(p.second))
+  {
+    Expects(p.first < p.second);
+  }
 
-  return interval_t<RT>(m, u);
-}
+  template<std::integral T1, std::integral T2>
+  constexpr interval(const std::pair<T1, T2> &p)
+    : interval(static_cast<T>(p.first), static_cast<T>(p.second))
+  {
+    Expects(std::cmp_less(p.first, p.second));
+    Expects(std::in_range<T>(p.first));
+    Expects(std::in_range<T>(p.second));
+  }
+
+  [[nodiscard]] bool is_valid() const noexcept
+  {
+    return min < sup;
+  }
+
+  T min;
+  T sup;
+};  // class interval
 
 }  // namespace ultra
 

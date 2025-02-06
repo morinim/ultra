@@ -51,7 +51,7 @@ public:
   [[nodiscard]] operator std::vector<value_type>() const noexcept;
   individual &operator=(const std::vector<value_type> &);
 
-  [[nodiscard]] individual crossover(double, const interval_t<double> &,
+  [[nodiscard]] individual crossover(double, const interval<double> &,
                                      const individual &, const individual &,
                                      const individual &) const;
 

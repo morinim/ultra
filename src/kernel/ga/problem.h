@@ -30,27 +30,29 @@ class problem : public ultra::problem
 public:
   // ---- Constructors ----
   problem() = default;
-  problem(std::size_t, const interval_t<int> &);
-  explicit problem(const std::vector<interval_t<int>> &);
+  problem(std::size_t, const interval<int> &);
+  explicit problem(const std::vector<interval<int>> &);
 
   [[nodiscard]] std::size_t parameters() const noexcept;
 
-  template<symbol_set::weight_t = symbol_set::default_weight,
-           class ...Args>
-  integer *insert(Args &&...);
+  template<symbol_set::weight_t = symbol_set::default_weight>
+  integer *insert(const interval<int> &,
+                  symbol::category_t = symbol::undefined_category);
 };
 
 ///
-/// Adds a symbol to the internal symbol set.
+/// Adds a `ga::integer` terminal to the internal symbol set.
 ///
-/// \param[in] args arguments used to build the `ga::integer` terminal
-/// \return         a raw pointer to the symbol just added (or `nullptr` in
-///                 case of error)
+/// \param[in] itval    the half open interval for the `integer` terminal
+/// \param[in] category an optional category
+/// \return             a raw pointer to the symbol just added (or `nullptr` in
+///                     case of error)
 ///
-template<symbol_set::weight_t W, class ...Args>
-integer *problem::insert(Args &&... args)
+template<symbol_set::weight_t W>
+integer *problem::insert(const interval<int> &itval,
+                         symbol::category_t category)
 {
-  return sset.insert<integer, W>(std::forward<Args>(args)...);
+  return sset.insert<integer, W>(itval, category);
 }
 
 }  // namespace ultra::ga

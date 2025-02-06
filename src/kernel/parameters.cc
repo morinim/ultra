@@ -199,7 +199,7 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
-  if (de.weight.first > de.weight.second)
+  if (de.weight.min > de.weight.sup)
   {
     ultraERROR << "Wrong DE dither interval";
     return false;

@@ -164,7 +164,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 ///
 /// `b` and `c` are used for mutation, `this` and `m` for crossover.
 ///
-individual individual::crossover(double p, const interval_t<double> &f,
+individual individual::crossover(double p, const interval<double> &f,
                                  const individual &a,
                                  const individual &b,
                                  const individual &c) const

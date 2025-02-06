@@ -177,7 +177,7 @@ struct parameters
     /// behaviour significantly, especially for noisy objective functions.
     ///
     /// \see https://github.com/morinim/ultra/wiki/bibliography#5
-    interval_t<double> weight {0.5, 1.0};
+    interval<double> weight {0.5, 1.0};
   } de;
 
   struct cache_parameters

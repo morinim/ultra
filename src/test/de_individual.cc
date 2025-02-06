@@ -122,7 +122,7 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
 
     for (unsigned i(0); i < p.parameters(); ++i)
     {
-      const auto delta(prob.params.de.weight.second * std::abs(a[i] - b[i]));
+      const auto delta(prob.params.de.weight.sup * std::abs(a[i] - b[i]));
 
       CHECK(off[i] > p[i] - delta);
       CHECK(off[i] < p[i] + delta);
@@ -137,7 +137,7 @@ TEST_CASE_FIXTURE(fixture4, "DE crossover")
     CHECK(off.age() == std::max({p.age(), c.age()}));
     for (unsigned i(0); i < p.parameters(); ++i)
     {
-      const auto delta(prob.params.de.weight.second * std::abs(a[i] - b[i]));
+      const auto delta(prob.params.de.weight.sup * std::abs(a[i] - b[i]));
 
       if (!almost_equal(p[i], off[i]))
       {
