@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "kernel/random.h"
+#include "kernel/gp/locus.h"
 #include "utility/matrix.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -55,6 +56,34 @@ TEST_CASE("Empty matrix")
 
   CHECK(m1.load(ss));
   CHECK(m == m1);
+}
+
+TEST_CASE("Element access")
+{
+  ultra::matrix<int> m =
+  {
+    { 0 , 1,  2},
+    { 3,  4,  5},
+    { 6,  7,  8},
+    { 9, 10, 11},
+    {12, 13, 14}
+  };
+
+  CHECK(m(0, 0) ==  0);
+  CHECK(m(0, 1) ==  1);
+  CHECK(m(0, 2) ==  2);
+  CHECK(m(4, 2) == 14);
+
+  CHECK(m(3, 1) == m(ultra::locus(3, 1)));
+  CHECK(m(4, 2) == m(ultra::locus(4, 2)));
+
+  ultra::locus l;
+  l.index = 4;
+  l.category = 2;
+  CHECK(m(4, 2) == m(l));
+
+  CHECK(m(3, 1) == m(std::pair{3, 1}));
+  CHECK(m(3, 2) == m(std::pair{3, 2}));
 }
 
 TEST_CASE("Fliplr")

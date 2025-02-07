@@ -30,6 +30,9 @@ struct locus
   locus() = default;
   constexpr locus(index_t i, size_t c) : index(i), category(c) {}
 
+  // DO NOT CHANGE THE ORDER: the matrix class uses structured binding to
+  // access this struct, associating `index` with `row` and `category` with
+  // `column`.
   index_t index;
   std::size_t category;
 

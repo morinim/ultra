@@ -49,8 +49,8 @@ public:
   explicit matrix(std::size_t, std::size_t);
   matrix(std::initializer_list<std::initializer_list<T>>);
 
-  [[nodiscard]] const_reference operator()(const locus &) const;
-  [[nodiscard]] reference operator()(const locus &);
+  template<class S> [[nodiscard]] const_reference operator()(const S &) const;
+  template<class S> [[nodiscard]] reference operator()(const S &);
   [[nodiscard]] const_reference operator()(std::size_t, std::size_t) const;
   [[nodiscard]] reference operator()(std::size_t, std::size_t);
 
@@ -68,10 +68,10 @@ public:
   using iterator = typename values_t::iterator;
   using const_iterator = typename values_t::const_iterator;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] iterator begin() noexcept;
+  [[nodiscard]] iterator end() noexcept;
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
 
   // *** Serialization ***
   bool load(std::istream &);

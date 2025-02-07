@@ -64,24 +64,31 @@ std::size_t matrix<T>::index(std::size_t r, std::size_t c) const
 }
 
 ///
-/// \param[in] l a locus of the genome
+/// \param[in] s an array / pair / tuple / struct
 /// \return      an element of the matrix
 ///
 template<class T>
-typename matrix<T>::const_reference matrix<T>::operator()(const locus &l) const
+template<class S>
+typename matrix<T>::const_reference matrix<T>::operator()(const S &s) const
 {
-  return data_[index(l.index, l.category)];
+  const auto & [r, c] = s;
+
+  return data_[index(r, c)];
 }
 
 ///
-/// \param[in] l a locus of the genome
+/// \param[in] s an array / pair / tuple / struct
 /// \return      an element of the matrix
 ///
 template<class T>
-typename matrix<T>::reference matrix<T>::operator()(const locus &l)
+template<class S>
+typename matrix<T>::reference matrix<T>::operator()(const S &s)
 {
-  // DO NOT CHANGE THE RETURN TYPE WITH T (the method won't work for T == bool)
-  return data_[index(l.index, l.category)];
+  const auto & [r, c] = s;
+
+  // DO NOT CHANGE THE RETURN TYPE TO `T` (the method won't work when
+  // `T` == `bool`)
+  return data_[index(r, c)];
 }
 
 ///
@@ -172,7 +179,7 @@ void matrix<T>::fill(const T &v)
 /// \return iterator to the first element of the matrix
 ///
 template<class T>
-typename matrix<T>::iterator matrix<T>::begin()
+typename matrix<T>::iterator matrix<T>::begin() noexcept
 {
   return data_.begin();
 }
@@ -181,7 +188,7 @@ typename matrix<T>::iterator matrix<T>::begin()
 /// \return constant iterator to the first element of the matrix
 ///
 template<class T>
-typename matrix<T>::const_iterator matrix<T>::begin() const
+typename matrix<T>::const_iterator matrix<T>::begin() const noexcept
 {
   return data_.begin();
 }
@@ -191,7 +198,7 @@ typename matrix<T>::const_iterator matrix<T>::begin() const
 ///         the matrix
 ///
 template<class T>
-typename matrix<T>::const_iterator matrix<T>::end() const
+typename matrix<T>::const_iterator matrix<T>::end() const noexcept
 {
   return data_.end();
 }
@@ -201,7 +208,7 @@ typename matrix<T>::const_iterator matrix<T>::end() const
 ///         the matrix
 ///
 template<class T>
-typename matrix<T>::iterator matrix<T>::end()
+typename matrix<T>::iterator matrix<T>::end() noexcept
 {
   return data_.end();
 }
