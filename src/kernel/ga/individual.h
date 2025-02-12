@@ -36,11 +36,11 @@ public:
   using value_type     = genome_t::value_type;
 
   // ---- Iterators ----
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
+  [[nodiscard]] iterator begin() noexcept;
+  [[nodiscard]] iterator end() noexcept;
 
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
@@ -49,6 +49,7 @@ public:
   // ---- Recombination operators ----
   unsigned mutation(const problem &);
   friend individual crossover(const individual &, const individual &);
+  friend individual pmx_crossover(const individual &, const individual &);
 
   // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
@@ -85,6 +86,7 @@ private:
 
 // Recombination operators.
 [[nodiscard]] individual crossover(const individual &, const individual &);
+[[nodiscard]] individual pmx_crossover(const individual &, const individual &);
 
 // Visualization/output functions.
 std::ostream &graphviz(std::ostream &, const individual &);

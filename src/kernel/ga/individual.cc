@@ -47,7 +47,7 @@ individual::individual(const ultra::problem &p) : ultra::individual(),
 ///
 /// \return a const iterator pointing to the first gene
 ///
-individual::const_iterator individual::begin() const
+individual::const_iterator individual::begin() const noexcept
 {
   return genome_.begin();
 }
@@ -55,7 +55,7 @@ individual::const_iterator individual::begin() const
 ///
 /// \return a const iterator pointing to a end-of-genome sentry
 ///
-individual::const_iterator individual::end() const
+individual::const_iterator individual::end() const noexcept
 {
   return genome_.end();
 }
@@ -63,7 +63,7 @@ individual::const_iterator individual::end() const
 ///
 /// \return an iterator pointing to the first gene
 ///
-individual::iterator individual::begin()
+individual::iterator individual::begin() noexcept
 {
   return genome_.begin();
 }
@@ -71,7 +71,7 @@ individual::iterator individual::begin()
 ///
 /// \return an iterator pointing to a end-of-genome sentry
 ///
-individual::iterator individual::end()
+individual::iterator individual::end() noexcept
 {
   return genome_.end();
 }
@@ -279,7 +279,7 @@ std::ostream &in_line(std::ostream &s, const individual &ga)
 ///
 /// \note Parents must have the same size.
 ///
-/// \relates inidividual
+/// \relates individual
 ///
 individual crossover(const individual &lhs, const individual &rhs)
 {
@@ -291,10 +291,68 @@ individual crossover(const individual &lhs, const individual &rhs)
 
   auto ret(rhs);
   for (auto i(cut1); i < cut2; ++i)
-    ret.genome_[i] = lhs[i];  // not using `operator[](unsigned)` to avoid
+    ret.genome_[i] = lhs[i];  // not using `operator[](std::size_t)` to avoid
                               // multiple signature resets.
 
   ret.set_if_older_age(lhs.age());
+  ret.signature_ = ret.hash();
+
+  Ensures(ret.is_valid());
+  return ret;
+}
+
+///
+/// Partially mapped  crossover (PMX).
+///
+/// \param[in] lhs first parent
+/// \param[in] rhs second parent
+/// \return        offspring
+///
+/// The Partially Mapped Crossover (PMX) is a recombination operator, initially
+/// designed for TSP like problems, that utilizes the genetic material of two
+/// parent solutions to propose a new offspring.
+/// It is one of the most commonly used crossover operator for
+/// permutation-encoded chromosomes.
+/// The principle behind PMX is to preserve the arrangement of genes from a
+/// parent while allowing variation in genes.
+///
+/// \remark Parents must be permutations of the same sequence.
+///
+/// \relates individual
+///
+individual pmx_crossover(const individual &lhs, const individual &rhs)
+{
+  Expects(lhs.parameters() == rhs.parameters());
+  Expects(std::ranges::is_permutation(lhs, rhs));
+
+  const auto ps(lhs.parameters());
+  const auto cut1(random::sup(ps - 1));
+  const auto cut2(random::between(cut1 + 1, ps));
+
+  auto ret(lhs);
+
+  const std::vector<std::pair<std::size_t, std::size_t>> segments =
+    {{0, cut1}, {cut2, ps}};
+
+  for (const auto &segment : segments)
+    for (auto s(segment.first); s < segment.second; ++s)
+    {
+      auto candidate(rhs[s]);
+
+      auto j(cut1);
+      while (j < cut2)
+        if (candidate != ret[j])
+          ++j;
+        else
+        {
+          candidate = rhs[j];
+          j = cut1;
+        }
+
+      ret.genome_[s] = candidate;
+    }
+
+  ret.set_if_older_age(rhs.age());
   ret.signature_ = ret.hash();
 
   Ensures(ret.is_valid());

@@ -149,6 +149,34 @@ TEST_CASE_FIXTURE(fixture5, "Standard crossover")
   }
 }
 
+TEST_CASE("PMX crossover")
+{
+  ultra::ga::problem prob(16, {0,16});
+
+  prob.params.init();
+
+  ultra::ga::individual i1(prob), i2(prob);
+
+  std::iota(i1.begin(), i1.end(), 0);
+  std::iota(i2.begin(), i2.end(), 0);
+
+  for (unsigned cycles(1000); cycles; --cycles)
+  {
+    std::ranges::shuffle(i2, ultra::random::engine());
+
+    if (ultra::random::boolean())
+      i1.inc_age();
+    if (ultra::random::boolean())
+      i2.inc_age();
+
+    const auto ic(pmx_crossover(i1, i2));
+    CHECK(ic.is_valid());
+    CHECK(ic.age() == std::max(i1.age(), i2.age()));
+
+    CHECK(std::ranges::is_permutation(ic, i1));
+  }
+}
+
 TEST_CASE_FIXTURE(fixture5, "Serialization")
 {
   // Non-empty ga::individual serialization.
