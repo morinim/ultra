@@ -65,20 +65,15 @@ auto sum_container::end() const noexcept
   return elems_.end();
 }
 
-w_symbol::weight_t sum_container::sum() const
+w_symbol::weight_t sum_container::sum() const noexcept
 {
   return sum_;
 }
 
-std::size_t sum_container::size() const
+std::size_t sum_container::size() const noexcept
 {
   return elems_.size();
 }
-
-//const w_symbol &sum_container::operator[](std::size_t i) const
-//{
-// return elems_[i];
-//}
 
 // Inserts a weighted symbol in the container.
 //
@@ -91,8 +86,8 @@ void sum_container::insert(const w_symbol &ws)
   elems_.push_back(ws);
   sum_ += ws.weight;
 
-  std::sort(begin(), end(),
-            [](auto s1, auto s2) { return s1.weight > s2.weight; });
+  std::ranges::sort(*this,
+                    [](auto s1, auto s2) { return s1.weight > s2.weight; });
 }
 
 template<class F>
@@ -298,7 +293,7 @@ symbol::category_t symbol_set::categories() const noexcept
 /// \param[in] c a category
 /// \return      number of functions in category `c`
 ///
-std::size_t symbol_set::functions(symbol::category_t c) const
+std::size_t symbol_set::functions(symbol::category_t c) const noexcept
 {
   return c < categories() ? views_[c].functions.size() : 0;
 }
@@ -307,7 +302,7 @@ std::size_t symbol_set::functions(symbol::category_t c) const
 /// \param[in] c a category
 /// \return      number of terminals in category `c`
 ///
-std::size_t symbol_set::terminals(symbol::category_t c) const
+std::size_t symbol_set::terminals(symbol::category_t c) const noexcept
 {
   return c < categories() ? views_[c].terminals.size() : 0;
 }
@@ -349,7 +344,7 @@ std::set<symbol::category_t> symbol_set::categories_missing_terminal() const
 /// \return `true` if there are enough terminals for secure individual
 ///         generation
 ///
-bool symbol_set::enough_terminals() const
+bool symbol_set::enough_terminals() const noexcept
 {
   return categories_missing_terminal().empty();
 }
@@ -519,6 +514,7 @@ bool symbol_set::is_valid() const
 
   return true;
 }
+
 ///
 /// Prints the symbol set to an output stream.
 ///

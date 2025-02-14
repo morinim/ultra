@@ -54,15 +54,14 @@ public:
 
   void insert(const w_symbol &);
 
-  [[nodiscard]] std::size_t size() const;
-  //[[nodiscard]] const w_symbol &operator[](std::size_t) const;
+  [[nodiscard]] std::size_t size() const noexcept;
 
   [[nodiscard]] auto begin() noexcept;
   [[nodiscard]] auto begin() const noexcept;
   [[nodiscard]] auto end() noexcept;
   [[nodiscard]] auto end() const noexcept;
 
-  [[nodiscard]] w_symbol::weight_t sum() const;
+  [[nodiscard]] w_symbol::weight_t sum() const noexcept;
 
   template<class F> void scale_weights(double, F);
   [[nodiscard]] const symbol *roulette() const;
@@ -128,11 +127,12 @@ public:
   std::add_pointer_t<S> insert(Args &&...);
 
   // ---- Capacity ----
+  [[nodiscard]] bool enough_terminals() const noexcept;
   [[nodiscard]] symbol::category_t categories() const noexcept;
   [[nodiscard]] std::size_t functions(
-    symbol::category_t = symbol::default_category) const;
+    symbol::category_t = symbol::default_category) const noexcept;
   [[nodiscard]] std::size_t terminals(
-    symbol::category_t = symbol::default_category) const;
+    symbol::category_t = symbol::default_category) const noexcept;
 
   // ---- Lookup / symbol access ----
   [[nodiscard]] const symbol *roulette(
@@ -155,7 +155,6 @@ public:
   [[nodiscard]] std::set<symbol::category_t>
     categories_missing_terminal() const;
 
-  [[nodiscard]] bool enough_terminals() const;
   [[nodiscard]] bool is_valid() const;
 
   friend std::ostream &operator<<(std::ostream &, const symbol_set &);
