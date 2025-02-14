@@ -35,7 +35,7 @@ struct w_symbol
 
   explicit w_symbol(const symbol *, weight_t = base_weight);
 
-  [[nodiscard]] bool operator==(const w_symbol &) const = default;
+  [[nodiscard]] bool operator==(const w_symbol &) const noexcept = default;
 
   const symbol *sym;
 
@@ -55,12 +55,12 @@ public:
   void insert(const w_symbol &);
 
   [[nodiscard]] std::size_t size() const;
-  [[nodiscard]] const w_symbol &operator[](std::size_t) const;
+  //[[nodiscard]] const w_symbol &operator[](std::size_t) const;
 
-  [[nodiscard]] auto begin();
-  [[nodiscard]] auto begin() const;
-  [[nodiscard]] auto end();
-  [[nodiscard]] auto end() const;
+  [[nodiscard]] auto begin() noexcept;
+  [[nodiscard]] auto begin() const noexcept;
+  [[nodiscard]] auto end() noexcept;
+  [[nodiscard]] auto end() const noexcept;
 
   [[nodiscard]] w_symbol::weight_t sum() const;
 

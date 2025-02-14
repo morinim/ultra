@@ -45,22 +45,22 @@ sum_container::sum_container(std::string n) : name_(std::move(n))
   Expects(!name_.empty());
 }
 
-auto sum_container::begin()
+auto sum_container::begin() noexcept
 {
   return elems_.begin();
 }
 
-auto sum_container::begin() const
+auto sum_container::begin() const noexcept
 {
   return elems_.begin();
 }
 
-auto sum_container::end()
+auto sum_container::end() noexcept
 {
   return elems_.end();
 }
 
-auto sum_container::end() const
+auto sum_container::end() const noexcept
 {
   return elems_.end();
 }
@@ -75,10 +75,10 @@ std::size_t sum_container::size() const
   return elems_.size();
 }
 
-const w_symbol &sum_container::operator[](std::size_t i) const
-{
-  return elems_[i];
-}
+//const w_symbol &sum_container::operator[](std::size_t i) const
+//{
+// return elems_[i];
+//}
 
 // Inserts a weighted symbol in the container.
 //
