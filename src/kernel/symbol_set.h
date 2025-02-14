@@ -149,6 +149,9 @@ public:
   [[nodiscard]] const symbol *decode(symbol::opcode_t) const;
   [[nodiscard]] const symbol *decode(const std::string &) const;
 
+  [[nodiscard]] const terminal *front_terminal(
+    symbol::category_t = symbol::default_category) const;
+
   // ---- Misc ----
   [[nodiscard]] weight_t weight(const symbol &) const;
 

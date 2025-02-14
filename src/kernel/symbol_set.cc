@@ -79,15 +79,14 @@ std::size_t sum_container::size() const noexcept
 //
 // \param[in] ws a weighted symbol
 //
-// We manage to sort the symbols in descending order, with respect to the
-// weight, so the selection algorithm would run faster.
+// We manage to sort the symbols in descending order (with respect to the
+// weight) so the selection algorithm would run faster.
 void sum_container::insert(const w_symbol &ws)
 {
   elems_.push_back(ws);
   sum_ += ws.weight;
 
-  std::ranges::sort(*this,
-                    [](auto s1, auto s2) { return s1.weight > s2.weight; });
+  std::ranges::sort(*this, std::ranges::greater{}, &w_symbol::weight);
 }
 
 template<class F>
@@ -106,7 +105,6 @@ void sum_container::scale_weights(double ratio, F f)
 //
 // \return a random symbol
 //
-//
 // \see
 // `test/speed_symbol_set.cc` compares various weighted random selection
 // algorithms.
@@ -122,7 +120,7 @@ const symbol *sum_container::roulette() const
        wedge += elems_[++i].weight)
   {}
 
-  assert(i < elems_.size());
+  assert(i < size());
   return elems_[i].sym;
 }
 
@@ -350,8 +348,21 @@ bool symbol_set::enough_terminals() const noexcept
 }
 
 ///
+/// Extracts the first terminal of a given category.
+///
+/// \param[in] c a category
+/// \return      first terminal of category `c`
+///
+const terminal *symbol_set::front_terminal(symbol::category_t c) const
+{
+  Expects(c < categories());
+
+  return static_cast<const terminal *>(views_[c].terminals.begin()->sym);
+}
+
+///
 /// Extracts a random symbol from the symbol set without bias between terminals
-/// and functions .
+/// and functions.
 ///
 /// \param[in] c a category
 /// \return      a random symbol of category `c`
@@ -373,7 +384,7 @@ const symbol *symbol_set::roulette(symbol::category_t c) const
   Expects(c < categories());
   Expects(terminals(c) > 0);
 
-  if (random::boolean() && functions(c) > 0)
+  if (functions(c) > 0 && random::boolean())
     return views_[c].functions.roulette();
 
   return views_[c].terminals.roulette();
