@@ -55,11 +55,11 @@ public:
   explicit symbol(const std::string &, category_t = default_category);
   virtual ~symbol() = default;
 
-  void category(category_t);
+  void category(category_t) noexcept;
 
-  [[nodiscard]] category_t category() const;
-  [[nodiscard]] opcode_t opcode() const;
-  [[nodiscard]] std::string name() const;
+  [[nodiscard]] category_t category() const noexcept;
+  [[nodiscard]] opcode_t opcode() const noexcept;
+  [[nodiscard]] std::string name() const noexcept;
 
   [[nodiscard]] virtual bool is_valid() const;
 

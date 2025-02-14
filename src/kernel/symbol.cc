@@ -35,7 +35,7 @@ symbol::symbol(const std::string &name, category_t c)
 ///
 /// \return the name of the symbol
 ///
-std::string symbol::name() const
+std::string symbol::name() const noexcept
 {
   return name_;
 }
@@ -48,7 +48,7 @@ std::string symbol::name() const
 /// \remark
 /// Should be called only for symbols with undefined category.
 ///
-void symbol::category(category_t c)
+void symbol::category(category_t c) noexcept
 {
   Expects(category_ == undefined_category);
   Expects(c != category_);
@@ -64,7 +64,7 @@ void symbol::category(category_t c)
 /// For GAs / DE category is used to define a valid interval for numeric
 /// arguments.
 ///
-symbol::category_t symbol::category() const
+symbol::category_t symbol::category() const noexcept
 {
   return category_;
 }
@@ -81,7 +81,7 @@ symbol::category_t symbol::category() const
 /// A symbol can be identified also by its name (a `std::string`). The name
 /// is often a better option since it doesn't change among executions.
 ///
-symbol::opcode_t symbol::opcode() const
+symbol::opcode_t symbol::opcode() const noexcept
 {
   return opcode_;
 }
