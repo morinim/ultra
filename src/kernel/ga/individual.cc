@@ -29,8 +29,7 @@ namespace ultra::ga
 /// implemented so as to ensure that they don't violate the type system's
 /// constraints.
 ///
-individual::individual(const ultra::problem &p) : ultra::individual(),
-                                                  genome_(p.sset.categories())
+individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
 {
   Expects(parameters());
 

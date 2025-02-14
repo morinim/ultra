@@ -30,8 +30,8 @@ namespace ultra::gp
 /// The constructor is implemented so as to ensure that there is no violation
 /// of the type system's constraints.
 ///
-individual::individual(const problem &p)
-  : ultra::individual(), genome_(p.params.slp.code_length, p.sset.categories())
+individual::individual(const problem &p) : genome_(p.params.slp.code_length,
+                                                   p.sset.categories())
 {
   Expects(size());
   Expects(categories());
@@ -67,8 +67,7 @@ individual::individual(const problem &p)
 /// This is useful for debugging purpose (i.e. setup *ad-hoc* individuals).
 ///
 individual::individual(const std::vector<gene> &gv)
-  : ultra::individual(),
-    genome_(gv.size(),
+  : genome_(gv.size(),
             std::ranges::max(gv,
                              [](const gene &g1, const gene &g2)
                              {
