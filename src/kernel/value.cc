@@ -125,7 +125,7 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
 
 ///
 /// \param[in]  in input stream
-/// \param[out] ss symbol set used for decoding `d_address` / `d_nullary`
+/// \param[in]  ss symbol set used for decoding `d_address` / `d_nullary`
 /// \param[out] v  value_t coming from the input stream
 /// \return       `true` if the object has been loaded correctly
 ///

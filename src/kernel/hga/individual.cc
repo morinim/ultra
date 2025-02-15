@@ -421,22 +421,24 @@ bool individual::is_valid() const
 
 ///
 /// \param[in] in input stream
+/// \param[in] ss symbol set (currently not used since terminals used in HGAs
+///               don't require deconding)
 /// \return       `true` if the object has been loaded correctly
 ///
 /// \note
 /// If the load operation isn't successful the current individual isn't
 /// modified.
 ///
-bool individual::load_impl(std::istream &in, const symbol_set &)
+bool individual::load_impl(std::istream &in, const symbol_set &ss)
 {
   std::size_t sz;
   if (!(in >> sz))
     return false;
 
   genome_t v(sz);
-  //for (auto &g : v)
-  //  if (!(in >> g))
-  //    return false;
+  for (auto &g : v)
+    if (!ultra::load(in, ss, g))
+      return false;
 
   genome_ = v;
 
@@ -451,7 +453,10 @@ bool individual::save_impl(std::ostream &out) const
 {
   out << parameters() << '\n';
   for (const auto &g : genome_)
-    out << g << '\n';
+  {
+    ultra::save(out, g);
+    out << '\n';
+  }
 
   return out.good();
 }

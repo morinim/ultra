@@ -102,12 +102,14 @@ TEST_CASE_FIXTURE(fixture6, "Mutation")
     CHECK(perc < 53.0);
   }
 }
-/*
-TEST_CASE_FIXTURE(fixture5, "Comparison")
+
+TEST_CASE_FIXTURE(fixture6, "Comparison")
 {
+  using namespace ultra;
+
   for (unsigned cycles(2000); cycles; --cycles)
   {
-    ultra::ga::individual a(prob);
+    hga::individual a(prob);
     CHECK(a == a);
     CHECK(distance(a, a) == 0);
 
@@ -116,7 +118,7 @@ TEST_CASE_FIXTURE(fixture5, "Comparison")
     CHECK(a == b);
     CHECK(distance(a, b) == 0);
 
-    ultra::ga::individual c(prob);
+    hga::individual c(prob);
     if (a.signature() != c.signature())
     {
       CHECK(!(a == c));
@@ -126,29 +128,31 @@ TEST_CASE_FIXTURE(fixture5, "Comparison")
   }
 }
 
-TEST_CASE_FIXTURE(fixture5, "Iterators")
+TEST_CASE_FIXTURE(fixture6, "Iterators")
 {
   for (unsigned cycles(1000); cycles; --cycles)
   {
-    ultra::ga::individual ind(prob);
+    ultra::hga::individual ind(prob);
 
     for (unsigned i(0); const auto &g : ind)
       CHECK(g == ind[i++]);
   }
 }
 
-TEST_CASE_FIXTURE(fixture5, "Standard crossover")
+TEST_CASE_FIXTURE(fixture6, "Standard crossover")
 {
-  ultra::ga::individual i1(prob), i2(prob);
+  using namespace ultra;
+
+  hga::individual i1(prob), i2(prob);
 
   for (unsigned cycles(1000); cycles; --cycles)
   {
-    if (ultra::random::boolean())
+    if (random::boolean())
       i1.inc_age();
-    if (ultra::random::boolean())
+    if (random::boolean())
       i2.inc_age();
 
-    const auto ic(crossover(i1, i2));
+    const auto ic(crossover(prob, i1, i2));
     CHECK(ic.is_valid());
     CHECK(ic.age() == std::max(i1.age(), i2.age()));
 
@@ -162,70 +166,56 @@ TEST_CASE_FIXTURE(fixture5, "Standard crossover")
 
     for (std::size_t k(0); k < ic.parameters(); ++k)
     {
-      const bool from_1_or_2(ic[k] == i1[k] || ic[k] == i2[k]);
-      CHECK(from_1_or_2);
+      const auto *t(prob.sset.front_terminal(k));
+
+      if (is<hga::integer>(t))
+      {
+        const bool from_1_or_2(ic[k] == i1[k] || ic[k] == i2[k]);
+        CHECK(from_1_or_2);
+      }
+      else if (is<hga::permutation>(t))
+        CHECK(std::ranges::is_permutation(std::get<D_IVECTOR>(ic[k]),
+                                          std::get<D_IVECTOR>(i1[k])));
     }
   }
 }
 
-TEST_CASE("PMX crossover")
+TEST_CASE_FIXTURE(fixture6, "Serialization")
 {
-  ultra::ga::problem prob(16, {0,16});
+  using namespace ultra;
 
-  prob.params.init();
-
-  ultra::ga::individual i1(prob), i2(prob);
-
-  std::iota(i1.begin(), i1.end(), 0);
-  std::iota(i2.begin(), i2.end(), 0);
-
-  for (unsigned cycles(1000); cycles; --cycles)
+  SUBCASE("Non-empty hga::individual serialization")
   {
-    std::ranges::shuffle(i2, ultra::random::engine());
+    for (unsigned cycles(2000); cycles; --cycles)
+    {
+      std::stringstream ss;
+      hga::individual i1(prob);
 
-    if (ultra::random::boolean())
-      i1.inc_age();
-    if (ultra::random::boolean())
-      i2.inc_age();
+      i1.inc_age(ultra::random::sup(100));
 
-    const auto ic(pmx_crossover(i1, i2));
-    CHECK(ic.is_valid());
-    CHECK(ic.age() == std::max(i1.age(), i2.age()));
+      CHECK(i1.save(ss));
 
-    CHECK(std::ranges::is_permutation(ic, i1));
+      hga::individual i2(prob);
+      CHECK(i2.load(ss));
+      CHECK(i2.is_valid());
+
+      CHECK(i1 == i2);
+    }
   }
-}
 
-TEST_CASE_FIXTURE(fixture5, "Serialization")
-{
-  // Non-empty ga::individual serialization.
-  for (unsigned cycles(2000); cycles; --cycles)
+  SUBCASE("Empty hga::individual serialization")
   {
     std::stringstream ss;
-    ultra::ga::individual i1(prob);
+    hga::individual empty;
+    CHECK(empty.save(ss));
 
-    i1.inc_age(ultra::random::sup(100));
+    hga::individual empty1;
+    CHECK(empty1.load(ss));
+    CHECK(empty1.is_valid());
+    CHECK(empty1.empty());
 
-    CHECK(i1.save(ss));
-
-    ultra::ga::individual i2(prob);
-    CHECK(i2.load(ss));
-    CHECK(i2.is_valid());
-
-    CHECK(i1 == i2);
+    CHECK(empty == empty1);
   }
-
-  // Non-empty ga::individual serialization.
-  std::stringstream ss;
-  ultra::ga::individual empty;
-  CHECK(empty.save(ss));
-
-  ultra::ga::individual empty1;
-  CHECK(empty1.load(ss));
-  CHECK(empty1.is_valid());
-  CHECK(empty1.empty());
-
-  CHECK(empty == empty1);
 }
-*/
+
 }  // TEST_SUITE("hga::individual")
