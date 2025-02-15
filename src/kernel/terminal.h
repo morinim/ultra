@@ -17,6 +17,7 @@
 
 namespace ultra
 {
+
 ///
 /// A terminal might be a variable (input to the program), a numeric value or a
 /// function taking no arguments (e.g. `move-north()`).
@@ -28,6 +29,8 @@ public:
 
   [[nodiscard]] virtual value_t instance() const = 0;
 };
+
+template<class T> concept Terminal = std::derived_from<T, terminal>;
 
 }  // namespace ultra
 
