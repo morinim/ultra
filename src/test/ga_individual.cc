@@ -30,11 +30,16 @@ TEST_CASE_FIXTURE(fixture5, "Random creation")
     ultra::ga::individual ind(prob);
 
     CHECK(ind.is_valid());
+    CHECK(!ind.empty());
     CHECK(ind.parameters() == prob.sset.categories());
     CHECK(ind.age() == 0);
 
     for (std::size_t j(0); j < ind.parameters(); ++j)
+    {
       CHECK(intervals[j].is_valid());
+      CHECK(intervals[j].min <= ind[j]);
+      CHECK(ind[j] < intervals[j].sup);
+    }
   }
 }
 
