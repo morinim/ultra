@@ -28,7 +28,6 @@ namespace ultra::ga
 /// this constructor).
 ///
 problem::problem(std::size_t nparam, const interval<int> &itval)
-  : ultra::problem()
 {
   Expects(parameters() == 0);
 
@@ -49,7 +48,6 @@ problem::problem(std::size_t nparam, const interval<int> &itval)
 /// its own range.
 ///
 problem::problem(const std::vector<interval<int>> &intervals)
-  : ultra::problem()
 {
   Expects(parameters() == 0);
 
@@ -67,4 +65,4 @@ std::size_t problem::parameters() const noexcept
   return sset.categories();
 }
 
-}  // namespace ultra
+}  // namespace ultra::ga
