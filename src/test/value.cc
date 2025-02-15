@@ -45,6 +45,8 @@ TEST_CASE("Correct mapping")
     <D_ADDRESS, std::variant_alternative_t<d_address, value_t>>);
   static_assert(std::is_same_v
     <const D_VARIABLE *, std::variant_alternative_t<d_variable, value_t>>);
+  static_assert(std::is_same_v
+    <D_IVECTOR, std::variant_alternative_t<d_ivector, value_t>>);
 }
 
 TEST_CASE("Base")
@@ -143,6 +145,22 @@ TEST_CASE("Base")
 
     out << v1;
     CHECK(out.str() == name);
+  }
+
+  SUBCASE("Vector value")
+  {
+    const std::vector v = {0, 1, 2, 3, 4, 5};
+    v1 = v;
+    CHECK(has_value(v1));
+    CHECK(v1.index() == d_ivector);
+    CHECK(!basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
+
+    out << v1;
+    const auto os(out.str());
+    CHECK(os.front() == '{');
+    CHECK(os.back() == '}');
+    CHECK(os.length() == 2*v.size() - 1 + 2);
   }
 
   SUBCASE("Different types comparison")

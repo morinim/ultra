@@ -21,6 +21,8 @@ namespace ultra
 {
 
 ///
+/// Checks whether a givene `value_t` contains a value.
+///
 /// \param[in] v value to be checked
 /// \return      `true` if `v` isn't empty
 ///
@@ -106,6 +108,15 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
   case d_string:  o << std::quoted(std::get<D_STRING>(v));               break;
   case d_variable:o << std::get<const D_VARIABLE *>(v)->name();          break;
   case d_void:    o << "{}";                                             break;
+  case d_ivector:
+    o << '{';
+    if (const auto &iv(std::get<D_IVECTOR>(v)); !iv.empty())
+    {
+      o << iv[0];
+      for (std::size_t i(1); i < iv.size(); ++i)
+        o << ' ' << iv[i];
+    }
+    o << '}';
   }
 
   return o;
