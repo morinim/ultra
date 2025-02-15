@@ -64,6 +64,11 @@ using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_STRING,
 
 std::ostream &operator<<(std::ostream &, const value_t &);
 
+// Serialization.
+class symbol_set;
+bool load(std::istream &, const symbol_set &, value_t &);
+bool save(std::ostream &, const value_t &);
+
 }  // namespace ultra
 
 #endif  // include guard

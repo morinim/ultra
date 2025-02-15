@@ -567,55 +567,10 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
       temp.args.resize(arity);
 
       for (auto &arg : temp.args)
-      {
-        int d;
-        if (!(in >> d))
+        if (value_t v; !ultra::load(in, ss, v) || !has_value(v))
           return false;
-
-        value_t v;
-        switch (d)
-        {
-        case d_address:
-          if (int x; in >> x)
-            v = param_address(x);
-          break;
-
-        case d_double:
-          if (double x; load_float_from_stream(in, &x))
-            v = x;
-          break;
-
-        case d_int:
-          if (int x; in >> x)
-            v = x;
-          break;
-
-        case d_nullary:
-          if (symbol::opcode_t x; in >> x)
-            if (const auto *n = get_if<nullary>(ss.decode(x)))
-              v = n;
-          break;
-
-        case d_string:
-          if (std::string s; in >> s)
-            v = s;
-          break;
-
-        case d_variable:
-          if (std::string name; in >> name)
-            if (const auto *n = get_if<D_VARIABLE>(ss.decode(name)))
-              v = n;
-          break;
-
-        case d_void:
-          break;
-        }
-
-        if (!has_value(v))
-          return false;
-
-        arg = v;
-      }
+        else
+          arg = v;
     }
 
     g = temp;
@@ -639,31 +594,10 @@ bool individual::save_impl(std::ostream &out) const
 
     for (const auto &a : g.args)
     {
-      out << ' ' << a.index() << ' ';
+      out << ' ';
 
-      switch (a.index())
-      {
-      case d_address:
-        out << as_integer(std::get<D_ADDRESS>(a));
-        break;
-      case d_double:
-        save_float_to_stream(out, std::get<D_DOUBLE>(a));
-        break;
-      case d_int:
-        out << std::get<D_INT>(a);
-        break;
-      case d_nullary:
-        out << std::get<const D_NULLARY *>(a)->opcode();
-        break;
-      case d_string:
-        out << std::get<D_STRING>(a);
-        break;
-      case d_variable:
-        out << std::get<const D_VARIABLE *>(a)->name();
-        break;
-      case d_void:
-        break;
-      }
+      if (!ultra::save(out, a))
+        return false;
     }
 
     out << '\n';
