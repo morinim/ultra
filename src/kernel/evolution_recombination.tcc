@@ -56,7 +56,7 @@ base<E>::operator()(const R &parents) const
     const auto cross_and_mutate(
       [this](const auto &p1, const auto &p2)
       {
-        auto ret(crossover(p1, p2));
+        auto ret(crossover(this->prob_, p1, p2));
 
         if (this->prob_.params.evolution.p_mutation > 0.0)
         {

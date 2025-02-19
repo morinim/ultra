@@ -16,6 +16,7 @@
 #include <iosfwd>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace ultra
 {
@@ -35,22 +36,24 @@ constexpr param_address operator""_addr(unsigned long long a)
 /// Numerical ID of supported data types.
 ///
 enum domain_t {d_void = 0, d_int, d_double, d_string, d_nullary, d_address,
-               d_variable};
+               d_variable, d_ivector};
 
-using D_VOID     = std::monostate;
-using D_INT      =            int;
-using D_DOUBLE   =         double;
-using D_STRING   =    std::string;
-using D_NULLARY  =        nullary;
-using D_ADDRESS  =  param_address;
-using D_VARIABLE =  src::variable;
+using D_VOID     =   std::monostate;
+using D_INT      =              int;
+using D_DOUBLE   =           double;
+using D_STRING   =      std::string;
+using D_NULLARY  =          nullary;
+using D_ADDRESS  =    param_address;
+using D_VARIABLE =    src::variable;
+using D_IVECTOR  = std::vector<int>;
 
 ///
 /// A variant containing the data types used by the interpreter for internal
 /// calculations / output value and for storing examples.
 ///
 using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_STRING,
-                             const D_NULLARY *, D_ADDRESS, const D_VARIABLE *>;
+                             const D_NULLARY *, D_ADDRESS, const D_VARIABLE *,
+                             D_IVECTOR>;
 
 [[nodiscard]] bool basic_data_type(domain_t) noexcept;
 [[nodiscard]] bool basic_data_type(const value_t &) noexcept;
@@ -60,6 +63,11 @@ using value_t = std::variant<D_VOID, D_INT, D_DOUBLE, D_STRING,
 [[nodiscard]] bool numerical_data_type(const value_t &) noexcept;
 
 std::ostream &operator<<(std::ostream &, const value_t &);
+
+// Serialization.
+class symbol_set;
+bool load(std::istream &, const symbol_set &, value_t &);
+bool save(std::ostream &, const value_t &);
 
 }  // namespace ultra
 

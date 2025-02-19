@@ -56,4 +56,13 @@ std::ostream &operator<<(std::ostream &o, hash_t h)
   return o << h.data[0] << h.data[1];
 }
 
+///
+/// \param[in] s a string
+/// \return      the string content viewed as a raw sequence of bytes
+///
+std::span<const std::byte> bytes_view(const std::string &s)
+{
+  return {reinterpret_cast<const std::byte *>(s.data()), s.length()};
+}
+
 }  // namespace ultra

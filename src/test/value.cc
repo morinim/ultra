@@ -45,6 +45,8 @@ TEST_CASE("Correct mapping")
     <D_ADDRESS, std::variant_alternative_t<d_address, value_t>>);
   static_assert(std::is_same_v
     <const D_VARIABLE *, std::variant_alternative_t<d_variable, value_t>>);
+  static_assert(std::is_same_v
+    <D_IVECTOR, std::variant_alternative_t<d_ivector, value_t>>);
 }
 
 TEST_CASE("Base")
@@ -52,7 +54,7 @@ TEST_CASE("Base")
   using namespace ultra;
 
   value_t v1;
-  std::stringstream out;
+  std::ostringstream out;
 
   SUBCASE("Empty value")
   {
@@ -103,6 +105,19 @@ TEST_CASE("Base")
     CHECK(out.str() == hw.to_string());
   }
 
+  SUBCASE("Address value")
+  {
+    v1 = 345_addr;
+    CHECK(has_value(v1));
+    CHECK(v1.index() == d_address);
+    CHECK(!basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
+
+    out << v1;
+    CHECK(out.str()
+          == "[" + std::to_string(as_integer(std::get<D_ADDRESS>(v1))) + "]");
+  }
+
   SUBCASE("Integer value")
   {
     v1 = 1;
@@ -145,6 +160,22 @@ TEST_CASE("Base")
     CHECK(out.str() == name);
   }
 
+  SUBCASE("Vector value")
+  {
+    const std::vector v = {0, 1, 2, 3, 4, 5};
+    v1 = v;
+    CHECK(has_value(v1));
+    CHECK(v1.index() == d_ivector);
+    CHECK(!basic_data_type(v1));
+    CHECK(!numerical_data_type(v1));
+
+    out << v1;
+    const auto os(out.str());
+    CHECK(os.front() == '{');
+    CHECK(os.back() == '}');
+    CHECK(os.length() == 2*v.size() - 1 + 2);
+  }
+
   SUBCASE("Different types comparison")
   {
     value_t v2(1.0);
@@ -154,6 +185,77 @@ TEST_CASE("Base")
     const bool type_diff(v1 != v2);
     CHECK(type_diff);
   }
+}
+
+TEST_CASE("Serialization")
+{
+  using namespace ultra;
+
+  std::stringstream ss;
+
+  SUBCASE("Empty value")
+  {
+    value_t v1;
+    CHECK(save(ss, v1));
+    CHECK(ss.str() == std::to_string(v1.index()));
+  }
+
+  SUBCASE("String value")
+  {
+    const D_STRING s("dummy");
+    value_t v1(s);
+    CHECK(save(ss, v1));
+    CHECK(ss.str() == std::to_string(v1.index()) + " " + s);
+  }
+
+  SUBCASE("Integer value")
+  {
+    const D_INT i(123);
+    value_t v1(i);
+    CHECK(save(ss, v1));
+    CHECK(ss.str() == std::to_string(v1.index()) + " " + std::to_string(i));
+  }
+
+  SUBCASE("Double value")
+  {
+    const D_DOUBLE i(123.0);
+    value_t v1(i);
+    CHECK(save(ss, v1));
+
+    std::ostringstream oss;
+    CHECK(save_float_to_stream(oss, i));
+
+    CHECK(ss.str() == std::to_string(v1.index()) + " " + oss.str());
+  }
+
+  SUBCASE("Address value")
+  {
+    const D_ADDRESS a(345_addr);
+    value_t v1(a);
+    CHECK(save(ss, v1));
+    CHECK(ss.str() == std::to_string(v1.index()) + " "
+          + std::to_string(as_integer(a)));
+  }
+
+  SUBCASE("Vector value")
+  {
+    const D_IVECTOR v = {1, 2, 3};
+    value_t v1(v);
+    CHECK(save(ss, v1));
+
+    CHECK(ss.str() == std::to_string(v1.index()) + " 3 1 2 3");
+  }
+
+  SUBCASE("Empty Vector value")
+  {
+    const D_IVECTOR v;
+    value_t v1(v);
+    CHECK(save(ss, v1));
+
+    CHECK(ss.str() == std::to_string(v1.index()) + " 0");
+  }
+
+  // `d_nullary` and `d_variable` require a symbol set and aren't checked.
 }
 
 }  // TEST_SUITE("VALUE_T")

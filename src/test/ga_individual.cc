@@ -134,7 +134,7 @@ TEST_CASE_FIXTURE(fixture5, "Standard crossover")
     if (ultra::random::boolean())
       i2.inc_age();
 
-    const auto ic(crossover(i1, i2));
+    const auto ic(crossover(prob, i1, i2));
     CHECK(ic.is_valid());
     CHECK(ic.age() == std::max(i1.age(), i2.age()));
 

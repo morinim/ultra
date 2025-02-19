@@ -82,6 +82,7 @@ unsigned team<I>::mutation(const problem &prb)
 }
 
 ///
+/// \param[in] prb current problem
 /// \param[in] lhs first parent
 /// \param[in] rhs second parent
 /// \return        the result of the crossover (we only generate a single
@@ -93,7 +94,7 @@ unsigned team<I>::mutation(const problem &prb)
 /// \related team
 ///
 template<Individual I>
-team<I> crossover(const team<I> &lhs, const team<I> &rhs)
+team<I> crossover(const problem &prb, const team<I> &lhs, const team<I> &rhs)
 {
   Expects(lhs.size() == rhs.size());
 
@@ -102,7 +103,7 @@ team<I> crossover(const team<I> &lhs, const team<I> &rhs)
 
   std::ranges::transform(
     lhs, rhs, std::back_inserter(crossed),
-    [](const auto &i1, const auto &i2) { return crossover(i1, i2); });
+    [&prb](const auto &i1, const auto &i2) { return crossover(prb, i1, i2); });
 
   return team(crossed);
 }

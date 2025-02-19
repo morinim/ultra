@@ -83,7 +83,8 @@ public:
   bool load(std::istream &, const symbol_set &);
   bool save(std::ostream &) const;
 
-  template<Individual U> friend team<U> crossover(const team<U> &,
+  template<Individual U> friend team<U> crossover(const problem &,
+                                                  const team<U> &,
                                                   const team<U> &);
 
 private:
@@ -108,7 +109,8 @@ template<Individual I> [[nodiscard]] unsigned distance(const team<I> &,
 
 
 template<Individual I> [[nodiscard]] unsigned active_slots(const team<I> &);
-template<Individual I> [[nodiscard]] team<I> crossover(const team<I> &,
+template<Individual I> [[nodiscard]] team<I> crossover(const problem &,
+                                                       const team<I> &,
                                                        const team<I> &);
 
 template<Individual I> std::ostream &operator<<(std::ostream &,

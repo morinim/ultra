@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <span>
 
 namespace ultra
 {
@@ -218,6 +219,20 @@ inline T murmurhash3::get_block(const T *p, std::size_t i) noexcept
 }
 
 using hash = murmurhash3;
+
+///
+/// \param[in] t a value belonging to a fundamental types
+/// \return      the value content viewed as a raw sequence of bytes
+///
+template <class T>
+requires (std::integral<T> || std::floating_point<T>)
+[[nodiscard]] std::span<const std::byte, sizeof(T)> bytes_view(const T &t)
+{
+  return std::span<const std::byte, sizeof(T)>{
+    reinterpret_cast<const std::byte *>(std::addressof(t)), sizeof(T)};
+}
+
+[[nodiscard]] std::span<const std::byte> bytes_view(const std::string &);
 
 }  // namespace ultra
 

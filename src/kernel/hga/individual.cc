@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,16 +12,18 @@
 
 #include <algorithm>
 
-#include "kernel/ga/individual.h"
+#include "kernel/hga/individual.h"
+#include "kernel/hga/primitive.h"
 #include "kernel/hash_t.h"
 #include "kernel/random.h"
 
 #include "utility/log.h"
 
-namespace ultra::ga
+namespace ultra::hga
 {
+
 ///
-/// Constructs a new, random GA individual.
+/// Constructs a new, random HGA individual.
 ///
 /// \param[in] p current problem
 ///
@@ -37,7 +39,8 @@ individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
     genome_,
     [&, n = 0]() mutable
     {
-      return std::get<D_INT>(p.sset.roulette_terminal(n++));
+      assert(p.sset.terminals(n) == 1);
+      return p.sset.front_terminal(n++)->instance();
     });
 
   Ensures(is_valid());
@@ -144,7 +147,7 @@ unsigned individual::mutation(const problem &prb)
   const auto ps(parameters());
   for (symbol::category_t c(0); c < ps; ++c)
     if (random::boolean(pgm))
-      if (const auto g(std::get<D_INT>(prb.sset.roulette_terminal(c)));
+      if (const auto g(prb.sset.front_terminal(c)->instance());
           g != genome_[c])
       {
         ++n;
@@ -265,48 +268,11 @@ std::ostream &in_line(std::ostream &s, const individual &ga)
 }
 
 ///
-/// Two points crossover.
-///
-/// \param[in] lhs first parent
-/// \param[in] rhs second parent
-/// \return        crossover children (we only generate a single offspring)
-///
-/// We randomly select two loci (common crossover points). The offspring is
-/// created with genes from the `rhs` parent before the first crossover
-/// point and after the second crossover point; genes between crossover
-/// points are taken from the `lhs` parent.
-///
-/// \note Parents must have the same size.
-///
-/// \relates individual
-///
-individual crossover(const problem &,
-                     const individual &lhs, const individual &rhs)
-{
-  Expects(lhs.parameters() == rhs.parameters());
-
-  const auto ps(lhs.parameters());
-  const auto cut1(random::sup(ps - 1));
-  const auto cut2(random::between(cut1 + 1, ps));
-
-  auto ret(rhs);
-  for (auto i(cut1); i < cut2; ++i)
-    ret.genome_[i] = lhs[i];  // not using `operator[](std::size_t)` to avoid
-                              // multiple signature resets.
-
-  ret.set_if_older_age(lhs.age());
-  ret.signature_ = ret.hash();
-
-  Ensures(ret.is_valid());
-  return ret;
-}
-
-///
 /// Partially mapped  crossover (PMX).
 ///
-/// \param[in] lhs first parent
-/// \param[in] rhs second parent
-/// \return        offspring
+/// \param[in] lhs first permutation
+/// \param[in] rhs second permutation
+/// \return        new permutation
 ///
 /// The Partially Mapped Crossover (PMX) is a recombination operator, initially
 /// designed for TSP like problems, that utilizes the genetic material of two
@@ -316,16 +282,13 @@ individual crossover(const problem &,
 /// The principle behind PMX is to preserve the arrangement of genes from a
 /// parent while allowing variation in genes.
 ///
-/// \remark Parents must be permutations of the same sequence.
-///
 /// \relates individual
 ///
-individual pmx_crossover(const individual &lhs, const individual &rhs)
+D_IVECTOR pmx(const D_IVECTOR &lhs, const D_IVECTOR &rhs)
 {
-  Expects(lhs.parameters() == rhs.parameters());
   Expects(std::ranges::is_permutation(lhs, rhs));
 
-  const auto ps(lhs.parameters());
+  const auto ps(lhs.size());
   const auto cut1(random::sup(ps - 1));
   const auto cut2(random::between(cut1 + 1, ps));
 
@@ -349,8 +312,51 @@ individual pmx_crossover(const individual &lhs, const individual &rhs)
           j = cut1;
         }
 
-      ret.genome_[s] = candidate;
+      ret[s] = candidate;
     }
+
+  return ret;
+}
+
+///
+/// Heterogeneos crossover.
+///
+/// \param[in] prb the current problem
+/// \param[in] lhs first parent
+/// \param[in] rhs second parent
+/// \return        crossover children (we only generate a single offspring)
+///
+/// Genes of class `integer` are crossed using homogenous crossover; genes of
+/// class `permutation` are recombinex using PMX.
+///
+/// \note Parents must have the same size.
+///
+/// \relates individual
+///
+individual crossover(const problem &prb,
+                     const individual &lhs, const individual &rhs)
+{
+  Expects(lhs.parameters() == rhs.parameters());
+
+  individual ret(lhs);
+
+  const auto ps(lhs.parameters());
+  for (std::size_t i(0); i < ps; ++i)
+  {
+    const auto *sym(prb.sset.front_terminal(i));
+    if (is<integer>(sym))
+    {
+      if (random::boolean())
+        ret.genome_[i] = rhs[i];
+    }
+    else if (is<permutation>(sym))
+    {
+      assert(lhs[i].index() == d_ivector);
+      assert(rhs[i].index() == d_ivector);
+      ret.genome_[i] = pmx(std::get<D_IVECTOR>(lhs[i]),
+                           std::get<D_IVECTOR>(rhs[i]));
+    }
+  }
 
   ret.set_if_older_age(rhs.age());
   ret.signature_ = ret.hash();
@@ -360,17 +366,56 @@ individual pmx_crossover(const individual &lhs, const individual &rhs)
 }
 
 ///
+/// Maps individuals to a byte stream.
+///
+/// \return a byte stream compacted version of the gene sequence
+///
+/// Useful for individual comparison / information retrieval.
+///
+std::vector<std::byte> individual::pack() const
+{
+  std::vector<std::byte> ret;
+
+  const auto pack_span([&ret](const std::span<const std::byte> data)
+  {
+    ret.insert(ret.end(), data.begin(), data.end());
+  });
+
+  const auto pack_value([&](const auto &data)
+  {
+    pack_span(bytes_view(data));
+  });
+
+  for (const auto &v : genome_)
+    switch (v.index())
+    {
+    case d_double:
+      pack_value(std::get<D_DOUBLE>(v));
+      break;
+    case d_int:
+      pack_value(std::get<D_INT>(v));
+      break;
+    case d_string:
+      pack_value(std::get<D_STRING>(v));
+      break;
+    case d_void:
+      break;
+    }
+
+  return ret;
+}
+
+///
 /// Hashes the current individual.
 ///
 /// \return the hash value of the individual
 ///
-/// Converts this individual in a packed representation (raw sequence of bytes)
-/// and performs the *MurmurHash3* algorithm on it.
-///
 hash_t individual::hash() const
 {
-  const auto len(genome_.size() * sizeof(genome_[0]));  // length in bytes
-  return ultra::hash::hash128(genome_.data(), len);
+  Expects(parameters());
+
+  const auto packed(pack());
+  return ultra::hash::hash128(packed.data(), packed.size());
 }
 
 ///
@@ -417,13 +462,15 @@ bool individual::is_valid() const
 
 ///
 /// \param[in] in input stream
+/// \param[in] ss symbol set (currently not used since terminals used in HGAs
+///               don't require deconding)
 /// \return       `true` if the object has been loaded correctly
 ///
 /// \note
 /// If the load operation isn't successful the current individual isn't
 /// modified.
 ///
-bool individual::load_impl(std::istream &in, const symbol_set &)
+bool individual::load_impl(std::istream &in, const symbol_set &ss)
 {
   std::size_t sz;
   if (!(in >> sz))
@@ -431,7 +478,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &)
 
   genome_t v(sz);
   for (auto &g : v)
-    if (!(in >> g))
+    if (!ultra::load(in, ss, g))
       return false;
 
   genome_ = v;
@@ -447,7 +494,10 @@ bool individual::save_impl(std::ostream &out) const
 {
   out << parameters() << '\n';
   for (const auto &g : genome_)
-    out << g << '\n';
+  {
+    ultra::save(out, g);
+    out << '\n';
+  }
 
   return out.good();
 }
@@ -464,4 +514,4 @@ std::ostream &operator<<(std::ostream &s, const individual &ind)
   return in_line(s, ind);
 }
 
-}  // namespace ultra::ga
+}  // namespace ultra::hga

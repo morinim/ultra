@@ -144,7 +144,7 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
   const unsigned n(2000);
   for (unsigned j(0); j < n; ++j)
   {
-    const auto tc(crossover(t1, t2));
+    const auto tc(crossover(prob, t1, t2));
     CHECK(tc.is_valid());
 
     for (std::size_t p(0); p < tc.size(); ++p)

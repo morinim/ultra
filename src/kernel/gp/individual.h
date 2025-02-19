@@ -57,7 +57,8 @@ public:
   // ---- Recombination operators ----
   enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
 
-  friend individual crossover(const individual &, const individual &);
+  friend individual crossover(const problem &,
+                              const individual &, const individual &);
   unsigned mutation(const problem &);
 
   // ---- Iterators ----
@@ -92,7 +93,8 @@ private:
 };
 
 [[nodiscard]] unsigned active_slots(const individual &);
-[[nodiscard]] individual crossover(const individual &, const individual &);
+[[nodiscard]] individual crossover(const problem &,
+                                   const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] locus random_locus(const individual &);
 
