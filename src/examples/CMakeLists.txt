@@ -2,7 +2,7 @@
 
 find_package(Threads)
 
-file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc knapsack/*.cc nonogram/*.cc pathfinding/*.cc polyomino/*.cc sonar/*.cc symbolic_regression/*.cc)
+file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc 8queens/*.cc knapsack/*.cc nonogram/*.cc pathfinding/*.cc polyomino/*.cc sonar/*.cc symbolic_regression/*.cc)
 foreach (example_src ${EXAMPLES_SRC})
   # Gets the filename (`example`) without directory / longest extension
   # (`NAME_WE`) from the full filename (${example_src})
