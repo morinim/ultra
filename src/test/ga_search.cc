@@ -27,8 +27,6 @@ TEST_CASE("Rastrigin")
 {
   using namespace ultra;
 
-  log::reporting_level = log::lWARNING;
-
   const std::string target = "Hello World";
   const std::string CHARSET =
     " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!";
@@ -49,9 +47,46 @@ TEST_CASE("Rastrigin")
                       return found;
                     });
 
-  const auto res(search.run(10));
+  const auto res(search.run(8));
 
   CHECK(res.best_measurements.fitness == doctest::Approx(target.length()));
+}
+
+TEST_CASE("8 Queens")
+{
+  using namespace ultra;
+
+  const int NQUEENS(8);
+
+  ga::problem prob(NQUEENS, {0, NQUEENS});
+
+  // Fitness function.
+  auto f = [](const ga::individual &x)
+  {
+    double attacks(0);
+
+    for (int queen(0); queen < NQUEENS - 1; ++queen)  // skips the last queen
+    {
+      const int row(x[queen]);
+
+      for (int i(queen + 1); i < NQUEENS; ++i)
+      {
+        const int other_row(x[i]);
+
+        if (other_row == row                            // same row
+            || std::abs(other_row - row) == i - queen)  // or diagonal
+          ++attacks;
+      }
+    }
+
+    return -attacks;
+  };
+
+  // Let's go.
+  ga::search search(prob, f);
+  auto result = search.run(4);
+
+  CHECK(result.best_measurements.fitness == doctest::Approx(0.0));
 }
 
 }  // TEST_SUITE("GA::SEARCH")
