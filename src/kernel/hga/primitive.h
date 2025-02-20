@@ -77,7 +77,7 @@ public:
     std::iota(base_.begin(), base_.end(), 0);
   }
 
-  [[nodiscard]] constexpr std::size_t length() const noexcept
+  [[nodiscard]] std::size_t length() const noexcept
   { return base_.size(); }
 
   [[nodiscard]] value_t instance() const final
