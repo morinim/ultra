@@ -395,6 +395,10 @@ std::vector<std::byte> individual::pack() const
     case d_int:
       pack_value(std::get<D_INT>(v));
       break;
+    case d_ivector:
+      for (const auto &elem : std::get<D_IVECTOR>(v))
+        pack_value(elem);
+      break;
     case d_string:
       pack_value(std::get<D_STRING>(v));
       break;
