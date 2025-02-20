@@ -227,6 +227,14 @@ TEST_CASE_FIXTURE(fixture6, "Signature")
   CHECK(i1.signature() == i2.signature());
   std::swap(i1[0], i1[i1.parameters() - 1]);
   CHECK(i1.signature() != i2.signature());
+  std::swap(i1[0], i1[i1.parameters() - 1]);
+  CHECK(i1.signature() == i2.signature());
+
+  auto vec(std::get<D_IVECTOR>(i1[0]));
+  std::ranges::next_permutation(vec);
+
+  i1[0] = vec;
+  CHECK(i1.signature() != i2.signature());
 }
 
 }  // TEST_SUITE("hga::individual")
