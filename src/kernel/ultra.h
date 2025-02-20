@@ -33,5 +33,8 @@
 #include "kernel/gp/src/holdout_validation.h"
 #include "kernel/gp/src/search.h"
 #include "kernel/gp/src/variable.h"
+#include "kernel/hga/individual.h"
+#include "kernel/hga/problem.h"
+#include "kernel/hga/search.h"
 
 #endif  // include guard
