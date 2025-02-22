@@ -164,7 +164,7 @@ unsigned individual::mutation(const problem &prb)
       auto &vec(std::get<D_IVECTOR>(genome_[c]));
       const auto v_size(vec.size());
 
-      for (std::size_t i(0); i < v_size; ++i)
+      for (std::size_t i(0); i < v_size/2; ++i)
         if (random::boolean(pgm))
           if (const auto rand(random::sup(v_size)); rand != i)
           {
@@ -215,17 +215,37 @@ hash_t individual::signature() const
 }
 
 ///
+/// Calculates the Hamming distance between two individuals.
+///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparsion
 /// \return        a numeric measurement of the difference between `lhs` and
-///                `rhs` (the number of different genes)
+///                `rhs`
+///
+/// \note
+/// Genes of the `D_IVECTOR` size are compared element by element. So the
+/// distance between `{1, 2, {1, 2, 3}}` and `{0, 2, {0, 3, 1}}` is `4` (and
+/// not `2`.
 ///
 unsigned distance(const individual &lhs, const individual &rhs)
 {
   Expects(lhs.parameters() == rhs.parameters());
 
-  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0,
-                            std::plus{}, std::not_equal_to{});
+  return std::inner_product(
+    lhs.begin(), lhs.end(), rhs.begin(), 0u,
+    std::plus{},
+    [](const auto &v1, const auto &v2)
+    {
+      if (v1.index() == d_ivector)
+      {
+        const auto &vec1(std::get<D_IVECTOR>(v1));
+        const auto &vec2(std::get<D_IVECTOR>(v2));
+        return std::inner_product(vec1.begin(), vec1.end(), vec2.begin(), 0u,
+                                  std::plus{}, std::not_equal_to{});
+      }
+      else
+        return static_cast<unsigned>(v1 != v2);
+    });
 }
 
 ///
