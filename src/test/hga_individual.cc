@@ -97,8 +97,9 @@ TEST_CASE_FIXTURE(fixture6, "Mutation")
       diff += distance(orig, i1);
     }
 
-    const double perc(100.0 * double(diff) / double(orig.parameters() * n));
-    CHECK(perc > 47.0);
+    const double perc(100.0 * static_cast<double>(diff)
+                      / static_cast<double>(fixture6::actual_length * n));
+    CHECK(perc > 38.0);
     CHECK(perc < 53.0);
   }
 }
@@ -158,11 +159,11 @@ TEST_CASE_FIXTURE(fixture6, "Standard crossover")
 
     const auto d1(distance(i1, ic));
     CHECK(0 <= d1);
-    CHECK(d1 <= i1.parameters());
+    CHECK(d1 <= fixture6::actual_length);
 
     const auto d2(distance(i2, ic));
     CHECK(0 <= d2);
-    CHECK(d1 <= i2.parameters());
+    CHECK(d1 <= fixture6::actual_length);
 
     for (std::size_t k(0); k < ic.parameters(); ++k)
     {

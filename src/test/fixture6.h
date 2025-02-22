@@ -18,16 +18,23 @@
 
 struct fixture6
 {
-  fixture6(unsigned n = 5)
+  static constexpr unsigned integer_parameters = 4;
+  static constexpr unsigned permutation_parameters = 1;
+  static constexpr unsigned permutation_length = 32;
+  static constexpr unsigned actual_length =
+    integer_parameters + permutation_parameters * permutation_length;
+
+  fixture6(const unsigned n = integer_parameters + permutation_parameters)
   {
     prob.params.init();
 
     if (n)
     {
-      prob.insert<ultra::hga::permutation>(32);
+      for (unsigned i(0); i < permutation_parameters; ++i)
+        prob.insert<ultra::hga::permutation>(permutation_length);
 
       int v(10);
-      for (unsigned i(1); i < n; ++i)
+      for (unsigned i(0); i < integer_parameters; ++i)
       {
         prob.insert<ultra::hga::integer>(ultra::interval(-v, v));
 
