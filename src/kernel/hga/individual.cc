@@ -146,13 +146,33 @@ unsigned individual::mutation(const problem &prb)
 
   const auto ps(parameters());
   for (symbol::category_t c(0); c < ps; ++c)
-    if (random::boolean(pgm))
-      if (const auto g(prb.sset.front_terminal(c)->instance());
-          g != genome_[c])
-      {
-        ++n;
-        genome_[c] = g;
-      }
+  {
+    const auto *sym(prb.sset.front_terminal(c));
+
+    if (is<integer>(sym))
+    {
+      if (random::boolean(pgm))
+        if (const auto g(prb.sset.front_terminal(c)->instance());
+            g != genome_[c])
+        {
+          ++n;
+          genome_[c] = g;
+        }
+    }
+    else if (is<permutation>(sym))
+    {
+      auto &vec(std::get<D_IVECTOR>(genome_[c]));
+      const auto v_size(vec.size());
+
+      for (std::size_t i(0); i < v_size; ++i)
+        if (random::boolean(pgm))
+          if (const auto rand(random::sup(v_size)); rand != i)
+          {
+            std::swap(vec[i], vec[rand]);
+            ++n;
+          }
+    }
+  }
 
   if (n)
     signature_ = hash();
