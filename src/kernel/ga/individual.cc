@@ -316,64 +316,6 @@ individual crossover(const problem &,
 }
 
 ///
-/// Partially mapped  crossover (PMX).
-///
-/// \param[in] lhs first parent
-/// \param[in] rhs second parent
-/// \return        offspring
-///
-/// The Partially Mapped Crossover (PMX) is a recombination operator, initially
-/// designed for TSP like problems, that utilizes the genetic material of two
-/// parent solutions to propose a new offspring.
-/// It is one of the most commonly used crossover operator for
-/// permutation-encoded chromosomes.
-/// The principle behind PMX is to preserve the arrangement of genes from a
-/// parent while allowing variation in genes.
-///
-/// \remark Parents must be permutations of the same sequence.
-///
-/// \relates ga::individual
-///
-individual pmx_crossover(const individual &lhs, const individual &rhs)
-{
-  Expects(lhs.parameters() == rhs.parameters());
-  Expects(std::ranges::is_permutation(lhs, rhs));
-
-  const auto ps(lhs.parameters());
-  const auto cut1(random::sup(ps - 1));
-  const auto cut2(random::between(cut1 + 1, ps));
-
-  auto ret(lhs);
-
-  const std::vector<std::pair<std::size_t, std::size_t>> segments =
-    {{0, cut1}, {cut2, ps}};
-
-  for (const auto &segment : segments)
-    for (auto s(segment.first); s < segment.second; ++s)
-    {
-      auto candidate(rhs[s]);
-
-      auto j(cut1);
-      while (j < cut2)
-        if (candidate != ret[j])
-          ++j;
-        else
-        {
-          candidate = rhs[j];
-          j = cut1;
-        }
-
-      ret.genome_[s] = candidate;
-    }
-
-  ret.set_if_older_age(rhs.age());
-  ret.signature_ = ret.hash();
-
-  Ensures(ret.is_valid());
-  return ret;
-}
-
-///
 /// Hashes the current individual.
 ///
 /// \return the hash value of the individual

@@ -89,7 +89,6 @@ private:
 // Recombination operators.
 [[nodiscard]] individual crossover(const problem &,
                                    const individual &, const individual &);
-[[nodiscard]] individual pmx_crossover(const individual &, const individual &);
 
 // Visualization/output functions.
 std::ostream &graphviz(std::ostream &, const individual &);
