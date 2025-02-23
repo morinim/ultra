@@ -83,24 +83,26 @@ TEST_CASE_FIXTURE(fixture6, "Mutation")
     }
   }
 
-  SUBCASE("50% probability mutation")
+  SUBCASE("Mutation sequences")
   {
-    unsigned diff(0);
-
-    prob.params.evolution.p_mutation = 0.5;
-
-    for (unsigned i(0); i < n; ++i)
+    std::vector<double> sequence;
+    for (double pgm(0.1); pgm <= 1.0; pgm += 0.1)
     {
-      auto i1(orig);
+      prob.params.evolution.p_mutation = pgm;
 
-      i1.mutation(prob);
-      diff += distance(orig, i1);
+      unsigned diff(0);
+      for (unsigned i(0); i < n; ++i)
+      {
+        auto i1(orig);
+
+        i1.mutation(prob);
+        diff += distance(orig, i1);
+      }
+
+      sequence.push_back(diff);
     }
 
-    const double perc(100.0 * static_cast<double>(diff)
-                      / static_cast<double>(fixture6::actual_length * n));
-    CHECK(perc > 37.0);
-    CHECK(perc < 52.0);
+    CHECK(std::ranges::is_sorted(sequence));
   }
 }
 
