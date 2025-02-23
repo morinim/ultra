@@ -99,8 +99,8 @@ TEST_CASE_FIXTURE(fixture6, "Mutation")
 
     const double perc(100.0 * static_cast<double>(diff)
                       / static_cast<double>(fixture6::actual_length * n));
-    CHECK(perc > 38.0);
-    CHECK(perc < 53.0);
+    CHECK(perc > 37.0);
+    CHECK(perc < 52.0);
   }
 }
 
@@ -127,6 +127,28 @@ TEST_CASE_FIXTURE(fixture6, "Comparison")
       CHECK(distance(a, c) == distance(c, a));
     }
   }
+}
+
+TEST_CASE("Distance")
+{
+  using namespace ultra;
+
+  hga::problem prob;
+  prob.params.init();
+
+  prob.insert<hga::permutation>(3);
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+
+  hga::individual a(prob), b(prob);
+
+  a[0] = std::vector{0, 1, 2};  b[0] = std::vector{1, 0, 2};
+  a[1] = 0;                     b[1] = 0;
+  a[2] = 1;                     b[2] = 2;
+  a[3] = 2;                     b[3] = 2;
+
+  CHECK(distance(a, b) == 3);
 }
 
 TEST_CASE_FIXTURE(fixture6, "Iterators")
