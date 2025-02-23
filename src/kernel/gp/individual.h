@@ -67,14 +67,14 @@ public:
 
   [[nodiscard]] basic_range<const_exon_iterator> cexons() const;
 
-  [[nodiscard]] auto begin() const { return genome_.begin(); }
-  [[nodiscard]] auto end() const { return genome_.end(); }
+  [[nodiscard]] auto begin() const noexcept { return genome_.cbegin(); }
+  [[nodiscard]] auto end() const noexcept { return genome_.cend(); }
+  [[nodiscard]] auto begin() noexcept { return genome_.cbegin(); }
 
   template<bool> friend class internal::basic_exon_iterator;
 
 private:
   // ---- Private member functions ----
-  [[nodiscard]] auto begin() { return genome_.begin(); }
   [[nodiscard]] basic_range<exon_iterator> exons();
 
   void pack(const locus &, std::vector<std::byte> *) const;

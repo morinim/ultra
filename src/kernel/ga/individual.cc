@@ -17,6 +17,7 @@
 #include "kernel/random.h"
 
 #include "utility/log.h"
+#include "utility/misc.h"
 
 namespace ultra::ga
 {
@@ -171,6 +172,14 @@ bool individual::empty() const noexcept
 ///
 std::size_t individual::parameters() const noexcept
 {
+  return size();
+}
+
+///
+/// \return the number of parameters stored in the individual
+///
+std::size_t individual::size() const noexcept
+{
   return genome_.size();
 }
 
@@ -192,17 +201,20 @@ hash_t individual::signature() const
 }
 
 ///
+/// Calculates the Hamming distance between two individuals.
+///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparsion
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs` (the number of different genes)
 ///
+/// \relates ga::individual
+///
 unsigned distance(const individual &lhs, const individual &rhs)
 {
   Expects(lhs.parameters() == rhs.parameters());
 
-  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0,
-                            std::plus{}, std::not_equal_to{});
+  return hamming_distance(lhs, rhs);
 }
 
 ///
@@ -212,6 +224,8 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// \note
 /// Age isn't checked.
+///
+/// \relates ga::individual
 ///
 bool operator==(const individual &lhs, const individual &rhs)
 {
@@ -228,7 +242,7 @@ bool operator==(const individual &lhs, const individual &rhs)
 /// The format used to describe the graph is the dot language
 /// (https://www.graphviz.org/).
 ///
-/// \relates individual
+/// \relates ga::individual
 ///
 std::ostream &graphviz(std::ostream &s, const individual &ga)
 {
@@ -249,7 +263,7 @@ std::ostream &graphviz(std::ostream &s, const individual &ga)
 /// \param[in]  ga data to be printed
 /// \return        a reference to the output stream
 ///
-/// \relates individual
+/// \relates ga::individual
 ///
 std::ostream &in_line(std::ostream &s, const individual &ga)
 {
@@ -278,7 +292,7 @@ std::ostream &in_line(std::ostream &s, const individual &ga)
 ///
 /// \note Parents must have the same size.
 ///
-/// \relates individual
+/// \relates ga::individual
 ///
 individual crossover(const problem &,
                      const individual &lhs, const individual &rhs)
@@ -318,7 +332,7 @@ individual crossover(const problem &,
 ///
 /// \remark Parents must be permutations of the same sequence.
 ///
-/// \relates individual
+/// \relates ga::individual
 ///
 individual pmx_crossover(const individual &lhs, const individual &rhs)
 {
@@ -457,7 +471,7 @@ bool individual::save_impl(std::ostream &out) const
 /// \param[in] ind individual to print
 /// \return        output stream including `ind`
 ///
-/// \relates individual
+/// \relates ga::individual
 ///
 std::ostream &operator<<(std::ostream &s, const individual &ind)
 {

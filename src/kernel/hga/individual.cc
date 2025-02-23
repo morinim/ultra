@@ -18,6 +18,7 @@
 #include "kernel/random.h"
 
 #include "utility/log.h"
+#include "utility/misc.h"
 
 namespace ultra::hga
 {
@@ -194,6 +195,14 @@ bool individual::empty() const noexcept
 ///
 std::size_t individual::parameters() const noexcept
 {
+  return size();
+}
+
+///
+/// \return the number of parameters stored in the individual
+///
+std::size_t individual::size() const noexcept
+{
   return genome_.size();
 }
 
@@ -227,9 +236,16 @@ hash_t individual::signature() const
 /// distance between `{1, 2, {1, 2, 3}}` and `{0, 2, {0, 3, 1}}` is `4` (and
 /// not `2`.
 ///
+/// \relates hga::individual
+///
 unsigned distance(const individual &lhs, const individual &rhs)
 {
-  Expects(lhs.parameters() == rhs.parameters());
+  Expects(lhs.size() == rhs.size());
+  Expects(std::ranges::equal(lhs, rhs,
+                             [](auto l, auto r)
+                             {
+                               return l.index() == r.index();
+                             }));
 
   return std::inner_product(
     lhs.begin(), lhs.end(), rhs.begin(), 0u,
@@ -237,14 +253,10 @@ unsigned distance(const individual &lhs, const individual &rhs)
     [](const auto &v1, const auto &v2)
     {
       if (v1.index() == d_ivector)
-      {
-        const auto &vec1(std::get<D_IVECTOR>(v1));
-        const auto &vec2(std::get<D_IVECTOR>(v2));
-        return std::inner_product(vec1.begin(), vec1.end(), vec2.begin(), 0u,
-                                  std::plus{}, std::not_equal_to{});
-      }
-      else
-        return static_cast<unsigned>(v1 != v2);
+        return hamming_distance(std::get<D_IVECTOR>(v1),
+                                std::get<D_IVECTOR>(v2));
+
+      return static_cast<unsigned>(v1 != v2);
     });
 }
 
@@ -255,6 +267,8 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// \note
 /// Age isn't checked.
+///
+/// \relates hga::individual
 ///
 bool operator==(const individual &lhs, const individual &rhs)
 {
@@ -271,7 +285,7 @@ bool operator==(const individual &lhs, const individual &rhs)
 /// The format used to describe the graph is the dot language
 /// (https://www.graphviz.org/).
 ///
-/// \relates individual
+/// \relates hga::individual
 ///
 std::ostream &graphviz(std::ostream &s, const individual &ga)
 {

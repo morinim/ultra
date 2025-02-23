@@ -54,6 +54,7 @@ public:
   // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t parameters() const noexcept;
+  [[nodiscard]] std::size_t size() const noexcept;
 
   // ---- Misc ----
   [[nodiscard]] operator std::vector<value_type>() const noexcept;

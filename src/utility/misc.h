@@ -20,6 +20,8 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <numeric>
+#include <ranges>
 #include <sstream>
 
 #include "kernel/value.h"
@@ -475,6 +477,25 @@ template<IsEnum E>
 template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 {
   return s << as_integer(v);
+}
+
+///
+/// Calculates the Hamming distance between two ranges.
+///
+/// \param[in] lhs first term of comparison
+/// \param[in] rhs second term of comparsion
+/// \return        a numeric measurement of the difference between `lhs` and
+///                `rhs`
+///
+/// Hamming distance between two containers of equal length is the number of
+/// positions at which the corresponding symbols are different.
+///
+template<std::ranges::range R>
+[[nodiscard]] unsigned hamming_distance(const R &lhs, const R &rhs)
+{
+  Expects(lhs.size() == rhs.size());
+  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0u,
+                            std::plus{}, std::not_equal_to{});
 }
 
 }  // namespace ultra

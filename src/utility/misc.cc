@@ -20,6 +20,7 @@
 
 namespace ultra
 {
+
 ///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparison

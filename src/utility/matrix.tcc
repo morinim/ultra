@@ -214,6 +214,25 @@ typename matrix<T>::iterator matrix<T>::end() noexcept
 }
 
 ///
+/// \return constant iterator to the first element of the matrix
+///
+template<class T>
+typename matrix<T>::const_iterator matrix<T>::cbegin() const noexcept
+{
+  return data_.cbegin();
+}
+
+///
+/// \return iterator to the end (i.e. the element after the last element) of
+///         the matrix
+///
+template<class T>
+typename matrix<T>::const_iterator matrix<T>::cend() const noexcept
+{
+  return data_.cend();
+}
+
+///
 /// \param[in] m a matrix
 /// \return      the sum of `this` and `m`
 ///

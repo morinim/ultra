@@ -15,6 +15,7 @@
 #include "kernel/gp/individual.h"
 #include "kernel/nullary.h"
 #include "kernel/gp/src/variable.h"
+
 #include "utility/log.h"
 #include "utility/misc.h"
 
@@ -271,20 +272,21 @@ bool individual::operator==(const individual &rhs) const noexcept
 }
 
 ///
+/// Calculates the Hamming distance between two individuals.
+///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs` (the number of different genes between individuals)
 ///
-/// \related gp::individual
+/// \relates gp::individual
 ///
 unsigned distance(const individual &lhs, const individual &rhs)
 {
   Expects(lhs.size() == rhs.size());
   Expects(lhs.categories() == rhs.categories());
 
-  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0u,
-                            std::plus{}, std::not_equal_to{});
+  return hamming_distance(lhs, rhs);
 }
 
 ///
@@ -306,7 +308,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// `size() == 4` (four slots / rows) and `active_functions() == 5`.
 ///
-/// \related gp::individual
+/// \relates gp::individual
 ///
 unsigned active_slots(const individual &prg)
 {
@@ -394,7 +396,7 @@ locus random_locus(const individual &prg)
 /// - https://github.com/morinim/ultra/wiki/bibliography#1
 /// - https://github.com/morinim/ultra/wiki/bibliography#2
 ///
-/// \related gp::individual
+/// \relates gp::individual
 ///
 individual crossover(const problem &,
                      const individual &lhs, const individual &rhs)
@@ -416,7 +418,7 @@ individual crossover(const problem &,
     const auto cut(random::sup(genes - 1));
 
     std::copy(std::next(from.begin(), cut), from.end(),
-              std::next(to.begin(), cut));
+              std::next(to.genome_.begin(), cut));
     break;
   }
 
@@ -426,12 +428,12 @@ individual crossover(const problem &,
     const auto cut2(random::between(cut1 + 1, genes));
 
     std::copy(std::next(from.begin(), cut1), std::next(from.begin(), cut2),
-              std::next(to.begin(), cut1));
+              std::next(to.genome_.begin(), cut1));
     break;
   }
 
   case individual::crossover_t::uniform:
-    std::transform(from.begin(), from.end(), to.begin(), to.begin(),
+    std::transform(from.begin(), from.end(), to.begin(), to.genome_.begin(),
                    [](const auto &g1, const auto &g2)
                    { return random::boolean() ? g1 : g2; });
     break;
@@ -826,7 +828,7 @@ std::ostream &tree(std::ostream &s, const individual &prg)
 /// \param[in]  prg individual to be printed
 /// \return         output stream including `prg`
 ///
-/// \related gp::individual
+/// \relates gp::individual
 ///
 std::ostream &operator<<(std::ostream &s, const individual &prg)
 {
