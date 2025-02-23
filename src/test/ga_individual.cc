@@ -87,6 +87,28 @@ TEST_CASE_FIXTURE(fixture5, "Mutation")
     CHECK(perc > 47.0);
     CHECK(perc < 53.0);
   }
+
+  SUBCASE("Mutation sequences")
+  {
+    std::vector<double> sequence;
+    for (double pgm(0.1); pgm <= 1.0; pgm += 0.1)
+    {
+      prob.params.evolution.p_mutation = pgm;
+
+      unsigned diff(0);
+      for (unsigned i(0); i < n; ++i)
+      {
+        auto i1(orig);
+
+        i1.mutation(prob);
+        diff += distance(orig, i1);
+      }
+
+      sequence.push_back(diff);
+    }
+
+    CHECK(std::ranges::is_sorted(sequence));
+  }
 }
 
 TEST_CASE_FIXTURE(fixture5, "Comparison")
@@ -110,6 +132,26 @@ TEST_CASE_FIXTURE(fixture5, "Comparison")
       CHECK(distance(a, c) == distance(c, a));
     }
   }
+}
+
+TEST_CASE("Distance")
+{
+  using namespace ultra;
+
+  ga::problem prob;
+  prob.params.init();
+
+  prob.insert(interval(0, 9));
+  prob.insert(interval(0, 9));
+  prob.insert(interval(0, 9));
+  prob.insert(interval(0, 9));
+
+  ga::individual a(prob), b(prob);
+
+  a = std::vector{0, 1, 2, 3};
+  b = std::vector{0, 2, 2, 2};
+
+  CHECK(distance(a, b) == 2);
 }
 
 TEST_CASE_FIXTURE(fixture5, "Iterators")
