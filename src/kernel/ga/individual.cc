@@ -63,17 +63,13 @@ individual::const_iterator individual::end() const noexcept
 ///
 /// \return an iterator pointing to the first gene
 ///
-individual::iterator individual::begin() noexcept
+/// \remark
+/// Cannot be used for modification (it would create problem with the
+/// signature).
+///
+individual::const_iterator individual::begin() noexcept
 {
   return genome_.begin();
-}
-
-///
-/// \return an iterator pointing to a end-of-genome sentry
-///
-individual::iterator individual::end() noexcept
-{
-  return genome_.end();
 }
 
 ///

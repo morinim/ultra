@@ -38,9 +38,7 @@ public:
   // ---- Iterators ----
   [[nodiscard]] const_iterator begin() const noexcept;
   [[nodiscard]] const_iterator end() const noexcept;
-
-  [[nodiscard]] iterator begin() noexcept;
-  [[nodiscard]] iterator end() noexcept;
+  [[nodiscard]] const_iterator begin() noexcept;
 
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
