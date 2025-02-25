@@ -14,6 +14,24 @@
 
 #include "kernel/random.h"
 
+namespace
+{
+
+using namespace ultra::random;
+
+// See:
+// - https://stackoverflow.com/a/77510422/3235496
+// - https://www.johndcook.com/blog/2016/01/29/random-number-generator-seed-mistakes/
+[[nodiscard]] engine_t::result_type next_seed(bool unpredictable = false)
+{
+  static std::atomic<engine_t::result_type> process_seed(
+    unpredictable ? std::random_device{}() : 1);
+
+  return process_seed.fetch_add(1, std::memory_order_relaxed);
+}
+
+}  // namespace
+
 namespace ultra::random
 {
 
@@ -39,22 +57,6 @@ std::size_t ring(std::size_t base, std::size_t radius, std::size_t n)
 
   return (min_val + random::sup(2 * radius)) % n;
 }
-
-namespace
-{
-
-// See:
-// - https://stackoverflow.com/a/77510422/3235496
-// - https://www.johndcook.com/blog/2016/01/29/random-number-generator-seed-mistakes/
-[[nodiscard]] engine_t::result_type next_seed(bool unpredictable = false)
-{
-  static std::atomic<engine_t::result_type> process_seed(
-    unpredictable ? std::random_device{}() : 1);
-
-  return process_seed.fetch_add(1, std::memory_order_relaxed);
-}
-
-}  // namespace
 
 ///
 /// Every thread has its own generator initialized with a different seed.
