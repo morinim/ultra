@@ -518,15 +518,6 @@ void render_population()
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
 
-            //ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-            //ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 6,
-            //                           ImPlot::GetColormapColor(1), IMPLOT_AUTO,
-            //                           ImPlot::GetColormapColor(1));
-
-            //ImPlot::PlotScatter("Distribution",
-            //                    pr.fit.data(), pr.obs.data(), pr.size());
-
-            //ImPlot::PopStyleVar();
             ImPlot::PlotHistogram("##Population fitness histogram",
                                   pr.fit.data(), pr.size(),
                                   std::min<std::size_t>(50, pr.size()/10));
@@ -538,7 +529,10 @@ void render_population()
 
         if (ImGui::BeginTabItem("Fitness entropy"))
         {
-          if (ImPlot::BeginPlot("", ImVec2(-1, -1),
+          const std::string title("Generation "
+                                  + std::to_string(pr.generation)
+                                  + "##Entropy");
+          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
             std::vector<double> xs(pr.fit_entropy.size());
