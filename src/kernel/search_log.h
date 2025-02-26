@@ -44,27 +44,29 @@ public:
   /// A single log file can overwrite this path specifying an absolute path.
   std::filesystem::path base_dir {};
 
-  /// Name of the file used to save "real-time" information.
+  /// The path to the XML file used to save real-time information.
   /// \note
-  /// An empty string disable logging.
-  std::filesystem::path dynamic_file_path {};
+  /// If this is an empty string, logging of real-time information is disabled.
+  std::filesystem::path dynamic_file_path {default_dynamic_file};
 
-  /// Name of the log file used to save layer-specific information.
+  /// The path to the XML file used to save layer-specific information.
   /// \note
-  /// An empty string disable logging.
-  std::filesystem::path layers_file_path {};
+  /// If this is an empty string, logging of layer-related information is
+  /// disabled.
+  std::filesystem::path layers_file_path {default_layers_file};
 
-  /// Name of the log file used to save population-specific information.
+  /// The path to the XML file used to save population-specific information.
   /// \note
-  /// An empty string disable logging.
+  /// If this is an empty string, logging of population-related information is
+  /// disabled.
   /// \warning
   /// Enabling this log with large populations has a big performance impact.
-  std::filesystem::path population_file_path {};
+  std::filesystem::path population_file_path {default_population_file};
 
-  /// Name of the xml file used to save summary infonmation.
+  /// The path to the XML file used to save summary information.
   /// \note
-  /// An empty string disable logging.
-  std::filesystem::path summary_file_path {};
+  /// If this is an empty string, logging of summary information is disabled.
+  std::filesystem::path summary_file_path {default_summary_file};
 
 private:
   std::filesystem::path build_path(const std::filesystem::path &) const;

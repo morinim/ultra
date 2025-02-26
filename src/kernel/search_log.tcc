@@ -37,14 +37,14 @@ void set_text(tinyxml2::XMLElement *p, const std::string &e, const T &v)
 
   std::string str_v;
 
-  if constexpr (!std::is_same_v<T, std::string>)
+  if constexpr (std::is_same_v<T, std::string>)
+    str_v = v;
+  else
   {
     std::ostringstream ss;
     ss << v;
     str_v = ss.str();
   }
-  else
-    str_v = v;
 
   auto *pe(p->GetDocument()->NewElement(e.c_str()));
   pe->SetText(str_v.c_str());
@@ -84,7 +84,7 @@ void search_log::save_dynamic(const summary<I, F> &sum,
   else
     dynamic_file << " \"" << out::in_line << best.ind << '"';
 
-  dynamic_file << '\n';
+  dynamic_file << '\n' << std::flush;
 }
 
 template<Fitness F>
@@ -103,7 +103,7 @@ void search_log::save_population(unsigned generation,
     population_file << ' ' << std::fixed << std::scientific << fit << ' '
                     << freq;
 
-  population_file << '\n';
+  population_file << '\n' << std::flush;
 }
 
 ///
@@ -153,7 +153,7 @@ void search_log::save_layers(
                 << ' ' << current_layer.size();
   }
 
-  layers_file << '\n';
+  layers_file << '\n' << std::flush;
 }
 
 ///
