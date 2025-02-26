@@ -216,75 +216,6 @@ void basic_search<ES, E>::log_stats(const search_stats<T> &s,
   }
   }*/
 
-/*
-///
-/// \param[in] id  numerical id of the evaluator to be activated
-/// \param[in] msg input parameters for the evaluator constructor
-/// \return        a reference to the search class (used for method chaining)
-///
-/// \exception std::invalid_argument unknown evaluator
-///
-/// \note
-/// If the evaluator `id` is not compatible with the problem type the
-/// function returns `false` and the active evaluator stays the same.
-///
-template<class T, template<class> class ES>
-src_search<T, ES> &src_search<T, ES>::evaluator(evaluator_id id,
-                                                const std::string &msg)
-{
-  if (training_data().classes() > 1)
-  {
-    switch (id)
-    {
-    case evaluator_id::bin:
-      set_evaluator<binary_evaluator<T>>();
-      break;
-
-    case evaluator_id::dyn_slot:
-      {
-        auto x_slot(static_cast<unsigned>(msg.empty() ? 10ul
-                                                      : std::stoul(msg)));
-        set_evaluator<dyn_slot_evaluator<T>>(x_slot);
-      }
-      break;
-
-    case evaluator_id::gaussian:
-      set_evaluator<gaussian_evaluator<T>>();
-      break;
-
-    default:
-      throw std::invalid_argument("Unknown evaluator");
-    }
-  }
-  else  // symbolic regression
-  {
-    switch (id)
-    {
-    case evaluator_id::count:
-      set_evaluator<count_evaluator<T>>();
-      break;
-
-    case evaluator_id::mae:
-      set_evaluator<mae_evaluator<T>>();
-      break;
-
-    case evaluator_id::rmae:
-      set_evaluator<rmae_evaluator<T>>();
-      break;
-
-    case evaluator_id::mse:
-      set_evaluator<mse_evaluator<T>>();
-      break;
-
-    default:
-      throw std::invalid_argument("Unknown evaluator");
-    }
-  }
-
-  return *this;
-}
-*/
-
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
@@ -299,6 +230,26 @@ search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
 {
 }
 
+///
+/// Sets the search/evolution logger.
+///
+/// \param[in] sl logger
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// \remark
+/// Logger must be set before calling `run`. By default, data logging is
+/// disabled.
+///
+template<Individual P>
+search<P> &search<P>::logger(search_log &sl)
+{
+  Expects(sl.is_valid());
+
+  search_log_ = &sl;
+  return *this;
+}
+
 template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
@@ -309,6 +260,8 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
 
     if (vs_)
       alps.validation_strategy(*vs_);
+    if (search_log_)
+      alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_);
 
     return alps.run(n, threshold);

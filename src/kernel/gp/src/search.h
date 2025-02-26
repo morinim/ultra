@@ -81,6 +81,8 @@ public:
 
   search(problem &, metric_flags = metric_flags::accuracy);
 
+  search &logger(search_log &);
+
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
 
@@ -99,6 +101,8 @@ private:
   std::unique_ptr<ultra::validation_strategy> vs_ {};
 
   after_generation_callback_t after_generation_callback_ {};
+
+  mutable search_log *search_log_ {nullptr};
 };
 
 

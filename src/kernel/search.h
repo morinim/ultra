@@ -40,6 +40,8 @@ public:
 
   basic_search(problem &, E);
 
+  basic_search &logger(search_log &);
+
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
 
@@ -78,7 +80,7 @@ private:
   bool load();
   //bool save() const;
 
-  mutable search_log search_log_ {};
+  mutable search_log *search_log_ {nullptr};
 };  // class basic_search
 
 

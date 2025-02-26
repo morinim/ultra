@@ -50,6 +50,24 @@ void basic_search<ES, E>::init()
 }
 
 ///
+/// Sets the search/evolution logger.
+///
+/// \param[in] sl logger
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// \remark
+/// Logger must be set before calling `run`. By default, data logging is
+/// disabled.
+///
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::logger(search_log &sl)
+{
+  search_log_ = &sl;
+  return *this;
+}
+
+///
 /// Template method of the `run` member function called at the end of each run.
 ///
 /// \param[in] run current run
@@ -172,7 +190,8 @@ basic_search<ES, E>::run(unsigned n,
 
     evolution evo(prob_, eva_);
     evo.after_generation(after_generation_callback_);
-    evo.logger(search_log_);
+    if (search_log_)
+      evo.logger(*search_log_);
     evo.shake_function(shake);
     const auto run_summary(evo.template run<ES>());
 
@@ -189,7 +208,8 @@ basic_search<ES, E>::run(unsigned n,
       stats.update(prg, metrics.back(), run_summary.elapsed, threshold);
     }
 
-    search_log_.save_summary(stats);
+    if (search_log_)
+      search_log_->save_summary(stats);
   }
 
   return stats;
