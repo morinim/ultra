@@ -16,7 +16,7 @@ Compared to Vita, this framework is a major breakthrough but it isn't production
 
 Ultra is a scalable, high-performance framework for evolutionary algorithms.
 
-It is suitable for [classification][classification], [symbolic regression][sr], content-base image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and scheduling. Main features include:
+It is suitable for [classification][classification], [symbolic regression][sr], content-base image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
 
 - concurrency support
 - modern, standard ISO C++20 source code
@@ -237,10 +237,10 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 [python]: https://www.python.org/
 [rastrigin]: https://github.com/morinim/ultra/wiki/rastrigin_tutorial
 [releases]: https://github.com/morinim/ultra/releases
+[scheduling]: https://github.com/morinim/ultra/wiki/scheduling_tutorial
 [semver]: https://semver.org/
 [sonar]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [sr]: https://github.com/morinim/ultra/wiki/symbolic_regression
 [tutorials]: https://ultraevolution.org/wiki/tutorials
-[twitter]: https://twitter.com/intent/tweet?text=%23Ultra+evolutionary+algorithms+framework:&url=https%3A%2F%2Fgithub.com%2Fmorinim%2Fultra
 [vita]: https://github.com/morinim/vita
 [ultrasite]: https://ultraevolution.org
