@@ -114,7 +114,7 @@ More information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
-Comprehensive documentation is available on the [official site][[ultrasite]]. It is recommended that you start with the [tutorials].
+Comprehensive documentation is available on the [official site][ultrasite]. It is recommended that you start with the [tutorials].
 Also, consider that the wiki on GitHub is the source for the ultraevolution.org site but may contain information regarding features not yet available in official releases.
 
 ## BUILD REQUIREMENTS
