@@ -5,7 +5,6 @@
 [![Build and test all platforms](https://github.com/morinim/ultra/actions/workflows/build_release.yml/badge.svg)][build_status]
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
-[![Twitter](https://img.shields.io/twitter/url/https/github.com/morinim/ultra.svg?style=social)][twitter]
 
 ## UNDER DEVELOPMENT ##
 
@@ -15,9 +14,9 @@ Compared to Vita, this framework is a major breakthrough but it isn't production
 
 ## OVERVIEW
 
-Ultra is a scalable, high performance evolutionary algorithms framework.
+Ultra is a scalable, high-performance framework for evolutionary algorithms.
 
-It's suitable for [classification][classification], [symbolic regression][sr], content base image retrieval, data mining and [software agents][agent] control, [mathematical optimization][rastrigin] and scheduling. Main features include:
+It is suitable for [classification][classification], [symbolic regression][sr], content-base image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and scheduling. Main features include:
 
 - concurrency support
 - modern, standard ISO C++20 source code
@@ -27,7 +26,7 @@ It's suitable for [classification][classification], [symbolic regression][sr], c
 - fast experimentation with detailed run-log
 - [more][features]
 
-This software is a complete rewrite of [Vita][vita]. The code has been restructured, simplified and if now less *research oriented*; however it retains all the useful aspects of the original project and **fully supports concurrency**. If you're transitioning from Vita, take a look at the [migration notes][migrating].
+This software is a complete rewrite of [Vita][vita]. The code has been restructured, simplified and is now less *research-oriented*; however it retains all the useful aspects of the original project and **fully supports concurrency**. If you're transitioning from Vita, take a look at the [migration notes][migrating].
 
 ## EXAMPLES
 
@@ -87,12 +86,12 @@ src::search s(prob);
 const auto result(s.run());
 ```
 
-It's pretty straightforward (further details in the [specific tutorial][sr]).
+It is quite straightforward (further details can be found in the [specific tutorial][sr]).
 
 ### Classification
 <img src="https://github.com/morinim/ultra/wiki/img/sonar.jpg" width="300">
 
-This is a machine learning examples that classifies sonar data into two categories (rocks vs mines):
+This is a machine learning example that classifies sonar data into two categories (rocks vs mines):
 
 ```C++
   // READING INPUT DATA
@@ -115,12 +114,12 @@ More information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
-There is [comprehensive documentation][ultrasite] on the official site. You should probably start with the [tutorials].
+Comprehensive documentation is available on the [official site][[ultrasite]]. It is recommended that you start with the [tutorials].
 Also, consider that the wiki on GitHub is the source for the ultraevolution.org site but may contain information regarding features not yet available in official releases.
 
 ## BUILD REQUIREMENTS
 
-Ultra is designed to have minimal requirements for building and use with your projects, though some are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. macOS, BSD).
+Ultra is designed to have minimal requirements for building and for use with your projects, though some prerequisites are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. macOS, BSD).
 However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
 
 ### Mandatory
@@ -136,7 +135,7 @@ However, since core members of the Ultra project have no access to these platfor
 
 There are two ways of getting Ultra's source code: you can [download][download] a stable source release in your preferred archive format or directly clone the source from a repository.
 
-Cloning a repository requires a few extra steps and some extra software packages on your system, but lets you track the latest development and make patches much more easily, so we highly encourage it.
+Cloning the repository requires a few extra steps and additional software packages on your system, but it enables you to track the latest development and apply patches more easily. We highly encourage cloning for those who wish to contribute.
 
 Run the following command:
 
