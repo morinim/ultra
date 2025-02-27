@@ -44,8 +44,7 @@ int main()
       {
         const int other_row(columns[i]);
 
-        if (other_row == row                            // same row
-            || std::abs(other_row - row) == i - queen)  // or diagonal
+        if (std::abs(other_row - row) == i - queen)  // diagonal
           ++attacks;
       }
     }
