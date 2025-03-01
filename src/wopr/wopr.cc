@@ -347,6 +347,24 @@ struct layers_sequence
 
 std::vector<layers_sequence> layers_runs;
 
+
+/*********************************************************************
+ * Summary-related data structures
+ ********************************************************************/
+struct summary_data
+{
+  explicit summary_data(const std::string &);
+
+  double success_rate {0.0};
+  std::chrono::milliseconds elapsed_time {0};
+
+  ultra::fitnd fit_mean {};
+  ultra::fitnd fit_std_dev {};
+
+  std::set<unsigned> good_runs {};
+};
+
+
 /*********************************************************************
  * Rendering
  ********************************************************************/
@@ -945,9 +963,14 @@ std::string random_string()
   return result;
 }
 
-void read_file(std::stop_token stoken,
-               const std::filesystem::path &filename,
-               ultra::ts_queue<std::string> &buffer)
+//
+// Reads a single log file into a queue buffer.
+// Takes advantage of the fact that a line is complete if a newline has been
+// reached.
+//
+void read_log_file(std::stop_token stoken,
+                   const std::filesystem::path &filename,
+                   ultra::ts_queue<std::string> &buffer)
 {
   std::ifstream file(filename);
   if (!file)
@@ -981,7 +1004,11 @@ void read_file(std::stop_token stoken,
   }
 }
 
-void get_data(std::stop_token stoken)
+//
+// Asynchronously reads all specified log files into queues for subsequent
+// processing.
+//
+void get_logs(std::stop_token stoken)
 {
   assert(!slog.dynamic_file_path.empty()
          || !slog.layers_file_path.empty()
@@ -990,19 +1017,19 @@ void get_data(std::stop_token stoken)
   std::jthread read_dynamic;
   ultra::ts_queue<std::string> dynamic_buffer;
   if (!slog.dynamic_file_path.empty())
-    read_dynamic = std::jthread(read_file, slog.dynamic_file_path,
+    read_dynamic = std::jthread(read_log_file, slog.dynamic_file_path,
                                 std::ref(dynamic_buffer));
 
   std::jthread read_population;
   ultra::ts_queue<std::string> population_buffer;
   if (!slog.population_file_path.empty())
-    read_population = std::jthread(read_file, slog.population_file_path,
+    read_population = std::jthread(read_log_file, slog.population_file_path,
                                    std::ref(population_buffer));
 
   std::jthread read_layers;
   ultra::ts_queue<std::string> layers_buffer;
   if (!slog.layers_file_path.empty())
-    read_layers = std::jthread(read_file, slog.layers_file_path,
+    read_layers = std::jthread(read_log_file, slog.layers_file_path,
                                std::ref(layers_buffer));
 
   ultra::timer last_read;
@@ -1034,6 +1061,21 @@ void get_data(std::stop_token stoken)
   }
 }
 
+//
+// Asynchronously reads all available summary files into queues for subsequent
+// processing.
+//
+void get_summaries(std::stop_token stoken)
+{
+  assert(!datasets.empty());
+
+  while (!stoken.stop_requested())
+  {
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(3000ms);
+  }
+}
+
 /*********************************************************************
  * Command line
  ********************************************************************/
@@ -1051,55 +1093,48 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr monitor [data_folder]\n"
-  "    The data folder must contain at least a search log produced by Ultra.\n"
+  "> wopr monitor [log_folder]\n"
+  "    The log folder must contain at least a search log produced by Ultra.\n"
   "    If missing, the current working directory is used.\n"
   "\n"
-  "> wopr test    [test_folder]\n"
+  "  Available switches:\n"
+  "\n"
+  "  --dynamic      filename\n"
+  "  --layers       filename\n"
+  "  --population   filename\n"
+  "    Use a filename different from the default one.\n"
+  "\n"
+  "> wopr test [test_folder]\n"
   "    The test folder must contain at least a dataset and optionally a test\n"
   "    configuration file. If missing, the current working directory is used.\n"
   "\n"
-  "Available switches:\n"
-  "\n"
-  "--dynamic      filename\n"
-  "--layers       filename\n"
-  "--population   filename\n"
-  "    Use a filename different from the default one.\n"
-  "\n"
-  "-help\n"
+  "--help\n"
   "    Show this help screen.\n"
-  "-imguidemo\n"
+  "--imguidemo\n"
   "    Enable ImGUI demo panel.\n"
   "\n"
     << "SHALL WE PLAY A GAME?\n\n";
 }
 
-std::filesystem::path build_path(const std::filesystem::path &base_dir,
-                                 const std::filesystem::path &f,
-                                 const std::string &default_filename)
+std::filesystem::path build_path(std::filesystem::path base_dir,
+                                 std::filesystem::path f,
+                                 const std::string &default_filename = {})
 {
+  f = f.lexically_normal();
+
   if (f.is_absolute())
-  {
-    if (std::filesystem::exists(f))
-      return f;
+    return f;
 
-    std::cerr << "File " << f << " doesn't exist\n";
-  }
-  else if (!f.empty())
-  {
-    if (const auto bf(base_dir / f); std::filesystem::exists(bf))
-      return bf;
-    else
-      std::cerr << "File " << bf << " doesn't exist\n";
-  }
-  else
-  {
-    if (const auto bf(base_dir / default_filename);
-        std::filesystem::exists(bf))
-      return bf;
-  }
+  if (base_dir.empty())
+    base_dir = "./";
 
-  return std::filesystem::path{};
+  if (!f.empty())
+    return base_dir / f;
+
+  if (!default_filename.empty())
+    return base_dir / default_filename;
+
+  return {};
 }
 
 cmdl_result parse_args(int argc, char *argv[])
@@ -1130,18 +1165,16 @@ cmdl_result parse_args(int argc, char *argv[])
 
   if (cmd == cmd_monitor)
   {
-    const std::filesystem::path data_folder(pos_args.size() <= 2
-                                            ? "./" : pos_args[2]);
-
-    if (!std::filesystem::is_directory(data_folder))
+    using namespace ultra;
+    const std::filesystem::path log_folder(pos_args.size() <= 2
+                                           ? "./" : pos_args[2]);
+    if (!std::filesystem::is_directory(log_folder))
     {
-      std::cerr << data_folder << " isn't a directory\n";
+      std::cerr << log_folder << " isn't a directory\n";
       return cmdl_result::error;
     }
 
-    slog.base_dir = data_folder;
-
-    using namespace ultra;
+    slog.base_dir = log_folder;
     slog.dynamic_file_path = build_path(slog.base_dir,
                                         cmdl("dynamic", "").str(),
                                         search_log::default_dynamic_file);
@@ -1152,11 +1185,11 @@ cmdl_result parse_args(int argc, char *argv[])
                                            cmdl("population", "").str(),
                                            search_log::default_population_file);
 
-    if (slog.dynamic_file_path.empty()
-        && slog.layers_file_path.empty()
-        && slog.population_file_path.empty())
+    if (!std::filesystem::exists(slog.dynamic_file_path)
+        && !std::filesystem::exists(slog.layers_file_path)
+        && !std::filesystem::exists(slog.population_file_path))
     {
-      std::cerr << "No data file available.\n";
+      std::cerr << "No log file available.\n";
       return cmdl_result::error;
     }
 
@@ -1204,7 +1237,7 @@ cmdl_result parse_args(int argc, char *argv[])
  ********************************************************************/
 void monitor(const imgui_app::program::settings &settings)
 {
-  std::jthread t_data(get_data);
+  std::jthread t_logs(get_logs);
 
   imgui_app::program prg(settings);
   prg.run(render);
@@ -1229,6 +1262,20 @@ void test(const imgui_app::program::settings &)
       prob.insert<ultra::real::mul>();
 
       ultra::src::search s(prob);
+
+      ultra::search_log sl;
+      const std::filesystem::path base_dir(dataset.parent_path());
+      const std::string base_fn(dataset.stem().concat("_"));
+
+      sl.dynamic_file_path = build_path(
+        base_dir, base_fn + ultra::search_log::default_dynamic_file);
+      sl.layers_file_path = build_path(
+        base_dir, base_fn + ultra::search_log::default_layers_file);
+      sl.population_file_path = build_path(
+        base_dir, base_fn + ultra::search_log::default_population_file);
+
+      s.logger(sl);
+
       return s.run(-1);
     });
 
@@ -1236,6 +1283,8 @@ void test(const imgui_app::program::settings &)
                                               double>>> tasks;
   for (const auto &dataset : datasets)
     tasks.push_back(std::async(std::launch::async, test_dataset, dataset));
+
+  std::jthread t_summaries(get_summaries);
 }
 
 int main(int argc, char *argv[])
