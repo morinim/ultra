@@ -29,7 +29,7 @@ public:
   static constexpr auto default_dynamic_file {"dynamic.txt"};
   static constexpr auto default_layers_file {"layers.txt"};
   static constexpr auto default_population_file {"population.txt"};
-  static constexpr auto default_summary_file {"summary.txt"};
+  static constexpr auto default_summary_file {"summary.xml"};
 
   template<Population P, Fitness F> void save_snapshot(
     const P &, const summary<std::ranges::range_value_t<P>, F> &);

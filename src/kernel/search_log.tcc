@@ -22,19 +22,17 @@ namespace internal
 
 //
 // A convenient arrangement for inserting stream-aware objects into
-// `XMLDocument`.
+// `XMLPrinter`.
 //
 // \tparam T type of the value
 //
-// \param[out] p parent element
+// \param[out] p output device
 // \param[in]  e new xml element
 // \param[in]  v new xml element's value
 //
 template<class T>
-void set_text(tinyxml2::XMLElement *p, const std::string &e, const T &v)
+void set_text(tinyxml2::XMLPrinter &p, const std::string &e, const T &v)
 {
-  Expects(p);
-
   std::string str_v;
 
   if constexpr (std::is_same_v<T, std::string>)
@@ -46,9 +44,9 @@ void set_text(tinyxml2::XMLElement *p, const std::string &e, const T &v)
     str_v = ss.str();
   }
 
-  auto *pe(p->GetDocument()->NewElement(e.c_str()));
-  pe->SetText(str_v.c_str());
-  p->InsertEndChild(pe);
+  p.OpenElement(e.c_str());
+  p.PushText(str_v.c_str());
+  p.CloseElement(e.c_str());
 }
 
 }  // namespace internal
@@ -197,48 +195,51 @@ template<Individual I, Fitness F> void search_log::save_summary(
   if (!is_valid())
     return;
 
-  tinyxml2::XMLDocument d(false);
-
-  auto *root(d.NewElement("ultra"));
-  d.InsertFirstChild(root);
-
-  auto *e_summary(d.NewElement("summary"));
-  root->InsertEndChild(e_summary);
-
   const auto solutions(stats.good_runs.size());
   const auto success_rate(
     stats.runs ? static_cast<double>(solutions)
                  / static_cast<double>(stats.runs)
                : 0);
 
-  using internal::set_text;
-  set_text(e_summary, "success_rate", success_rate);
-  set_text(e_summary, "elapsed_time", stats.elapsed.count());
-  set_text(e_summary, "mean_fitness", stats.fitness_distribution.mean());
-  set_text(e_summary, "standard_deviation",
-           stats.fitness_distribution.standard_deviation());
+  tinyxml2::XMLPrinter doc;
 
-  auto *e_best(d.NewElement("best"));
-  e_summary->InsertEndChild(e_best);
+  doc.OpenElement("ultra");
+  doc.OpenElement("summary");
+
+  using internal::set_text;
+  set_text(doc, "success_rate", success_rate);
+  set_text(doc, "elapsed_time", stats.elapsed.count());
+  set_text(doc, "mean_fitness", stats.fitness_distribution.mean());
+  set_text(doc, "standard_deviation",
+           stats.fitness_distribution.standard_deviation());
+  set_text(doc, "runs", stats.runs);
+
+  doc.OpenElement("best");
   if (stats.best_measurements.fitness)
-    set_text(e_best, "fitness", *stats.best_measurements.fitness);
-  set_text(e_best, "run", stats.best_run);
+    set_text(doc, "fitness", *stats.best_measurements.fitness);
+  set_text(doc, "run", stats.best_run);
 
   std::ostringstream ss;
   ss << out::in_line << stats.best_individual;
-  set_text(e_best, "code", ss.str());
+  set_text(doc, "code", ss.str());
+  doc.CloseElement();  // best
 
-  auto *e_solutions(d.NewElement("solutions"));
-  e_summary->InsertEndChild(e_solutions);
-
-  auto *e_runs(d.NewElement("runs"));
-  e_solutions->InsertEndChild(e_runs);
+  doc.OpenElement("solutions");
   for (const auto &gr : stats.good_runs)
-    set_text(e_runs, "run", gr);
-  set_text(e_solutions, "found", solutions);
+    set_text(doc, "run", gr);
+  doc.CloseElement();  // solutions
+
+  doc.CloseElement();  // summary
+
+  set_text(doc, "checksum", "00000000");
+  doc.CloseElement();  // ultra
+
+  const std::string base_xml(doc.CStr());
+  const std::string signed_xml(ultra::crc32::embed_xml_signature(base_xml));
 
   const auto path(build_path(summary_file_path));
-  d.SaveFile(path.string().c_str());
+  if (std::ofstream out = path)
+    out << signed_xml << std::flush;
 }
 
 #endif  // include guard
