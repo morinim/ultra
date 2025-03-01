@@ -207,12 +207,19 @@ template<Individual I, Fitness F> void search_log::save_summary(
   doc.OpenElement("summary");
 
   using internal::set_text;
-  set_text(doc, "success_rate", success_rate);
+  set_text(doc, "runs", stats.runs);
   set_text(doc, "elapsed_time", stats.elapsed.count());
-  set_text(doc, "mean_fitness", stats.fitness_distribution.mean());
+  set_text(doc, "success_rate", success_rate);
+
+  doc.OpenElement("distributions");
+
+  doc.OpenElement("fitness");
+  set_text(doc, "mean", stats.fitness_distribution.mean());
   set_text(doc, "standard_deviation",
            stats.fitness_distribution.standard_deviation());
-  set_text(doc, "runs", stats.runs);
+  doc.CloseElement();  // fitness
+
+  doc.CloseElement();  // distributions
 
   doc.OpenElement("best");
   if (stats.best_measurements.fitness)
