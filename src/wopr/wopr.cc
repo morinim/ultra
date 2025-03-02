@@ -353,16 +353,74 @@ std::vector<layers_sequence> layers_runs;
  ********************************************************************/
 struct summary_data
 {
-  explicit summary_data(const std::string &);
+  summary_data() = default;
+  explicit summary_data(const tinyxml2::XMLDocument &);
 
-  double success_rate {0.0};
+  unsigned runs {0};
   std::chrono::milliseconds elapsed_time {0};
+  double success_rate {0.0};
 
   ultra::fitnd fit_mean {};
   ultra::fitnd fit_std_dev {};
 
+  ultra::fitnd best_fit {};
+  unsigned     best_run {};
+  std::string  best_prg {};
+
   std::set<unsigned> good_runs {};
 };
+
+summary_data::summary_data(const tinyxml2::XMLDocument &doc)
+{
+  tinyxml2::XMLConstHandle handle(&doc);
+
+  const auto h_summary(handle
+                       .FirstChildElement("ultra")
+                       .FirstChildElement("summary"));
+  if (const auto *e = h_summary.FirstChildElement("runs").ToElement())
+    runs = e->UnsignedText(0);
+  if (const auto *e = h_summary.FirstChildElement("elapsed_time").ToElement())
+    elapsed_time = std::chrono::milliseconds(e->UnsignedText(0));
+  if (const auto *e = h_summary.FirstChildElement("success_rate").ToElement())
+    success_rate = e->DoubleText(-1.0);
+
+  const auto h_distributions(h_summary
+                             .FirstChildElement("distributions"));
+  if (const auto *e = h_distributions.FirstChildElement("fitness")
+                      .FirstChildElement("mean").ToElement())
+  {
+    std::istringstream ss(e->GetText());
+    ss >> fit_mean;
+  }
+  if (const auto *e = h_distributions.FirstChildElement("fitness")
+                      .FirstChildElement("standard_deviation").ToElement())
+  {
+    std::istringstream ss(e->GetText());
+    ss >> fit_std_dev;
+  }
+
+  const auto h_best(h_summary.FirstChildElement("best"));
+  if (const auto *e = h_best.FirstChildElement("fitness").ToElement())
+  {
+    std::istringstream ss(e->GetText());
+    ss >> best_fit;
+  }
+  if (const auto *e = h_best.FirstChildElement("run").ToElement())
+    best_run = e->UnsignedText(0);
+  if (const auto *e = h_best.FirstChildElement("code").ToElement())
+    best_prg = e->GetText();
+
+  const auto h_solutions(handle.FirstChildElement("ultra")
+                         .FirstChildElement("solutions"));
+
+  for(const auto *e(h_solutions.FirstChildElement().ToElement()); e;
+      e = e->NextSibling()->ToElement())
+    if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
+      good_runs.insert(run);
+}
+
+std::vector<summary_data> summaries;
+std::mutex summaries_mutex;
 
 
 /*********************************************************************
@@ -775,7 +833,7 @@ void render_layers_age()
   }
 }
 
-void render(const imgui_app::program &prg, bool *p_open)
+void render_monitor(const imgui_app::program &prg, bool *p_open)
 {
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -791,7 +849,7 @@ void render(const imgui_app::program &prg, bool *p_open)
   static bool mxz_layers_fit(false);
   static bool mxz_layers_age(false);
 
-  if (ImGui::Begin("Main##Window", p_open))
+  if (ImGui::Begin("Monitor##Window", p_open))
   {
     ImGui::Checkbox("Dynamic", &show_dynamic_check);
     ImGui::SameLine();
@@ -920,6 +978,21 @@ void render(const imgui_app::program &prg, bool *p_open)
   // `ImGui::End` is special and must be called even if `Begin` returns false.
   ImGui::End();
 }
+
+void render_test(const imgui_app::program &prg, bool *p_open)
+{
+  //const auto fa(prg.free_area());
+  //ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
+  //ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
+
+  if (ImGui::Begin("Test##Window", p_open))
+  {
+  }
+
+  // `ImGui::End` is special and must be called even if `Begin` returns false.
+  ImGui::End();
+}
+
 
 /*********************************************************************
  * Misc
@@ -1069,8 +1142,31 @@ void get_summaries(std::stop_token stoken)
 {
   assert(!datasets.empty());
 
+  summaries.resize(datasets.size());
+
   while (!stoken.stop_requested())
   {
+    for (std::size_t i(0); const auto &ds : datasets)
+    {
+      tinyxml2::XMLDocument summary;
+      if (const auto result(summary.LoadFile(ds.c_str()));
+          result != tinyxml2::XML_SUCCESS)
+        continue;
+
+      if (const auto *root = summary.FirstChild())
+      {
+        tinyxml2::XMLPrinter printer;
+        summary.Print(&printer);
+        if (const char *cstr(printer.CStr());
+            !cstr || !ultra::crc32::verify_xml_signature(cstr))
+          continue;
+      }
+
+      std::lock_guard guard(summaries_mutex);
+      summaries[i] = summary_data(summary);
+      ++i;
+    }
+
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(3000ms);
   }
@@ -1240,14 +1336,12 @@ void monitor(const imgui_app::program::settings &settings)
   std::jthread t_logs(get_logs);
 
   imgui_app::program prg(settings);
-  prg.run(render);
+  prg.run(render_monitor);
 }
 
-void test(const imgui_app::program::settings &)
+void test(const imgui_app::program::settings &settings)
 {
   std::stop_source source;
-
-  std::vector<std::jthread> threads;
 
   const auto test_dataset(
     [stop_token = source.get_token()](std::filesystem::path dataset)
@@ -1285,6 +1379,9 @@ void test(const imgui_app::program::settings &)
     tasks.push_back(std::async(std::launch::async, test_dataset, dataset));
 
   std::jthread t_summaries(get_summaries);
+
+  imgui_app::program prg(settings);
+  prg.run(render_test);
 }
 
 int main(int argc, char *argv[])
