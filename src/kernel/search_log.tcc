@@ -245,7 +245,7 @@ template<Individual I, Fitness F> void search_log::save_summary(
   const std::string signed_xml(ultra::crc32::embed_xml_signature(base_xml));
 
   const auto path(build_path(summary_file_path));
-  if (std::ofstream out = path)
+  if (std::ofstream out(path); out)
     out << signed_xml << std::flush;
 }
 
