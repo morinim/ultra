@@ -24,22 +24,19 @@ double accuracy_metric::operator()(const core_reg_oracle *o,
                                    const dataframe &d) const
 {
   Expects(!d.classes());
-  Expects(d.begin() != d.end());
+  Expects(d.size());
 
-  std::uintmax_t ok(0), total_nr(0);
+  const auto ok(
+    std::ranges::count_if(
+    d,
+    [o](const auto &e)
+    {
+      const auto res((*o)(e.input));
+      return has_value(res)
+        && almost_equal(std::get<D_DOUBLE>(res), label_as<D_DOUBLE>(e));
+    }));
 
-  for (const auto &example : d)
-  {
-    if (const auto res((*o)(example.input));
-        has_value(res) && issmall(std::get<D_DOUBLE>(res)
-                                  - label_as<D_DOUBLE>(example)))
-      ++ok;
-
-    ++total_nr;
-  }
-
-  Ensures(total_nr);
-  return static_cast<double>(ok) / static_cast<double>(total_nr);
+  return static_cast<double>(ok) / static_cast<double>(d.size());
 }
 
 ///
@@ -51,7 +48,7 @@ double accuracy_metric::operator()(const core_class_oracle *o,
                                    const dataframe &d) const
 {
   Expects(d.classes() >= 2);
-  Expects(d.begin() != d.end());
+  Expects(!d.empty());
 
   std::uintmax_t ok(0), total_nr(0);
 
