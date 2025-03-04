@@ -278,8 +278,8 @@ window_size dpi_handler::get_dpi_aware_window_size(
   const window::settings &settings)
 {
   const float scale(dpi_handler::get_scale());
-  const int width(static_cast<int>(static_cast<float>(settings.width) * scale));
-  const int height(static_cast<int>(static_cast<float>(settings.height) * scale));
+  const int width(static_cast<int>(static_cast<float>(settings.width)*scale));
+  const int height(static_cast<int>(static_cast<float>(settings.height)*scale));
 
   return {width, height};
 }

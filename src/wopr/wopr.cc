@@ -29,6 +29,9 @@
 #include "imgui_app.h"
 
 
+using namespace std::chrono_literals;
+
+
 ultra::search_log slog {};
 std::set<std::filesystem::path> datasets {};
 bool imgui_demo_panel {false};
@@ -109,7 +112,6 @@ struct dynamic_sequence
   }
 };
 
-std::vector<dynamic_sequence> dynamic_runs;
 
 /*********************************************************************
  * Population-related data structures
@@ -201,7 +203,6 @@ struct population_sequence
   }
 };
 
-std::vector<population_sequence> population_runs;
 
 /*********************************************************************
  * Layer-related data structures
@@ -345,8 +346,6 @@ struct layers_sequence
   }
 };
 
-std::vector<layers_sequence> layers_runs;
-
 
 /*********************************************************************
  * Summary-related data structures
@@ -355,6 +354,7 @@ struct summary_data
 {
   summary_data() = default;
   explicit summary_data(const tinyxml2::XMLDocument &);
+  explicit summary_data(const std::filesystem::path &);
 
   unsigned runs {0};
   std::chrono::milliseconds elapsed_time {0};
@@ -363,12 +363,22 @@ struct summary_data
   ultra::fitnd fit_mean {};
   ultra::fitnd fit_std_dev {};
 
-  ultra::fitnd best_fit {};
+  ultra::fitnd best_fit {-std::numeric_limits<double>::infinity()};
   unsigned     best_run {};
   std::string  best_prg {};
 
   std::set<unsigned> good_runs {};
 };
+
+summary_data::summary_data(const std::filesystem::path &path)
+{
+  tinyxml2::XMLDocument doc;
+  if (doc.LoadFile(path.c_str()) != tinyxml2::XML_SUCCESS)
+    throw std::invalid_argument("Cannot parse summary file "
+                                + path.generic_string());
+
+  *this = summary_data(doc);
+}
 
 summary_data::summary_data(const tinyxml2::XMLDocument &doc)
 {
@@ -420,14 +430,67 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
 }
 
 std::vector<summary_data> summaries;
-std::mutex summaries_mutex;
+std::shared_mutex summaries_mutex;
+
+// Doesn't require a mutex since it's compiled before starting testing and
+// then used in read-only mode.
+std::vector<summary_data> ref_summaries;
 
 
 /*********************************************************************
  * Rendering
  ********************************************************************/
+void render_best()
+{
+  static bool reference_values {true};
+
+  std::vector<double> data;
+
+  {
+    std::shared_lock guard(summaries_mutex);
+    for (const auto &s : summaries)
+      data.push_back(s.best_fit[0]);
+  }
+
+  std::vector<std::string> glabels;
+
+  assert(datasets.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &dataset : datasets)
+  {
+    glabels.push_back(dataset.stem().string());
+    data.push_back(ref_summaries[i].best_fit[0]);
+    ++i;
+  }
+
+  std::vector<const char *> glabels_chr(glabels.size());
+  std::ranges::transform(glabels, glabels_chr.begin(),
+                         [](const auto &str) { return str.data(); });
+
+  const std::vector ilabels = {"Current", "Reference"};
+  std::vector<double> positions(datasets.size());
+  std::iota(positions.begin(), positions.end(), 0.0);
+
+  ImGui::Checkbox("Reference values##Test##Fitness", &reference_values);
+
+  if (ImPlot::BeginPlot("##Best fitness##Test", ImVec2(-1, -1),
+                        ImPlotFlags_NoTitle))
+  {
+    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+    ImPlot::SetupAxes("Dataset", "Fitness",
+                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), datasets.size(),
+                           glabels_chr.data());
+    ImPlot::PlotBarGroups(ilabels.data(), data.data(),
+                          reference_values ? 2 : 1,
+                          datasets.size(), 0.5, 0, 0);
+    ImPlot::EndPlot();
+  }
+}
+
 void render_dynamic()
 {
+  static std::vector<dynamic_sequence> dynamic_runs;
+
   if (const auto data(dynamic_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -558,6 +621,7 @@ void render_dynamic()
 
 void render_population()
 {
+  static std::vector<population_sequence> population_runs;
   if (auto data(population_queue.try_pop()); data)
   {
     if (data->new_run)
@@ -637,20 +701,8 @@ void render_population()
   }
 }
 
-void render_layers_fit()
+void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
 {
-  if (auto data(layers_queue.try_pop()); data)
-  {
-    if (data->new_run)
-    {
-      // Skip multiple empty lines.
-      if (layers_runs.empty() || !layers_runs.back().empty())
-        layers_runs.push_back({});
-    }
-    else
-      layers_runs.back().push_back(*data);
-  }
-
   static std::minstd_rand g;
 
   for (std::size_t run(layers_runs.size()); run--;)
@@ -758,20 +810,8 @@ void render_layers_fit()
   }
 }
 
-void render_layers_age()
+void render_layers_age(const std::vector<layers_sequence> &layers_runs)
 {
-  if (auto data(layers_queue.try_pop()); data)
-  {
-    if (data->new_run)
-    {
-      // Skip multiple empty lines.
-      if (layers_runs.empty() || !layers_runs.back().empty())
-        layers_runs.push_back({});
-    }
-    else
-      layers_runs.back().push_back(*data);
-  }
-
   static std::minstd_rand g;
 
   for (std::size_t run(layers_runs.size()); run--;)
@@ -831,6 +871,29 @@ void render_layers_age()
       }
     }
   }
+}
+
+enum class layer_info {age, fitness};
+void render_layers(layer_info li)
+{
+  static std::vector<layers_sequence> layers_runs;
+
+  if (auto data(layers_queue.try_pop()); data)
+  {
+    if (data->new_run)
+    {
+      // Skip multiple empty lines.
+      if (layers_runs.empty() || !layers_runs.back().empty())
+        layers_runs.push_back({});
+    }
+    else
+      layers_runs.back().push_back(*data);
+  }
+
+  if (li == layer_info::age)
+    render_layers_age(layers_runs);
+  else  // layer_info::fitness
+    render_layers_fit(layers_runs);
 }
 
 void render_monitor(const imgui_app::program &prg, bool *p_open)
@@ -949,7 +1012,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_layers_fit = !mxz_layers_fit;
 
-      render_layers_fit();
+      render_layers(layer_info::fitness);
       ImGui::EndChild();
     }
 
@@ -970,7 +1033,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_layers_age = !mxz_layers_age;
 
-      render_layers_age();
+      render_layers(layer_info::age);
       ImGui::EndChild();
     }
   }
@@ -981,12 +1044,85 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
 
 void render_test(const imgui_app::program &prg, bool *p_open)
 {
-  //const auto fa(prg.free_area());
-  //ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
-  //ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
+  const auto fa(prg.free_area());
+  ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
+  ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
+
+  static bool show_best_check(true);
+  static bool show_2_check(true);
+  static bool show_3_check(true);
+  static bool show_4_check(true);
+
+  static bool mxz_best(false);
+  static bool mxz_2(false);
+  static bool mxz_3(false);
+  static bool mxz_4(false);
 
   if (ImGui::Begin("Test##Window", p_open))
   {
+    ImGui::Checkbox("best", &show_best_check);
+    ImGui::SameLine();
+    ImGui::Checkbox("1", &show_2_check);
+    ImGui::SameLine();
+    ImGui::Checkbox("3", &show_3_check);
+    ImGui::SameLine();
+    ImGui::Checkbox("4", &show_4_check);
+    ImGui::SameLine(ImGui::GetWindowWidth() - 128);
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
+                       "%s", random_string().c_str());
+    ImGui::Separator();
+
+    const bool show_best(
+      show_best_check
+      && !(mxz_2 && show_2_check)
+      && !(mxz_3 && show_3_check)
+      && !(mxz_4 && show_4_check));
+    const bool show_2(
+      show_2_check
+      && !(mxz_best && show_best_check)
+      && !(mxz_3 && show_3_check)
+      && !(mxz_4 && show_4_check));
+    const bool show_3(
+      show_3_check
+      && !(mxz_best && show_best_check)
+      && !(mxz_2 && show_2_check)
+      && !(mxz_4 && show_4_check));
+    const bool show_4(
+      show_4_check
+      && !(mxz_best && show_best_check)
+      && !(mxz_2 && show_2_check)
+      && !(mxz_3 && show_3_check));
+
+    const int available_width(ImGui::GetContentRegionAvail().x - 4);
+    const int available_height(ImGui::GetContentRegionAvail().y - 4);
+
+    const int w1(show_best && show_2 ? available_width/2
+                                     : available_width);
+    const int h1(show_3 || show_4 ? available_height/2
+                                  : available_height);
+    if (show_best)
+    {
+      const auto w(mxz_best ? available_width : w1);
+      const auto h(mxz_best ? available_height : h1);
+
+      ImGui::BeginChild("Best##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("BEST");
+      ImGui::SameLine();
+      const std::string bs(mxz_best ? "Minimize##Best" : "Maximize##Best");
+      if (ImGui::Button(bs.c_str()))
+        mxz_best = !mxz_best;
+
+      render_best();
+      ImGui::EndChild();
+    }
+
+    if (show_2)
+    {
+      if (show_best)
+        ImGui::SameLine();
+    }
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
@@ -1072,7 +1208,6 @@ void read_log_file(std::stop_token stoken,
     assert(file.eof());
 
     // Small delay before checking for new data.
-    using namespace std::chrono_literals;
     std::this_thread::sleep_for(150ms);
   }
 }
@@ -1127,7 +1262,6 @@ void get_logs(std::stop_token stoken)
       last_read.restart();
     }
 
-    using namespace std::chrono_literals;
     const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
                          last_read.elapsed()));
     std::this_thread::sleep_for(std::min(3000ms, elapsed));
@@ -1148,8 +1282,10 @@ void get_summaries(std::stop_token stoken)
   {
     for (std::size_t i(0); const auto &ds : datasets)
     {
+      const std::filesystem::path base_dir(ds.parent_path());
+      const auto xml_fn(base_dir / ultra::summary_from_basename(ds));
       tinyxml2::XMLDocument summary;
-      if (const auto result(summary.LoadFile(ds.c_str()));
+      if (const auto result(summary.LoadFile(xml_fn.c_str()));
           result != tinyxml2::XML_SUCCESS)
         continue;
 
@@ -1167,7 +1303,6 @@ void get_summaries(std::stop_token stoken)
       ++i;
     }
 
-    using namespace std::chrono_literals;
     std::this_thread::sleep_for(3000ms);
   }
 }
@@ -1195,14 +1330,21 @@ void cmdl_usage()
   "\n"
   "  Available switches:\n"
   "\n"
-  "  --dynamic      filename\n"
-  "  --layers       filename\n"
-  "  --population   filename\n"
-  "    Use a filename different from the default one.\n"
+  "  --dynamic    filepath\n"
+  "  --layers     filepath\n"
+  "  --population filepath\n"
+  "    Allow monitoring files with a name different from the default one.\n"
+  "  --basename   name\n"
+  "    Restrict monitoring to the set of log files with the `basename_*.txt`\n"
+  "    format.\n"
   "\n"
   "> wopr test [test_folder]\n"
   "    The test folder must contain at least a dataset and optionally a test\n"
   "    configuration file. If missing, the current working directory is used.\n"
+  "  Available switches:\n"
+  "\n"
+  "  --reference directory\n"
+  "    Specify a directory containing reference results.\n"
   "\n"
   "--help\n"
   "    Show this help screen.\n"
@@ -1233,9 +1375,171 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
+[[nodiscard]] bool setup_monitor_cmd(argh::parser &cmdl)
+{
+  using namespace ultra;
+
+  const auto &pos_args(cmdl.pos_args());
+  const std::filesystem::path log_folder(pos_args.size() <= 2
+                                         ? "./" : pos_args[2]);
+
+  if (!std::filesystem::is_directory(log_folder))
+  {
+    std::cerr << log_folder << " isn't a directory\n";
+    return false;
+  }
+
+  const std::string basename(cmdl("basename", "").str());
+  std::cout << "Basename: " << basename
+            << "Dynamic: " << cmdl("dynamic", "").str() << std::endl
+            << "Dynamic: " << cmdl("layers", "").str()
+            << "Dynamic: " << cmdl("population", "").str() << std::endl;
+
+  slog.base_dir = log_folder;
+  slog.summary_file_path = "";
+
+  slog.dynamic_file_path = build_path(log_folder, cmdl("dynamic", "").str());
+  slog.layers_file_path = build_path(log_folder, cmdl("layers", "").str());
+  slog.population_file_path = build_path(log_folder,
+                                         cmdl("population", "").str());
+
+  std::vector<std::filesystem::path> dynamic_file_paths;
+  std::vector<std::filesystem::path> layers_file_paths;
+  std::vector<std::filesystem::path> population_file_paths;
+
+  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty() ||
+      slog.population_file_path.empty())
+    for (const auto &entry : std::filesystem::directory_iterator(log_folder))
+      if (entry.is_regular_file()
+          && ultra::iequals(entry.path().extension(), ".txt"))
+      {
+        const std::string fn(entry.path().filename().string());
+
+        if (const auto def(search_log::default_dynamic_file);
+            slog.dynamic_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          dynamic_file_paths.push_back(entry.path());
+        }
+
+        if (const auto def(search_log::default_layers_file);
+            slog.layers_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          layers_file_paths.push_back(entry.path());
+        }
+
+        if (const auto def(search_log::default_population_file);
+            slog.population_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          population_file_paths.push_back(entry.path());
+        }
+
+        if (dynamic_file_paths.size() > 1
+            || layers_file_paths.size() > 1
+            || population_file_paths.size() > 1)
+        {
+          std::cerr << "Too many log files.\n"
+                    << "Use `--basename` switch to specify a test.\n";
+          return false;
+        }
+      }
+
+  if (slog.dynamic_file_path.empty())
+    slog.dynamic_file_path = dynamic_file_paths.front();
+  if (slog.layers_file_path.empty())
+    slog.layers_file_path = layers_file_paths.front();
+  if (slog.population_file_path.empty())
+    slog.population_file_path = population_file_paths.front();
+
+  if (!std::filesystem::exists(slog.dynamic_file_path)
+      && !std::filesystem::exists(slog.layers_file_path)
+      && !std::filesystem::exists(slog.population_file_path))
+  {
+    std::cerr << "No log file available.\n";
+    return false;
+  }
+
+  std::cout << "Dynamic file path: " << slog.dynamic_file_path
+            << "\nLayers file path: " << slog.layers_file_path
+            << "\nPopulation file path: " << slog.population_file_path
+            << '\n';
+
+  return true;
+}
+
+[[nodiscard]] bool setup_test_cmd(argh::parser &cmdl)
+{
+  using namespace ultra;
+
+  const auto &pos_args(cmdl.pos_args());
+  const std::filesystem::path test_folder(pos_args.size() <= 2
+                                          ? "./" : pos_args[2]);
+
+  if (!std::filesystem::is_directory(test_folder))
+  {
+    std::cerr << test_folder << " isn't a directory.\n";
+    return false;
+  }
+
+  for (const auto &entry : std::filesystem::directory_iterator(test_folder))
+    if (entry.is_regular_file()
+        && ultra::iequals(entry.path().extension(), ".csv"))
+      datasets.insert(entry.path());
+
+  if (datasets.empty())
+  {
+    std::cerr << "No dataset available.\n";
+    return false;
+  }
+
+  std::cout << "Datasets:";
+  for (const auto &d : datasets)
+    std::cout << ' ' << d;
+  std::cout << '\n';
+
+  const std::filesystem::path ref_folder(cmdl("reference", "").str());
+  if (!ref_folder.empty() && !std::filesystem::is_directory(ref_folder))
+  {
+    std::cerr << ref_folder << " isn't a directory.\n";
+    return false;
+  }
+
+  if (ref_folder.empty())
+  {
+    for (auto n(datasets.size()); n; --n)
+      ref_summaries.push_back({});
+  }
+  else
+  {
+    for (const auto &dataset : datasets)
+    {
+      const auto ref_path(ref_folder / ultra::summary_from_basename(dataset));
+
+      if (std::filesystem::exists(ref_path))
+        ref_summaries.push_back(summary_data(ref_path));
+      else
+        ref_summaries.push_back({});
+    }
+  }
+
+  return true;
+}
+
 cmdl_result parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
+
+  cmdl.add_param("basename");
+  cmdl.add_param("dynamic");
+  cmdl.add_param("layers");
+  cmdl.add_param("population");
+  cmdl.add_param("reference");
+
   cmdl.parse(argc, argv);
 
   const std::string cmd_monitor("monitor");
@@ -1259,71 +1563,10 @@ cmdl_result parse_args(int argc, char *argv[])
 
   imgui_demo_panel = cmdl["imguidemo"];
 
-  if (cmd == cmd_monitor)
-  {
-    using namespace ultra;
-    const std::filesystem::path log_folder(pos_args.size() <= 2
-                                           ? "./" : pos_args[2]);
-    if (!std::filesystem::is_directory(log_folder))
-    {
-      std::cerr << log_folder << " isn't a directory\n";
-      return cmdl_result::error;
-    }
-
-    slog.base_dir = log_folder;
-    slog.dynamic_file_path = build_path(slog.base_dir,
-                                        cmdl("dynamic", "").str(),
-                                        search_log::default_dynamic_file);
-    slog.layers_file_path = build_path(slog.base_dir,
-                                       cmdl("layers", "").str(),
-                                       search_log::default_layers_file);
-    slog.population_file_path = build_path(slog.base_dir,
-                                           cmdl("population", "").str(),
-                                           search_log::default_population_file);
-
-    if (!std::filesystem::exists(slog.dynamic_file_path)
-        && !std::filesystem::exists(slog.layers_file_path)
-        && !std::filesystem::exists(slog.population_file_path))
-    {
-      std::cerr << "No log file available.\n";
-      return cmdl_result::error;
-    }
-
-    std::cout << "Dynamic file path: " << slog.dynamic_file_path
-              << "\nLayers file path: " << slog.layers_file_path
-              << "\nPopulation file path: " << slog.population_file_path
-              << '\n';
-
+  if (cmd == cmd_monitor && setup_monitor_cmd(cmdl))
     return cmdl_result::monitor;
-  }
-  else if (cmd == cmd_test)
-  {
-    const std::filesystem::path test_folder(pos_args.size() <= 2
-                                            ? "./" : pos_args[2]);
-
-    if (!std::filesystem::is_directory(test_folder))
-    {
-      std::cerr << test_folder << " isn't a directory.\n";
-      return cmdl_result::error;
-    }
-
-    for (const auto &entry : std::filesystem::directory_iterator(test_folder))
-      if (ultra::iequals(entry.path().extension(), ".csv"))
-        datasets.insert(entry.path());
-
-    if (datasets.empty())
-    {
-      std::cerr << "No dataset available.\n";
-      return cmdl_result::error;
-    }
-
-    std::cout << "Datasets:";
-    for (const auto &d : datasets)
-      std::cout << ' ' << d;
-    std::cout << '\n';
-
+  else if (cmd == cmd_test  && setup_test_cmd(cmdl))
     return cmdl_result::test;
-  }
 
   return cmdl_result::error;
 }
@@ -1344,7 +1587,7 @@ void test(const imgui_app::program::settings &settings)
   std::stop_source source;
 
   const auto test_dataset(
-    [stop_token = source.get_token()](std::filesystem::path dataset)
+    [source](std::filesystem::path dataset)
     {
       ultra::src::problem prob(dataset);
 
@@ -1367,11 +1610,17 @@ void test(const imgui_app::program::settings &settings)
         base_dir, base_fn + ultra::search_log::default_layers_file);
       sl.population_file_path = build_path(
         base_dir, base_fn + ultra::search_log::default_population_file);
+      sl.summary_file_path = build_path(
+        base_dir, ultra::summary_from_basename(dataset));
 
       s.logger(sl);
+      s.stop_source(source);
 
-      return s.run(-1);
+      return s.run(2);
     });
+
+  if (datasets.size() > 1)
+    ultra::log::reporting_level = ultra::log::lWARNING;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
@@ -1382,6 +1631,17 @@ void test(const imgui_app::program::settings &settings)
 
   imgui_app::program prg(settings);
   prg.run(render_test);
+
+  const auto task_completed(
+    [](const auto &future)
+    {
+      return future.wait_for(0ms) == std::future_status::ready;
+    });
+
+  t_summaries.request_stop();
+  source.request_stop();
+  while (!std::ranges::all_of(tasks, task_completed))
+    ;
 }
 
 int main(int argc, char *argv[])
