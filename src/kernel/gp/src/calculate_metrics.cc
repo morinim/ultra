@@ -33,7 +33,7 @@ double accuracy_metric::operator()(const core_reg_oracle *o,
     {
       const auto res((*o)(e.input));
       return has_value(res)
-        && almost_equal(std::get<D_DOUBLE>(res), label_as<D_DOUBLE>(e));
+             && almost_equal(std::get<D_DOUBLE>(res), label_as<D_DOUBLE>(e));
     }));
 
   return static_cast<double>(ok) / static_cast<double>(d.size());
@@ -48,20 +48,16 @@ double accuracy_metric::operator()(const core_class_oracle *o,
                                    const dataframe &d) const
 {
   Expects(d.classes() >= 2);
-  Expects(!d.empty());
+  Expects(d.size());
 
-  std::uintmax_t ok(0), total_nr(0);
+  const auto ok(
+    std::ranges::count_if(d,
+                          [o](const auto &e)
+                          {
+                            return o->tag(e.input).label == label(e);
+                          }));
 
-  for (const auto &example : d)
-  {
-    if (o->tag(example.input).label == label(example))
-      ++ok;
-
-    ++total_nr;
-  }
-
-  Ensures(total_nr);
-  return static_cast<double>(ok) / static_cast<double>(total_nr);
+  return static_cast<double>(ok) / static_cast<double>(d.size());
 }
 
 }  // namespace ultra::src
