@@ -28,7 +28,7 @@ TEST_CASE_FIXTURE(fixture1, "Accuracy")
 {
   using namespace ultra;
 
-  SUBCASE("Regression 1")
+  SUBCASE("Regression base")
   {
     src::variable x0(0, "X0");
     src::variable x1(1, "X1");
@@ -116,6 +116,40 @@ TEST_CASE_FIXTURE(fixture1, "Accuracy")
 
     CHECK(src::accuracy_metric()(&oracle, src::dataframe(test))
           == doctest::Approx(1.0));
+  }
+
+  SUBCASE("Classification base")
+  {
+    src::variable x1(0, "X1");
+    src::variable x2(0, "X2");
+    src::variable x3(0, "X3");
+    src::variable x4(0, "X4");
+
+    gp::individual i({
+                       {f_mul, {&x4, &x3}},     // [0] FMUL X4 X3
+                       {f_sub, {&x1, 0_addr}},  // [1] FMUL X1 [0]
+                       {f_add, {&x2, 1_addr}}   // [2] FADD X2 [1]
+                     });
+
+    std::istringstream test(R"(
+      "S", 5.1, 3.5, 1.4, 0.2
+      "S", 4.9, 3.0, 1.4, 0.2
+      "S", 4.7, 3.2, 1.3, 0.2
+      "S", 4.6, 3.1, 1.5, 0.2
+      "E", 7.0, 3.2, 4.7, 1.4
+      "E", 6.4, 3.2, 4.5, 1.5
+      "E", 6.9, 3.1, 4.9, 1.5
+      "E", 5.5, 2.3, 4.0, 1.3
+      "I", 6.3, 3.3, 6.0, 2.5
+      "I", 5.8, 2.7, 5.1, 1.9
+      "I", 7.1, 3.0, 5.9, 2.1
+      "I", 6.3, 2.9, 5.6, 1.8)");
+
+    const src::dataframe df(test);
+
+    src::gaussian_oracle oracle(i, df);
+
+    CHECK(src::accuracy_metric()(&oracle, df) == doctest::Approx(0.75));
   }
 }
 
