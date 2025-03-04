@@ -21,6 +21,57 @@
 TEST_SUITE("SEARCH LOG")
 {
 
+TEST_CASE("Filenames")
+{
+  using namespace ultra;
+
+  SUBCASE("Default filenames")
+  {
+    CHECK(std::filesystem::path(search_log::default_dynamic_file).extension()
+          == ".txt");
+    CHECK(std::filesystem::path(search_log::default_layers_file).extension()
+          == ".txt");
+    CHECK(std::filesystem::path(search_log::default_population_file).extension()
+          == ".txt");
+    CHECK(std::filesystem::path(search_log::default_summary_file).extension()
+          == ".xml");
+  }
+
+  SUBCASE("Basename")
+  {
+    const std::string basename("test.csv");
+    const std::string stem("test");
+
+    const auto dyn(dynamic_from_basename(basename));
+    CHECK(dyn.string().find(stem) == 0);
+    CHECK(dyn.string().find(basename) == std::string::npos);
+    CHECK(dyn.string().find(search_log::default_dynamic_file)
+          != std::string::npos);
+    CHECK(dyn.extension() == ".txt");
+
+    const auto lys(layers_from_basename(basename));
+    CHECK(lys.string().find(stem) == 0);
+    CHECK(lys.string().find(basename) == std::string::npos);
+    CHECK(lys.string().find(search_log::default_layers_file)
+          != std::string::npos);
+    CHECK(lys.extension() == ".txt");
+
+    const auto pop(population_from_basename(basename));
+    CHECK(pop.string().find(stem) == 0);
+    CHECK(pop.string().find(basename) == std::string::npos);
+    CHECK(pop.string().find(search_log::default_population_file)
+          != std::string::npos);
+    CHECK(pop.extension() == ".txt");
+
+    const auto sum(summary_from_basename(basename));
+    CHECK(sum.string().find(stem) == 0);
+    CHECK(sum.string().find(basename) == std::string::npos);
+    CHECK(sum.string().find(search_log::default_summary_file)
+          != std::string::npos);
+    CHECK(sum.extension() == ".xml");
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
 {
   using namespace ultra;

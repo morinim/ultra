@@ -21,6 +21,30 @@ std::filesystem::path search_log::build_path(
   return f.is_absolute() ? f : base_dir / f;
 }
 
+std::filesystem::path dynamic_from_basename(const std::string &basename)
+{
+  return std::filesystem::path(basename).filename()
+         .replace_extension(search_log::default_dynamic_file);
+}
+
+std::filesystem::path layers_from_basename(const std::string &basename)
+{
+  return std::filesystem::path(basename).filename()
+         .replace_extension(search_log::default_layers_file);
+}
+
+std::filesystem::path population_from_basename(const std::string &basename)
+{
+  return std::filesystem::path(basename).filename()
+         .replace_extension(search_log::default_population_file);
+}
+
+std::filesystem::path summary_from_basename(const std::string &basename)
+{
+  return std::filesystem::path(basename).filename()
+         .replace_extension(search_log::default_summary_file);
+}
+
 ///
 /// \return `true` if the object passes the internal consistency check
 ///
