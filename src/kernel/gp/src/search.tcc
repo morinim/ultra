@@ -231,6 +231,20 @@ search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
 }
 
 ///
+/// Set a stop source for performing cooperative task shutdown.
+///
+/// \param[in] ss stop source to issue a stop request
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<Individual P>
+search<P> &search<P>::stop_source(std::stop_source ss)
+{
+  stop_source_ = ss;
+  return *this;
+}
+
+///
 /// Sets the search/evolution logger.
 ///
 /// \param[in] sl logger
@@ -263,6 +277,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     if (search_log_)
       alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_);
+    alps.stop_source(stop_source_);
 
     return alps.run(n, threshold);
   });

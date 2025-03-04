@@ -82,6 +82,7 @@ public:
   search(problem &, metric_flags = metric_flags::accuracy);
 
   search &logger(search_log &);
+  search &stop_source(std::stop_source);
 
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
@@ -103,6 +104,7 @@ private:
   after_generation_callback_t after_generation_callback_ {};
 
   mutable search_log *search_log_ {nullptr};
+  std::stop_source stop_source_ {};
 };
 
 

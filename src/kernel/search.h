@@ -41,6 +41,7 @@ public:
   basic_search(problem &, E);
 
   basic_search &logger(search_log &);
+  basic_search &stop_source(std::stop_source);
 
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
@@ -81,6 +82,7 @@ private:
   //bool save() const;
 
   mutable search_log *search_log_ {nullptr};
+  std::stop_source stop_source_ {std::nostopstate};
 };  // class basic_search
 
 

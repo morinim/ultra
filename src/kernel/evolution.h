@@ -55,6 +55,7 @@ public:
   evolution &after_generation(after_generation_callback_t);
   evolution &logger(search_log &);
   evolution &shake_function(const std::function<bool(unsigned)> &);
+  evolution &stop_source(std::stop_source);
 
   [[nodiscard]] bool is_valid() const;
 
@@ -73,6 +74,7 @@ private:
   after_generation_callback_t after_generation_callback_ {};
 
   mutable search_log *search_log_ {nullptr};
+  std::stop_source external_stop_source_ {std::nostopstate};
 };
 
 #include "kernel/evolution.tcc"

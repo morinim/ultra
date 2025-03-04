@@ -50,6 +50,25 @@ void basic_search<ES, E>::init()
 }
 
 ///
+/// Set a stop source for performing cooperative task shutdown.
+///
+/// \param[in] ss stop source to issue a stop request
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// \note
+/// std::stop_source is copyable; the copies all share the same internal
+/// stop-state (along with any stop_tokens created from them). So there's no
+/// reason to pass them by reference.
+///
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::stop_source(std::stop_source ss)
+{
+  stop_source_ = ss;
+  return *this;
+}
+
+///
 /// Sets the search/evolution logger.
 ///
 /// \param[in] sl logger
@@ -82,7 +101,11 @@ void basic_search<ES, E>::after_evolution(
 
   std::string accuracy;
   if (mm[0].accuracy)
-    accuracy = "  Accuracy: " + std::to_string(*mm[0].accuracy*100.0) + "%";
+  {
+    std::ostringstream ss;
+    ss << "  Accuracy: " << *mm[0].accuracy*100.0 << '%';
+    accuracy = ss.str();
+  }
 
   ultraOUTPUT << "Run " << run << " TRAINING. Fitness: " << *mm[0].fitness
               << accuracy;
@@ -91,7 +114,11 @@ void basic_search<ES, E>::after_evolution(
   {
     accuracy = "";
     if (mm[1].accuracy)
-      accuracy = "  Accuracy: " + std::to_string(*mm[1].accuracy*100.0) + "%";
+    {
+      std::ostringstream ss;
+      ss << "  Accuracy: " << *mm[1].accuracy*100.0 << '%';
+      accuracy = ss.str();
+    }
 
     ultraOUTPUT << "Run " << run << " VALIDATION. Fitness: " << *mm[1].fitness
                 << accuracy;
@@ -184,7 +211,7 @@ basic_search<ES, E>::run(unsigned n,
   auto shake([this](unsigned g) { return vs_->shake(g); });
   search_stats<individual_t, fitness_t> stats;
 
-  for (unsigned r(0); r < n; ++r)
+  for (unsigned r(0); r < n && !stop_source_.stop_requested(); ++r)
   {
     vs_->training_setup(r);
 
@@ -193,6 +220,7 @@ basic_search<ES, E>::run(unsigned n,
     if (search_log_)
       evo.logger(*search_log_);
     evo.shake_function(shake);
+    evo.stop_source(stop_source_);
     const auto run_summary(evo.template run<ES>());
 
     if (const auto prg(run_summary.best().ind); !prg.empty())

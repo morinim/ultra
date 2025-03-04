@@ -45,7 +45,7 @@ bool evolution<E>::stop_condition() const
   if (term::user_stop())
     return true;
 
-  return false;
+  return external_stop_source_.stop_requested();
 }
 
 template<Evaluator E>
@@ -133,6 +133,20 @@ template<Evaluator E>
 evolution<E> &evolution<E>::after_generation(after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
+  return *this;
+}
+
+///
+/// Set an external stop source for performing cooperative task shutdown.
+///
+/// \param[in] ss stop source to issue a stop request
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<Evaluator E>
+evolution<E> &evolution<E>::stop_source(std::stop_source ss)
+{
+  external_stop_source_ = ss;
   return *this;
 }
 
