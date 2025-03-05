@@ -11,11 +11,7 @@
  */
 
 #include <cassert>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <sstream>
-#include <stdexcept>
 
 #include "argh/argh.h"
 #include "kernel/exceptions.h"
@@ -32,8 +28,18 @@
 using namespace std::chrono_literals;
 
 
+// Monitoring related variables.
 ultra::search_log slog {};
-std::set<std::filesystem::path> datasets {};
+
+// Testing related variables.
+struct
+{
+  unsigned generations {100};
+  std::set<std::filesystem::path> datasets {};
+  unsigned runs {1};
+} test_param;
+
+// Other variables.
 bool imgui_demo_panel {false};
 
 
@@ -470,8 +476,8 @@ void render_best()
 
   std::vector<std::string> glabels;
 
-  assert(datasets.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &dataset : datasets)
+  assert(test_param.datasets.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &dataset : test_param.datasets)
   {
     glabels.push_back(dataset.stem().string());
     data.push_back(ref_summaries[i].best_accuracy);
@@ -483,7 +489,7 @@ void render_best()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
-  std::vector<double> positions(datasets.size());
+  std::vector<double> positions(test_param.datasets.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Test##Accuracy", &reference_values);
@@ -494,11 +500,11 @@ void render_best()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Accuracy",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), datasets.size(),
-                           glabels_chr.data());
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(),
+                           test_param.datasets.size(), glabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          datasets.size(), 0.5, 0, 0);
+                          test_param.datasets.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -1282,13 +1288,13 @@ void get_logs(std::stop_token stoken)
 //
 void get_summaries(std::stop_token stoken)
 {
-  assert(!datasets.empty());
+  assert(!test_param.datasets.empty());
 
-  summaries.resize(datasets.size());
+  summaries.resize(test_param.datasets.size());
 
   while (!stoken.stop_requested())
   {
-    for (std::size_t i(0); const auto &ds : datasets)
+    for (std::size_t i(0); const auto &ds : test_param.datasets)
     {
       ++i;
 
@@ -1335,26 +1341,34 @@ void cmdl_usage()
     << "\n"
     <<
   "> wopr monitor [log_folder]\n"
-  "    The log folder must contain at least a search log produced by Ultra.\n"
-  "    If missing, the current working directory is used.\n"
+  "\n"
+  "  The log folder must contain at least a search log produced by Ultra. If\n"
+  "  missing, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
   "  --dynamic    filepath\n"
   "  --layers     filepath\n"
   "  --population filepath\n"
-  "    Allow monitoring files with a name different from the default one.\n"
+  "      Allow monitoring of files with names different from the default\n"
+  "      ones.\n"
   "  --basename   name\n"
-  "    Restrict monitoring to the set of log files with the `basename_*.txt`\n"
-  "    format.\n"
+  "      Restrict monitoring to the set of log files with the\n"
+  "      `basename_*.txt` format.\n"
   "\n"
   "> wopr test [test_folder]\n"
-  "    The test folder must contain at least a dataset and optionally a test\n"
-  "    configuration file. If missing, the current working directory is used.\n"
+  "\n"
+  "  The test folder must contain at least a dataset and optionally a test\n"
+  "  configuration file. If missing, the current working directory is used.\n"
+  "\n"
   "  Available switches:\n"
   "\n"
+  "  --generations\n"
+  "      Set the maximum number of generations in a run.\n"
   "  --reference directory\n"
-  "    Specify a directory containing reference results.\n"
+  "      Specify a directory containing reference results.\n"
+  "  --runs\n"
+  "      Perform the given number of evolutionary runs.\n"
   "\n"
   "--help\n"
   "    Show this help screen.\n"
@@ -1495,16 +1509,16 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   for (const auto &entry : std::filesystem::directory_iterator(test_folder))
     if (entry.is_regular_file()
         && ultra::iequals(entry.path().extension(), ".csv"))
-      datasets.insert(entry.path());
+      test_param.datasets.insert(entry.path());
 
-  if (datasets.empty())
+  if (test_param.datasets.empty())
   {
     std::cerr << "No dataset available.\n";
     return false;
   }
 
   std::cout << "Datasets:";
-  for (const auto &d : datasets)
+  for (const auto &d : test_param.datasets)
     std::cout << ' ' << d;
   std::cout << '\n';
 
@@ -1517,12 +1531,12 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 
   if (ref_folder.empty())
   {
-    for (auto n(datasets.size()); n; --n)
+    for (auto n(test_param.datasets.size()); n; --n)
       ref_summaries.push_back({});
   }
   else
   {
-    for (const auto &dataset : datasets)
+    for (const auto &dataset : test_param.datasets)
     {
       const auto ref_path(ref_folder / ultra::summary_from_basename(dataset));
 
@@ -1531,6 +1545,18 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
       else
         ref_summaries.push_back({});
     }
+  }
+
+  if (const auto v(cmdl("generations").str()); !v.empty())
+  {
+    test_param.generations = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Generations: " << test_param.generations << '\n';
+  }
+
+  if (const auto v(cmdl("runs").str()); !v.empty())
+  {
+    test_param.runs = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Runs: " << test_param.runs << '\n';
   }
 
   return true;
@@ -1542,9 +1568,11 @@ cmdl_result parse_args(int argc, char *argv[])
 
   cmdl.add_param("basename");
   cmdl.add_param("dynamic");
+  cmdl.add_param("generations");
   cmdl.add_param("layers");
   cmdl.add_param("population");
   cmdl.add_param("reference");
+  cmdl.add_param("runs");
 
   cmdl.parse(argc, argv);
 
@@ -1596,6 +1624,7 @@ void test(const imgui_app::program::settings &settings)
     [source](std::filesystem::path dataset)
     {
       ultra::src::problem prob(dataset);
+      prob.params.evolution.generations = test_param.generations;
 
       prob.insert<ultra::real::sin>();
       prob.insert<ultra::real::cos>();
@@ -1622,15 +1651,15 @@ void test(const imgui_app::program::settings &settings)
       s.logger(sl);
       s.stop_source(source);
 
-      return s.run(2);
+      return s.run(test_param.runs);
     });
 
-  if (datasets.size() > 1)
+  if (test_param.datasets.size() > 1)
     ultra::log::reporting_level = ultra::log::lWARNING;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  for (const auto &dataset : datasets)
+  for (const auto &dataset : test_param.datasets)
     tasks.push_back(std::async(std::launch::async, test_dataset, dataset));
 
   std::jthread t_summaries(get_summaries);
