@@ -42,7 +42,7 @@ bool evolution<E>::stop_condition() const
   if (sum_.generation > planned_generations)
     return true;
 
-  if (term::user_stop())
+  if (console.user_stop())
     return true;
 
   return external_stop_source_.stop_requested();
@@ -215,8 +215,6 @@ summary<typename evolution<E>::individual_t,
       return false;
     });
 
-  term::set();
-
   ultraDEBUG << "Calling evolution_strategy init method";
   strategy.init(pop_);  // strategy-specific customizatin point
 
@@ -276,7 +274,6 @@ summary<typename evolution<E>::individual_t,
             << ". Elapsed time: "
             << lexical_cast<std::string>(from_start.elapsed());
 
-  term::reset();
   return sum_;
 }
 

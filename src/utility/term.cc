@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -34,39 +34,40 @@
 #  include <unistd.h>
 #endif
 
-namespace ultra::term
+namespace
 {
 
 #if !defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)
-///
-/// \param[in] enter if `true` sets the terminal raw mode, else restore the
-///                  default terminal mode
-///
-/// The raw mode discipline performs no line editing and the control
-/// sequences for both line editing functions and the various special
-/// characters ("interrupt", "quit", and flow control) are treated as normal
-/// character input. Applications programs reading from the terminal receive
-/// characters immediately and receive the entire character stream unaltered,
-/// just as it came from the terminal device itself.
-///
+//
+// \param[in] enter if `true` sets the terminal raw mode, else restore the
+//                  default terminal mode
+//
+// The raw mode discipline performs no line editing and the control
+// sequences for both line editing functions and the various special
+// characters ("interrupt", "quit", and flow control) are treated as normal
+// character input. Applications programs reading from the terminal receive
+// characters immediately and receive the entire character stream unaltered,
+// just as it came from the terminal device itself.
+//
 void term_raw_mode(bool enter)
 {
   static termios oldt, newt;
 
   if (enter)
   {
+    // Use termios to turn off line buffering (canonical mode).
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~static_cast<unsigned>(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
   }
-  else
+  else  // restore console settings to original state
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-///
-/// \return `true` if the user press a key (`false` otherwise)
-///
+//
+// \return `true` if the user press a key (`false` otherwise)
+//
 [[nodiscard]] bool kbhit()
 {
   // Do not wait at all, not even a microsecond.
@@ -96,10 +97,54 @@ void term_raw_mode(bool) {}
 
 #endif
 
+}  // namespace
+
+namespace ultra
+{
+
+term console {};
+
+///
+/// Sets the terminal in raw mode and handles the interrupt signals.
+///
+term::term()
+{
+  // Install our signal handler.
+  std::signal(SIGABRT, signal_handler);
+  std::signal(SIGINT, signal_handler);
+  std::signal(SIGTERM, signal_handler);
+
+  term_raw_mode(true);
+}
+
+///
+/// Resets the term and restores the default signal handlers.
+///
+term::~term()
+{
+  reset();
+}
+
+///
+/// Resets the term and restores the default signal handlers.
+///
+void term::reset()
+{
+  std::signal(SIGABRT, SIG_DFL);
+  std::signal(SIGINT, SIG_DFL);
+  std::signal(SIGTERM, SIG_DFL);
+
+  term_raw_mode(false);
+}
+
 ///
 /// \return `true` when the user presses the '.' key
 ///
-bool user_stop()
+/// \note
+/// While concurrency safe, conside that just one thread will detect the
+/// keypress.
+///
+bool term::user_stop() const
 {
   const bool stop(keypressed('.'));
 
@@ -112,39 +157,14 @@ bool user_stop()
 }
 
 ///
-/// Resets the term and restores the default signal handlers.
-///
-void reset()
-{
-  std::signal(SIGABRT, SIG_DFL);
-  std::signal(SIGINT, SIG_DFL);
-  std::signal(SIGTERM, SIG_DFL);
-
-  term_raw_mode(false);
-}
-
-///
 /// If the program receives a `SIGABRT` / `SIGINT` / `SIGTERM`, it must handle
 /// the signal and reset the terminal to the initial state.
 ///
-void signal_handler(int signum)
+void term::signal_handler(int signum)
 {
-  term::reset();
+  reset();
 
   std::raise(signum);
 }
 
-///
-/// Sets the term in raw mode and handles the interrupt signals.
-///
-void set()
-{
-  // Install our signal handler.
-  std::signal(SIGABRT, term::signal_handler);
-  std::signal(SIGINT, term::signal_handler);
-  std::signal(SIGTERM, term::signal_handler);
-
-  term_raw_mode(true);
-}
-
-}  // namespace ultra::term
+}  // namespace ultra
