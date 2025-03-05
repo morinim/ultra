@@ -224,6 +224,8 @@ template<Individual I, Fitness F> void search_log::save_summary(
   doc.OpenElement("best");
   if (stats.best_measurements.fitness)
     set_text(doc, "fitness", *stats.best_measurements.fitness);
+  if (stats.best_measurements.accuracy)
+    set_text(doc, "accuracy", *stats.best_measurements.accuracy);
   set_text(doc, "run", stats.best_run);
 
   std::ostringstream ss;
