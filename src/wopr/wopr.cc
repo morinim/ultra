@@ -364,6 +364,8 @@ struct summary_data
   ultra::fitnd fit_std_dev {};
 
   ultra::fitnd best_fit {-std::numeric_limits<double>::infinity()};
+  double best_accuracy {-std::numeric_limits<double>::infinity()};
+
   unsigned     best_run {};
   std::string  best_prg {};
 
@@ -415,6 +417,8 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
     std::istringstream ss(e->GetText());
     ss >> best_fit;
   }
+  if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
+    best_accuracy = e->DoubleText(0.0);
   if (const auto *e = h_best.FirstChildElement("run").ToElement())
     best_run = e->UnsignedText(0);
   if (const auto *e = h_best.FirstChildElement("code").ToElement())
@@ -449,7 +453,7 @@ void render_best()
   {
     std::shared_lock guard(summaries_mutex);
     for (const auto &s : summaries)
-      data.push_back(s.best_fit[0]);
+      data.push_back(s.best_accuracy);
   }
 
   std::vector<std::string> glabels;
@@ -458,7 +462,7 @@ void render_best()
   for (std::size_t i(0); const auto &dataset : datasets)
   {
     glabels.push_back(dataset.stem().string());
-    data.push_back(ref_summaries[i].best_fit[0]);
+    data.push_back(ref_summaries[i].best_accuracy);
     ++i;
   }
 
@@ -470,13 +474,13 @@ void render_best()
   std::vector<double> positions(datasets.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
-  ImGui::Checkbox("Reference values##Test##Fitness", &reference_values);
+  ImGui::Checkbox("Reference values##Test##Accuracy", &reference_values);
 
-  if (ImPlot::BeginPlot("##Best fitness##Test", ImVec2(-1, -1),
+  if (ImPlot::BeginPlot("##Best accuracy##Test", ImVec2(-1, -1),
                         ImPlotFlags_NoTitle))
   {
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
-    ImPlot::SetupAxes("Dataset", "Fitness",
+    ImPlot::SetupAxes("Dataset", "Accuracy",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), datasets.size(),
                            glabels_chr.data());
@@ -1282,6 +1286,8 @@ void get_summaries(std::stop_token stoken)
   {
     for (std::size_t i(0); const auto &ds : datasets)
     {
+      ++i;
+
       const std::filesystem::path base_dir(ds.parent_path());
       const auto xml_fn(base_dir / ultra::summary_from_basename(ds));
       tinyxml2::XMLDocument summary;
@@ -1289,7 +1295,7 @@ void get_summaries(std::stop_token stoken)
           result != tinyxml2::XML_SUCCESS)
         continue;
 
-      if (const auto *root = summary.FirstChild())
+      if (summary.FirstChild())
       {
         tinyxml2::XMLPrinter printer;
         summary.Print(&printer);
@@ -1299,8 +1305,8 @@ void get_summaries(std::stop_token stoken)
       }
 
       std::lock_guard guard(summaries_mutex);
-      summaries[i] = summary_data(summary);
-      ++i;
+      summaries[i-1] = summary_data(summary);
+
     }
 
     std::this_thread::sleep_for(3000ms);
@@ -1390,10 +1396,6 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   }
 
   const std::string basename(cmdl("basename", "").str());
-  std::cout << "Basename: " << basename
-            << "Dynamic: " << cmdl("dynamic", "").str() << std::endl
-            << "Dynamic: " << cmdl("layers", "").str()
-            << "Dynamic: " << cmdl("population", "").str() << std::endl;
 
   slog.base_dir = log_folder;
   slog.summary_file_path = "";
