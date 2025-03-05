@@ -1637,14 +1637,13 @@ void test(const imgui_app::program::settings &settings)
 
       ultra::search_log sl;
       const std::filesystem::path base_dir(dataset.parent_path());
-      const std::string base_fn(dataset.stem().concat("_"));
 
       sl.dynamic_file_path = build_path(
-        base_dir, base_fn + ultra::search_log::default_dynamic_file);
+        base_dir, ultra::dynamic_from_basename(dataset));
       sl.layers_file_path = build_path(
-        base_dir, base_fn + ultra::search_log::default_layers_file);
+        base_dir, ultra::layers_from_basename(dataset));
       sl.population_file_path = build_path(
-        base_dir, base_fn + ultra::search_log::default_population_file);
+        base_dir, ultra::population_from_basename(dataset));
       sl.summary_file_path = build_path(
         base_dir, ultra::summary_from_basename(dataset));
 
