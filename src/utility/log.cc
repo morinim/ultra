@@ -20,21 +20,21 @@
 namespace ultra
 {
 
-log::level log::reporting_level = log::lINFO;
-std::unique_ptr<std::ostream> log::stream_ = nullptr;
+log::level log::reporting_level {log::lINFO};
+std::unique_ptr<std::ostream> log::stream_ {nullptr};
 
 ///
 /// Sets the logging level of a message.
 ///
-/// \param[in] l logging level of the following message
+/// \param[in] l level associated to the streamed message
 ///
 /// The following code:
 ///
 ///     log().get(level) << "Hello " << username;
 ///
-/// creates a `log` object with the `level` logging level, fetches its
-/// `std::stringstream` object, formats and accumulates the user-supplied data
-/// and, finally:
+/// creates a `log` object with the `level` logging level (everything at with
+/// a level lower than `level` is ignored), fetches its `std::stringstream`
+/// object, formats and accumulates the user-supplied data and, finally:
 /// - prints the resulting string on `std::cout`;
 /// - persists the resulting string into the log file (if specified).
 ///
@@ -48,7 +48,7 @@ log::~log()
 {
   static const std::string tags[] =
   {
-    "ALL", "DEBUG", "INFO", "", "WARNING", "ERROR", "FATAL", ""
+    "DEBUG", "INFO", "", "", "WARNING", "ERROR", "FATAL", ""
   };
 
   if (stream_)  // `stream_`, if available, gets all the messages
@@ -64,10 +64,11 @@ log::~log()
   if (level_ >= reporting_level)  // `cout` is selective
   {
     std::string tag;
-    if (level_ != lOUTPUT)
+    if (level_ != lSTDOUT and level_ != lPAROUT)
       tag = "[" + tags[level_] + "] ";
 
-    std::osyncstream(std::cout) << tag << os.str() << std::endl;
+    const std::string clear_line(std::string(60, ' ') + std::string(1, '\r'));
+    std::osyncstream(std::cout) << clear_line << tag << os.str() << std::endl;
   }
 }
 
@@ -80,15 +81,17 @@ log::~log()
 /// with the `app_123_18_30_00.log` file (the numbers represents the current:
 /// day of the year, hours, minutes, seconds) in the `/home/doe/` directory.
 ///
-void log::setup_stream(const std::string &base)
+std::filesystem::path log::setup_stream(const std::string &base)
 {
   using namespace std::chrono;
   const std::time_t t_c(system_clock::to_time_t(system_clock::now()));
 
   std::ostringstream fn;
   fn << base << std::put_time(std::localtime(&t_c), "_%j_%H_%M_%S") << ".log";
+  const std::filesystem::path fp(fn.str());
 
-  stream_ = std::make_unique<std::ofstream>(fn.str());
+  stream_ = std::make_unique<std::ofstream>(fp);
+  return fp;
 }
 
 }  // namespace ultra

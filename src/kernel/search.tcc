@@ -107,7 +107,7 @@ void basic_search<ES, E>::after_evolution(
     accuracy = ss.str();
   }
 
-  ultraOUTPUT << "Run " << run << " TRAINING. Fitness: " << *mm[0].fitness
+  ultraPAROUT << "Run " << run << " TRAINING. Fitness: " << *mm[0].fitness
               << accuracy;
 
   if (mm.size() > 1)
@@ -120,7 +120,7 @@ void basic_search<ES, E>::after_evolution(
       accuracy = ss.str();
     }
 
-    ultraOUTPUT << "Run " << run << " VALIDATION. Fitness: " << *mm[1].fitness
+    ultraPAROUT << "Run " << run << " VALIDATION. Fitness: " << *mm[1].fitness
                 << accuracy;
   }
 }

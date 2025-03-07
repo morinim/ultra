@@ -76,8 +76,6 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
 {
   using namespace ultra;
 
-  log::reporting_level = log::lALL;
-
   prob.params.population.individuals    = 30;
   prob.params.population.init_subgroups =  4;
 

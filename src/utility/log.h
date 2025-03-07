@@ -13,6 +13,7 @@
 #if !defined(ULTRA_LOG_H)
 #define      ULTRA_LOG_H
 
+#include <filesystem>
 #include <memory>
 #include <sstream>
 #include <syncstream>
@@ -34,21 +35,23 @@ public:
   ///
   /// * `lDEBUG`   - Only interesting for developers
   /// * `lINFO`    - I say something but I don't expect you to listen
-  /// * `lOUTPUT`  - Standard console output
+  /// * `lSTDOUT`  - Standard console output
+  /// * `lPAROUT`  - Console with multiple concurrent linked searches
   /// * `lWARNING` - I can continue but please have a look
   /// * `lERROR`   - Something really wrong... but you could be lucky
   /// * `lFATAL`   - The program cannot continue
   /// * `lOFF`     - Disable output
   ///
   /// \remarks
-  /// The `DEBUG` log level can be switched on only if the `NDEBUG` macro is
+  /// The `lDEBUG` log level can be switched on only when the `NDEBUG` macro is
   /// defined.
-  enum level {lALL, lDEBUG, lINFO, lOUTPUT, lWARNING, lERROR, lFATAL, lOFF};
+  enum level {lDEBUG, lINFO, lSTDOUT, lPAROUT, lWARNING, lERROR, lFATAL, lOFF};
 
-  /// Messages with a lower level aren't logged / printed.
+  /// Current reporting level: messages with a lower level aren't logged /
+  /// printed.
   static level reporting_level;
 
-  static void setup_stream(const std::string & = "ultra");
+  static std::filesystem::path setup_stream(const std::string & = "ultra");
 
   log() = default;
   log(const log &) = delete;
@@ -56,7 +59,7 @@ public:
 
   virtual ~log();
 
-  std::ostringstream &get(level = lOUTPUT);
+  [[nodiscard]] std::ostringstream &get(level = lSTDOUT);
 
 protected:
   std::ostringstream os {};
@@ -64,7 +67,7 @@ protected:
 private:
   static std::unique_ptr<std::ostream> stream_;  // long term log stream
 
-  level level_ {lOUTPUT};  // current log level
+  level level_ {lSTDOUT};  // current log level
 };
 
 ///
@@ -81,10 +84,10 @@ private:
 /// efficient. But as always, "macro-itis" can introduce subtle bugs. In this
 /// example:
 ///
-///     ultraPRINT(log::INFO) << "A number of " << NotifyClients()
-///                           << " were notified.";
+///     ultraPRINT(log::lINFO) << "A number of " << NotifyClients()
+///                            << " were notified.";
 ///
-/// the clients will be notified only if the logging level detail will be
+/// the clients will be notified only if the logging level will will be
 /// `log::lINFO` and greater. Probably not what was intended! The correct code
 /// should be:
 ///
@@ -109,8 +112,10 @@ private:
 #define ultraERROR   ultraPRINT(log::lERROR)
 #define ultraFATAL   ultraPRINT(log::lFATAL)
 #define ultraINFO    ultraPRINT(log::lINFO)
-#define ultraOUTPUT  ultraPRINT(log::lOUTPUT)
+#define ultraPAROUT  ultraPRINT(log::lPAROUT)
+#define ultraSTDOUT  ultraPRINT(log::lSTDOUT)
 #define ultraWARNING ultraPRINT(log::lWARNING)
 
 }  // namespace ultra
+
 #endif  // include guard

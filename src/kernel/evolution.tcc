@@ -52,37 +52,35 @@ template<Evaluator E>
 void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
                          timer *from_last_msg) const
 {
-  if (log::reporting_level <= log::lOUTPUT)
+  if (log::reporting_level > log::lPAROUT)
+    return;
+
+  if (summary)
   {
-    if (summary)
-    {
-      std::cout << std::string(50, ' ') << '\r' << std::flush;
-      ultraOUTPUT << std::setw(8) << lexical_cast<std::string>(elapsed)
-                  << std::setw(8) << sum_.generation
-                  << ':' << std::setw(13) << sum_.best().fit;
-    }
-    else
-    {
-      const auto seconds(
-        std::max(
-          std::chrono::duration_cast<std::chrono::seconds>(elapsed),
-          std::chrono::seconds(1)).count());
-
-      double gph(3600.0 * sum_.generation / seconds);
-      if (gph > 2.0)
-        gph = std::floor(gph);
-
-      std::cout << lexical_cast<std::string>(elapsed) << "  gen "
-                << sum_.generation << "  [" << pop_.layers();
-
-      if (sum_.generation)
-        std::cout << "x " << gph << "gph";
-
-      std::cout << ']' << "                              \r" << std::flush;
-    }
-
-    from_last_msg->restart();
+    ultraPAROUT << std::setw(8) << lexical_cast<std::string>(elapsed)
+                << std::setw(8) << sum_.generation
+                << ':' << std::setw(13) << sum_.best().fit;
   }
+  else if (log::reporting_level <= log::lSTDOUT)
+  {
+    const auto seconds(
+      std::max(
+        std::chrono::duration_cast<std::chrono::seconds>(elapsed), 1s).count());
+
+    double gph(3600.0 * sum_.generation / seconds);
+    if (gph > 2.0)
+      gph = std::floor(gph);
+
+    std::cout << lexical_cast<std::string>(elapsed) << "  gen "
+              << sum_.generation << "  [" << pop_.layers();
+
+    if (sum_.generation)
+      std::cout << "x " << gph << "gph";
+
+    std::cout << ']' << std::string(30, ' ') << '\r' << std::flush;
+  }
+
+  from_last_msg->restart();
 }
 
 ///
