@@ -179,44 +179,6 @@ void basic_search<ES, E>::tune_parameters()
 }
 
 ///
-/// Writes end-of-run logs (run summary, results for test...).
-///
-/// \param[in]  s summary information regarding the search
-/// \param[out] d output xml document
-///
-/*template<class T, template<class> class ES>
-void basic_search<ES, E>::log_stats(const search_stats<T> &s,
-                                  tinyxml2::XMLDocument *d) const
-{
-  Expects(d);
-
-  const auto &stat(prob().env.stat);
-
-  search<T, ES>::log_stats(s, d);
-
-  if (!stat.summary_file.empty())
-  {
-    assert(d->FirstChild());
-    assert(d->FirstChild()->FirstChildElement("summary"));
-
-    auto *e_best(d->FirstChild()->FirstChildElement("summary")
-                 ->FirstChildElement("best"));
-    assert(e_best);
-    set_text(e_best, "accuracy", s.overall.best.score.accuracy);
-  }
-
-  // Test set results logging.
-  if (!stat.test_file.empty() && test_data().size())
-  {
-    const auto lambda(lambdify(s.overall.best.solution));
-
-    std::ofstream tf(stat.dir / stat.test_file);
-    for (const auto &example : test_data())
-      tf << lambda->name((*lambda)(example)) << '\n';
-  }
-  }*/
-
-///
 /// \return `true` if the object passes the internal consistency check
 ///
 template<template<class> class ES, Evaluator E>
