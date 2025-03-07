@@ -37,6 +37,7 @@ struct
   unsigned generations {100};
   std::set<std::filesystem::path> datasets {};
   unsigned runs {1};
+  ultra::model_measurements<double> threshold {};
 } test_param;
 
 // Other variables.
@@ -467,7 +468,6 @@ void render_best()
   static bool reference_values {true};
 
   std::vector<double> data;
-
   {
     std::shared_lock guard(summaries_mutex);
     for (const auto &s : summaries)
@@ -1342,8 +1342,8 @@ void cmdl_usage()
     <<
   "> wopr monitor [log_folder]\n"
   "\n"
-  "  The log folder must contain at least a search log produced by Ultra. If\n"
-  "  missing, the current working directory is used.\n"
+  "  The log folder must contain at least one search log produced by Ultra.\n"
+  "  If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
@@ -1353,22 +1353,26 @@ void cmdl_usage()
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
   "  --basename   name\n"
-  "      Restrict monitoring to the set of log files with the\n"
-  "      `basename_*.txt` format.\n"
+  "      Restrict monitoring to log files matching the `basename_*.txt`\n"
+  "      format.\n"
   "\n"
   "> wopr test [test_folder]\n"
   "\n"
-  "  The test folder must contain at least a dataset and optionally a test\n"
-  "  configuration file. If missing, the current working directory is used.\n"
+  "  The test folder must contain at least a dataset and, optionally, a test\n"
+  "  configuration file. If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
-  "  --generations\n"
+  "  --generations <nr>\n"
   "      Set the maximum number of generations in a run.\n"
-  "  --reference directory\n"
+  "  --reference directory <directory>\n"
   "      Specify a directory containing reference results.\n"
-  "  --runs\n"
-  "      Perform the given number of evolutionary runs.\n"
+  "  --runs <nr>\n"
+  "      Perform the specified number of evolutionary runs.\n"
+  "  --threshold <val>\n"
+  "      Set the success threshold for a run. If the value ends with '%', it\n"
+  "      is interpreted as an accuracy measure; otherwise, it is treated as\n"
+  "      a fitness value.\n"
   "\n"
   "--help\n"
   "    Show this help screen.\n"
@@ -1559,6 +1563,24 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     std::cout << "Runs: " << test_param.runs << '\n';
   }
 
+  if (const auto v(cmdl("threshold").str()); !v.empty())
+  {
+    if (v.back() == '%')
+    {
+      const auto v1(v.substr(0, v.size()-1));
+
+      test_param.threshold.accuracy = std::clamp<double>(
+        std::stod(v1)/100.0, 0.0, 1.0);
+      std::cout << "Threshold: " << *test_param.threshold.accuracy * 100.0
+                << "%\n";
+    }
+    else
+    {
+      test_param.threshold.fitness = std::stod(v);
+      std::cout << "Threshold: " << *test_param.threshold.fitness << '\n';
+    }
+  }
+
   return true;
 }
 
@@ -1573,6 +1595,7 @@ cmdl_result parse_args(int argc, char *argv[])
   cmdl.add_param("population");
   cmdl.add_param("reference");
   cmdl.add_param("runs");
+  cmdl.add_param("threshold");
 
   cmdl.parse(argc, argv);
 
@@ -1647,9 +1670,12 @@ void test(const imgui_app::program::settings &settings)
       sl.summary_file_path = build_path(
         base_dir, ultra::summary_from_basename(dataset));
 
-      s.logger(sl).stop_source(source).tag(dataset.stem());
+      s.logger(sl).stop_source(source);
 
-      return s.run(test_param.runs);
+      if (test_param.datasets.size() > 1)
+        s.tag(dataset.stem());
+
+      return s.run(test_param.runs, test_param.threshold);
     });
 
   if (test_param.datasets.size() > 1)
