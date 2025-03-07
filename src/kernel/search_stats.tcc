@@ -40,7 +40,7 @@ void search_stats<I, F>::update(const I &lr_best_prg,
   }
 
   if ((threshold.fitness.has_value() || threshold.accuracy.has_value())
-      && lr_measurements > threshold)
+      && lr_measurements >= threshold)
     good_runs.insert(runs);
 
   using std::isfinite;
