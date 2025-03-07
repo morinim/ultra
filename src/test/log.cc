@@ -161,6 +161,7 @@ TEST_CASE("Reporting level")
     CHECK(line.find(msg) != std::string::npos);
   }
 
+#if !defined(NDEBUG)
   msg = "Debug message";
   ultraDEBUG << msg;
   {
@@ -187,6 +188,7 @@ TEST_CASE("Reporting level")
     CHECK(std::getline(logstream, line));
     CHECK(line.find(msg) != std::string::npos);
   }
+#endif
 }
 
 }  // TEST_SUITE("LOG")
