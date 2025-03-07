@@ -55,29 +55,45 @@ void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
   if (log::reporting_level > log::lPAROUT)
     return;
 
+  const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
+
   if (summary)
   {
-    ultraPAROUT << std::setw(8) << lexical_cast<std::string>(elapsed)
+    ultraPAROUT << tags << std::setw(8) << lexical_cast<std::string>(elapsed)
                 << std::setw(8) << sum_.generation
                 << ':' << std::setw(13) << sum_.best().fit;
   }
-  else if (log::reporting_level <= log::lSTDOUT)
+  else
   {
-    const auto seconds(
-      std::max(
-        std::chrono::duration_cast<std::chrono::seconds>(elapsed), 1s).count());
+    static const std::string clear_line(std::string(30, ' ')
+                                        + std::string(1, '\r'));
 
-    double gph(3600.0 * sum_.generation / seconds);
-    if (gph > 2.0)
-      gph = std::floor(gph);
+    if (log::reporting_level == log::lPAROUT)
+    {
+      static const std::string chrs("|/-\\");
 
-    std::cout << lexical_cast<std::string>(elapsed) << "  gen "
-              << sum_.generation << "  [" << pop_.layers();
+      std::cout << tags << chrs[elapsed.count() % chrs.size()] << clear_line
+                << std::flush;
+    }
+    else if (log::reporting_level <= log::lSTDOUT)
+    {
+      const auto seconds(
+        std::max(
+          std::chrono::duration_cast<std::chrono::seconds>(elapsed),
+          1s).count());
 
-    if (sum_.generation)
-      std::cout << "x " << gph << "gph";
+      double gph(3600.0 * sum_.generation / seconds);
+      if (gph > 2.0)
+        gph = std::floor(gph);
 
-    std::cout << ']' << std::string(30, ' ') << '\r' << std::flush;
+      std::cout << lexical_cast<std::string>(elapsed) << "  gen "
+                << sum_.generation << "  [" << pop_.layers();
+
+      if (sum_.generation)
+        std::cout << "x " << gph << "gph";
+
+      std::cout << ']' << clear_line << std::flush;
+    }
   }
 
   from_last_msg->restart();
@@ -98,6 +114,23 @@ template<Evaluator E>
 evolution<E> &evolution<E>::logger(search_log &sl)
 {
   search_log_ = &sl;
+  return *this;
+}
+
+///
+/// Sets the identification tag for this object.
+///
+/// \param[in] t identification tag
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// The tag is used to identify this object when multiple evolutions are
+/// performed in parallel.
+///
+template<Evaluator E>
+evolution<E> &evolution<E>::tag(const std::string &t)
+{
+  tag_ = t;
   return *this;
 }
 

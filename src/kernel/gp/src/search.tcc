@@ -264,6 +264,23 @@ search<P> &search<P>::logger(search_log &sl)
   return *this;
 }
 
+///
+/// Sets the identification tag for this object.
+///
+/// \param[in] t identification tag
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// The tag is used to identify this object when multiple searches are
+/// performed in parallel.
+///
+template<Individual P>
+search<P> &search<P>::tag(const std::string &t)
+{
+  tag_ = t;
+  return *this;
+}
+
 template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
@@ -276,8 +293,8 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
       alps.validation_strategy(*vs_);
     if (search_log_)
       alps.logger(*search_log_);
-    alps.after_generation(after_generation_callback_);
-    alps.stop_source(stop_source_);
+    alps.after_generation(after_generation_callback_)
+        .stop_source(stop_source_).tag(tag_);
 
     return alps.run(n, threshold);
   });

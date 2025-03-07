@@ -40,17 +40,17 @@ public:
 
   basic_search(problem &, E);
 
-  basic_search &logger(search_log &);
-  basic_search &stop_source(std::stop_source);
-
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
+
+  basic_search &after_generation(after_generation_callback_t);
+  basic_search &logger(search_log &);
+  basic_search &tag(const std::string &);
+  basic_search &stop_source(std::stop_source);
 
   template<ValidationStrategy, class... Args>
   basic_search &validation_strategy(Args && ...);
   basic_search &validation_strategy(const ultra::validation_strategy &);
-
-  basic_search &after_generation(after_generation_callback_t);
 
   [[nodiscard]] virtual bool is_valid() const;
 
@@ -83,6 +83,7 @@ private:
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {std::nostopstate};
+  std::string tag_ {};
 };  // class basic_search
 
 

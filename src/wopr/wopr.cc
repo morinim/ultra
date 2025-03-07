@@ -1647,14 +1647,13 @@ void test(const imgui_app::program::settings &settings)
       sl.summary_file_path = build_path(
         base_dir, ultra::summary_from_basename(dataset));
 
-      s.logger(sl);
-      s.stop_source(source);
+      s.logger(sl).stop_source(source).tag(dataset.stem());
 
       return s.run(test_param.runs);
     });
 
   if (test_param.datasets.size() > 1)
-    ultra::log::reporting_level = ultra::log::lWARNING;
+    ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;

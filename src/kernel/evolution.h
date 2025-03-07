@@ -56,6 +56,7 @@ public:
   evolution &logger(search_log &);
   evolution &shake_function(const std::function<bool(unsigned)> &);
   evolution &stop_source(std::stop_source);
+  evolution &tag(const std::string &);
 
   [[nodiscard]] bool is_valid() const;
 
@@ -75,6 +76,7 @@ private:
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source external_stop_source_ {std::nostopstate};
+  std::string tag_ {};
 };
 
 #include "kernel/evolution.tcc"

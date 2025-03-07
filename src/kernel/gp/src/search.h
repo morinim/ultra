@@ -83,6 +83,7 @@ public:
 
   search &logger(search_log &);
   search &stop_source(std::stop_source);
+  search &tag(const std::string &);
 
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
@@ -105,6 +106,7 @@ private:
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {};
+  std::string tag_ {};
 };
 
 

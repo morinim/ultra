@@ -87,6 +87,23 @@ basic_search<ES, E> &basic_search<ES, E>::logger(search_log &sl)
 }
 
 ///
+/// Sets the identification tag for this object.
+///
+/// \param[in] t identification tag
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+/// The tag is used to identify this object when multiple searches are
+/// performed in parallel.
+///
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::tag(const std::string &t)
+{
+  tag_ = t;
+  return *this;
+}
+
+///
 /// Template method of the `run` member function called at the end of each run.
 ///
 /// \param[in] run current run
@@ -107,8 +124,10 @@ void basic_search<ES, E>::after_evolution(
     accuracy = ss.str();
   }
 
-  ultraPAROUT << "Run " << run << " TRAINING. Fitness: " << *mm[0].fitness
-              << accuracy;
+  const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
+
+  ultraPAROUT << tags << "Run " << run
+              << " TRAINING. Fitness: " << *mm[0].fitness << accuracy;
 
   if (mm.size() > 1)
   {
@@ -120,8 +139,8 @@ void basic_search<ES, E>::after_evolution(
       accuracy = ss.str();
     }
 
-    ultraPAROUT << "Run " << run << " VALIDATION. Fitness: " << *mm[1].fitness
-                << accuracy;
+    ultraPAROUT << tags << "Run " << run << " VALIDATION. Fitness: "
+                << *mm[1].fitness << accuracy;
   }
 }
 
@@ -216,11 +235,11 @@ basic_search<ES, E>::run(unsigned n,
     vs_->training_setup(r);
 
     evolution evo(prob_, eva_);
-    evo.after_generation(after_generation_callback_);
     if (search_log_)
       evo.logger(*search_log_);
-    evo.shake_function(shake);
-    evo.stop_source(stop_source_);
+    evo.after_generation(after_generation_callback_)
+       .shake_function(shake).stop_source(stop_source_).tag(tag_);
+
     const auto run_summary(evo.template run<ES>());
 
     if (const auto prg(run_summary.best().ind); !prg.empty())
