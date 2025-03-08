@@ -30,8 +30,10 @@ struct model_measurements
 
   [[nodiscard]] bool empty() const noexcept;
 
-  [[nodiscard]] friend auto operator<=>(const model_measurements &,
-                                        const model_measurements &) = default;
+  [[nodiscard]] friend bool operator==(
+    const model_measurements &, const model_measurements &) noexcept = default;
+  [[nodiscard]] friend bool operator!=(
+    const model_measurements &, const model_measurements &) noexcept = default;
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &);
@@ -40,6 +42,10 @@ struct model_measurements
   std::optional<F> fitness {};
   std::optional<double> accuracy {};
 };
+
+template<Fitness F>
+[[nodiscard]] auto operator<=>(const model_measurements<F> &,
+                               const model_measurements<F> &) noexcept;
 
 #include "kernel/model_measurements.tcc"
 

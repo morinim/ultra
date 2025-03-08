@@ -34,6 +34,30 @@ bool model_measurements<F>::empty() const noexcept
 }
 
 ///
+/// \param[in] lhs first term of comparison
+/// \param[in] rhs second term of comparison
+/// \return        a partial ordering result
+///
+/// The comparison criterium is Pareto dominance
+/// (https://en.wikipedia.org/wiki/Pareto_efficiency)
+///
+template<Fitness F>
+auto operator<=>(const model_measurements<F> &lhs,
+                 const model_measurements<F> &rhs) noexcept
+{
+  if (lhs.fitness <= rhs.fitness && lhs.accuracy <= rhs.accuracy
+      && (lhs.fitness < rhs.fitness || lhs.accuracy < rhs.accuracy))
+    return std::partial_ordering::less;
+  if (lhs.fitness >= rhs.fitness && lhs.accuracy >= rhs.accuracy
+      && (lhs.fitness > rhs.fitness || lhs.accuracy > rhs.accuracy))
+    return std::partial_ordering::greater;
+  if (lhs == rhs)
+    return std::partial_ordering::equivalent;
+
+  return std::partial_ordering::unordered;  // {12, 50} <=> {10, 60}
+}
+
+///
 /// Loads the object from a stream.
 ///
 /// \param[in] is input stream

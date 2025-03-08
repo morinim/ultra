@@ -28,11 +28,22 @@ TEST_CASE("Base")
   CHECK(model_measurements(-5.0, .8) >= model_measurements(-5.0, .8));
   CHECK(model_measurements(-5.0, .8) <= model_measurements(-5.0, .8));
   CHECK(model_measurements(-5.0, .8) > model_measurements(-10.0, .8));
+  CHECK(model_measurements(-10.0, .8) < model_measurements(-5.0, .8));
 
   CHECK(model_measurements(fitnd{0.0, 1.0}, .8)
         > model_measurements(fitnd{0.0, 0.0}, .8));
   CHECK(model_measurements(fitnd{0.0, 1.0}, .9)
         > model_measurements(fitnd{0.0, 1.0}, .8));
+
+  CHECK(!(model_measurements(5.0, .8) > model_measurements(4.0, .9)));
+  CHECK(!(model_measurements(4.0, .9) > model_measurements(5.0, .8)));
+  CHECK(!(model_measurements(5.0, .8) >= model_measurements(4.0, .9)));
+  CHECK(!(model_measurements(4.0, .9) >= model_measurements(5.0, .8)));
+  CHECK(!(model_measurements(5.0, .8) < model_measurements(4.0, .9)));
+  CHECK(!(model_measurements(4.0, .9) < model_measurements(5.0, .8)));
+  CHECK(!(model_measurements(5.0, .8) <= model_measurements(4.0, .9)));
+  CHECK(!(model_measurements(4.0, .9) <= model_measurements(5.0, .8)));
+  CHECK(model_measurements(4.0, .9) != model_measurements(5.0, .8));
 
   model_measurements<double> empty;
   CHECK(empty.empty());
@@ -42,7 +53,18 @@ TEST_CASE("Base")
   CHECK(!partially_empty.empty());
 
   CHECK(model_measurements(10.0, .9) > empty);
+  CHECK(partially_empty > empty);
   CHECK(model_measurements(10.0, .9) > partially_empty);
+  CHECK(model_measurements(8.0, .9) > partially_empty);
+  CHECK(!(model_measurements(7.0, .9) < partially_empty));
+  CHECK(!(model_measurements(7.0, .9) > partially_empty));
+
+  model_measurements<double> partially_empty2, partially_empty3;
+  partially_empty2.accuracy = .75;
+  partially_empty3.accuracy = .90;
+
+  CHECK(partially_empty2 > empty);
+  CHECK(partially_empty2 < partially_empty3);
 }
 
 TEST_CASE("Serialization")
