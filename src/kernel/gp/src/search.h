@@ -52,9 +52,6 @@ protected:
   [[nodiscard]] model_measurements<fitness_t> calculate_metrics(
     const individual_t &) const override;
 
-  //void log_stats(const search_stats<T> &,
-  //               tinyxml2::XMLDocument *) const override;
-
   void tune_parameters() override;
 
 private:

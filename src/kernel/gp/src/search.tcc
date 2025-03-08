@@ -71,8 +71,8 @@ problem &basic_search<ES, E>::prob() const noexcept
 /// \param[in] prg best individual from the evolution run just finished
 /// \return        measurements about the individual
 ///
-/// Fitness is always calculated. Additional metrics only if explicitly asked
-/// in the constructor.
+/// Fitness and accuracy are calculated by default. Additional must be
+/// explicitly requested in the basic_search constructor.
 ///
 /// \warning
 /// Can be very time consuming.

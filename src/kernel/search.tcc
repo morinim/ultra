@@ -116,31 +116,24 @@ void basic_search<ES, E>::after_evolution(
 {
   Expects(mm.size());
 
-  std::string accuracy;
-  if (mm[0].accuracy)
-  {
-    std::ostringstream ss;
-    ss << "  Accuracy: " << *mm[0].accuracy*100.0 << '%';
-    accuracy = ss.str();
-  }
-
+  const std::vector phase = {"TRAINING", "VALIDATION"};
   const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
 
-  ultraPAROUT << tags << "Run " << run
-              << " TRAINING. Fitness: " << *mm[0].fitness << accuracy;
-
-  if (mm.size() > 1)
+  for (std::size_t i(0); const auto &m : mm)
   {
-    accuracy = "";
-    if (mm[1].accuracy)
+    std::string accuracy;
+    if (m.accuracy)
     {
       std::ostringstream ss;
-      ss << "  Accuracy: " << *mm[1].accuracy*100.0 << '%';
+      ss << *m.accuracy * 100.0 << '%';
       accuracy = ss.str();
     }
 
-    ultraPAROUT << tags << "Run " << run << " VALIDATION. Fitness: "
-                << *mm[1].fitness << accuracy;
+    ultraPAROUT << tags << "Run " << run << ' ' << phase[i]
+                << ". Fitness: " << *m.fitness
+                << "  Accuracy: " << accuracy;
+
+    ++i;
   }
 }
 
@@ -238,7 +231,9 @@ basic_search<ES, E>::run(unsigned n,
     if (search_log_)
       evo.logger(*search_log_);
     evo.after_generation(after_generation_callback_)
-       .shake_function(shake).stop_source(stop_source_).tag(tag_);
+       .shake_function(shake)
+       .stop_source(stop_source_)
+       .tag(tag_);
 
     const auto run_summary(evo.template run<ES>());
 
