@@ -68,9 +68,9 @@ public:
 class as_is_validation final : public validation_strategy
 {
 public:
-  void training_setup(unsigned) override {}
-  bool shake(unsigned) override { return false; }
-  bool validation_setup(unsigned) override { return false; }
+  void training_setup(unsigned) noexcept override {}
+  bool shake(unsigned) noexcept override { return false; }
+  bool validation_setup(unsigned) noexcept override { return false; }
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override
   {
