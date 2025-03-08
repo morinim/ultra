@@ -14,9 +14,9 @@ Compared to Vita, this framework is a major breakthrough but it isn't production
 
 ## OVERVIEW
 
-Ultra is a scalable, high-performance framework for evolutionary algorithms.
+Ultra is a scalable, high-performance C++ framework for evolutionary algorithms, covering genetic programming, genetic algorithms and differential evolution.
 
-It is suitable for [classification][classification], [symbolic regression][sr], content-base image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
+It is suitable for [classification][classification], [symbolic regression][sr], content-based image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
 
 - concurrency support
 - modern, standard ISO C++20 source code
