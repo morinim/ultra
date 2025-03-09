@@ -471,7 +471,7 @@ void render_best()
   {
     std::shared_lock guard(summaries_mutex);
     for (const auto &s : summaries)
-      data.push_back(s.best_accuracy);
+      data.push_back(s.best_accuracy * 100.0);
   }
 
   std::vector<std::string> glabels;
@@ -480,7 +480,7 @@ void render_best()
   for (std::size_t i(0); const auto &dataset : test_param.datasets)
   {
     glabels.push_back(dataset.stem().string());
-    data.push_back(ref_summaries[i].best_accuracy);
+    data.push_back(ref_summaries[i].best_accuracy * 100.0);
     ++i;
   }
 
@@ -502,6 +502,66 @@ void render_best()
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(),
                            test_param.datasets.size(), glabels_chr.data());
+    ImPlot::PlotBarGroups(ilabels.data(), data.data(),
+                          reference_values ? 2 : 1,
+                          test_param.datasets.size(), 0.5, 0, 0);
+    ImPlot::EndPlot();
+  }
+}
+
+void render_success_rate()
+{
+  static bool reference_values {true};
+
+  std::vector<double> data;
+  std::vector<std::string> rlabels;
+  {
+    std::shared_lock guard(summaries_mutex);
+    for (const auto &s : summaries)
+    {
+      data.push_back(s.success_rate * 100.0);
+      rlabels.push_back(std::to_string(s.runs));
+    }
+  }
+
+  std::vector<std::string> glabels;
+
+  assert(test_param.datasets.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &dataset : test_param.datasets)
+  {
+    glabels.push_back(dataset.stem().string());
+    data.push_back(ref_summaries[i].success_rate * 100.0);
+    if (ref_summaries[i].runs)
+      rlabels[i] += " vs " + std::to_string(ref_summaries[i].runs);
+    ++i;
+  }
+
+  std::vector<const char *> glabels_chr(glabels.size());
+  std::ranges::transform(glabels, glabels_chr.begin(),
+                         [](const auto &str) { return str.data(); });
+
+  std::vector<const char *> rlabels_chr(rlabels.size());
+  std::ranges::transform(rlabels, rlabels_chr.begin(),
+                         [](const auto &str) { return str.data(); });
+
+  const std::vector ilabels = {"Current", "Reference"};
+  std::vector<double> positions(test_param.datasets.size());
+  std::iota(positions.begin(), positions.end(), 0.0);
+
+  ImGui::Checkbox("Reference values##Test##Success rate", &reference_values);
+
+  if (ImPlot::BeginPlot("##Success rate##Test", ImVec2(-1, -1),
+                        ImPlotFlags_NoTitle))
+  {
+    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+    ImPlot::SetupAxes("Dataset", "Success rate",
+                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(),
+                           test_param.datasets.size(), glabels_chr.data());
+    ImPlot::SetupAxis(ImAxis_X2, "Runs", ImPlotAxisFlags_AuxDefault);
+    ImPlot::SetupAxisLimits(ImAxis_X2, 0, test_param.datasets.size()-1);
+    ImPlot::SetupAxisTicks(ImAxis_X2, positions.data(),
+                           test_param.datasets.size(), rlabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
                           test_param.datasets.size(), 0.5, 0, 0);
@@ -1063,12 +1123,12 @@ void render_test(const imgui_app::program &prg, bool *p_open)
   ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
 
   static bool show_best_check(true);
-  static bool show_2_check(true);
+  static bool show_success_rate_check(true);
   static bool show_3_check(true);
   static bool show_4_check(true);
 
   static bool mxz_best(false);
-  static bool mxz_2(false);
+  static bool mxz_success_rate(false);
   static bool mxz_3(false);
   static bool mxz_4(false);
 
@@ -1076,7 +1136,7 @@ void render_test(const imgui_app::program &prg, bool *p_open)
   {
     ImGui::Checkbox("best", &show_best_check);
     ImGui::SameLine();
-    ImGui::Checkbox("1", &show_2_check);
+    ImGui::Checkbox("success rate", &show_success_rate_check);
     ImGui::SameLine();
     ImGui::Checkbox("3", &show_3_check);
     ImGui::SameLine();
@@ -1088,30 +1148,30 @@ void render_test(const imgui_app::program &prg, bool *p_open)
 
     const bool show_best(
       show_best_check
-      && !(mxz_2 && show_2_check)
+      && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_3 && show_3_check)
       && !(mxz_4 && show_4_check));
-    const bool show_2(
-      show_2_check
+    const bool show_success_rate(
+      show_success_rate_check
       && !(mxz_best && show_best_check)
       && !(mxz_3 && show_3_check)
       && !(mxz_4 && show_4_check));
     const bool show_3(
       show_3_check
       && !(mxz_best && show_best_check)
-      && !(mxz_2 && show_2_check)
+      && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_4 && show_4_check));
     const bool show_4(
       show_4_check
       && !(mxz_best && show_best_check)
-      && !(mxz_2 && show_2_check)
+      && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_3 && show_3_check));
 
     const int available_width(ImGui::GetContentRegionAvail().x - 4);
     const int available_height(ImGui::GetContentRegionAvail().y - 4);
 
-    const int w1(show_best && show_2 ? available_width/2
-                                     : available_width);
+    const int w1(show_best && show_success_rate ? available_width/2
+                                    : available_width);
     const int h1(show_3 || show_4 ? available_height/2
                                   : available_height);
     if (show_best)
@@ -1124,18 +1184,34 @@ void render_test(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("BEST");
       ImGui::SameLine();
-      const std::string bs(mxz_best ? "Minimize##Best" : "Maximize##Best");
-      if (ImGui::Button(bs.c_str()))
+      if (const std::string bs(mxz_best ? "Minimize##Best" : "Maximize##Best");
+          ImGui::Button(bs.c_str()))
         mxz_best = !mxz_best;
 
       render_best();
       ImGui::EndChild();
     }
 
-    if (show_2)
+    if (show_success_rate)
     {
       if (show_best)
         ImGui::SameLine();
+
+      const auto w(mxz_success_rate ? available_width : w1);
+      const auto h(mxz_success_rate ? available_height : h1);
+
+      ImGui::BeginChild("Success rate##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("SUCCESS RATE");
+      ImGui::SameLine();
+      if (const std::string bs(mxz_success_rate ? "Minimize##SR"
+                                                : "Maximize##SR");
+          ImGui::Button(bs.c_str()))
+        mxz_success_rate = !mxz_success_rate;
+
+      render_success_rate();
+      ImGui::EndChild();
     }
   }
 
@@ -1503,10 +1579,9 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 
   const auto &pos_args(cmdl.pos_args());
 
-  const std::filesystem::path test_input(pos_args.size() <= 2
-                                         ? "./" : pos_args[2]);
-
-  if (std::filesystem::is_directory(test_input))
+  if (const std::filesystem::path test_input(pos_args.size() <= 2
+                                             ? "./" : pos_args[2]);
+      std::filesystem::is_directory(test_input))
   {
     const std::filesystem::path test_folder(test_input);
 
@@ -1533,19 +1608,12 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     std::cout << ' ' << d;
   std::cout << '\n';
 
-  const std::filesystem::path ref_folder(cmdl("reference", "").str());
-  if (!ref_folder.empty() && !std::filesystem::is_directory(ref_folder))
+  if (const std::filesystem::path ref_folder(cmdl("reference", "").str());
+      ref_folder.empty())
   {
-    std::cerr << ref_folder << " isn't a directory.\n";
-    return false;
+    ref_summaries.resize(test_param.datasets.size(), {});
   }
-
-  if (ref_folder.empty())
-  {
-    for (auto n(test_param.datasets.size()); n; --n)
-      ref_summaries.push_back({});
-  }
-  else
+  else if (std::filesystem::is_directory(ref_folder))
   {
     for (const auto &dataset : test_param.datasets)
     {
@@ -1556,6 +1624,11 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
       else
         ref_summaries.push_back({});
     }
+  }
+  else
+  {
+    std::cerr << ref_folder << " isn't a directory.\n";
+    return false;
   }
 
   if (const auto v(cmdl("generations").str()); !v.empty())
