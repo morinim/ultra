@@ -1340,26 +1340,27 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr monitor [log_folder]\n"
+  "> wopr monitor [log folder]\n"
   "\n"
   "  The log folder must contain at least one search log produced by Ultra.\n"
   "  If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
-  "  --dynamic    filepath\n"
-  "  --layers     filepath\n"
-  "  --population filepath\n"
+  "  --dynamic    <filepath>\n"
+  "  --layers     <filepath>\n"
+  "  --population <filepath>\n"
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
-  "  --basename   name\n"
+  "  --basename   <name>\n"
   "      Restrict monitoring to log files matching the `basename_*.txt`\n"
   "      format.\n"
   "\n"
-  "> wopr test [test_folder]\n"
+  "> wopr test [folder or file]\n"
   "\n"
-  "  The test folder must contain at least a dataset and, optionally, a test\n"
-  "  configuration file. If omitted, the current working directory is used.\n"
+  "  The argument of the test command must point a folder containing, at\n"
+  "  least, a .csv dataset (and, optionally, a test configuration file) or a\n"
+  "  specific file. If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
@@ -1501,19 +1502,25 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   using namespace ultra;
 
   const auto &pos_args(cmdl.pos_args());
-  const std::filesystem::path test_folder(pos_args.size() <= 2
-                                          ? "./" : pos_args[2]);
 
-  if (!std::filesystem::is_directory(test_folder))
+  const std::filesystem::path test_input(pos_args.size() <= 2
+                                         ? "./" : pos_args[2]);
+
+  if (std::filesystem::is_directory(test_input))
   {
-    std::cerr << test_folder << " isn't a directory.\n";
+    const std::filesystem::path test_folder(test_input);
+
+    for (const auto &entry : std::filesystem::directory_iterator(test_folder))
+      if (ultra::iequals(entry.path().extension(), ".csv"))
+        test_param.datasets.insert(entry.path());
+  }
+  else if (std::filesystem::exists(test_input))
+    test_param.datasets.insert(test_input);
+  else
+  {
+    std::cerr << test_input << " isn't a valid input.\n";
     return false;
   }
-
-  for (const auto &entry : std::filesystem::directory_iterator(test_folder))
-    if (entry.is_regular_file()
-        && ultra::iequals(entry.path().extension(), ".csv"))
-      test_param.datasets.insert(entry.path());
 
   if (test_param.datasets.empty())
   {
@@ -1700,7 +1707,7 @@ void test(const imgui_app::program::settings &settings)
   t_summaries.request_stop();
   source.request_stop();
   while (!std::ranges::all_of(tasks, task_completed))
-    ;
+    std::this_thread::sleep_for(100ms);
 }
 
 int main(int argc, char *argv[])
