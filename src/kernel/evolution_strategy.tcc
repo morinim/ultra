@@ -255,7 +255,6 @@ auto std_es<E>::operations(
 template<Evaluator E>
 de_es<E>::de_es(const problem &prob, E &eva)
   : evolution_strategy<E>(prob, eva),
-    select_(prob.params),
     recombine_(prob),
     replace_(this->eva_, prob.params)
 {

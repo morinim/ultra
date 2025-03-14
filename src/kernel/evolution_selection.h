@@ -105,13 +105,13 @@ public:
     // prevents some kinds of programming errors.
   };
 
-  explicit de(const parameters &params) : params_(params) {}
+  //explicit de(const parameters &params) : params_(params) {}
 
   template<SizedRandomAccessPopulation P>
   [[nodiscard]] selected_refs<typename P::value_type> operator()(P &) const;
 
 private:
-  const parameters &params_;
+  //const parameters &params_;
 };
 
 #include "kernel/evolution_selection.tcc"
