@@ -45,8 +45,9 @@ public:
   using reference = typename values_t::reference;
   using const_reference = typename values_t::const_reference;
 
-  explicit matrix() : matrix(0, 0) {}
-  explicit matrix(std::size_t, std::size_t);
+  explicit matrix() = default;
+  matrix(std::size_t, std::size_t);
+  matrix(std::size_t, std::size_t, T);
   matrix(std::initializer_list<std::initializer_list<T>>);
 
   template<class S> [[nodiscard]] const_reference operator()(const S &) const;
@@ -86,9 +87,9 @@ private:
 
   // *** Private data members ***
   // Elements stored in row-major order (element are stored row by row).
-  values_t data_;
+  values_t data_ {};
 
-  std::size_t cols_;
+  std::size_t cols_ {0};
 };
 
 template<class T> [[nodiscard]] matrix<T> flip(matrix<T>, unsigned);

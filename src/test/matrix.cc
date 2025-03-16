@@ -25,20 +25,37 @@ TEST_SUITE("MATRIX")
 
 TEST_CASE("Constructor")
 {
-  ultra::matrix<int> m(3, 4);
+  SUBCASE("Default inserted objects")
+  {
+    ultra::matrix<int> m(3, 4);
 
-  CHECK(m.rows() == 3);
-  CHECK(m.cols() == 4);
-  CHECK(!m.empty());
-  CHECK(m(0, 0) == ultra::matrix<int>::value_type());
+    CHECK(m.rows() == 3);
+    CHECK(m.cols() == 4);
+    CHECK(!m.empty());
+    CHECK(m(0, 0) == ultra::matrix<int>::value_type());
+  }
 
-  m = { {1, 2, 3},
-        {4, 5, 6} };
+  SUBCASE("Initialization value")
+  {
+    ultra::matrix<int> m(3, 4, 3);
 
-  CHECK(m.rows() == 2);
-  CHECK(m.cols() == 3);
-  CHECK(!m.empty());
-  CHECK(m(0, 0) == 1);
+    CHECK(m.rows() == 3);
+    CHECK(m.cols() == 4);
+    CHECK(!m.empty());
+
+    CHECK(std::ranges::all_of(m, [](auto v) { return v == 3; }));
+  }
+
+  SUBCASE("Initialization list")
+  {
+    ultra::matrix m = { {1, 2, 3},
+                        {4, 5, 6} };
+
+    CHECK(m.rows() == 2);
+    CHECK(m.cols() == 3);
+    CHECK(!m.empty());
+    CHECK(m(0, 0) == 1);
+  }
 }
 
 TEST_CASE("Empty matrix")

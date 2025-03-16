@@ -23,9 +23,9 @@
 /// \param[in] rs number of rows
 /// \param[in] cs number of columns
 ///
-/// \note
-/// Default values for `rs` and `cs` is `0` (i.e. uninitialized matrix,
-/// sometimes we need it for performance).
+/// Constructs a matrix with the given number of rows and columns and
+/// default-inserted objects of `T`. If `T` is not `DefaultInsertable` the
+/// behaviour is undefined.
 ///
 template<class T>
 matrix<T>::matrix(std::size_t rs, std::size_t cs) : data_(rs * cs), cols_(cs)
@@ -33,6 +33,28 @@ matrix<T>::matrix(std::size_t rs, std::size_t cs) : data_(rs * cs), cols_(cs)
   Expects((rs && cs) || (!rs && !cs));
 }
 
+///
+/// Standard `rs` x `cs` matrix.
+///
+/// \param[in] rs    number of rows
+/// \param[in] cs    number of columns
+/// \param[in] value value to initialize elements of the matrix with
+///
+/// Constructs a matrix with the given number of rows and columns and filled
+/// with elements of the given value.
+///
+template<class T>
+matrix<T>::matrix(std::size_t rs, std::size_t cs, T value)
+  : data_(rs * cs, value), cols_(cs)
+{
+  Expects((rs && cs) || (!rs && !cs));
+}
+
+///
+/// Constructs the matrix with the content of initializer lists.
+///
+/// \param[in] ll initializer list
+///
 template<class T>
 matrix<T>::matrix(std::initializer_list<std::initializer_list<T>> ll)
   : matrix(ll.size(), ll.size() ? ll.begin()->size() : 0)
