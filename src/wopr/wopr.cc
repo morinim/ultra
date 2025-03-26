@@ -30,6 +30,7 @@ using namespace std::chrono_literals;
 
 // Monitoring related variables.
 ultra::search_log slog {};
+int monitoring_window {0};
 
 // Testing related variables.
 struct
@@ -586,7 +587,7 @@ void render_dynamic()
   }
 
   static bool show_best(true);
-  static bool show_longer(true);
+  static bool show_longest(true);
 
   for (std::size_t run(dynamic_runs.size()); run--;)
   {
@@ -595,10 +596,20 @@ void render_dynamic()
     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (ImGui::CollapsingHeader(gui_uid("Run " + std::to_string(run))))
     {
-      const auto &xs(dr.xs);
-
       if (ImGui::BeginTabBar(gui_uid("DynamicTabBar", run)))
       {
+        const auto &xs(dr.xs);
+
+        std::size_t window(monitoring_window
+                           ? static_cast<std::size_t>(monitoring_window)
+                           : std::numeric_limits<std::size_t>::max());
+        window = std::min<std::size_t>(xs.size(), window);
+
+        const auto get_window([&window](const auto &vect)
+        {
+          return vect.data() + vect.size() - window;
+        });
+
         if (ImGui::BeginTabItem(gui_uid("Fitness dynamic", run)))
         {
           static int current_best_prg_index(0);
@@ -619,30 +630,30 @@ void render_dynamic()
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
 
-            ImPlot::SetupAxes(
-              "Generation", "Fit",
-              ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
-              ImPlotAxisFlags_AutoFit);
+            ImPlot::SetupAxes("Generation", "Fit",
+                              ImPlotAxisFlags_AutoFit,
+                              ImPlotAxisFlags_AutoFit);
 
             ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-            ImPlot::PlotErrorBars("Avg & StdDev",
-                                  xs.data(),
-                                  dr.fit_mean.data(),
-                                  dr.fit_std_dev.data(),
-                                  xs.size());
+            const auto avg_stddev(gui_uid("Avg & StdDev", run));
+            ImPlot::PlotErrorBars(avg_stddev,
+                                  get_window(xs),
+                                  get_window(dr.fit_mean),
+                                  get_window(dr.fit_std_dev),
+                                  window);
             ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-            ImPlot::PlotLine("Avg & StdDev",
-                             xs.data(),
-                             dr.fit_mean.data(),
-                             xs.size());
+            ImPlot::PlotLine(avg_stddev,
+                             get_window(xs),
+                             get_window(dr.fit_mean),
+                             window);
 
             if (show_best)
             {
               ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
               ImPlot::PlotLine("Best",
-                               xs.data(),
-                               dr.fit_best.data(),
-                               xs.size());
+                               get_window(xs),
+                               get_window(dr.fit_best),
+                               window);
             }
 
             ImPlot::EndPlot();
@@ -653,7 +664,7 @@ void render_dynamic()
 
         if (ImGui::BeginTabItem(gui_uid("Length dynamic", run)))
         {
-          ImGui::Checkbox(gui_uid("Longer", run), &show_longer);
+          ImGui::Checkbox(gui_uid("Longest", run), &show_longest);
 
           if (ImPlot::BeginPlot(gui_uid("##Length by generation", run),
                                 ImVec2(-1, -1), ImPlotFlags_NoTitle))
@@ -665,25 +676,26 @@ void render_dynamic()
               ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
               ImPlotAxisFlags_AutoFit);
 
+            const auto avg_stddev(gui_uid("Len Avg & StdDev", run));
             ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-            ImPlot::PlotErrorBars(gui_uid("Len Avg & StdDev", run),
-                                  xs.data(),
-                                  dr.len_mean.data(),
-                                  dr.len_std_dev.data(),
-                                  xs.size());
+            ImPlot::PlotErrorBars(avg_stddev,
+                                  get_window(xs),
+                                  get_window(dr.len_mean),
+                                  get_window(dr.len_std_dev),
+                                  window);
             ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-            ImPlot::PlotLine(gui_uid("Len Avg & StdDev", run),
-                             xs.data(),
-                             dr.len_mean.data(),
-                             xs.size());
+            ImPlot::PlotLine(avg_stddev,
+                             get_window(xs),
+                             get_window(dr.len_mean),
+                             window);
 
-            if (show_longer)
+            if (show_longest)
             {
               ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-              ImPlot::PlotLine(gui_uid("Longer", run),
-                               xs.data(),
-                               dr.len_max.data(),
-                               xs.size());
+              ImPlot::PlotLine(gui_uid("Longest", run),
+                               get_window(xs),
+                               get_window(dr.len_max),
+                               window);
             }
 
             ImPlot::EndPlot();
@@ -734,7 +746,6 @@ void render_population()
             ImPlot::SetupAxes("Fitness", "Individuals",
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
-
             ImPlot::PlotHistogram(gui_uid("##PopulationFitnessHistogram", run),
                                   pr.fit.data(), pr.size(),
                                   std::min<std::size_t>(50, pr.size()/10));
@@ -995,6 +1006,10 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
     ImGui::Checkbox("Layers fit.", &show_layers_fit_check);
     ImGui::SameLine();
     ImGui::Checkbox("Layers age", &show_layers_age_check);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
+    ImGui::SliderInt("##MonitoringWindow", &monitoring_window, 0, 8000,
+                     "window = %d");
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
                        "%s", random_string().c_str());
@@ -1423,14 +1438,16 @@ void cmdl_usage()
   "\n"
   "  Available switches:\n"
   "\n"
+  "  --basename <name>\n"
+  "      Restrict monitoring to log files matching the `basename_*.txt`\n"
+  "      format.\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
   "  --population <filepath>\n"
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
-  "  --basename   <name>\n"
-  "      Restrict monitoring to log files matching the `basename_*.txt`\n"
-  "      format.\n"
+  "  --window <nr>\n"
+  "      Restrict monitoring window to the last `nr` generations.\n"
   "\n"
   "> wopr test [folder or file]\n"
   "\n"
@@ -1570,6 +1587,17 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
             << "\nPopulation file path: " << slog.population_file_path
             << '\n';
 
+
+  if (const auto v(cmdl("window").str()); !v.empty())
+  {
+    try
+    {
+      monitoring_window = std::stoi(v);
+      std::cout << "Monitoring window: " << monitoring_window << '\n';
+    }
+    catch (...) {}
+  }
+
   return true;
 }
 
@@ -1676,6 +1704,7 @@ cmdl_result parse_args(int argc, char *argv[])
   cmdl.add_param("reference");
   cmdl.add_param("runs");
   cmdl.add_param("threshold");
+  cmdl.add_param("window");
 
   cmdl.parse(argc, argv);
 
