@@ -10,10 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cassert>
-#include <iostream>
+#include "imgui_app.h"
 
-#include "argh/argh.h"
 #include "kernel/exceptions.h"
 #include "kernel/search_log.h"
 #include "kernel/gp/primitive/real.h"
@@ -22,8 +20,10 @@
 #include "utility/timer.h"
 #include "utility/ts_queue.h"
 
-#include "imgui_app.h"
+#include "argh/argh.h"
 
+#include <iostream>
+#include <cassert>
 
 using namespace std::chrono_literals;
 
@@ -1477,14 +1477,16 @@ void cmdl_usage()
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
   "  --refresh <seconds>\n"
+  "      Set the refresh rate for updating plots.\n"
   "  --window <nr>\n"
   "      Restrict monitoring window to the last `nr` generations.\n"
   "\n"
   "> wopr test [folder or file]\n"
   "\n"
-  "  The argument of the test command must point a folder containing, at\n"
+  "  The argument of the test command must point a to folder containing, at\n"
   "  least, a .csv dataset (and, optionally, a test configuration file) or a\n"
-  "  specific file. If omitted, the current working directory is used.\n"
+  "  specific file. If no folder is specified, the current working directory\n"
+  "  is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
@@ -1638,7 +1640,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     try
     {
       refresh_rate = std::chrono::duration<double>(std::stof(v));
-      std::cout << "Refresh rate: " << refresh_rate << '\n';
+      std::cout << "Refresh rate: " << refresh_rate.count() << "s\n";
     }
     catch (...)
     {
