@@ -162,7 +162,7 @@ void program::run(std::function<void (const program &, bool *)> render_main)
         on_event(event.window);
     }
 
-    // Start the Dear ImGui frame.
+    // Start the ImGui frame.
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -196,12 +196,12 @@ void program::run(std::function<void (const program &, bool *)> render_main)
       if (show_main_panel_)
         render_main(*this, &show_main_panel_);
 
-      // ImGUI demo panel
+      // ImGUI demo panel.
       if (show_demo_panel_)
         ImGui::ShowDemoWindow(&show_demo_panel_);
     }
 
-    // Rendering
+    // Render and present.
     ImGui::Render();
 
     SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,

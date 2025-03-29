@@ -178,7 +178,7 @@ struct population_sequence
   [[nodiscard]] bool empty() const noexcept { return fit.empty(); }
   [[nodiscard]] std::size_t size() const noexcept { return fit.size(); }
 
-  void push_back(population_line &pl)
+  void update(population_line &pl)
   {
     generation = pl.generation;
 
@@ -335,7 +335,7 @@ struct layers_sequence
   [[nodiscard]] bool empty() const noexcept { return age_sup.empty(); }
   [[nodiscard]] std::size_t size() const noexcept { return age_sup.size(); }
 
-  void push_back(layers_line &ld)
+  void update(layers_line &ld)
   {
     generation = ld.generation;
 
@@ -574,7 +574,7 @@ void render_dynamic()
 {
   static std::vector<dynamic_sequence> dynamic_runs;
 
-  if (const auto data(dynamic_queue.try_pop()); data)
+  if (const auto data = dynamic_queue.try_pop())
   {
     if (data->new_run)
     {
@@ -713,7 +713,8 @@ void render_dynamic()
 void render_population()
 {
   static std::vector<population_sequence> population_runs;
-  if (auto data(population_queue.try_pop()); data)
+
+  if (auto data = population_queue.try_pop())
   {
     if (data->new_run)
     {
@@ -722,7 +723,7 @@ void render_population()
         population_runs.push_back({});
     }
     else
-      population_runs.back().push_back(*data);
+      population_runs.back().update(*data);
   }
 
   for (std::size_t run(population_runs.size()); run--;)
@@ -963,7 +964,7 @@ void render_layers(layer_info li)
 {
   static std::vector<layers_sequence> layers_runs;
 
-  if (auto data(layers_queue.try_pop()); data)
+  if (auto data = layers_queue.try_pop())
   {
     if (data->new_run)
     {
@@ -972,7 +973,7 @@ void render_layers(layer_info li)
         layers_runs.push_back({});
     }
     else
-      layers_runs.back().push_back(*data);
+      layers_runs.back().update(*data);
   }
 
   if (li == layer_info::age)

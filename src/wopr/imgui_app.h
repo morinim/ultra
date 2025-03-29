@@ -59,7 +59,7 @@ public:
   [[nodiscard]] SDL_Renderer *get_native_renderer() const;
   [[nodiscard]] SDL_Window *get_native_window() const;
 
- private:
+private:
   SDL_Window *window_ {nullptr};
   SDL_Renderer *renderer_ {nullptr};
   TTF_Font *font_ {nullptr};
@@ -116,7 +116,7 @@ public:
   void on_shown();
   void on_close();
 
- private:
+private:
   std::unique_ptr<window> window_ {nullptr};
 
   settings settings_ {};
