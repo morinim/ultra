@@ -31,6 +31,7 @@ using namespace std::chrono_literals;
 // Monitoring related variables.
 ultra::search_log slog {};
 int monitoring_window {0};
+std::chrono::duration<double> refresh_rate {2s};
 
 // Testing related variables.
 struct
@@ -570,7 +571,7 @@ void render_success_rate()
   }
 }
 
-void render_dynamic()
+void render_dynamic(bool update)
 {
   static std::vector<dynamic_sequence> dynamic_runs;
 
@@ -583,7 +584,13 @@ void render_dynamic()
         dynamic_runs.push_back({});
     }
     else
-      dynamic_runs.back().push_back(*data);
+    {
+      static dynamic_sequence buffer;
+      buffer.push_back(*data);
+
+      if (update)
+        dynamic_runs.back() = buffer;
+    }
   }
 
   static bool show_best(true);
@@ -710,7 +717,7 @@ void render_dynamic()
   }
 }
 
-void render_population()
+void render_population(bool update)
 {
   static std::vector<population_sequence> population_runs;
 
@@ -723,7 +730,13 @@ void render_population()
         population_runs.push_back({});
     }
     else
-      population_runs.back().update(*data);
+    {
+      static population_sequence buffer;
+      buffer.update(*data);
+
+      if (update)
+        population_runs.back() = buffer;
+    }
   }
 
   for (std::size_t run(population_runs.size()); run--;)
@@ -741,6 +754,7 @@ void render_population()
           const std::string title("Generation "
                                   + std::to_string(pr.generation)
                                   + "##Population");
+
           if (ImPlot::BeginPlot(gui_uid(title, run), ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
@@ -748,8 +762,8 @@ void render_population()
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
             ImPlot::PlotHistogram(gui_uid("##PopulationFitnessHistogram", run),
-                                  pr.fit.data(), pr.size(),
-                                  std::min<std::size_t>(50, pr.size()/10));
+                                  pr.fit.data(), pr.fit.size(),
+                                  std::min<std::size_t>(50, pr.fit.size()/10));
             ImPlot::EndPlot();
           }
 
@@ -960,7 +974,7 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
 }
 
 enum class layer_info {age, fitness};
-void render_layers(layer_info li)
+void render_layers(layer_info li, bool update)
 {
   static std::vector<layers_sequence> layers_runs;
 
@@ -973,7 +987,13 @@ void render_layers(layer_info li)
         layers_runs.push_back({});
     }
     else
-      layers_runs.back().update(*data);
+    {
+      static layers_sequence buffer;
+      buffer.update(*data);
+
+      if (update)
+        layers_runs.back() = buffer;
+    }
   }
 
   if (li == layer_info::age)
@@ -998,19 +1018,25 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
   static bool mxz_layers_fit(false);
   static bool mxz_layers_age(false);
 
+  static ultra::timer last_update;
+  const bool update(last_update.elapsed() > refresh_rate);
+
   if (ImGui::Begin("Monitor##Window", p_open))
   {
-    ImGui::Checkbox("Dynamic", &show_dynamic_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("Population", &show_population_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("Layers fit.", &show_layers_fit_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("Layers age", &show_layers_age_check);
-    ImGui::SameLine();
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
-    ImGui::SliderInt("##MonitoringWindow", &monitoring_window, 0, 8000,
-                     "window = %d");
+    if (ImGui::CollapsingHeader("GUI Parameters"))
+    {
+      ImGui::Checkbox("Dynamic", &show_dynamic_check);
+      ImGui::SameLine();
+      ImGui::Checkbox("Population", &show_population_check);
+      ImGui::SameLine();
+      ImGui::Checkbox("Layers fit.", &show_layers_fit_check);
+      ImGui::SameLine();
+      ImGui::Checkbox("Layers age", &show_layers_age_check);
+      ImGui::SameLine();
+      ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
+      ImGui::SliderInt("##MonitoringWindow", &monitoring_window, 0, 8000,
+                       "window = %d");
+    }
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
                        "%s", random_string().c_str());
@@ -1058,7 +1084,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_dynamic = !mxz_dynamic;
 
-      render_dynamic();
+      render_dynamic(update);
       ImGui::EndChild();
     }
 
@@ -1079,7 +1105,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_population = !mxz_population;
 
-      render_population();
+      render_population(update);
       ImGui::EndChild();
     }
 
@@ -1102,7 +1128,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_layers_fit = !mxz_layers_fit;
 
-      render_layers(layer_info::fitness);
+      render_layers(layer_info::fitness, update);
       ImGui::EndChild();
     }
 
@@ -1123,13 +1149,16 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs.c_str()))
         mxz_layers_age = !mxz_layers_age;
 
-      render_layers(layer_info::age);
+      render_layers(layer_info::age, update);
       ImGui::EndChild();
     }
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
   ImGui::End();
+
+  if (update)
+    last_update.restart();
 }
 
 void render_test(const imgui_app::program &prg, bool *p_open)
@@ -1447,6 +1476,7 @@ void cmdl_usage()
   "  --population <filepath>\n"
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
+  "  --refresh <seconds>\n"
   "  --window <nr>\n"
   "      Restrict monitoring window to the last `nr` generations.\n"
   "\n"
@@ -1596,7 +1626,25 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
       monitoring_window = std::stoi(v);
       std::cout << "Monitoring window: " << monitoring_window << '\n';
     }
-    catch (...) {}
+    catch (...)
+    {
+      std::cerr << "Wrong value for monitoring window.\n";
+      return false;
+    }
+  }
+
+  if (const auto v(cmdl("refresh").str()); !v.empty())
+  {
+    try
+    {
+      refresh_rate = std::chrono::duration<double>(std::stof(v));
+      std::cout << "Refresh rate: " << refresh_rate << '\n';
+    }
+    catch (...)
+    {
+      std::cerr << "Wrong value for refresh rate.\n";
+      return false;
+    }
   }
 
   return true;
@@ -1703,6 +1751,7 @@ cmdl_result parse_args(int argc, char *argv[])
   cmdl.add_param("layers");
   cmdl.add_param("population");
   cmdl.add_param("reference");
+  cmdl.add_param("refresh");
   cmdl.add_param("runs");
   cmdl.add_param("threshold");
   cmdl.add_param("window");
