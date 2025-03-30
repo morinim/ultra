@@ -23,6 +23,7 @@
 #include "argh/argh.h"
 
 #include <iostream>
+#include <map>
 #include <cassert>
 
 using namespace std::chrono_literals;
@@ -34,13 +35,14 @@ int monitoring_window {0};
 std::chrono::duration<double> refresh_rate {2s};
 
 // Testing related variables.
-struct
+struct test_settings
 {
-  unsigned generations {100};
-  std::set<std::filesystem::path> datasets {};
-  unsigned runs {1};
-  ultra::model_measurements<double> threshold {};
-} test_param;
+  unsigned generations;
+  unsigned runs;
+  ultra::model_measurements<double> threshold;
+};
+
+std::map<std::filesystem::path, test_settings> test_collection;
 
 // Other variables.
 bool imgui_demo_panel {false};
@@ -478,10 +480,10 @@ void render_best()
 
   std::vector<std::string> glabels;
 
-  assert(test_param.datasets.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &dataset : test_param.datasets)
+  assert(test_collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test_collection)
   {
-    glabels.push_back(dataset.stem().string());
+    glabels.push_back(test.first.stem().string());
     data.push_back(ref_summaries[i].best_accuracy * 100.0);
     ++i;
   }
@@ -491,7 +493,7 @@ void render_best()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
-  std::vector<double> positions(test_param.datasets.size());
+  std::vector<double> positions(test_collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Test##Accuracy", &reference_values);
@@ -502,11 +504,11 @@ void render_best()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Accuracy",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(),
-                           test_param.datasets.size(), glabels_chr.data());
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
+                           glabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test_param.datasets.size(), 0.5, 0, 0);
+                          test_collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -528,10 +530,10 @@ void render_success_rate()
 
   std::vector<std::string> glabels;
 
-  assert(test_param.datasets.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &dataset : test_param.datasets)
+  assert(test_collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test_collection)
   {
-    glabels.push_back(dataset.stem().string());
+    glabels.push_back(test.first.stem().string());
     data.push_back(ref_summaries[i].success_rate * 100.0);
     if (ref_summaries[i].runs)
       rlabels[i] += " vs " + std::to_string(ref_summaries[i].runs);
@@ -547,7 +549,7 @@ void render_success_rate()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
-  std::vector<double> positions(test_param.datasets.size());
+  std::vector<double> positions(test_collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Test##Success rate", &reference_values);
@@ -558,15 +560,15 @@ void render_success_rate()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Success rate",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(),
-                           test_param.datasets.size(), glabels_chr.data());
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
+                           glabels_chr.data());
     ImPlot::SetupAxis(ImAxis_X2, "Runs", ImPlotAxisFlags_AuxDefault);
-    ImPlot::SetupAxisLimits(ImAxis_X2, 0, test_param.datasets.size()-1);
-    ImPlot::SetupAxisTicks(ImAxis_X2, positions.data(),
-                           test_param.datasets.size(), rlabels_chr.data());
+    ImPlot::SetupAxisLimits(ImAxis_X2, 0, test_collection.size()-1);
+    ImPlot::SetupAxisTicks(ImAxis_X2, positions.data(), test_collection.size(),
+                           rlabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test_param.datasets.size(), 0.5, 0, 0);
+                          test_collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -1409,18 +1411,19 @@ void get_logs(std::stop_token stoken)
 //
 void get_summaries(std::stop_token stoken)
 {
-  assert(!test_param.datasets.empty());
+  assert(!test_collection.empty());
 
-  summaries.resize(test_param.datasets.size());
+  summaries.resize(test_collection.size());
 
   while (!stoken.stop_requested())
   {
-    for (std::size_t i(0); const auto &ds : test_param.datasets)
+    for (std::size_t i(0); const auto &test : test_collection)
     {
       ++i;
 
-      const std::filesystem::path base_dir(ds.parent_path());
-      const auto xml_fn(base_dir / ultra::summary_from_basename(ds));
+      const auto &dataset(test.first);
+      const std::filesystem::path base_dir(dataset.parent_path());
+      const auto xml_fn(base_dir / ultra::summary_from_basename(dataset));
       tinyxml2::XMLDocument summary;
       if (const auto result(summary.LoadFile(xml_fn.c_str()));
           result != tinyxml2::XML_SUCCESS)
@@ -1666,37 +1669,38 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 
     for (const auto &entry : std::filesystem::directory_iterator(test_folder))
       if (ultra::iequals(entry.path().extension(), ".csv"))
-        test_param.datasets.insert(entry.path());
+        test_collection.insert({entry.path(), {}});
   }
   else if (std::filesystem::exists(test_input))
-    test_param.datasets.insert(test_input);
+    test_collection.insert({test_input, {}});
   else
   {
     std::cerr << test_input << " isn't a valid input.\n";
     return false;
   }
 
-  if (test_param.datasets.empty())
+  if (test_collection.empty())
   {
     std::cerr << "No dataset available.\n";
     return false;
   }
 
   std::cout << "Datasets:";
-  for (const auto &d : test_param.datasets)
-    std::cout << ' ' << d;
+  for (const auto &test : test_collection)
+    std::cout << ' ' << test.first;
   std::cout << '\n';
 
   if (const std::filesystem::path ref_folder(cmdl("reference", "").str());
       ref_folder.empty())
   {
-    ref_summaries.resize(test_param.datasets.size(), {});
+    ref_summaries.resize(test_collection.size(), {});
   }
   else if (std::filesystem::is_directory(ref_folder))
   {
-    for (const auto &dataset : test_param.datasets)
+    for (const auto &test : test_collection)
     {
-      const auto ref_path(ref_folder / ultra::summary_from_basename(dataset));
+      const auto ref_path(ref_folder
+                          / ultra::summary_from_basename(test.first));
 
       if (std::filesystem::exists(ref_path))
         ref_summaries.push_back(summary_data(ref_path));
@@ -1710,34 +1714,42 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     return false;
   }
 
+  unsigned generations(100);
   if (const auto v(cmdl("generations").str()); !v.empty())
   {
-    test_param.generations = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Generations: " << test_param.generations << '\n';
+    generations = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Generations: " << generations << '\n';
   }
 
+  unsigned runs(1);
   if (const auto v(cmdl("runs").str()); !v.empty())
   {
-    test_param.runs = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Runs: " << test_param.runs << '\n';
+    runs = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Runs: " << runs << '\n';
   }
 
+  ultra::model_measurements<double> threshold;
   if (const auto v(cmdl("threshold").str()); !v.empty())
   {
     if (v.back() == '%')
     {
       const auto v1(v.substr(0, v.size()-1));
 
-      test_param.threshold.accuracy = std::clamp<double>(
-        std::stod(v1)/100.0, 0.0, 1.0);
-      std::cout << "Threshold: " << *test_param.threshold.accuracy * 100.0
-                << "%\n";
+      threshold.accuracy = std::clamp<double>(std::stod(v1)/100.0, 0.0, 1.0);
+      std::cout << "Threshold: " << *threshold.accuracy * 100.0 << "%\n";
     }
     else
     {
-      test_param.threshold.fitness = std::stod(v);
-      std::cout << "Threshold: " << *test_param.threshold.fitness << '\n';
+      threshold.fitness = std::stod(v);
+      std::cout << "Threshold: " << *threshold.fitness << '\n';
     }
+  }
+
+  for (auto &test : test_collection)
+  {
+    test.second.generations = generations;
+    test.second.runs = runs;
+    test.second.threshold = threshold;
   }
 
   return true;
@@ -1804,11 +1816,12 @@ void test(const imgui_app::program::settings &settings)
 {
   std::stop_source source;
 
-  const auto test_dataset(
-    [source](std::filesystem::path dataset)
+  const auto test_driver(
+    [source](auto test)
     {
+      const auto &dataset(test.first);
       ultra::src::problem prob(dataset);
-      prob.params.evolution.generations = test_param.generations;
+      prob.params.evolution.generations = test.second.generations;
 
       prob.insert<ultra::real::sin>();
       prob.insert<ultra::real::cos>();
@@ -1833,19 +1846,19 @@ void test(const imgui_app::program::settings &settings)
 
       s.logger(sl).stop_source(source);
 
-      if (test_param.datasets.size() > 1)
+      if (test_collection.size() > 1)
         s.tag(dataset.stem());
 
-      return s.run(test_param.runs, test_param.threshold);
+      return s.run(test.second.runs, test.second.threshold);
     });
 
-  if (test_param.datasets.size() > 1)
+  if (test_collection.size() > 1)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  for (const auto &dataset : test_param.datasets)
-    tasks.push_back(std::async(std::launch::async, test_dataset, dataset));
+  for (const auto &test : test_collection)
+    tasks.push_back(std::async(std::launch::async, test_driver, test));
 
   std::jthread t_summaries(get_summaries);
 
