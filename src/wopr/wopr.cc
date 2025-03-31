@@ -469,45 +469,44 @@ std::vector<summary_data> ref_summaries;
   return buffer.c_str();
 }
 
-void render_best()
+void render_runs()
 {
   static bool reference_values {true};
 
-  std::vector<double> data;
+  std::vector<unsigned> data;
   {
     std::shared_lock guard(summaries_mutex);
     for (const auto &s : summaries)
-      data.push_back(s.best_accuracy * 100.0);
+      data.push_back(s.runs);
   }
 
-  std::vector<std::string> glabels;
+  std::vector<std::string> labels;
 
   assert(test_collection.size() == ref_summaries.size());
   for (std::size_t i(0); const auto &test : test_collection)
   {
-    glabels.push_back(test.first.stem().string());
-    data.push_back(ref_summaries[i].best_accuracy * 100.0);
+    labels.push_back(test.first.stem().string());
+    data.push_back(ref_summaries[i].runs);
     ++i;
   }
 
-  std::vector<const char *> glabels_chr(glabels.size());
-  std::ranges::transform(glabels, glabels_chr.begin(),
+  std::vector<const char *> labels_chr(labels.size());
+  std::ranges::transform(labels, labels_chr.begin(),
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
   std::vector<double> positions(test_collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
-  ImGui::Checkbox("Reference values##Test##Accuracy", &reference_values);
+  ImGui::Checkbox("Reference values##Test##Runs", &reference_values);
 
-  if (ImPlot::BeginPlot("##Best accuracy##Test", ImVec2(-1, -1),
-                        ImPlotFlags_NoTitle))
+  if (ImPlot::BeginPlot("##Runs##Test", ImVec2(-1, -1), ImPlotFlags_NoTitle))
   {
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
-    ImPlot::SetupAxes("Dataset", "Accuracy",
+    ImPlot::SetupAxes("Dataset", "Runs",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
-                           glabels_chr.data());
+                           labels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
                           test_collection.size(), 0.5, 0, 0);
@@ -537,17 +536,11 @@ void render_success_rate()
   {
     glabels.push_back(test.first.stem().string());
     data.push_back(ref_summaries[i].success_rate * 100.0);
-    if (ref_summaries[i].runs)
-      rlabels[i] += " vs " + std::to_string(ref_summaries[i].runs);
     ++i;
   }
 
   std::vector<const char *> glabels_chr(glabels.size());
   std::ranges::transform(glabels, glabels_chr.begin(),
-                         [](const auto &str) { return str.data(); });
-
-  std::vector<const char *> rlabels_chr(rlabels.size());
-  std::ranges::transform(rlabels, rlabels_chr.begin(),
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
@@ -564,10 +557,6 @@ void render_success_rate()
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
     ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
                            glabels_chr.data());
-    ImPlot::SetupAxis(ImAxis_X2, "Runs", ImPlotAxisFlags_AuxDefault);
-    ImPlot::SetupAxisLimits(ImAxis_X2, 0, test_collection.size()-1);
-    ImPlot::SetupAxisTicks(ImAxis_X2, positions.data(), test_collection.size(),
-                           rlabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
                           test_collection.size(), 0.5, 0, 0);
@@ -1237,7 +1226,7 @@ void render_test(const imgui_app::program &prg, bool *p_open)
           ImGui::Button(bs.c_str()))
         mxz_best = !mxz_best;
 
-      render_best();
+      render_runs();
       ImGui::EndChild();
     }
 
