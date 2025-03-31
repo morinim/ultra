@@ -13,5 +13,5 @@ foreach (example_src ${EXAMPLES_SRC})
 endforeach()
 
 # Resources needed by examples
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sonar/sonar.csv
+file(COPY ${ULTRA_SOURCE_DIR}/../data/sonar.csv
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
