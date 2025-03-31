@@ -35,6 +35,8 @@ int monitoring_window {0};
 std::chrono::duration<double> refresh_rate {2s};
 
 // Testing related variables.
+bool nogui {false};
+
 struct test_settings
 {
   unsigned generations;
@@ -1476,6 +1478,9 @@ void cmdl_usage()
   "      format.\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
+  "  --nogui\n"
+  "      Disable the graphical user interface performing the test in headless\n"
+  "      mode.\n"
   "  --population <filepath>\n"
   "      Allow monitoring of files with names different from the default\n"
   "      ones.\n"
@@ -1745,6 +1750,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     }
   }
 
+  nogui = cmdl["nogui"];
+
   for (auto &test : test_collection)
   {
     test.second.generations = generations;
@@ -1862,8 +1869,13 @@ void test(const imgui_app::program::settings &settings)
 
   std::jthread t_summaries(get_summaries);
 
-  imgui_app::program prg(settings);
-  prg.run(render_test);
+  if (nogui == false)
+  {
+    imgui_app::program prg(settings);
+    prg.run(render_test);
+
+    source.request_stop();
+  }
 
   const auto task_completed(
     [](const auto &future)
@@ -1871,10 +1883,10 @@ void test(const imgui_app::program::settings &settings)
       return future.wait_for(0ms) == std::future_status::ready;
     });
 
-  t_summaries.request_stop();
-  source.request_stop();
   while (!std::ranges::all_of(tasks, task_completed))
     std::this_thread::sleep_for(100ms);
+
+  t_summaries.request_stop();
 }
 
 int main(int argc, char *argv[])
