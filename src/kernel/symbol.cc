@@ -12,6 +12,8 @@
 
 #include "kernel/symbol.h"
 
+#include <atomic>
+
 namespace ultra
 {
 ///
@@ -25,7 +27,9 @@ namespace ultra
 symbol::symbol(const std::string &name, category_t c)
   : name_(name), category_(c)
 {
-  static opcode_t opc_count_(0);
+  // Atomic is necessary because multiple `ultra::problem` instances
+  // may be created concurrently, each adding their own `symbol`s in parallel.
+  static std::atomic<opcode_t> opc_count_(0);
 
   opcode_ = opc_count_++;
 
