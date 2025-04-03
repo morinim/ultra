@@ -474,11 +474,8 @@ void render_runs()
   static bool reference_values {true};
 
   std::vector<unsigned> data;
-  {
-    std::shared_lock guard(summaries_mutex);
-    for (const auto &s : summaries)
-      data.push_back(s.runs);
-  }
+  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
+    data.push_back(s.runs);
 
   std::vector<std::string> labels;
 
@@ -520,13 +517,10 @@ void render_success_rate()
 
   std::vector<double> data;
   std::vector<std::string> rlabels;
+  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
   {
-    std::shared_lock guard(summaries_mutex);
-    for (const auto &s : summaries)
-    {
-      data.push_back(s.success_rate * 100.0);
-      rlabels.push_back(std::to_string(s.runs));
-    }
+    data.push_back(s.success_rate * 100.0);
+    rlabels.push_back(std::to_string(s.runs));
   }
 
   std::vector<std::string> glabels;
@@ -1431,7 +1425,6 @@ void get_summaries(std::stop_token stoken)
 
       std::lock_guard guard(summaries_mutex);
       summaries[i-1] = summary_data(summary);
-
     }
 
     std::this_thread::sleep_for(3000ms);
