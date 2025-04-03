@@ -13,6 +13,8 @@
 #if !defined(ULTRA_UTILITY_H)
 #define      ULTRA_UTILITY_H
 
+#include "kernel/value.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -23,8 +25,6 @@
 #include <numeric>
 #include <ranges>
 #include <sstream>
-
-#include "kernel/value.h"
 
 namespace ultra
 {
