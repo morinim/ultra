@@ -75,16 +75,7 @@ public:
     {
       // If thread creation fails, stop all threads gracefully before
       // rethrowing.
-      {
-        std::lock_guard lock(mutex_);
-        stop_ = true;
-      }
-
-      // Signal each already created thread to stop (using std::jthread, they
-      // are expected to stop on destruction, but explicitly requesting stop
-      // can speed up shutdown).
-      for (auto &worker : workers_)
-        worker.request_stop();
+      stop();
 
       throw;
     }
@@ -154,7 +145,6 @@ public:
         throw std::runtime_error("submit called on stopped thread_pool");
 
       tasks_.emplace(std::move(task));
-      // tasks_.emplace(std::packaged_task<void()>([task = std::move(task)]() { task(); }));
     }
 
     condition_.notify_one();
@@ -179,11 +169,7 @@ public:
   /// Signals the threads to stop and notifies all waiting threads.
   ~thread_pool()
   {
-    {
-      std::lock_guard lock(mutex_);
-      stop_ = true;
-    }
-
+    stop();
     condition_.notify_all();
   }
 
@@ -192,6 +178,12 @@ public:
   thread_pool &operator=(const thread_pool &) = delete;
 
 private:
+  void stop()
+  {
+    std::lock_guard lock(mutex_);
+    stop_ = true;
+  }
+
   // Note that the order of declaration of the members is important: both the
   // `stop_` flag and the `tasks_` queue must be declared before the threads
   // vector. This ensures that the members are destroyed in the right order:
