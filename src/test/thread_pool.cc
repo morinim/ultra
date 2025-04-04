@@ -18,7 +18,7 @@
 TEST_SUITE("thread_pool")
 {
 
-using namespace std::chrono_literals;
+using namespace std::literals::chrono_literals;
 
 TEST_CASE("Number of threads")
 {
