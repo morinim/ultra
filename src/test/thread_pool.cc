@@ -12,6 +12,8 @@
 
 #include "utility/thread_pool.h"
 
+#include <chrono>
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
