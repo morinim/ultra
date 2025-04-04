@@ -15,10 +15,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+using namespace std::chrono_literals;
+
 TEST_SUITE("thread_pool")
 {
-
-using namespace std::literals::chrono_literals;
 
 TEST_CASE("Number of threads")
 {
