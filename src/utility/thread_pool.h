@@ -13,6 +13,7 @@
 #if !defined(ULTRA_THREAD_POOL_H)
 #define      ULTRA_THREAD_POOL_H
 
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <future>
@@ -37,8 +38,8 @@ class thread_pool
 public:
   /// Constructor for the thread pool.
   ///
-  /// \param[in] thread_count number of threads to launch. Defaults to the
-  ///                         hardware concurrency (or `1` if unknown or zero)
+  /// \param[in] thread_count number of working threads to launch. Defaults to
+  ///                         the hardware concurrency (or `1` if not available)
   explicit thread_pool(
     std::size_t thread_count = std::jthread::hardware_concurrency())
   {
@@ -56,6 +57,7 @@ public:
             for(;;)
             {
               std::packaged_task<void()> task;
+
               {
                 std::unique_lock lock(mutex_);
                 condition_.wait(lock,
@@ -67,7 +69,9 @@ public:
                 task = std::move(tasks_.front());
                 tasks_.pop();
               }
+
               task();
+              --task_counter_;
             }
           });
     }
@@ -75,7 +79,7 @@ public:
     {
       // If thread creation fails, stop all threads gracefully before
       // rethrowing.
-      stop();
+      shutdown();
 
       throw;
     }
@@ -91,6 +95,7 @@ public:
   /// Throws `std::runtime_error` if submit is called after the pool is
   /// stopped.
   template<class F, class... Args>
+  requires std::invocable<F, Args...>
   auto submit(F &&f, Args&&... args)
   {
     using return_type = std::invoke_result_t<std::decay_t<F>,
@@ -112,6 +117,7 @@ public:
       tasks_.emplace(std::move(task));
     }
 
+    ++task_counter_;
     condition_.notify_one();
     return res;
   }
@@ -128,6 +134,7 @@ public:
   /// Throws `std::runtime_error` if execute is called after the pool is
   /// stopped.
   template<class F, class... Args>
+  requires std::invocable<F, Args...>
   void execute(F &&f, Args&&... args)
   {
     // Using `std::function` could be more lightweight than
@@ -147,6 +154,7 @@ public:
       tasks_.emplace(std::move(task));
     }
 
+    ++task_counter_;
     condition_.notify_one();
   }
 
@@ -164,12 +172,33 @@ public:
     return tasks_.size();
   }
 
+  /// Checks whether there are unfinished tasks.
+  ///
+  /// \return `true` only if no tasks are currently being executed or queued
+  [[nodiscard]] bool has_pending_tasks() const noexcept
+  {
+    return task_counter_;
+  }
+
+  /// Allows controlled early termination.
+  void shutdown()
+  {
+    std::lock_guard lock(mutex_);
+    stop_ = true;
+
+    // Signal each already created thread to stop (using std::jthread, they
+    // are expected to stop on destruction, but explicitly requesting stop
+    // can speed up shutdown).
+    for (auto &worker : workers_)
+      worker.request_stop();
+  }
+
   /// Stops all threads and cleans up.
   ///
   /// Signals the threads to stop and notifies all waiting threads.
   ~thread_pool()
   {
-    stop();
+    shutdown();
     condition_.notify_all();
   }
 
@@ -178,12 +207,6 @@ public:
   thread_pool &operator=(const thread_pool &) = delete;
 
 private:
-  void stop()
-  {
-    std::lock_guard lock(mutex_);
-    stop_ = true;
-  }
-
   // Note that the order of declaration of the members is important: both the
   // `stop_` flag and the `tasks_` queue must be declared before the threads
   // vector. This ensures that the members are destroyed in the right order:
@@ -195,6 +218,8 @@ private:
 
   std::queue<std::packaged_task<void()>> tasks_;
   std::vector<std::jthread> workers_;
+
+  std::atomic<std::size_t> task_counter_ {0};
 };  // class thread_pool
 
 }  // namespace ultra
