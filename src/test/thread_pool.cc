@@ -13,6 +13,7 @@
 #include "utility/thread_pool.h"
 
 #include <chrono>
+#include <random>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -61,6 +62,7 @@ TEST_CASE("Run more tasks than threads")
   for (auto &f : futures)
     f.wait();
 
+  CHECK(!pool.has_pending_tasks());
   CHECK(pool.queue_size() == 0);
   CHECK(result == TASK_COUNT);
   CHECK(thread_ids.size() == THREAD_COUNT);
@@ -71,8 +73,8 @@ TEST_CASE("Miscellaneous tasks")
   ultra::thread_pool pool(2);
 
   constexpr int MAGIC_NUMBER = 42;
-  auto fi = pool.submit([] { return MAGIC_NUMBER; });
-  auto fs = pool.submit([] { return std::string{"42"}; });
+  auto fi(pool.submit([] { return MAGIC_NUMBER; }));
+  auto fs(pool.submit([] { return std::string{"42"}; }));
 
   CHECK(fi.get() == MAGIC_NUMBER);
   CHECK(fs.get() == std::string{"42"});
@@ -80,12 +82,12 @@ TEST_CASE("Miscellaneous tasks")
 
 TEST_CASE("Lambdas")
 {
-  const std::size_t TASK_COUNT(4);
-  std::vector<std::future<std::size_t>> v;
+  const unsigned TASK_COUNT(4);
+  std::vector<std::future<unsigned>> v;
 
   ultra::thread_pool pool(4);
 
-  for (std::size_t i(0); i < TASK_COUNT; ++i)
+  for (unsigned i(0); i < TASK_COUNT; ++i)
   {
     v.push_back(pool.submit([task_num = i]
     {
@@ -215,13 +217,13 @@ TEST_CASE("Support params of different types")
 
 TEST_CASE("Ensure work completes upon destruction")
 {
-  std::atomic<int> counter;
-  constexpr auto TOTAL_TASKS(30);
+  std::atomic<unsigned> counter(0);
+  constexpr unsigned TOTAL_TASKS(30);
   {
     ultra::thread_pool pool(4);
-    for (auto i(0); i < TOTAL_TASKS; ++i)
+    for (unsigned i(0); i < TOTAL_TASKS; ++i)
     {
-      auto task([i, &counter]()
+      const auto task([i, &counter]
       {
         std::this_thread::sleep_for(
           std::chrono::milliseconds((i + 1) * 10));
@@ -233,7 +235,7 @@ TEST_CASE("Ensure work completes upon destruction")
     }
   }
 
-  CHECK(counter.load() == TOTAL_TASKS);
+  CHECK(counter == TOTAL_TASKS);
 }
 
 static std::thread::id test_function(unsigned delay)
@@ -274,6 +276,116 @@ TEST_CASE("Threads are reused")
     CHECK(iter != thread_ids.end());
     thread_ids.erase(iter);
   }
+}
+
+TEST_CASE("Ensure task exception doesn't kill worker thread")
+{
+  const auto throw_task([](int) -> int
+  {
+    throw std::logic_error("Error occurred.");
+  });
+
+  const auto regular_task([](int input) -> int { return input * 2; });
+
+  std::atomic_uint_fast64_t count(0);
+
+  const auto throw_no_return([]
+  {
+    throw std::logic_error("Error occurred.");
+  });
+
+  const auto no_throw_no_return([&count]
+  {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    count += 1;
+  });
+
+  {
+    ultra::thread_pool pool{};
+
+    auto throw_future(pool.submit(throw_task, 1));
+    auto no_throw_future(pool.submit(regular_task, 2));
+
+    CHECK_THROWS(throw_future.get());
+    CHECK(no_throw_future.get() == 4);
+
+    // Do similar check for tasks without return.
+    pool.execute(throw_no_return);
+    pool.execute(no_throw_no_return);
+  }
+
+  CHECK(count == 1);
+}
+
+TEST_CASE("Ensure work completes when one thread is running, another is "
+          "finished, and a new task is submitted")
+{
+  std::atomic<std::size_t> last_thread;
+
+  {
+    ultra::thread_pool thread_pool(2);
+
+    // Ties up the first thread.
+    thread_pool.execute([&last_thread]
+    {
+      std::this_thread::sleep_for(5s);
+      last_thread = 1;
+    });
+
+    // Runs a quick job on the second thread.
+    thread_pool.execute([&last_thread]
+    {
+      std::this_thread::sleep_for(50ms);
+      last_thread = 2;
+    });
+
+    // Waits for the second thread to finish.
+    std::this_thread::sleep_for(1s);
+
+    // Executes a quick job.
+    thread_pool.execute([&last_thread]
+    {
+      std::this_thread::sleep_for(50ms);
+      last_thread = 3;
+    });
+  }
+
+  CHECK(last_thread == 1);
+}
+
+
+void recursive_sequential_sum(std::atomic<int> &counter, int count,
+                              ultra::thread_pool &pool)
+{
+  std::cout << "Executing " << count << std::endl;
+
+  counter += count;
+
+  if (count > 1)
+  {
+    pool.submit(recursive_sequential_sum,
+                 std::ref(counter), count - 1, std::ref(pool));
+  }
+}
+
+TEST_CASE("Recursive execute calls work correctly")
+{
+  std::atomic<int> counter(0);
+
+  constexpr auto start(1000);
+  {
+    ultra::thread_pool pool(4);
+    recursive_sequential_sum(counter, start, pool);
+
+    while (pool.has_pending_tasks())
+      std::this_thread::yield();
+  }
+
+  auto expected_sum(0);
+  for (int i(0); i <= start; ++i)
+    expected_sum += i;
+
+  CHECK(expected_sum == counter);
 }
 
 }  // TEST_SUITE("thread_pool")
