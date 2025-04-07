@@ -353,12 +353,9 @@ TEST_CASE("Ensure work completes when one thread is running, another is "
   CHECK(last_thread == 1);
 }
 
-
 void recursive_sequential_sum(std::atomic<int> &counter, int count,
                               ultra::thread_pool &pool)
 {
-  std::cout << "Executing " << count << std::endl;
-
   counter += count;
 
   if (count > 1)
@@ -377,8 +374,7 @@ TEST_CASE("Recursive execute calls work correctly")
     ultra::thread_pool pool(4);
     recursive_sequential_sum(counter, start, pool);
 
-    while (pool.has_pending_tasks())
-      std::this_thread::yield();
+    pool.wait();
   }
 
   auto expected_sum(0);

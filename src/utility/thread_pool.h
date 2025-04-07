@@ -31,7 +31,7 @@ namespace ultra
 ///
 /// This thread pool is inspired by:
 /// - "C++ Concurrency in Action" by Anthony Williams;
-/// - Jakob Progsch's simple end elegant thread pool
+/// - Jakob Progsch's simple and elegant thread pool
 ///   (https://github.com/progschj/ThreadPool);
 /// - Paul T's performant thread pool
 ///   (https://github.com/DeveloperPaul123/thread-pool). We have also adapted
@@ -39,13 +39,22 @@ namespace ultra
 ///
 /// It allows scheduling tasks and retrieving results via futures (`submit`) or
 /// simply executing tasks (`execute`).
+///
+/// \warning
+/// When using a recursive approach to submit tasks, you must call the `wait`
+/// member function to ensure that all tasks have been submitted before the
+/// thread_pool destructor is called. Otherwise, the destructor may set the
+/// non-accepting state prematurely (see the "Recursive execute calls work
+/// correctly" test case).
+///
 class thread_pool
 {
 public:
   /// Constructor for the thread pool.
   ///
   /// \param[in] thread_count number of worker threads to launch. Defaults to
-  ///                         the hardware concurrency (or `1` if not available)
+  ///                         the number of hardware threads available (or `1`
+  ///                         if that value is not available)
   explicit thread_pool(
     std::size_t thread_count = std::jthread::hardware_concurrency())
   {
@@ -60,18 +69,14 @@ public:
         workers_.emplace_back(
           [this](std::stop_token stop_token)
           {
-            for(;;)
+            for (;;)
             {
               std::packaged_task<void()> task;
 
               {
                 std::unique_lock lock(mutex_);
-                condition_.wait(
-                  lock,
-                  [this, &stop_token]
-                  {
-                    return stop_token.stop_requested() || !tasks_.empty();
-                  });
+                cv_available_.wait(lock, stop_token,
+                                   [this] { return !tasks_.empty(); });
 
                 if (stop_token.stop_requested() && tasks_.empty())
                   return;
@@ -81,7 +86,10 @@ public:
               }
 
               task();
-              --task_counter_;
+
+              if (std::lock_guard lock(task_counter_mutex_);
+                  --task_counter_ == 0)
+                cv_finished_.notify_all();
             }
           });
     }
@@ -106,10 +114,10 @@ public:
   requires std::invocable<F, Args...>
   auto submit(F &&f, Args&&... args)
   {
-    ++task_counter_;
-
     if (!accepting_tasks_)
       throw std::runtime_error("submit called on stopped thread_pool");
+
+    increment_task_counter();
 
     using return_type = std::invoke_result_t<std::decay_t<F>,
                                              std::decay_t<Args>...>;
@@ -120,13 +128,7 @@ public:
       });
 
     auto res(task.get_future());
-
-    {
-      std::lock_guard lock(mutex_);
-      tasks_.emplace(std::move(task));
-    }
-
-    condition_.notify_one();
+    enqueue_task(std::move(task));
     return res;
   }
 
@@ -143,10 +145,10 @@ public:
   requires std::invocable<F, Args...>
   void execute(F &&f, Args&&... args)
   {
-    ++task_counter_;
-
     if (!accepting_tasks_)
       throw std::runtime_error("execute called on stopped thread_pool");
+
+    increment_task_counter();
 
     std::packaged_task<void()> task(
       [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable
@@ -154,12 +156,7 @@ public:
         f(std::forward<Args>(args)...);
       });
 
-    {
-      std::lock_guard lock(mutex_);
-      tasks_.emplace(std::move(task));
-    }
-
-    condition_.notify_one();
+    enqueue_task(std::move(task));
   }
 
   /// Gets the number of worker threads in the pool.
@@ -180,12 +177,21 @@ public:
   ///                nonzero)
   [[nodiscard]] bool has_pending_tasks() const noexcept
   {
+    std::lock_guard lock(task_counter_mutex_);
     return task_counter_;
+  }
+
+  /// Blocks until all tasks have been completed.
+  void wait()
+  {
+    std::unique_lock lock(task_counter_mutex_);
+    cv_finished_.wait(lock, [this]{ return task_counter_ == 0; });
   }
 
   /// Initiates the termination process.
   ///
   /// Shutdown prevents new submissions and signals worker threads to exit once
+
   /// the current tasks have been processed and there are no pending tasks,
   /// which lets the pool gracefully complete any tasks that were already
   /// queued.
@@ -196,7 +202,7 @@ public:
     for (auto &worker : workers_)
       worker.request_stop();
 
-    condition_.notify_all();
+    cv_available_.notify_all();
   }
 
   /// Stops all threads and cleans up.
@@ -212,12 +218,40 @@ public:
   thread_pool &operator=(const thread_pool &) = delete;
 
 private:
-  mutable std::mutex mutex_;  // protects tasks_ and condition variables
-  std::condition_variable condition_;  // notifies worker threads when tasks
-                                       // are available
-  std::atomic<bool> accepting_tasks_ {true};
-  std::atomic<std::size_t> task_counter_ {0};
+  template <class Task>void enqueue_task(Task &&task)
+  {
+    {
+      std::lock_guard lock(mutex_);
+      tasks_.emplace(std::forward<Task>(task));
+    }
+    cv_available_.notify_one();
+  }
 
+  void increment_task_counter()
+  {
+    std::lock_guard lock(task_counter_mutex_);
+    ++task_counter_;
+  }
+
+  mutable std::mutex mutex_;  // protects tasks_ and condition variables
+
+  // A `stop_token` requires additional synchronization which is provided only
+  // by the `wait` method of `std::condition_variable_any`.
+  std::condition_variable_any cv_available_;  // notifies worker threads when
+                                              // tasks are available
+
+  // A separate mutex and condition variable to wait for task completion.
+  mutable std::mutex task_counter_mutex_;
+  std::condition_variable cv_finished_;
+  std::size_t task_counter_ {0};
+
+  std::atomic<bool> accepting_tasks_ {true};
+
+  // `packaged_task<void()>` can store any callable, destroyable, movable
+  // object that can be invoked with signature `void()`, which includes
+  // `packaged_task<R()>`! It has an `operator() with signature `void()` since
+  // the return value comes out of a `std::future`
+  // (e.g see https://stackoverflow.com/a/31078143/3235496).
   std::queue<std::packaged_task<void()>> tasks_;
 
   // Placing the thread-related object at the end helps ensure that when other
