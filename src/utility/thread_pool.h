@@ -55,6 +55,10 @@ public:
   /// \param[in] thread_count number of worker threads to launch. Defaults to
   ///                         the number of hardware threads available (or `1`
   ///                         if that value is not available)
+  ///
+  /// The constructor reserves space for the worker threads and launches each
+  /// worker as a lambda that continuously waits for work on a condition
+  /// variable.
   explicit thread_pool(
     std::size_t thread_count = std::jthread::hardware_concurrency())
   {
@@ -109,13 +113,13 @@ public:
   /// \tparam Args argument types to be forwarded to the callable
   /// \return      a future holding the result of the task
   ///
-  /// \throws std::runtime_error if submit is called after the pool is stopped.
+  /// \throws std::runtime_error if submit is invoked after the pool is stopped.
   template<class F, class... Args>
   requires std::invocable<F, Args...>
   auto submit(F &&f, Args&&... args)
   {
     if (!accepting_tasks_)
-      throw std::runtime_error("submit called on stopped thread_pool");
+      throw std::runtime_error("submit was invoked on stopped thread_pool");
 
     increment_task_counter();
 
@@ -146,7 +150,7 @@ public:
   void execute(F &&f, Args&&... args)
   {
     if (!accepting_tasks_)
-      throw std::runtime_error("execute called on stopped thread_pool");
+      throw std::runtime_error("execute was invoked on stopped thread_pool");
 
     increment_task_counter();
 
@@ -191,7 +195,6 @@ public:
   /// Initiates the termination process.
   ///
   /// Shutdown prevents new submissions and signals worker threads to exit once
-
   /// the current tasks have been processed and there are no pending tasks,
   /// which lets the pool gracefully complete any tasks that were already
   /// queued.
