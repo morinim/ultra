@@ -13,6 +13,7 @@
 #include "utility/thread_pool.h"
 
 #include <chrono>
+#include <numeric>
 #include <random>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
