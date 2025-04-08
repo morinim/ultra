@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -382,6 +382,164 @@ TEST_CASE("Recursive execute calls work correctly")
     expected_sum += i;
 
   CHECK(expected_sum == counter);
+}
+
+void recursive_parallel_sort(int *begin, int *end, int split_level,
+                             ultra::thread_pool &pool)
+{
+  if (split_level < 2 || end - begin < 2)
+    std::sort(begin, end);
+  else
+  {
+    const auto mid(begin + (end - begin) / 2);
+
+    if (split_level == 2)
+    {
+      const auto future(
+        pool.submit(recursive_parallel_sort, begin, mid, split_level/2,
+                    std::ref(pool)));
+      std::sort(mid, end);
+      future.wait();
+    }
+    else
+    {
+      const auto left(
+        pool.submit(recursive_parallel_sort, begin, mid, split_level/2,
+                    std::ref(pool)));
+      const auto right(
+        pool.submit(recursive_parallel_sort, mid, end, split_level/2,
+                    std::ref(pool)));
+
+      left.wait();
+      right.wait();
+    }
+    std::inplace_merge(begin, mid, end);
+  }
+}
+
+TEST_CASE("Recursive parallel sort")
+{
+  std::vector<int> data(10000);
+  std::iota(data.begin(), data.end(), 0);
+
+  std::ranges::shuffle(data, std::mt19937{std::random_device{}()});
+
+  {
+    ultra::thread_pool pool(4);
+    recursive_parallel_sort(data.data(), data.data() + data.size(), 4, pool);
+
+    pool.wait();
+  }
+
+  CHECK(std::ranges::is_sorted(data));
+}
+
+TEST_CASE("Ensure wait() properly blocks current execution.")
+{
+  std::atomic counter(0);
+  unsigned total_tasks(0);
+  constexpr unsigned THREAD_COUNT(4);
+
+  SUBCASE("with tasks") { total_tasks = 30; }
+  SUBCASE("with no tasks") { total_tasks = 0; }
+  SUBCASE("task count < thread count") { total_tasks = THREAD_COUNT / 2; }
+
+  ultra::thread_pool pool(THREAD_COUNT);
+  for (unsigned i(0); i < total_tasks; ++i)
+  {
+    const auto task([i, &counter]
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds((i + 1) * 10));
+      ++counter;
+    });
+    pool.execute(task);
+  }
+
+  pool.wait();
+
+  CHECK(counter == total_tasks);
+}
+
+struct counter_wrapper
+{
+  void increment_counter() {counter.fetch_add(1, std::memory_order_release);}
+
+  std::atomic<unsigned> counter {0};
+};
+
+TEST_CASE("Ensure wait() properly waits for tasks to fully complete")
+{
+  ultra::thread_pool local_pool;
+  constexpr unsigned task_count(10);
+
+  std::array<unsigned, task_count> counts = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  for (unsigned i(0); i < task_count; ++i)
+  {
+    counter_wrapper cnt_wrp;
+
+    for (unsigned var1(0); var1 < 17; ++var1)
+      for (unsigned var2(0); var2 < 12; ++var2)
+        local_pool.execute([&cnt_wrp] { cnt_wrp.increment_counter(); });
+
+    local_pool.wait();
+
+    counts[i] = cnt_wrp.counter.load(std::memory_order_acquire);
+  }
+
+  const auto all_correct_count(
+    std::ranges::all_of(counts, [](int count) { return count == 17 * 12; }));
+
+  const unsigned sum(std::accumulate(counts.begin(), counts.end(), 0u));
+
+  CHECK(sum == 17 * 12 * task_count);
+  CHECK(all_correct_count);
+}
+
+TEST_CASE("Ensure wait() can be called multiple times on the same pool")
+{
+  ultra::thread_pool local_pool;
+  constexpr unsigned task_count(10);
+
+  std::array<unsigned, task_count> counts = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  for (unsigned i(0); i < task_count; ++i)
+  {
+    counter_wrapper cnt_wrp;
+
+    for (unsigned var1(0); var1 < 16; ++var1)
+      for (unsigned var2(0); var2 < 13; ++var2)
+        local_pool.execute([&cnt_wrp] { cnt_wrp.increment_counter(); });
+
+    local_pool.wait();
+    counts[i] = cnt_wrp.counter.load(std::memory_order_acquire);
+  }
+
+  auto all_correct_count(
+    std::ranges::all_of(counts, [](unsigned count) {return count == 16*13;}));
+
+  auto sum(std::accumulate(counts.begin(), counts.end(), 0u));
+
+  CHECK(sum == 16 * 13 * task_count);
+  CHECK(all_correct_count);
+
+  for (unsigned i(0); i < task_count; ++i)
+  {
+    counter_wrapper cnt_wrp;
+
+    for (unsigned var1(0); var1 < 17; ++var1)
+      for (unsigned var2(0); var2 < 12; ++var2)
+        local_pool.execute([&cnt_wrp] { cnt_wrp.increment_counter(); });
+
+    local_pool.wait();
+    counts[i] = cnt_wrp.counter.load(std::memory_order_acquire);
+  }
+
+  all_correct_count = std::ranges::all_of(counts,
+                                          [](unsigned count)
+                                          { return count == 17 * 12; });
+  sum = std::accumulate(counts.begin(), counts.end(), 0u);
+  CHECK(sum == 17 * 12 * task_count);
+  CHECK(all_correct_count);
 }
 
 }  // TEST_SUITE("thread_pool")
