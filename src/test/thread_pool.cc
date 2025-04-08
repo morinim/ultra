@@ -12,6 +12,7 @@
 
 #include "utility/thread_pool.h"
 
+#include <array>
 #include <chrono>
 #include <numeric>
 #include <random>
