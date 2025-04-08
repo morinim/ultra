@@ -6,15 +6,17 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
 
-## UNDER DEVELOPMENT ##
 
-There is an ongoing transfer process from Vita. However, many features are available and fully functional.
+## PREMISE
 
-Compared to Vita, this framework is a major breakthrough but it isn't production-ready yet ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
+This software is a complete rewrite of [Vita][vita]. The code has been restructured and simplified, making it less *research-oriented*; however it retains all the useful aspects of the original project and **fully supports concurrency**. If you're transitioning from Vita, take a look at the [migration notes][migrating].
+
+We are approaching version 1.0 ([approximate view of the process](https://github.com/users/morinim/projects/4/)).
+
 
 ## OVERVIEW
 
-Ultra is a scalable, high-performance C++ framework for evolutionary algorithms, covering genetic programming, genetic algorithms and differential evolution.
+Ultra is a scalable, high-performance C++ framework for evolutionary algorithms, covering genetic programming, genetic algorithms, and differential evolution.
 
 It is suitable for [classification][classification], [symbolic regression][sr], content-based image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
 
@@ -26,14 +28,13 @@ It is suitable for [classification][classification], [symbolic regression][sr], 
 - fast experimentation with detailed run-log
 - [more][features]
 
-This software is a complete rewrite of [Vita][vita]. The code has been restructured, simplified and is now less *research-oriented*; however it retains all the useful aspects of the original project and **fully supports concurrency**. If you're transitioning from Vita, take a look at the [migration notes][migrating].
 
 ## EXAMPLES
 
-### Mathematical optimization
+### Mathematical optimisation
 <img src="https://github.com/morinim/ultra/wiki/img/rastrigin.png" width="300">
 
-The core operation is:
+The core operations are:
 
 ```C++
 de::problem prob(dimensions, {-5.12, 5.12});
@@ -91,7 +92,7 @@ It is quite straightforward (further details can be found in the [specific tutor
 ### Classification
 <img src="https://github.com/morinim/ultra/wiki/img/sonar.jpg" width="300">
 
-This is a machine learning example that classifies sonar data into two categories (rocks vs mines):
+This is a machine learning example that classifies sonar data into two categories: rocks and mines.
 
 ```C++
   // READING INPUT DATA
@@ -112,10 +113,12 @@ This is a machine learning example that classifies sonar data into two categorie
 
 More information in the [specific tutorial][sonar].
 
+
 ## DOCUMENTATION
 
-Comprehensive documentation is available on the [official site][ultrasite]. It is recommended that you start with the [tutorials].
-Also, consider that the wiki on GitHub is the source for the ultraevolution.org site but may contain information regarding features not yet available in official releases.
+Comprehensive documentation is available on the [official site][ultrasite]. We recommended that you start with the [tutorials].
+Note that the GitHub wiki, which is the source for the ultraevolution.org site, may contain information on features that are not yet available in official releases.
+
 
 ## BUILD REQUIREMENTS
 
@@ -129,7 +132,8 @@ However, since core members of the Ultra project have no access to these platfor
 
 ### Optional
 
-* [Python v3][python] for additional functionalities
+* [Python 3][python] for additional functionalities
+
 
 ## GETTING THE SOURCE
 
@@ -143,11 +147,13 @@ Run the following command:
 git clone https://github.com/morinim/ultra.git
 ```
 
+
 ## THE ULTRA DISTRIBUTION
 
 This is a sketch of the resulting directory structure:
 ```
 ultra/
+  data/
   doc/
   misc/
   src/
@@ -164,6 +170,7 @@ ultra/
   SECURITY.md
 ```
 
+
 ## SETTING UP THE BUILD
 
 ```shell
@@ -173,7 +180,7 @@ cmake -B build/ src/
 
 You're now ready to build using the underlying build system tool:
 
-```Shell
+```shell
 cmake --build build/
 ```
 
@@ -181,9 +188,10 @@ The output files are stored in sub-directories of `build/` (out-of-source build)
 
 Further details are available in the [build walkthrough][build].
 
+
 ## INSTALLING ULTRA
 
-To install Ultra use the command:
+To install Ultra, use the command:
 
 ```shell
 cmake --install build/
@@ -202,9 +210,11 @@ As a side note, to build the global header manually, use:
 ```
 (must be executed from the main directory of the repository)
 
+
 ## LICENSE
 
 [Mozilla Public License v2.0][mpl2] (also available in the accompanying [LICENSE][license] file).
+
 
 ## VERSIONING
 <img align="left" src="https://imgs.xkcd.com/comics/workflow.png">
