@@ -103,7 +103,7 @@ def main():
     print("\n\nRELEASE NOTE\n")
     print("1. Build.  cmake --preset=clang_sanitize_address src/ ; cmake --build build/")
     print("2. Check.  cd build/test ; ctest")
-    print('3. Commit. git commit -am "doc: change revision number v'
+    print('3. Commit. git commit -am "docs: update version to v'
           + version + '"')
     print("4. Tag.    git tag -a v" + version + " -m \"tag message\"")
     print("\nRemember to 'git push' both code and tag. For the tag:\n")
