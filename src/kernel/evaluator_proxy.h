@@ -23,14 +23,13 @@ namespace ultra
 ///
 /// Provides a surrogate for an evaluator to control access to it.
 ///
-/// evaluator_proxy uses an ad-hoc internal hash table to cache fitness scores
+/// evaluator_proxy uses a custom internal hash table to cache fitness scores
 /// of individuals.
 ///
 template<Evaluator E>
 class evaluator_proxy
 {
 public:
-  explicit evaluator_proxy(E);
   evaluator_proxy(E, bitwidth);
 
   // Serialization.
@@ -56,7 +55,7 @@ private:
   E eva_;
 
   // Hash table cache.
-  static cache<evaluator_fitness_t<E>> cache_;
+  mutable cache<evaluator_fitness_t<E>> cache_;
 };
 
 #include "kernel/evaluator_proxy.tcc"

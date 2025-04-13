@@ -17,28 +17,16 @@
 #if !defined(ULTRA_EVALUATOR_PROXY_TCC)
 #define      ULTRA_EVALUATOR_PROXY_TCC
 
-template<Evaluator E>
-cache<evaluator_fitness_t<E>> evaluator_proxy<E>::cache_ {};
-
 ///
 /// \param[in] eva the "real" evaluator
 /// \param[in] ts  `2^ts` is the number of elements of the cache
 ///
 template<Evaluator E>
-evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva))
+evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
+                                                          cache_(ts)
 {
   static_assert(!std::derived_from<E, evaluator_proxy>);
   Expects(ts);
-  cache_.resize(ts);
-}
-
-///
-/// \param[in] eva the "real" evaluator
-///
-template<Evaluator E>
-evaluator_proxy<E>::evaluator_proxy(E eva) : eva_(std::move(eva))
-{
-  static_assert(!std::derived_from<E, evaluator_proxy>);
 }
 
 ///
