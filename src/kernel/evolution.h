@@ -13,13 +13,12 @@
 #if !defined(ULTRA_EVOLUTION_H)
 #define      ULTRA_EVOLUTION_H
 
-#include <future>
-
 #include "kernel/evolution_strategy.h"
 #include "kernel/layered_population.h"
 #include "kernel/search_log.h"
 
 #include "utility/term.h"
+#include "utility/thread_pool.h"
 #include "utility/timer.h"
 
 namespace ultra

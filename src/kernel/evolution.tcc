@@ -30,7 +30,7 @@ evolution<E>::evolution(const problem &prob, E &eva) : pop_(prob), eva_(eva)
 }
 
 ///
-/// \return `true` when evolution should be interrupted
+/// \return `true` if the evolution should be interrupted
 ///
 template<Evaluator E>
 bool evolution<E>::stop_condition() const
@@ -207,28 +207,20 @@ summary<typename evolution<E>::individual_t,
 
   std::stop_source source;
 
+  // Asynchronous population update: each newly generated offspring can replace   // an individual of the current population (aka steady state population).
+  // Asynchronous update permits new individual to contribute to the evolution
+  // immediately and can speed up the convergence.
   const auto evolve_subpop(
-    [&, stop_token = source.get_token()](auto subpop_iter)
+    [&, stop_token = source.get_token()](auto subpop_it)
     {
-      auto evolve(strategy.operations(pop_, subpop_iter,
+      auto evolve(strategy.operations(pop_, subpop_it,
                                       sum_.starting_status()));
 
       // We must use `safe_size()` because other threads might migrate
       // individuals in this subpopulation.
-      for (auto cycles(subpop_iter->safe_size()); cycles; --cycles)
+      for (auto cycles(subpop_it->safe_size()); cycles; --cycles)
         if (!stop_token.stop_requested())
           evolve();
-          // Asynchronous population update: each newly generated offspring can
-          // replace an individual of the current population (aka steady state
-          // population).
-          // Asynchronous update permits new individual to contribute to the
-          // evolution immediately and can speed up the convergence.
-    });
-
-  const auto task_completed(
-    [](const auto &future)
-    {
-      return future.wait_for(0ms) == std::future_status::ready;
     });
 
   scored_individual previous_best(sum_.best());
@@ -251,6 +243,8 @@ summary<typename evolution<E>::individual_t,
 
   bool use_sleep(false);
 
+  ultra::thread_pool pool;
+
   for (bool stop(false); !stop; ++sum_.generation)
   {
     if (shake_)
@@ -260,13 +254,12 @@ summary<typename evolution<E>::individual_t,
 
     const auto subpops(pop_.range_of_layers());
 
-    std::vector<std::future<void>> tasks;
     for (auto l(subpops.begin()); l != subpops.end(); ++l)
-      tasks.push_back(std::async(std::launch::async, evolve_subpop, l));
+      pool.execute(evolve_subpop, l);
 
     ultraDEBUG << "Tasks running";
 
-    while (!std::ranges::all_of(tasks, task_completed))
+    while (pool.has_pending_tasks())
     {
       if (from_last_msg.elapsed() > 2s)
       {
