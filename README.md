@@ -2,6 +2,7 @@
 [![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
 
 ![C++20](https://img.shields.io/badge/c%2B%2B-20-blue.svg)
+![Platform](https://img.shields.io/badge/platform-cross--platform-lightgrey)
 [![Build and test all platforms](https://github.com/morinim/ultra/actions/workflows/build_release.yml/badge.svg)][build_status]
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
