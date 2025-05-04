@@ -13,6 +13,12 @@
 #if !defined(ULTRA_DATAFRAME_H)
 #define      ULTRA_DATAFRAME_H
 
+#include "kernel/distribution.h"
+#include "kernel/exceptions.h"
+#include "kernel/problem.h"
+#include "kernel/gp/src/columns_info.h"
+#include "utility/pocket_csv.h"
+
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -20,11 +26,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
-#include "kernel/distribution.h"
-#include "kernel/problem.h"
-#include "kernel/gp/src/columns_info.h"
-#include "utility/pocket_csv.h"
 
 namespace tinyxml2 { class XMLDocument; }
 
@@ -143,9 +144,11 @@ private:
   using record_t = std::vector<std::string>;
 
   bool read_record(const record_t &, bool);
-  [[nodiscard]] src::example to_example(const record_t &, bool);
 
-  [[nodiscard]] class_t encode(const std::string &);
+  template<std::ranges::sized_range R>
+  [[nodiscard]] example to_example(const R &, bool);
+
+  [[nodiscard]] class_t encode(const value_t &);
 
   std::size_t read_csv(const std::filesystem::path &, const params &);
   std::size_t read_xrff(const std::filesystem::path &, const params &);
@@ -238,6 +241,8 @@ dataframe::iterator dataframe::insert(dataframe::const_iterator pos,
 {
   return dataset_.insert(pos, first, last);
 }
+
+#include "kernel/gp/src/dataframe.tcc"
 
 }  // namespace ultra::src
 

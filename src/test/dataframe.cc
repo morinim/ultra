@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <sstream>
-
 #include "test/debug_datasets.h"
 
 #include "kernel/random.h"
 #include "kernel/gp/src/dataframe.h"
+
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -24,8 +24,7 @@ class random_csv_line
 {
 public:
   explicit random_csv_line(const std::vector<ultra::domain_t> &format)
-    : head_(format.front()),
-      tail_(std::next(format.begin()), format.end())
+    : head_(format.front()), tail_(std::next(format.begin()), format.end())
   {
     Expects(format.size());
   }

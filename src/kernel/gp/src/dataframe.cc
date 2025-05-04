@@ -10,39 +10,18 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <algorithm>
-
 #include "kernel/gp/src/dataframe.h"
+
 #include "kernel/exceptions.h"
 #include "kernel/random.h"
 #include "utility/log.h"
 
 #include "tinyxml2/tinyxml2.h"
 
+#include <algorithm>
+
 namespace ultra::src
 {
-
-namespace
-{
-
-// \param[in] s the string to be converted
-// \param[in] d what type should `s` be converted in?
-// \return      the converted data or an empty value (`std::monostate`) if no
-///             conversion can be applied
-//
-// `convert("123.1", D_DOUBLE) == value_t(123.1f)`
-[[nodiscard]] value_t convert(const std::string &s, domain_t d)
-{
-  switch (d)
-  {
-  case d_int:    return std::stoi(s);
-  case d_double: return std::stod(s);
-  case d_string: return            s;
-  default:       return           {};
-  }
-}
-
-}  // namespace
 
 ///
 /// Gets the `class_t` ID (aka label) for a given example.
@@ -245,55 +224,14 @@ void dataframe::push_back(const example &e)
 /// \param[in] label name of a class of the learning collection
 /// \return          the (numerical) value associated with class `label`
 ///
-class_t dataframe::encode(const std::string &label)
+class_t dataframe::encode(const value_t &label)
 {
-  if (!classes_map_.contains(label))
-    classes_map_[label] = classes();
+  const auto str(std::get<D_STRING>(label));
 
-  return classes_map_[label];
-}
+  if (!classes_map_.contains(str))
+    classes_map_[str] = classes();
 
-///
-/// \param[in] v            the raw example (features encoded as `std::string`s)
-/// \param[in] add_instance should we automatically add instances for text
-///                         features?
-/// \return                 `v` converted to `example` type
-///
-/// \remark
-/// When `add_instance` is `true` the function can have side-effects (changing
-/// the set of admissible instances associated with a text-feature).
-///
-example dataframe::to_example(const record_t &v, bool add_instance)
-{
-  Expects(v.size());
-  Expects(v.size() == columns.size());
-
-  example ret;
-
-  for (std::size_t i(0); i < v.size(); ++i)
-    if (const auto domain(columns[i].domain()); domain != d_void)
-    {
-      const auto feature(trim(v[i]));
-
-      if (i == 0)
-      {
-        const bool classification(!is_number(v.front()));
-
-        // Strings could be used as label for classes, but integers
-        // are simpler and faster to manage (arrays instead of maps).
-        if (classification)
-          ret.output = static_cast<D_INT>(encode(feature));
-        else
-          ret.output = convert(feature, domain);
-      }
-      else  // input value
-        ret.input.push_back(convert(feature, domain));
-
-      if (add_instance && domain == d_string)
-        columns[i].add_state(feature);
-    }
-
-  return ret;
+  return classes_map_[str];
 }
 
 ///
@@ -532,7 +470,7 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 }
 
 ///
-/// Loads a CSV file into the active dataset.
+/// Loads a CSV file into the dataframe.
 ///
 /// \param[in] from the csv stream
 /// \param[in] p    additional, optional, parameters (see `params` structure)
