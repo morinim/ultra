@@ -13,21 +13,19 @@
 #if !defined(ULTRA_SRC_PROBLEM_H)
 #define      ULTRA_SRC_PROBLEM_H
 
-#include <filesystem>
-#include <string>
-
 #include "kernel/problem.h"
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/multi_dataset.h"
+
+#include <filesystem>
+#include <string>
 
 namespace ultra::src
 {
 
 ///
-/// Provides a GP-specific interface to the generic `problem` class.
-///
-/// The class is a facade that provides a simpler interface to represent
-/// symbolic regression / classification tasks.
+/// A specialization of the generic `problem` class for symbolic regression and
+/// classification problems.
 ///
 class problem : public ultra::problem
 {

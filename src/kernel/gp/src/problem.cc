@@ -10,8 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <set>
-
 #include "kernel/gp/src/problem.h"
 #include "kernel/exceptions.h"
 #include "kernel/gp/function.h"
@@ -20,10 +18,12 @@
 #include "kernel/gp/primitive/string.h"
 #include "kernel/gp/src/variable.h"
 
+#include <set>
+
 namespace ultra::src
 {
 
-problem::problem(dataframe d) : problem()
+problem::problem(dataframe d)
 {
   ultraINFO << "Importing dataset...";
   data[dataset_t::training] = std::move(d);
