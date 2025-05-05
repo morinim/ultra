@@ -61,8 +61,8 @@ void inplace_trim(T &v)
 template<std::ranges::sized_range R>
 example dataframe::to_example(const R &r, bool add_instance)
 {
-  Expects(v.size());
-  Expects(v.size() == columns.size());
+  Expects(r.size());
+  Expects(r.size() == columns.size());
 
   example ret;
 
