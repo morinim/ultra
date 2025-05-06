@@ -14,7 +14,3 @@ foreach (test_src ${TESTS_SRC})
     add_test(NAME ${test} COMMAND ${test})
   endif()
 endforeach()
-
-# Resources needed for testing
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_resources/testall.bat
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
