@@ -23,47 +23,7 @@ jobs:
       matrix:
         config:
         - {
-            name: "Ubuntu CLANG Debug",
-            build_type: "Debug",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "clang", cxx: "clang++"
-          }
-        - {
-            name: "Ubuntu CLANG Release",
-            build_type: "Release",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "clang", cxx: "clang++"
-          }
-        - {
-            name: "Ubuntu CLANG TSan",
-            build_type: "Release",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "clang -fsanitize=thread", cxx: "clang++ -fsanitize=thread"
-          }
-        - {
-            name: "Ubuntu GCC Debug",
-            build_type: "Debug",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "gcc", cxx: "g++"
-          }
-        - {
-            name: "Ubuntu GCC Release",
-            build_type: "Release",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "gcc", cxx: "g++"
-          }
-        - {
-            name: "Ubuntu GCC ARM",
+            name: "ARM Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-24.04-arm,
             shell: bash,
@@ -71,7 +31,55 @@ jobs:
             cc: "gcc", cxx: "g++"
           }
         - {
-            name: "Ubuntu GCC TSan",
+            name: "ARM Windows MSVC Release",
+            build_type: "Release",
+            os: windows-11-arm,
+            shell: powershell,
+            generator: default,
+            cc: "cl", cxx: "cl"
+          }
+        - {
+            name: "Intel Ubuntu CLANG Debug",
+            build_type: "Debug",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "clang", cxx: "clang++"
+          }
+        - {
+            name: "Intel Ubuntu CLANG Release",
+            build_type: "Release",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "clang", cxx: "clang++"
+          }
+        - {
+            name: "Intel Ubuntu CLANG TSan",
+            build_type: "Release",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "clang -fsanitize=thread", cxx: "clang++ -fsanitize=thread"
+          }
+        - {
+            name: "Intel Ubuntu GCC Debug",
+            build_type: "Debug",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Intel Ubuntu GCC Release",
+            build_type: "Release",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "Intel Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
@@ -79,7 +87,7 @@ jobs:
             cc: "gcc -fsanitize=thread", cxx: "g++ -fsanitize=thread"
           }
         - {
-            name: "Windows MINGW Release",
+            name: "Intel Windows MINGW Release",
             build_type: "Release",
             os: windows-latest,
             shell: cmd,
@@ -87,7 +95,7 @@ jobs:
             cc: "gcc", cxx: "g++"
           }
         - {
-            name: "Windows MSVC Debug",
+            name: "Intel Windows MSVC Debug",
             build_type: "Debug",
             os: windows-latest,
             shell: powershell,
@@ -95,7 +103,7 @@ jobs:
             cc: "cl", cxx: "cl"
           }
         - {
-            name: "Windows MSVC Release",
+            name: "Intel Windows MSVC Release",
             build_type: "Release",
             os: windows-latest,
             shell: powershell,
