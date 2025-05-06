@@ -63,6 +63,14 @@ jobs:
             cc: "gcc", cxx: "g++"
           }
         - {
+            name: "Ubuntu GCC ARM",
+            build_type: "Release",
+            os: ubuntu-24.04-arm,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
             name: "Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-latest,
