@@ -22,6 +22,7 @@
 # <type> can be:
 #
 # build: changes that affect the build system or external dependencies
+# chore: general maintenance tasks that aren't bug fixes or features
 # ci: changes to CI configuration files and scripts
 # docs: documentation only changes
 # feat: a new feature
