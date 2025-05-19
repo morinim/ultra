@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of POCKET_CSV.
  *
- *  \copyright Copyright (C) 2016-2024 Manlio Morini.
+ *  \copyright Copyright (C) 2022 Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -15,11 +15,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <sstream>
+#include <vector>
 
 namespace pocket_csv
 {
@@ -37,11 +41,11 @@ struct dialect
   char delimiter {0};
   /// When `true` skips leading and trailing spaces adjacent to commas.
   bool trim_ws {false};
-  /// When `HAS_HEADER` assumes a header row is present. When `GUESS_HEADER`
-  /// triggers the sniffer.
+  /// If `HAS_HEADER` assumes a header row is present; if `GUESS_HEADER`,
+  /// sniffs.
   enum header_e {GUESS_HEADER = -1, NO_HEADER = 0, HAS_HEADER = 1} has_header
   {GUESS_HEADER};
-  /// Controls if quotes should be keep by the reader.
+  /// Controls whether quotes should be keep by the reader.
   /// - `KEEP_QUOTES`. Always keep the quotes;
   /// - `REMOVE_QUOTES`. Never keep quotes.
   /// It defaults to `REMOVE_QUOTES`.
@@ -52,7 +56,7 @@ struct dialect
 /// Simple parser for CSV files.
 ///
 /// \warning
-/// The class doesn't support multi-line fields.
+/// This class does not support multi-line fields.
 ///
 class parser
 {
@@ -63,19 +67,22 @@ public:
   explicit parser(std::istream &);
   parser(std::istream &, const dialect &);
 
-  [[nodiscard]] const dialect &active_dialect() const;
+  [[nodiscard]] const dialect &active_dialect() const noexcept;
 
-  parser &delimiter(char) &;
-  parser delimiter(char) &&;
+  parser &delimiter(char) & noexcept;
+  parser delimiter(char) && noexcept;
 
-  parser &quoting(dialect::quoting_e) &;
-  parser quoting(dialect::quoting_e) &&;
+  parser &quoting(dialect::quoting_e) & noexcept;
+  parser quoting(dialect::quoting_e) && noexcept;
 
-  parser &trim_ws(bool) &;
-  parser trim_ws(bool) &&;
+  parser &skip_header() & noexcept;
+  parser skip_header() && noexcept;
 
-  parser &filter_hook(filter_hook_t) &;
-  parser filter_hook(filter_hook_t) &&;
+  parser &trim_ws(bool) & noexcept;
+  parser trim_ws(bool) && noexcept;
+
+  parser &filter_hook(filter_hook_t) & noexcept;
+  parser filter_hook(filter_hook_t) && noexcept;
 
   class const_iterator;
   [[nodiscard]] const_iterator begin() const;
@@ -87,6 +94,7 @@ private:
 
   filter_hook_t filter_hook_ {nullptr};
   dialect dialect_;
+  bool skip_header_ {false};
 };  // class parser
 
 ///
@@ -130,14 +138,14 @@ public:
   /// \param[in] rhs second term of comparison
   /// \return        `true` if iterators point to the same line
   [[nodiscard]] friend bool operator==(const const_iterator &lhs,
-                                       const const_iterator &rhs)
+                                       const const_iterator &rhs) noexcept
   {
-    return lhs.ptr_ == rhs.ptr_ && lhs.value_ == rhs.value_
+    return lhs.ptr_ == rhs.ptr_
            && (!lhs.ptr_ || lhs.ptr_->tellg() == rhs.ptr_->tellg());
   }
 
   [[nodiscard]] friend bool operator!=(const const_iterator &lhs,
-                                       const const_iterator &rhs)
+                                       const const_iterator &rhs) noexcept
   {
     return !(lhs == rhs);
   }
@@ -179,14 +187,14 @@ struct char_stat
 [[nodiscard]] inline std::string trim(const std::string &s)
 {
   const auto front(std::find_if_not(
-               s.begin(), s.end(),
-               [](auto c) { return std::isspace(c); }));
+                     s.begin(), s.end(),
+                     [](unsigned char c) { return std::isspace(c); }));
 
   // The search is limited in the reverse direction to the last non-space value
   // found in the search in the forward direction.
   const auto back(std::find_if_not(
                     s.rbegin(), std::make_reverse_iterator(front),
-                    [](auto c) { return std::isspace(c); }).base());
+                    [](unsigned char c) { return std::isspace(c); }).base());
 
   return {front, back};
 }
@@ -200,15 +208,16 @@ struct char_stat
   s = trim(s);
 
   char *end;
-  strtod(s.c_str(), &end);  // if no conversion can be performed, `end` is set
-                            // to `s.c_str()`
-  return end != s.c_str() && *end == '\0';
+  const double val(std::strtod(s.c_str(), &end));  // if no conversion can be
+                                                   // performed, `end` is set
+                                                   // to `s.c_str()`
+  return end != s.c_str() && *end == '\0' && std::isfinite(val);
 }
 
 ///
 /// Calculates the mode of a sequence of natural numbers.
 ///
-/// \param[in] v a sequence of natural number
+/// \param[in] v a sequence of natural numbers
 /// \return    a vector of `{mode, counter}` pairs (the input sequence may have
 ///            more than one mode)
 ///
@@ -249,7 +258,7 @@ struct char_stat
   return ret;
 }
 
-[[nodiscard]] inline int find_column_tag(const std::string &s)
+[[nodiscard]] inline column_tag find_column_tag(const std::string &s)
 {
   const auto ts(internal::trim(s));
 
@@ -258,7 +267,7 @@ struct char_stat
   if (internal::is_number(ts))
     return number_tag;
 
-  return static_cast<int>(s.length());
+  return static_cast<column_tag>(s.length());
 }
 
 [[nodiscard]] inline bool capitalized(std::string s)
@@ -267,7 +276,7 @@ struct char_stat
 
   return !s.empty() && std::isupper(s.front())
          && std::all_of(std::next(s.begin()), s.end(),
-                        [](auto c)
+                        [](unsigned char c)
                         {
                           return std::isprint(c)
                                  && (!std::isalpha(c) || std::islower(c));
@@ -277,7 +286,7 @@ struct char_stat
 [[nodiscard]] inline bool lower_case(const std::string &s)
 {
   return std::all_of(s.begin(), s.end(),
-                     [](auto c)
+                     [](unsigned char c)
                      {
                        return !std::isalpha(c) || std::islower(c);
                      });
@@ -286,7 +295,7 @@ struct char_stat
 [[nodiscard]] inline bool upper_case(const std::string &s)
 {
   return std::all_of(s.begin(), s.end(),
-                     [](auto c)
+                     [](unsigned char c)
                      {
                        return !std::isalpha(c) || std::isupper(c);
                      });
@@ -309,7 +318,7 @@ struct char_stat
   parser.quoting(pocket_csv::dialect::REMOVE_QUOTES);
 
   const auto columns(header.size());
-  std::vector<int> column_types(columns, none_tag);
+  std::vector<internal::column_tag> column_types(columns, none_tag);
 
   unsigned checked(0);
   for (auto it(std::next(parser.begin())); it != parser.end(); ++it)
@@ -454,8 +463,9 @@ struct char_stat
 ///
 /// *Sniffs* the format of a CSV file (delimiter, headers).
 ///
-/// \param[in] is stream containing CSV data
-/// \return       a `dialect` object
+/// \param[in] is    stream containing CSV data
+/// \param[in] lines number of lines used for sniffing data format
+/// \return          a `dialect` object
 ///
 /// For detecting the **header** creates a dictionary of types of data in each
 /// column. If any column is of a single type (say, integers), *except* for the
@@ -484,13 +494,11 @@ struct char_stat
 ///
 /// \note
 /// Somewhat inspired by the dialect sniffer developed by Clifford Wells for
-/// his Python-DSV package (Wells, 2002) ehich was incorporated into Python
+/// his Python-DSV package (Wells, 2002) which was incorporated into Python
 /// v2.3.
 ///
-[[nodiscard]] inline dialect sniffer(std::istream &is)
+[[nodiscard]] inline dialect sniffer(std::istream &is, std::size_t lines = 20)
 {
-  const std::size_t lines(20);
-
   dialect d;
 
   d.delimiter = internal::guess_delimiter(is, lines);
@@ -510,7 +518,7 @@ inline parser::parser(std::istream &is) : parser(is, {})
 }
 
 ///
-/// Initializes theparser trying to sniff the CSV format.
+/// Initializes the parser trying by sniffing the CSV format.
 ///
 /// \param[in] is input stream containing CSV data
 /// \param[in] d  dialect used for CSV data
@@ -518,12 +526,14 @@ inline parser::parser(std::istream &is) : parser(is, {})
 inline parser::parser(std::istream &is, const dialect &d)
   : is_(&is), dialect_(d)
 {
+  is.clear();
+  is.seekg(0, std::ios::beg);  // back to the start!
 }
 
 ///
 /// \return a constant reference to the active CSV dialect
 ///
-inline const pocket_csv::dialect &parser::active_dialect() const
+inline const pocket_csv::dialect &parser::active_dialect() const noexcept
 {
   return dialect_;
 }
@@ -532,12 +542,12 @@ inline const pocket_csv::dialect &parser::active_dialect() const
 /// \param[in] delim separator character for fields
 /// \return          a reference to `this` object (fluent interface)
 ///
-inline parser &parser::delimiter(char delim) &
+inline parser &parser::delimiter(char delim) & noexcept
 {
   dialect_.delimiter = delim;
   return *this;
 }
-inline parser parser::delimiter(char delim) &&
+inline parser parser::delimiter(char delim) && noexcept
 {
   dialect_.delimiter = delim;
   return *this;
@@ -547,15 +557,31 @@ inline parser parser::delimiter(char delim) &&
 /// \param[in] q quoting style (see `pocket_csv::dialect`)
 /// \return      a reference to `this` object (fluent interface)
 ///
-inline parser &parser::quoting(dialect::quoting_e q) &
+inline parser &parser::quoting(dialect::quoting_e q) & noexcept
 {
   dialect_.quoting = q;
   return *this;
 }
 
-inline parser parser::quoting(dialect::quoting_e q) &&
+inline parser parser::quoting(dialect::quoting_e q) && noexcept
 {
   dialect_.quoting = q;
+  return *this;
+}
+
+///
+/// Skips a possible header when iterating over the rows of the CSV file.
+///
+/// \return a reference to `this` object (fluent interface)
+///
+inline parser &parser::skip_header() & noexcept
+{
+  skip_header_ = true;
+  return *this;
+}
+inline parser parser::skip_header() && noexcept
+{
+  skip_header_ = true;
   return *this;
 }
 
@@ -569,12 +595,12 @@ inline parser parser::quoting(dialect::quoting_e q) &&
 /// prohibited by RFC 4180, which states: *spaces are considered part of a
 /// field and should not be ignored*.
 ///
-inline parser &parser::trim_ws(bool t) &
+inline parser &parser::trim_ws(bool t) & noexcept
 {
   dialect_.trim_ws = t;
   return *this;
 }
-inline parser parser::trim_ws(bool t) &&
+inline parser parser::trim_ws(bool t) && noexcept
 {
   dialect_.trim_ws = t;
   return *this;
@@ -602,12 +628,12 @@ inline parser parser::trim_ws(bool t) &&
 ///
 /// \see https://stackoverflow.com/q/10593686/3235496
 ///
-inline parser &parser::filter_hook(filter_hook_t filter) &
+inline parser &parser::filter_hook(filter_hook_t filter) & noexcept
 {
   filter_hook_ = filter;
   return *this;
 }
-inline parser parser::filter_hook(filter_hook_t filter) &&
+inline parser parser::filter_hook(filter_hook_t filter) && noexcept
 {
   filter_hook_ = filter;
   return *this;
@@ -623,8 +649,17 @@ inline parser::const_iterator parser::begin() const
   is_->clear();
   is_->seekg(0, std::ios::beg);  // back to the start!
 
-  return *is_ ? const_iterator(is_, filter_hook_, dialect_)
-              : end();
+  if (*is_)
+  {
+    auto it(const_iterator(is_, filter_hook_, dialect_));
+
+    if (dialect_.has_header == dialect::HAS_HEADER && skip_header_)
+      ++it;
+
+    return it;
+  }
+
+  return end();
 }
 
 ///
@@ -736,6 +771,73 @@ inline parser::const_iterator::value_type parser::const_iterator::parse_line(
   add_field(curstring);
 
   return record;
+}
+
+///
+/// Pretty-print the leading portion of a CSV file.
+///
+/// \param[in] is input stream containing CSV data
+/// \param[in] n  number of data rows to extract
+/// \return       a vector whose first element is the header (if present;
+///               otherwise an empty row of the correct length), followed by up
+///               to `n` data rows that match the header's column count.
+///
+/// If the CSV has a header, it appears in the first element of the returned
+/// vector (`.front()`); otherwise the element is resized to the same width as
+/// the first conforming data row. Subsequent elements are the first `n` rows
+/// whose column count equals that of the first data row.
+///
+/// Resets the reading position of the input stream to the beginning before
+/// returning.
+///
+[[nodiscard]] inline std::vector<parser::record_t> head(std::istream &is,
+                                                        std::size_t n = 16)
+{
+  parser p(is);
+  const bool has_header(p.active_dialect().has_header == dialect::HAS_HEADER);
+
+  std::vector<parser::record_t> ret;
+
+  std::size_t expected_cols(0);
+
+  auto it(p.begin());
+  if (has_header)
+  {
+    ret.push_back(*it);
+    expected_cols = ret.front().size();
+    ++it;
+  }
+  else
+    // Placeholder row, we'll resize once we know the column count.
+    ret.emplace_back();
+
+  while (it != p.end() && n)
+  {
+    if (!expected_cols)
+      expected_cols = it->size();
+
+    if (it->size() == expected_cols)
+    {
+      ret.push_back(*it);
+      --n;
+    }
+
+    ++it;
+  }
+
+  // If there was no header, resize the placeholder to match data rows.
+  if (!has_header)
+  {
+    if (ret.size() > 1)
+      ret.front().resize(ret[1].size());
+    else if (it != p.end() && it->size())
+      ret.front().resize(it->size());
+  }
+
+  is.clear();
+  is.seekg(0, std::ios::beg);  // back to the start!
+
+  return ret;
 }
 
 }  // namespace pocket_csv
