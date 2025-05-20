@@ -130,6 +130,20 @@ TEST_CASE("as_integer")
   CHECK(as_integer(my_enum::c) == 5);
 }
 
+TEST_CASE("is_integer")
+{
+  using namespace ultra;
+
+  CHECK(is_integer("3"));
+  CHECK(is_integer("   3 "));
+  CHECK(is_integer("+3"));
+  CHECK(is_integer("-3"));
+  CHECK(!is_integer(""));
+  CHECK(!is_integer("aa3aa"));
+  CHECK(!is_integer("abc"));
+  CHECK(!is_integer("3.1"));
+}
+
 TEST_CASE("is_number")
 {
   using namespace ultra;
@@ -137,6 +151,11 @@ TEST_CASE("is_number")
   CHECK(is_number("3.1"));
   CHECK(is_number("3"));
   CHECK(is_number("   3 "));
+  CHECK(is_number("+3"));
+  CHECK(is_number("-3"));
+  CHECK(!is_number("inf"));
+  CHECK(!is_number("+inf"));
+  CHECK(!is_number("-inf"));
   CHECK(!is_number("aa3aa"));
   CHECK(!is_number(""));
   CHECK(!is_number("abc"));

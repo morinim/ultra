@@ -15,6 +15,8 @@
 
 #include <array>
 #include <atomic>
+#include <charconv>
+#include <system_error>
 #include <thread>
 
 namespace ultra
@@ -31,6 +33,32 @@ bool iequals(const std::string &lhs, const std::string &rhs)
   return std::ranges::equal(lhs, rhs,
                             [](auto c1, auto c2)
                             { return std::tolower(c1) == std::tolower(c2); });
+}
+
+///
+/// \param[in] s the string to be tested
+/// \return      `true` if `s` contains a number
+///
+bool is_integer(std::string s)
+{
+  s = trim(s);
+
+  if (s.empty())
+    return false;
+
+  // Allow an optional leading sign.
+  const std::size_t idx((s[0] == '+' || s[0] == '-') ? 1 : 0);
+  if (idx == s.size())  // string was only '+' or '-'
+    return false;
+
+  [[maybe_unused]] int _;
+  const auto [ptr, ec] = std::from_chars(s.data() + idx,
+                                         s.data() + s.size(),
+                                         _);
+
+  // `ec == errc()` means conversion succeeded.
+  // `ptr == end()` ensures we consumed the entire string.
+  return ec == std::errc() && ptr == s.data() + s.size();
 }
 
 ///
