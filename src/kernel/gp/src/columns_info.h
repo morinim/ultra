@@ -15,12 +15,14 @@
 
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "kernel/symbol.h"
 #include "kernel/value.h"
+#include "utility/misc.h"
 
 namespace ultra::src
 {
@@ -41,6 +43,10 @@ namespace ultra::src
 /// https://github.com/morinim/ultra/wiki/bibliography#10
 ///
 enum class typing {weak, strong};
+
+template<class R> concept RangeOfSizedRanges =
+  std::ranges::range<R>
+  && std::ranges::sized_range<std::ranges::range_value_t<R>>;
 
 ///
 /// Information about the collection of columns (type, name, output index).
@@ -119,7 +125,9 @@ public:
   // ---- Misc ----
   void data_typing(typing) noexcept;
 
-  void build(const std::vector<std::string> &, bool);
+  template<RangeOfSizedRanges R>
+  void build(R, std::optional<std::size_t>);
+
   std::set<symbol::category_t> used_categories() const;
 
   [[nodiscard]] domain_t domain_of_category(symbol::category_t) const;
@@ -132,6 +140,8 @@ private:
   std::vector<column_info> cols_ {};
   typing typing_ {typing::weak};
 };
+
+#include "columns_info.tcc"
 
 }  // namespace ultra::src
 

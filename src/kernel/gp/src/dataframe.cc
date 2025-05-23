@@ -236,13 +236,19 @@ class_t dataframe::encode(const value_t &label)
 
 ///
 /// \param[in] r            an example in raw format
+/// \param[in] output_index index of the output column
 /// \param[in] add_instance should we automatically add instances for text
 ///                         features?
 /// \return                 `true` for a correctly converted/imported record
 ///
-bool dataframe::read_record(const record_t &r, bool add_instance)
+bool dataframe::read_record(record_t r,
+                            std::optional<std::size_t> output_index,
+                            bool add_instance)
 {
   Expects(r.size());
+  Expects(!output_index || *output_index < r.size());
+
+  r = internal::output_column_first(r, output_index);
 
   if (r.size() != columns.size())  // skip lines with wrong number of columns
   {
@@ -434,11 +440,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
       if (p.filter && p.filter(record) == false)
         continue;
 
-      std::rotate(record.begin(),
-                  std::next(record.begin(), output_index),
-                  std::next(record.begin(), output_index + 1));
-
-      read_record(record, false);
+      read_record(std::move(record), output_index, false);
     }
   }
   else
@@ -535,41 +537,22 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
       p.dialect.delimiter = sniff.delimiter;
   }
 
-  std::size_t count(0);
-  for (auto record : pocket_csv::parser(from, p.dialect).filter_hook(p.filter))
+  if (const auto head(pocket_csv::head(from, p.dialect)); head.size() <= 1)
+    return 0;
+  else
   {
-    if (p.output_index)
-    {
-      if (p.output_index == params::index::back)
-        p.output_index = record.size() - 1;
+    if (p.output_index == params::index::back)
+      p.output_index = head.front().size();
 
-      assert(p.output_index < record.size());
-
-      if (p.output_index > 0)
-        std::rotate(record.begin(),
-                    std::next(record.begin(), *p.output_index),
-                    std::next(record.begin(), *p.output_index + 1));
-    }
-    else
-      // When the output index is unspecified, all the columns are treated as
-      // input columns (this is obtained adding a surrogate, empty output
-      // column).
-      record.insert(record.begin(), "");
-
-    // Every new record may add further information about the column domain.
-    const bool has_header(p.dialect.has_header
-                          == pocket_csv::dialect::HAS_HEADER);
-
-    if (count < 10)
-      columns.build(record, has_header);
-    if (has_header == false || count)
-      read_record(record, true);
-
-    ++count;
+    columns.build(head, p.output_index);
   }
 
-  if (!is_valid() || !size())
-    throw exception::insufficient_data("Empty / undersized CSV data file");
+  for (auto record : pocket_csv::parser(from, p.dialect).skip_header()
+                                                        .filter_hook(p.filter))
+    read_record(record, p.output_index, true);
+
+  if (!is_valid())
+    throw exception::insufficient_data("Empty / invalid CSV data file");
 
   return size();
 }
@@ -672,11 +655,39 @@ bool dataframe::is_valid() const
   if (empty())
     return true;
 
+  const auto out_domain(columns.front().domain());
   const auto cl_size(classes());
-  // Symbolic regression has 0 classes.
-  // Classification requires at least 2 classes.
-  if (cl_size == 1)
+
+  switch (out_domain)
+  {
+  case d_double:  // symbolic regression or classification
+    if (cl_size == 1)
+    {
+      ultraERROR << "Only one class for a classification task";
+      return false;
+    }
+    break;
+
+  case d_int:  // symbolic regression
+    if (cl_size != 0)
+    {
+      ultraERROR << "Symbolic regression tasks require zero classes";
+      return false;
+    }
+    break;
+
+  case d_void:  // unsupervised learning
+    if (cl_size != 0)
+    {
+      ultraERROR << "Unsupervised learning tasks require zero classes";
+      return false;
+    }
+    break;
+
+  default:
+    ultraERROR << "Unmanaged output column domain";
     return false;
+  }
 
   const auto in_size(front().input.size());
 

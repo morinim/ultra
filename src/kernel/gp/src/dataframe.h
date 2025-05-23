@@ -143,7 +143,7 @@ private:
   // > FILE -> record_t -> example --(push_back)--> dataframe
   using record_t = std::vector<std::string>;
 
-  bool read_record(const record_t &, bool);
+  bool read_record(record_t, std::optional<std::size_t>, bool);
 
   template<std::ranges::sized_range R>
   [[nodiscard]] example to_example(const R &, bool);

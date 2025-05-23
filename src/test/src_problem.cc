@@ -51,7 +51,7 @@ TEST_CASE("setup_terminals")
 
     CHECK(p.is_valid());
 
-    CHECK(p.categories() == 1);
+    CHECK(p.categories() == 2);
     CHECK(p.classes() == 0);
     CHECK(p.variables() == 11);
 

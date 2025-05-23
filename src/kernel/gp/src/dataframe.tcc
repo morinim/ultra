@@ -17,11 +17,7 @@
 #if !defined(ULTRA_DATAFRAME_TCC)
 #define      ULTRA_DATAFRAME_TCC
 
-template<class RR> concept RangeOfSizedRanges =
-  std::ranges::range<RR>
-  && std::ranges::sized_range<std::ranges::range_value_t<RR>>;
-
-namespace internals
+namespace internal
 {
 
 [[nodiscard]] inline value_t lexical_cast(value_t v, domain_t d)
@@ -46,7 +42,7 @@ void inplace_trim(T &v)
       *p = trim(*p);
 }
 
-}  // namespace internals
+}  // namespace internal
 
 ///
 /// \param[in] r            a range containing the example
@@ -71,17 +67,17 @@ example dataframe::to_example(const R &r, bool add_instance)
     if (const auto domain(columns[i].domain()); domain != d_void)
     {
       assert(basic_data_type(domain));
-      internals::inplace_trim(feature);
+      internal::inplace_trim(feature);
 
       if (i == 0)
       {
         if (!is_number(lexical_cast<D_STRING>(feature)))  // classification task
           ret.output = static_cast<D_INT>(encode(feature));
         else  // symbolic regression
-          ret.output = internals::lexical_cast(feature, domain);
+          ret.output = internal::lexical_cast(feature, domain);
       }
       else  // input value
-        ret.input.push_back(internals::lexical_cast(feature, domain));
+        ret.input.push_back(internal::lexical_cast(feature, domain));
 
       if (add_instance && domain == d_string)
         columns[i].add_state(lexical_cast<D_STRING>(feature));

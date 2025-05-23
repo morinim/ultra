@@ -206,7 +206,7 @@ TEST_CASE("load_csv headers")
   for (const auto &c: d.columns)
   {
     ++count;
-    CHECK(c.domain() == d_double);
+    CHECK(c.domain() == (count < ncol ? d_double : d_int));
   }
   CHECK(count == ncol);
 
@@ -217,8 +217,10 @@ TEST_CASE("load_csv headers")
   {
     CHECK(std::holds_alternative<D_DOUBLE>(e.output));
 
-    for (const auto &i : e.input)
-      CHECK(std::holds_alternative<D_DOUBLE>(i));
+    CHECK(std::all_of(
+            e.input.begin(), std::prev(e.input.end()),
+            [](auto i) { return std::holds_alternative<D_DOUBLE>(i); }));
+    CHECK(std::holds_alternative<D_INT>(e.input.back()));
   }
 }
 
@@ -258,13 +260,14 @@ TEST_CASE("load_csv output_index")
   CHECK(d.columns.begin()->name() ==   d.columns.front().name());
   CHECK(d.columns.back().name()   == d.columns[ncol - 1].name());
 
-  CHECK(d.columns[0].domain() == d_double);
+  CHECK(d.columns[0].domain() == d_int);
   CHECK(d.columns[1].domain() == d_string);
+  CHECK(d.columns[2].domain() == d_double);
 
   CHECK(d.classes() == 0);
   CHECK(d.front().input.size() == ncol - 1);
 
-  CHECK(std::holds_alternative<D_DOUBLE>(d.front().output));
+  CHECK(std::holds_alternative<D_INT>(d.front().output));
   CHECK(std::holds_alternative<D_STRING>(d.front().input[0]));
   CHECK(std::holds_alternative<D_DOUBLE>(d.front().input[1]));
 }
