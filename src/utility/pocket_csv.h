@@ -22,6 +22,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -790,10 +791,12 @@ inline parser::const_iterator::value_type parser::const_iterator::parse_line(
 /// Resets the reading position of the input stream to the beginning before
 /// returning.
 ///
-[[nodiscard]] inline std::vector<parser::record_t> head(std::istream &is,
-                                                        std::size_t n = 16)
+[[nodiscard]] inline std::vector<parser::record_t> head(
+  std::istream &is,
+  const std::optional<dialect> &d = {},
+  std::size_t n = 16)
 {
-  parser p(is);
+  parser p(is, d ? *d : sniffer(is, n));
   const bool has_header(p.active_dialect().has_header == dialect::HAS_HEADER);
 
   std::vector<parser::record_t> ret;
