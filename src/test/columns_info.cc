@@ -55,10 +55,14 @@ TEST_CASE_FIXTURE(fixture_ci, "wine categories weak")
   CHECK(cs[10].name() == "alcohol");
   CHECK(cs[11].name() == "quality");
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
-  CHECK(cs.domain_of_category(0) == d_double);
+  CHECK(std::all_of(cs.begin(), std::prev(cs.end()),
+                    [](auto c) { return c.domain() == d_double; }));
+  CHECK(cs.back().domain() == d_int);
 
-  CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
+  CHECK(cs.domain_of_category(0) == d_double);
+  CHECK(cs.domain_of_category(1) == d_int);
+
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0, 1});
 }
 
 TEST_CASE("wine categories strong")
@@ -103,11 +107,14 @@ TEST_CASE("wine categories strong")
   CHECK(cs.used_categories()
         == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8,9,10,11});
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+  CHECK(std::ranges::all_of(cs.begin(), std::prev(cs.end()),
+                    [](auto c) { return c.domain() == d_double; }));
+  CHECK(cs.back().domain() == d_int);
 
   CHECK(std::ranges::all_of(
           cs.used_categories(),
-          [&cs] (auto c) { return cs.domain_of_category(c) == d_double; }));
+          [&cs] (auto c)
+          { return cs.domain_of_category(c) == (c==11 ? d_int : d_double); }));
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
@@ -123,37 +130,38 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
   CHECK(cs.is_valid());
 
   CHECK(cs[0].name() == "rings");
-  CHECK(cs[0].domain() == d_double);
+  CHECK(cs[0].domain() == d_int);
   CHECK(cs[0].category() == 0);
   CHECK(cs[1].name() == "sex");
   CHECK(cs[1].domain() == d_string);
   CHECK(cs[1].category() == 1);
   CHECK(cs[2].name() == "length");
   CHECK(cs[2].domain() == d_double);
-  CHECK(cs[2].category() == 0);
+  CHECK(cs[2].category() == 2);
   CHECK(cs[3].name() == "diameter");
   CHECK(cs[3].domain() == d_double);
-  CHECK(cs[3].category() == 0);
+  CHECK(cs[3].category() == 2);
   CHECK(cs[4].name() == "height");
   CHECK(cs[4].domain() == d_double);
-  CHECK(cs[4].category() == 0);
+  CHECK(cs[4].category() == 2);
   CHECK(cs[5].name() == "whole weight");
   CHECK(cs[5].domain() == d_double);
-  CHECK(cs[5].category() == 0);
+  CHECK(cs[5].category() == 2);
   CHECK(cs[6].name() == "shucked weight");
   CHECK(cs[6].domain() == d_double);
-  CHECK(cs[6].category() == 0);
+  CHECK(cs[6].category() == 2);
   CHECK(cs[7].name() == "viscera weight");
   CHECK(cs[7].domain() == d_double);
-  CHECK(cs[7].category() == 0);
+  CHECK(cs[7].category() == 2);
   CHECK(cs[8].name() == "shell weight");
   CHECK(cs[8].domain() == d_double);
-  CHECK(cs[8].category() == 0);
+  CHECK(cs[8].category() == 2);
 
-  CHECK(cs.used_categories() == std::set<symbol::category_t>{0,1});
+  CHECK(cs.used_categories() == std::set<symbol::category_t>{0,1,2});
 
-  CHECK(cs.domain_of_category(0) == d_double);
+  CHECK(cs.domain_of_category(0) == d_int);
   CHECK(cs.domain_of_category(1) == d_string);
+  CHECK(cs.domain_of_category(2) == d_double);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
@@ -170,7 +178,7 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
   CHECK(cs.is_valid());
 
   CHECK(cs[0].name() == "rings");
-  CHECK(cs[0].domain() == d_double);
+  CHECK(cs[0].domain() == d_int);
   CHECK(cs[0].category() == 0);
   CHECK(cs[1].name() == "sex");
   CHECK(cs[1].domain() == d_string);
@@ -202,10 +210,15 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
   CHECK(used_categories == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8});
 
   for (auto c : used_categories)
-    if (c == 1)
-      CHECK(cs.domain_of_category(c) == d_string);
-    else
+    switch (c)
+    {
+    case 0:
+      CHECK(cs.domain_of_category(c) ==    d_int);  break;
+    case 1:
+      CHECK(cs.domain_of_category(c) == d_string);  break;
+    default:
       CHECK(cs.domain_of_category(c) == d_double);
+    }
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
