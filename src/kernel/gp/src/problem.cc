@@ -236,7 +236,7 @@ void problem::setup_symbols()
       if (domain == d_double)
         add_symbol(insert<real::number>(-100.0, 100.0, category));
       else
-        add_symbol(insert<integer::number>(100, 100, category));
+        add_symbol(insert<integer::number>(-100, 100, category));
     }
 
   for (const auto &[category, names] : symbols)
