@@ -20,17 +20,36 @@
 namespace internal
 {
 
+template<class C, class T>
+concept has_insert_at_beginning = requires(C c, T v)
+{
+  { c.begin() } -> std::input_iterator; // has a begin() returning an iterator
+  { c.insert(c.begin(), v) };           // supports insert at begin
+};
+
+template<class C>
+concept range_with_insert_at_beginning =
+  std::ranges::range<C>
+  && has_insert_at_beginning<C, std::ranges::range_value_t<C>>;
+
 // Move the `n`-th element to the front, preserving the order of the other
 // elements.
 // If `n` is empty add an empty column to the front.
-template<std::ranges::random_access_range R>
+//
+// \note
+// `ranges::rotate` has better efficiency on common implementations with
+// `bidirectional_iterator` or (better) `random_access_iterator`.
+// Implementations (e.g. MSVC STL) may enable vectorization when the iterator
+// type models `contiguous_iterator` and swapping its value type calls neither
+// non-trivial special member function nor ADL-found swap.
+template<range_with_insert_at_beginning R>
 [[nodiscard]] R output_column_first(const R &raw, std::optional<std::size_t> n)
 {
   R r(raw);
 
   if (n)
   {
-    assert(n < r.size());
+    assert(n < std::ranges::distance(raw));
 
     if (n > 0)
       std::rotate(r.begin(),

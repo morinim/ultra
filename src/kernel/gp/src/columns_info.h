@@ -30,7 +30,8 @@ namespace ultra::src
 ///
 /// Category/type management of the dataframe columns.
 ///
-/// - `weak`: columns having the same domain can be freely mixed by the engine.
+/// - `weak`: columns **having the same domain** (`double with `double`,
+///           `string`s with `string`s...) can be freely mixed by the engine.
 /// - `strong`: every column has its own type/category (Strongly Typed Genetic
 /// Programming).
 ///
