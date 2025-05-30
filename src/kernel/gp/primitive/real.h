@@ -177,6 +177,10 @@ public:
 /// protected or unprotected division. Further, the AQ operator is
 /// differentiable.
 ///
+/// \see
+/// - https://ultraevolution.org/blog/thread_pool/
+/// - https://github.com/morinim/ultra/wiki/bibliography#23
+///
 class aq : public function
 {
 public:
