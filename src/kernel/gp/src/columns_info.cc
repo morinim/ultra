@@ -68,7 +68,7 @@ void columns_info::column_info::add_state(value_t s)
 }
 
 ///
-/// The category of the column.
+/// Computes and returns the category assigned to this column.
 ///
 /// \note
 /// This is a computed field: if the value have to be used multiple time store
@@ -95,7 +95,7 @@ columns_info::columns_info(const columns_info &other)
 ///
 /// Copy assignment operator.
 ///
-/// \param[in] other another container to use as data source
+/// \param[in] other another container to use as the data source
 /// \return          `*this`
 ///
 /// Replaces the contents with a copy of the contents of other.
@@ -142,7 +142,7 @@ columns_info::column_info columns_info::operator[](
 ///
 /// Set the data typing system used for category identification.
 ///
-/// \param[in] t king of data typing (see `typing` for details)
+/// \param[in] t type of data typing (see `typing` for details)
 ///
 void columns_info::data_typing(typing t) noexcept
 {
@@ -210,10 +210,11 @@ columns_info::column_info &columns_info::back()
 }
 
 ///
-/// Removes the last element of the container.
+/// Removes the last column from the container.
 ///
 /// \warning
-/// Calling pop_back on an empty container results in undefined behavior.
+/// Ensure the container is not empty before calling (possible undefined
+/// behavior).
 ///
 void columns_info::pop_back()
 {
@@ -231,7 +232,8 @@ void columns_info::push_back(const column_info &v)
 }
 
 ///
-/// Adds a new column at the front of the column list.
+/// Inserts a new column at the beginning of the column list, shifting existing
+/// columns back.
 ///
 /// \param[in] v information about the new column
 ///
@@ -279,7 +281,7 @@ symbol::category_t columns_info::category(const column_info &ci) const
 }
 
 ///
-/// \return the set of used categories
+/// \return a set of all categories used across columns
 ///
 std::set<symbol::category_t> columns_info::used_categories() const
 {
@@ -301,7 +303,7 @@ domain_t columns_info::domain_of_category(symbol::category_t target) const
 }
 
 ///
-/// \return `true` if the object passes the internal consistency check
+/// \return `true` if all columns have valid domains and consistent categories
 ///
 bool columns_info::is_valid() const
 {

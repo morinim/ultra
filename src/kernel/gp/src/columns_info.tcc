@@ -67,16 +67,22 @@ template<range_with_insert_at_beginning R>
 }  // namespace internal
 
 ///
-/// Given an example compiles information about the columns of the dataframe.
+/// Compiles metadata about the dataframe columns from a sample of examples.
 ///
-/// \param[in] exs a range containing examples. The first row must contain
-///                column headers
-/// \param[in] output_index index of the column to be considered as output
+/// \param[in] exs          a range of examples. The first row must contain
+///                         column headers
+/// \param[in] output_index optional index specifying the output column
+///
+/// \note
+/// Examples with an incorrect number of columns are skipped.
 ///
 template<RangeOfSizedRanges R>
 void columns_info::build(R exs, std::optional<std::size_t> output_index)
 {
-  Expects(exs.size());
+  using VT = std::ranges::range_value_t<std::ranges::range_value_t<R>>;
+  static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
+
+  Expects(std::ranges::distance(exs));
   Expects(exs.front().size());
 
   std::ranges::transform(
@@ -87,12 +93,16 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
     });
 
   // Set up column headers (first row must contain the headers).
-  cols_.reserve(exs.front().size());
-  std::ranges::transform(exs.front(), std::back_inserter(cols_),
-                         [this](const auto &name)
-                         {
-                           return column_info(*this, trim(name));
-                         });
+  cols_.reserve(std::ranges::distance(exs.front()));
+  std::ranges::transform(
+    exs.front(), std::back_inserter(cols_),
+    [this](const auto &name)
+    {
+      if constexpr (std::same_as<VT, std::string>)
+        return column_info(*this, trim(name));
+      else
+        return column_info(*this, trim(std::get<std::string>(name)));
+    });
 
   for (std::size_t idx(0); idx < size(); ++idx)
     for (auto row(std::next(exs.begin())); row != exs.end(); ++row)
@@ -106,29 +116,61 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
       switch (cols_[idx].domain())
       {
       case d_void:
-        if (is_integer(value))
-          cols_[idx].domain(d_int);
-        else if (is_number(value))
-          cols_[idx].domain(d_double);
-        else if (value != "")
-          cols_[idx].domain(d_string);
+        if constexpr (std::same_as<VT, std::string>)
+        {
+          if (is_integer(value))
+            cols_[idx].domain(d_int);
+          else if (is_number(value))
+            cols_[idx].domain(d_double);
+          else if (value != "")
+            cols_[idx].domain(d_string);
+        }
+        else
+        {
+          if (basic_data_type(value))
+            cols_[idx].domain(value.index());
+        }
         break;
 
       case d_int:
-        if (is_integer(value))
-          continue;
+        if constexpr (std::same_as<VT, std::string>)
+        {
+          if (is_integer(value))
+            continue;
+        }
+        else
+        {
+          if (value.index() == d_int)
+            continue;
+        }
 
         cols_[idx].domain(d_double);
         [[fallthrough]];
 
       case d_double:
-        if (is_number(value))
-          continue;
+        if constexpr (std::same_as<VT, std::string>)
+        {
+          if (is_number(value))
+            continue;
+        }
+        else
+        {
+          if (numerical_data_type(value))
+            continue;
+        }
         [[fallthrough]];
 
       default:
-        if (value != "")
-          cols_[idx].domain(d_string);
+        if constexpr (std::same_as<VT, std::string>)
+        {
+          if (!value.empty())
+            cols_[idx].domain(d_string);
+        }
+        else
+        {
+          if (value.index() == d_string)
+            cols_[idx].domain(d_string);
+        }
       }
     }
 
