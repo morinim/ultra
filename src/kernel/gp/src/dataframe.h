@@ -138,14 +138,13 @@ public:
   src::columns_info columns {};
 
 private:
-  // Raw input record.
   // The ETL chain is:
-  // > FILE -> record_t -> example --(push_back)--> dataframe
-  using record_t = std::vector<std::string>;
+  // > INPUT SOURCE -> raw record -> example --(push_back)--> dataframe
+  template<std::ranges::range R> bool read_record(R,
+                                                  std::optional<std::size_t>,
+                                                  bool);
 
-  bool read_record(record_t, std::optional<std::size_t>, bool);
-
-  template<std::ranges::sized_range R>
+  template<std::ranges::range R>
   [[nodiscard]] example to_example(const R &, bool);
 
   [[nodiscard]] class_t encode(const value_t &);

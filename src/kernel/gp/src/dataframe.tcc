@@ -54,11 +54,11 @@ void inplace_trim(T &v)
 /// When `add_instance` is `true` the function can have side-effects (changing
 /// the set of admissible instances associated with a text-feature).
 ///
-template<std::ranges::sized_range R>
+template<std::ranges::range R>
 example dataframe::to_example(const R &r, bool add_instance)
 {
   Expects(r.size());
-  Expects(r.size() == columns.size());
+  Expects(static_cast<std::size_t>(std::ranges::distance(r)) == columns.size());
 
   example ret;
 
@@ -88,6 +88,34 @@ example dataframe::to_example(const R &r, bool add_instance)
 
   return ret;
 }
+
+///
+/// \param[in] r            an example in raw format
+/// \param[in] output_index index of the output column
+/// \param[in] add_instance should we automatically add instances for text
+///                         features?
+/// \return                 `true` for a correctly converted/imported record
+///
+template<std::ranges::range R>
+bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
+                            bool add_instance)
+{
+  Expects(!r.empty());
+  Expects(!output_index || *output_index < std::ranges::distance(r));
+
+  r = internal::output_column_first(r, output_index);
+
+  // Skip lines with wrong number of columns.
+  if (static_cast<std::size_t>(std::ranges::distance(r)) != columns.size())
+  {
+    ultraWARNING << "Malformed exampled " << size() <<  " skipped";
+    return false;
+  }
+
+  push_back(to_example(r, add_instance));
+  return true;
+}
+
 /*
 ///
 /// Loads a matrix into the dataframe.

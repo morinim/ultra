@@ -235,32 +235,6 @@ class_t dataframe::encode(const value_t &label)
 }
 
 ///
-/// \param[in] r            an example in raw format
-/// \param[in] output_index index of the output column
-/// \param[in] add_instance should we automatically add instances for text
-///                         features?
-/// \return                 `true` for a correctly converted/imported record
-///
-bool dataframe::read_record(record_t r,
-                            std::optional<std::size_t> output_index,
-                            bool add_instance)
-{
-  Expects(r.size());
-  Expects(!output_index || *output_index < r.size());
-
-  r = internal::output_column_first(r, output_index);
-
-  if (r.size() != columns.size())  // skip lines with wrong number of columns
-  {
-    ultraWARNING << "Malformed exampled " << size() <<  " skipped";
-    return false;
-  }
-
-  push_back(to_example(r, add_instance));
-  return true;
-}
-
-///
 /// \param[in] i the encoded (dataframe::encode()) value of a class
 /// \return      the name of the class encoded by `i` (or an empty string if
 ///              such class cannot be find)
@@ -430,7 +404,7 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
          i;
          i = i->NextSiblingElement("instance"))
     {
-      record_t record;
+      std::vector<std::string> record;
 
       for (auto *v(i->FirstChildElement("value"));
            v;
@@ -481,7 +455,6 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 /// \exception exception::insufficient_data empty / undersized data file
 ///
 /// General conventions:
-/// - NO HEADER ROW is allowed;
 /// - only one example is allowed per line. A single example cannot contain
 ///   newlines and cannot span multiple lines.
 ///   Note than CSV standard (e.g.
@@ -491,9 +464,9 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 /// - columns are separated by commas. Commas inside a quoted string aren't
 ///   column delimiters;
 /// - the column containing the labels (numeric or string) for the examples can
-///   be specified by the user; if not specified, the the first column is the
-///   default. If the label is numeric Ultra assumes a REGRESSION model; if it's
-///   a string, a CATEGORIZATION (i.e. classification) model is assumed.
+///   be specified by the user; if not specified, the first column is the
+///   default. If the label is numeric Ultra assumes a REGRESSION model; if
+///   it's a string, a CATEGORIZATION (i.e. classification) model is assumed.
 /// - each column must describe the same kind of information;
 /// - the column order of features in the table does not weight the results.
 ///   The first feature is not weighted any more than the last;
@@ -537,15 +510,15 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
       p.dialect.delimiter = sniff.delimiter;
   }
 
-  if (const auto head(pocket_csv::head(from, p.dialect)); head.size() <= 1)
-    return 0;
-  else
+  if (const auto head(pocket_csv::head(from, p.dialect)); head.size() > 1)
   {
     if (p.output_index == params::index::back)
       p.output_index = head.front().size();
 
     columns.build(head, p.output_index);
   }
+  else
+    return 0;
 
   for (auto record : pocket_csv::parser(from, p.dialect).skip_header()
                                                         .filter_hook(p.filter))

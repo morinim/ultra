@@ -45,6 +45,9 @@ concept range_with_insert_at_beginning =
 template<range_with_insert_at_beginning R>
 [[nodiscard]] R output_column_first(const R &raw, std::optional<std::size_t> n)
 {
+  using VT = std::ranges::range_value_t<R>;
+  static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
+
   R r(raw);
 
   if (n)
@@ -57,9 +60,14 @@ template<range_with_insert_at_beginning R>
                   std::next(r.begin(), *n + 1));
   }
   else
+  {
     // When the output index is missing, all the columns are treated as input
     // columns (this is obtained adding a surrogate, empty output column).
-    r.insert(r.begin(), "");
+    if constexpr (std::same_as<VT, std::string>)
+      r.insert(r.begin(), "");
+    else
+      r.insert(r.begin(), {});
+  }
 
   return r;
 }
