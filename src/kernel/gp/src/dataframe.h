@@ -116,6 +116,8 @@ public:
   std::size_t read(const std::filesystem::path &, const params &);
   std::size_t read_csv(std::istream &);
   std::size_t read_csv(std::istream &, params);
+  template<RangeOfSizedRanges R> std::size_t read_table(const R &,
+                                                        const params &);
   std::size_t read_xrff(std::istream &);
   std::size_t read_xrff(std::istream &, const params &);
   [[nodiscard]] bool operator!() const noexcept;

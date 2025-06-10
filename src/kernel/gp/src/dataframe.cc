@@ -513,7 +513,7 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
   if (const auto head(pocket_csv::head(from, p.dialect)); head.size() > 1)
   {
     if (p.output_index == params::index::back)
-      p.output_index = head.front().size();
+      p.output_index = head.front().size() - 1;
 
     columns.build(head, p.output_index);
   }

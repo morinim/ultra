@@ -116,7 +116,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
   return true;
 }
 
-/*
+
 ///
 /// Loads a matrix into the dataframe.
 ///
@@ -127,42 +127,29 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 /// \return              number of elements parsed (0 in case of error)
 ///
 template<RangeOfSizedRanges R>
-std::size_t dataframe::read_table(const R &container, params &p)
+std::size_t dataframe::read_table(const R &container, const params &p)
 {
   columns.data_typing(p.data_typing);
 
   clear();
 
-  std::size_t count(0);
-  for (auto record : container)
+  if (container.size() > 1)
   {
-    if (p.output_index)
-    {
-      if (p.output_index == params::index::back)
-        p.output_index = record.size() - 1;
+    if (p.output_index == params::index::back)
+      p.output_index = container.front().size() - 1;
 
-      assert(p.output_index < record.size());
-
-      if (p.output_index > 0)
-        std::rotate(record.begin(),
-                    std::next(record.begin(), *p.output_index),
-                    std::next(record.begin(), *p.output_index + 1));
-    }
-    else
-      // When the output index is unspecified, all the columns are treated as
-      // input columns (this is obtained adding a surrogate, empty output
-      // column).
-      record.insert(record.begin(), "");
-
-    read_record(record, true);
-
-    ++count;
+    columns.build(container, p.output_index);
   }
+  else
+    return 0;
 
-  if (!is_valid() || !size())
+  for (auto it(std::next(container.cbegin())); it != container.end(); ++it)
+    read_record(*it, p.output_index, true);
+
+  if (!is_valid())
     throw exception::insufficient_data("Empty / undersized CSV data file");
 
   return size();
 }
-*/
+
 #endif  // include guard
