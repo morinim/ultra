@@ -35,9 +35,17 @@ TEST_CASE_FIXTURE(fixture_ci, "wine categories weak")
 {
   using namespace ultra;
 
-  std::istringstream wine(debug::wine);
+  SUBCASE("stringstream")
+  {
+    std::istringstream wine(debug::wine);
+    CHECK(d.read_csv(wine) == debug::WINE_COUNT);
+  }
 
-  CHECK(d.read_csv(wine) == debug::WINE_COUNT);
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::wine_table) == debug::WINE_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -70,9 +78,21 @@ TEST_CASE("wine categories strong")
   using namespace ultra;
   using src::dataframe;
 
-  std::istringstream wine(debug::wine);
+  dataframe d;
 
-  dataframe d(wine, dataframe::params().strong_data_typing());
+  SUBCASE("stringstream")
+  {
+    std::istringstream wine(debug::wine);
+    dataframe ds(wine, dataframe::params().strong_data_typing());
+    d = ds;
+  }
+
+  SUBCASE("table")
+  {
+    dataframe dt(debug::wine_table, dataframe::params().strong_data_typing());
+    d = dt;
+  }
+
   CHECK(d.is_valid());
   CHECK(d.size() == debug::WINE_COUNT);
 
