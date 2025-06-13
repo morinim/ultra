@@ -35,22 +35,28 @@ namespace ultra::src
 /// The type used as class ID in classification tasks.
 using class_t = std::size_t;
 
+/// A raw observation or data entry, typically read from an input source.
 ///
-/// Stores a single element (row) of the dataset.
+/// The ETL chain is:
+/// > INPUT SOURCE -> raw record -> processed example --(push_back)-> dataframe
+///                   `record_t`    `example`
+using record_t = std::vector<value_t>;
+
 ///
-/// The `struct` consists of an input vector (`input`) and an answer value
-/// (`output`). Depending on the kind of problem, `output` stores:
-/// - a numeric value (symbolic regression problem);
-/// - a categorical value (classification problem).
+/// Stores a single processed element (row) of the dataset.
+///
+/// The `example` struct consists of an input vector (`input`) and an
+/// outoput value (`output`). Depending on the task, `output` holds:
+/// - a numeric value (e.g. in symbolic regression);
+/// - a categorical label (e.g. in classification).
 ///
 struct example
 {
-  /// The thing about which we want to make a prediction (aka instance). The
-  /// elements of the vector are features.
+  /// The instance we want to make a prediction about. Each element in the
+  /// vector represents a feature.
   std::vector<value_t> input {};
-  /// The answer for the prediction task either the answer produced by the
-  /// machine learning system, or the right answer supplied in the training
-  /// data.
+  /// The expected output for the prediction task: either the predicted
+  /// value or the correct label from training data.
   value_t output {};
 
   [[nodiscard]] bool operator==(const example &) const noexcept = default;
@@ -88,6 +94,8 @@ public:
   dataframe(std::istream &, const params &);
   explicit dataframe(const std::filesystem::path &);
   dataframe(const std::filesystem::path &, const params &);
+  template<RangeOfSizedRanges R> dataframe(const R &);
+  template<RangeOfSizedRanges R> dataframe(const R &, params);
 
   // ---- Iterators ----
   using iterator = examples_t::iterator;
@@ -116,8 +124,8 @@ public:
   std::size_t read(const std::filesystem::path &, const params &);
   std::size_t read_csv(std::istream &);
   std::size_t read_csv(std::istream &, params);
-  template<RangeOfSizedRanges R> std::size_t read_table(const R &,
-                                                        const params &);
+  template<RangeOfSizedRanges R> std::size_t read_table(const R &);
+  template<RangeOfSizedRanges R> std::size_t read_table(const R &, params);
   std::size_t read_xrff(std::istream &);
   std::size_t read_xrff(std::istream &, const params &);
   [[nodiscard]] bool operator!() const noexcept;
@@ -140,8 +148,6 @@ public:
   src::columns_info columns {};
 
 private:
-  // The ETL chain is:
-  // > INPUT SOURCE -> raw record -> example --(push_back)--> dataframe
   template<std::ranges::range R> bool read_record(R,
                                                   std::optional<std::size_t>,
                                                   bool);

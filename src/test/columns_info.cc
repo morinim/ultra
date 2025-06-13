@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <sstream>
-
 #include "test/debug_datasets.h"
 
 #include "kernel/gp/src/columns_info.h"
 #include "kernel/gp/src/dataframe.h"
+
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -121,10 +121,19 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
 {
   using namespace ultra;
 
-  std::istringstream abalone(debug::abalone);
-
   p.output_index = 8;
-  CHECK(d.read_csv(abalone, p) == debug::ABALONE_COUNT);
+
+  SUBCASE("stringstream")
+  {
+    std::istringstream abalone(debug::abalone);
+    CHECK(d.read_csv(abalone, p) == debug::ABALONE_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::abalone_table, p) == debug::ABALONE_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -168,11 +177,22 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
 {
   using namespace ultra;
 
-  std::istringstream abalone(debug::abalone);
+  SUBCASE("stringstream")
+  {
+    std::istringstream abalone(debug::abalone);
 
-  CHECK(d.read_csv(abalone,
-                   src::dataframe::params().strong_data_typing().output(8))
-        == debug::ABALONE_COUNT);
+    CHECK(d.read_csv(abalone,
+                     src::dataframe::params().strong_data_typing().output(8))
+          == debug::ABALONE_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::abalone_table,
+                       src::dataframe::params().strong_data_typing().output(8))
+          == debug::ABALONE_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -225,11 +245,19 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
 {
   using namespace ultra;
 
-  std::istringstream ecoli(debug::ecoli);
-
   p.output_index = std::nullopt;
 
-  CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+  SUBCASE("stringstream")
+  {
+    std::istringstream ecoli(debug::ecoli);
+    CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::ecoli_table, p) == debug::ECOLI_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -278,12 +306,20 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
 {
   using namespace ultra;
 
-  std::istringstream ecoli(debug::ecoli);
-
   p.output_index = std::nullopt;
   p.data_typing = src::typing::strong;
 
-  CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+  SUBCASE("stringstream")
+  {
+    std::istringstream ecoli(debug::ecoli);
+    CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::ecoli_table, p) == debug::ECOLI_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -335,10 +371,19 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
 {
   using namespace ultra;
 
-  std::istringstream iris(debug::iris);
-
   p.output_index = 4;
-  CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+
+  SUBCASE("stringstream")
+  {
+    std::istringstream iris(debug::iris);
+    CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::iris_table, p) == debug::IRIS_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());
@@ -360,11 +405,20 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
 {
   using namespace ultra;
 
-  std::istringstream iris(debug::iris);
-
   p.output_index = 4;
   p.data_typing = src::typing::strong;
-  CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+
+  SUBCASE("stringstream")
+  {
+    std::istringstream iris(debug::iris);
+    CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+  }
+
+  SUBCASE("table")
+  {
+    CHECK(d.read_table(debug::iris_table, p) == debug::IRIS_COUNT);
+  }
+
   CHECK(d.is_valid());
 
   CHECK(cs.is_valid());

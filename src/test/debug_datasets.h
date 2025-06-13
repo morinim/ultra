@@ -10,6 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/gp/src/dataframe.h"
+
+#include <vector>
 #include <string>
 
 #if !defined(ULTRA_DEBUG_DATASETS_H)
@@ -31,6 +34,20 @@ constexpr char abalone[] = R"(
   F,0.545,0.425,0.125,0.768,0.294,0.1495,0.26,16
   M,0.475,0.37,0.125,0.5095,0.2165,0.1125,0.165,9
   F,0.55,0.44,0.15,0.8945,0.3145,0.151,0.32,19)";
+const std::vector<ultra::src::record_t> abalone_table =
+{
+  {"sex","length","diameter","height","whole weight","shucked weight","viscera weight","shell weight","rings"},
+  {"M",0.455,0.365,0.095,0.514,0.2245,0.101,0.15,15},
+  {"M",0.35,0.265,0.09,0.2255,0.0995,0.0485,0.07,7},
+  {"F",0.53,0.42,0.135,0.677,0.2565,0.1415,0.21,9},
+  {"M",0.44,0.365,0.125,0.516,0.2155,0.114,0.155,10},
+  {"I",0.33,0.255,0.08,0.205,0.0895,0.0395,0.055,7},
+  {"I",0.425,0.3,0.095,0.3515,0.141,0.0775,0.12,8},
+  {"F",0.53,0.415,0.15,0.7775,0.237,0.1415,0.33,20},
+  {"F",0.545,0.425,0.125,0.768,0.294,0.1495,0.26,16},
+  {"M",0.475,0.37,0.125,0.5095,0.2165,0.1125,0.165,9},
+  {"F",0.55,0.44,0.15,0.8945,0.3145,0.151,0.32,19}
+};
 
 constexpr std::size_t ECOLI_COUNT = 10;
 constexpr char ecoli[] = R"(
@@ -45,6 +62,20 @@ constexpr char ecoli[] = R"(
     AMY2_ECOLI,   0.21, 0.34, 0.48, 0.50, 0.51, 0.28, 0.39, cp
     APT_ECOLI,    0.20, 0.44, 0.48, 0.50, 0.46, 0.51, 0.57, cp
     ARAC_ECOLI,   0.42, 0.40, 0.48, 0.50, 0.56, 0.18, 0.30, cp)";
+const std::vector<ultra::src::record_t> ecoli_table =
+{
+  {"sequence name","mcg","gvh","lip","chg","aac","alm1","alm2","localization"},
+  {"AAT_ECOLI",     0.49, 0.29, 0.48, 0.50, 0.56,  0.24,  0.35,          "cp"},
+  {"ACEA_ECOLI",    0.07, 0.40, 0.48, 0.50, 0.54,  0.35,  0.44,          "cp"},
+  {"ACEK_ECOLI",    0.56, 0.40, 0.48, 0.50, 0.49,  0.37,  0.46,          "cp"},
+  {"ACKA_ECOLI",    0.59, 0.49, 0.48, 0.50, 0.52,  0.45,  0.36,          "cp"},
+  {"ADI_ECOLI",     0.23, 0.32, 0.48, 0.50, 0.55,  0.25,  0.35,          "cp"},
+  {"ALKH_ECOLI",    0.67, 0.39, 0.48, 0.50, 0.36,  0.38,  0.46,          "cp"},
+  {"AMPD_ECOLI",    0.29, 0.28, 0.48, 0.50, 0.44,  0.23,  0.34,          "cp"},
+  {"AMY2_ECOLI",    0.21, 0.34, 0.48, 0.50, 0.51,  0.28,  0.39,          "cp"},
+  {"APT_ECOLI",     0.20, 0.44, 0.48, 0.50, 0.46,  0.51,  0.57,          "cp"},
+  {"ARAC_ECOLI",    0.42, 0.40, 0.48, 0.50, 0.56,  0.18,  0.30,          "cp"}
+};
 
 constexpr std::size_t IRIS_COUNT = 10;
 constexpr char iris[] = R"(
@@ -59,6 +90,20 @@ constexpr char iris[] = R"(
     6.5,3,5.2,2,Iris-virginica
     6.2,3.4,5.4,2.3,Iris-virginica
     5.9,3,5.1,1.8,Iris-virginica)";
+const std::vector<ultra::src::record_t> iris_table =
+{
+  {"sepal length","sepal width","petal length","petal width","class"},
+  {5.1,3.5,1.4,0.2,"Iris-setosa"},
+  {4.9,3,1.4,0.2,"Iris-setosa"},
+  {4.7,3.2,1.3,0.2,"Iris-setosa"},
+  {7,3.2,4.7,1.4,"Iris-versicolor"},
+  {6.4,3.2,4.5,1.5,"Iris-versicolor"},
+  {6.9,3.1,4.9,1.5,"Iris-versicolor"},
+  {6.3,2.5,5,1.9,"Iris-virginica"},
+  {6.5,3,5.2,2,"Iris-virginica"},
+  {6.2,3.4,5.4,2.3,"Iris-virginica"},
+  {5.9,3,5.1,1.8,"Iris-virginica"}
+};
 
 constexpr std::size_t IRIS_FULL_COUNT = 150;
 constexpr char iris_full[] = R"(

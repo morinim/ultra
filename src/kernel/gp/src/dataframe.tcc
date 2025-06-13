@@ -38,7 +38,7 @@ void inplace_trim(T &v)
     v = trim(v);
 
   if constexpr (std::same_as<T, value_t>)
-    if (auto *p = std::get_if<D_STRING>(v))
+    if (auto *p = std::get_if<D_STRING>(&v))
       *p = trim(*p);
 }
 
@@ -116,7 +116,6 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
   return true;
 }
 
-
 ///
 /// Loads a matrix into the dataframe.
 ///
@@ -127,7 +126,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 /// \return              number of elements parsed (0 in case of error)
 ///
 template<RangeOfSizedRanges R>
-std::size_t dataframe::read_table(const R &container, const params &p)
+std::size_t dataframe::read_table(const R &container, params p)
 {
   columns.data_typing(p.data_typing);
 
@@ -147,9 +146,36 @@ std::size_t dataframe::read_table(const R &container, const params &p)
     read_record(*it, p.output_index, true);
 
   if (!is_valid())
-    throw exception::insufficient_data("Empty / undersized CSV data file");
+    throw exception::insufficient_data("Empty / invalid data table");
 
   return size();
+}
+
+template<RangeOfSizedRanges R>
+std::size_t dataframe::read_table(const R &container)
+{
+  return read_table(container, {});
+}
+
+///
+/// New dataframe instance containing the learning collection imported from a
+/// range.
+///
+/// \param[in] t input range
+/// \param[in] p additional, optional, parameters (see `params` structure)
+///
+/// \remark
+/// The first row of the table must contain headers.
+///
+template<RangeOfSizedRanges R> dataframe::dataframe(const R &t, params p)
+{
+  read_table(t, p);
+  Ensures(is_valid());
+}
+
+template<RangeOfSizedRanges R> dataframe::dataframe(const R &t)
+  : dataframe(t, {})
+{
 }
 
 #endif  // include guard

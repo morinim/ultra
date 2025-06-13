@@ -24,6 +24,15 @@ struct fixture1
                                  a0, 0.0, 0, d0
                                  a1, 0.1, 1, d1
                                  a2, 0.2, 2, d2)"};
+
+  std::vector<ultra::src::record_t> dataset2 =
+  {
+    { "A", "B", "C",  "D"},
+    {"a0", 0.0,   0, "d0"},
+    {"a1", 0.1,   1, "d1"},
+    {"a2", 0.2,   2, "d2"}
+  };
+
   ultra::src::dataframe d {};
 };
 
@@ -31,7 +40,15 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 1")
 {
   using namespace ultra;
 
-  d.read_csv(dataset);
+  SUBCASE("stringstream")
+  {
+    d.read_csv(dataset);
+  }
+
+  SUBCASE("table")
+  {
+    d.read_table(dataset2);
+  }
 
   CHECK(d.columns[0].name() == "A");
   CHECK(d.columns[1].name() == "B");
@@ -43,7 +60,15 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
 {
   using namespace ultra::src;
 
-  d.read_csv(dataset, dataframe::params().output(2));
+  SUBCASE("stringstream")
+  {
+    d.read_csv(dataset, dataframe::params().output(2));
+  }
+
+  SUBCASE("table")
+  {
+    d.read_table(dataset2, dataframe::params().output(2));
+  }
 
   CHECK(d.columns[0].name() == "C");
   CHECK(d.columns[1].name() == "A");
@@ -62,7 +87,15 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 3")
 {
   using namespace ultra::src;
 
-  d.read_csv(dataset, dataframe::params().no_output());
+  SUBCASE("stringstream")
+  {
+    d.read_csv(dataset, dataframe::params().no_output());
+  }
+
+  SUBCASE("table")
+  {
+    d.read_table(dataset2, dataframe::params().no_output());
+  }
 
   CHECK(d.columns[0].name() == "");
   CHECK(d.columns[1].name() == "A");

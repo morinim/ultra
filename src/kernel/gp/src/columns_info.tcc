@@ -66,7 +66,7 @@ template<range_with_insert_at_beginning R>
     if constexpr (std::same_as<VT, std::string>)
       r.insert(r.begin(), "");
     else
-      r.insert(r.begin(), {});
+      r.insert(r.begin(), D_VOID());
   }
 
   return r;
@@ -109,7 +109,7 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
       if constexpr (std::same_as<VT, std::string>)
         return column_info(*this, trim(name));
       else
-        return column_info(*this, trim(std::get<std::string>(name)));
+        return column_info(*this, trim(lexical_cast<std::string>(name)));
     });
 
   for (std::size_t idx(0); idx < size(); ++idx)
@@ -136,7 +136,7 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
         else
         {
           if (basic_data_type(value))
-            cols_[idx].domain(value.index());
+            cols_[idx].domain(static_cast<domain_t>(value.index()));
         }
         break;
 
