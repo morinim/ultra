@@ -130,12 +130,6 @@ public:
   template<RangeOfSizedRanges R> std::size_t read(const R &, params);
   [[nodiscard]] bool operator!() const noexcept;
 
-  // Declare explicit specialisation.
-  template<> std::size_t read<filetype::csv>(std::istream &);
-  template<> std::size_t read<filetype::csv>(std::istream &, params);
-  template<> std::size_t read<filetype::xrff>(std::istream &);
-  template<> std::size_t read<filetype::xrff>(std::istream &, params);
-
   bool clone_schema(const dataframe &);
 
   // ---- Capacity ----
@@ -163,7 +157,11 @@ private:
   [[nodiscard]] class_t encode(const value_t &);
 
   std::size_t read_csv(const std::filesystem::path &, const params &);
+  std::size_t read_csv(std::istream &);
+  std::size_t read_csv(std::istream &, params);
+
   std::size_t read_xrff(const std::filesystem::path &, const params &);
+  std::size_t read_xrff(std::istream &, params);
   std::size_t read_xrff(tinyxml2::XMLDocument &, const params &);
 
   // Integer are simpler to manage than textual data, so, when appropriate,

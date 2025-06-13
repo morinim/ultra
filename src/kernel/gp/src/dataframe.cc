@@ -282,8 +282,7 @@ std::size_t dataframe::read_xrff(const std::filesystem::path &fn,
 /// \see
 /// `dataframe::read_xrff(tinyxml2::XMLDocument &)` for details.
 ///
-template<>
-std::size_t dataframe::read<filetype::xrff>(std::istream &in, params p)
+std::size_t dataframe::read_xrff(std::istream &in, params p)
 {
   std::ostringstream ss;
   ss << in.rdbuf();
@@ -293,12 +292,6 @@ std::size_t dataframe::read<filetype::xrff>(std::istream &in, params p)
     throw exception::data_format("XRFF data file format error");
 
   return read_xrff(doc, p);
-}
-
-template<>
-std::size_t dataframe::read<filetype::xrff>(std::istream &in)
-{
-  return read<filetype::xrff>(in, {});
 }
 
 ///
@@ -496,8 +489,7 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 /// \note
 /// Test set can have an empty output value.
 ///
-template<>
-std::size_t dataframe::read<filetype::csv>(std::istream &from, params p)
+std::size_t dataframe::read_csv(std::istream &from, params p)
 {
   columns.data_typing(p.data_typing);
 
@@ -532,11 +524,6 @@ std::size_t dataframe::read<filetype::csv>(std::istream &from, params p)
     throw exception::insufficient_data("Empty / invalid CSV data file");
 
   return size();
-}
-
-template<> std::size_t dataframe::read<filetype::csv>(std::istream &from)
-{
-  return read(from, {});
 }
 
 ///

@@ -178,4 +178,19 @@ template<RangeOfSizedRanges R> dataframe::dataframe(const R &t)
 {
 }
 
+template<filetype T>
+std::size_t dataframe::read(std::istream &from, params p)
+{
+  if constexpr (T == filetype::xrff)
+    return read_xrff(from, p);
+  else
+    return read_csv(from, p);
+}
+
+template<filetype T>
+std::size_t dataframe::read(std::istream &from)
+{
+  return read<T>(from, {});
+}
+
 #endif  // include guard
