@@ -42,6 +42,8 @@ using class_t = std::size_t;
 ///                   `record_t`    `example`
 using record_t = std::vector<value_t>;
 
+enum class filetype {csv, xrff};
+
 ///
 /// Stores a single processed element (row) of the dataset.
 ///
@@ -122,13 +124,17 @@ public:
   // ---- Convenience ----
   std::size_t read(const std::filesystem::path &);
   std::size_t read(const std::filesystem::path &, const params &);
-  std::size_t read_csv(std::istream &);
-  std::size_t read_csv(std::istream &, params);
-  template<RangeOfSizedRanges R> std::size_t read_table(const R &);
-  template<RangeOfSizedRanges R> std::size_t read_table(const R &, params);
-  std::size_t read_xrff(std::istream &);
-  std::size_t read_xrff(std::istream &, const params &);
+  template<filetype = filetype::csv> std::size_t read(std::istream &);
+  template<filetype = filetype::csv> std::size_t read(std::istream &, params);
+  template<RangeOfSizedRanges R> std::size_t read(const R &);
+  template<RangeOfSizedRanges R> std::size_t read(const R &, params);
   [[nodiscard]] bool operator!() const noexcept;
+
+  // Declare explicit specialisation.
+  template<> std::size_t read<filetype::csv>(std::istream &);
+  template<> std::size_t read<filetype::csv>(std::istream &, params);
+  template<> std::size_t read<filetype::xrff>(std::istream &);
+  template<> std::size_t read<filetype::xrff>(std::istream &, params);
 
   bool clone_schema(const dataframe &);
 
@@ -148,9 +154,8 @@ public:
   src::columns_info columns {};
 
 private:
-  template<std::ranges::range R> bool read_record(R,
-                                                  std::optional<std::size_t>,
-                                                  bool);
+  template<std::ranges::range R> bool read_record(
+    R, std::optional<std::size_t>, bool);
 
   template<std::ranges::range R>
   [[nodiscard]] example to_example(const R &, bool);

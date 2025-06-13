@@ -42,12 +42,12 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 1")
 
   SUBCASE("stringstream")
   {
-    d.read_csv(dataset);
+    d.read(dataset);
   }
 
   SUBCASE("table")
   {
-    d.read_table(dataset2);
+    d.read(dataset2);
   }
 
   CHECK(d.columns[0].name() == "A");
@@ -62,12 +62,12 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 2")
 
   SUBCASE("stringstream")
   {
-    d.read_csv(dataset, dataframe::params().output(2));
+    d.read(dataset, dataframe::params().output(2));
   }
 
   SUBCASE("table")
   {
-    d.read_table(dataset2, dataframe::params().output(2));
+    d.read(dataset2, dataframe::params().output(2));
   }
 
   CHECK(d.columns[0].name() == "C");
@@ -89,12 +89,12 @@ TEST_CASE_FIXTURE(fixture1, "dataframe import data 3")
 
   SUBCASE("stringstream")
   {
-    d.read_csv(dataset, dataframe::params().no_output());
+    d.read(dataset, dataframe::params().no_output());
   }
 
   SUBCASE("table")
   {
-    d.read_table(dataset2, dataframe::params().no_output());
+    d.read(dataset2, dataframe::params().no_output());
   }
 
   CHECK(d.columns[0].name() == "");
@@ -110,7 +110,7 @@ TEST_CASE_FIXTURE(fixture1, "dataframe columns")
 {
   using namespace ultra::src;
 
-  d.read_csv(dataset, dataframe::params().header());
+  d.read(dataset, dataframe::params().header());
 
   std::cout << "Name of the first column: " << d.columns[0].name()
             << "\nDomain of the first column: " << d.columns[0].domain();

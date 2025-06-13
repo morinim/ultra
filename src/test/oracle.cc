@@ -204,7 +204,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::sr);
-  CHECK(pr.data.selected().read_csv(is) == debug::SR_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::SR_COUNT);
   pr.setup_symbols();
 
   // TEAM OF ONE INDIVIDUAL.
@@ -307,7 +307,7 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle serialization")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::sr);
-  CHECK(pr.data.selected().read_csv(is) == debug::SR_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::SR_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -343,7 +343,7 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::iris_full);
-  CHECK(pr.data.selected().read_csv(is) == debug::IRIS_FULL_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::IRIS_FULL_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -360,7 +360,7 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle serialization")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::iris_full);
-  CHECK(pr.data.selected().read_csv(is) == debug::IRIS_FULL_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::IRIS_FULL_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -377,7 +377,7 @@ TEST_CASE_FIXTURE(fixture, "binary_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::gender);
-  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::GENDER_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -394,7 +394,7 @@ TEST_CASE_FIXTURE(fixture, "binary_oracle serialization")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::gender);
-  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::GENDER_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 
@@ -411,7 +411,7 @@ TEST_CASE_FIXTURE(fixture, "Perfect binary_oracle")
   log::reporting_level = log::lWARNING;
 
   std::istringstream is(debug::gender_trick);
-  CHECK(pr.data.selected().read_csv(is) == debug::GENDER_TRICK_COUNT);
+  CHECK(pr.data.selected().read(is) == debug::GENDER_TRICK_COUNT);
   pr.setup_symbols();
   CHECK(pr.sset.enough_terminals());
 

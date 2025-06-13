@@ -81,7 +81,7 @@ namespace ultra::src
 dataframe::dataframe(std::istream &is, const params &p)
 {
   Expects(is.good());
-  read_csv(is, p);
+  read(is, p);
   Ensures(is_valid());
 }
 dataframe::dataframe(std::istream &is) : dataframe(is, {}) {}
@@ -282,7 +282,8 @@ std::size_t dataframe::read_xrff(const std::filesystem::path &fn,
 /// \see
 /// `dataframe::read_xrff(tinyxml2::XMLDocument &)` for details.
 ///
-std::size_t dataframe::read_xrff(std::istream &in, const params &p)
+template<>
+std::size_t dataframe::read<filetype::xrff>(std::istream &in, params p)
 {
   std::ostringstream ss;
   ss << in.rdbuf();
@@ -293,9 +294,11 @@ std::size_t dataframe::read_xrff(std::istream &in, const params &p)
 
   return read_xrff(doc, p);
 }
-std::size_t dataframe::read_xrff(std::istream &in)
+
+template<>
+std::size_t dataframe::read<filetype::xrff>(std::istream &in)
 {
-  return read_xrff(in, {});
+  return read<filetype::xrff>(in, {});
 }
 
 ///
@@ -442,7 +445,7 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
   if (!in)
     throw std::runtime_error("Cannot read CSV data file");
 
-  return read_csv(in, p);
+  return read(in, p);
 }
 
 ///
@@ -493,7 +496,8 @@ std::size_t dataframe::read_csv(const std::filesystem::path &fn,
 /// \note
 /// Test set can have an empty output value.
 ///
-std::size_t dataframe::read_csv(std::istream &from, params p)
+template<>
+std::size_t dataframe::read<filetype::csv>(std::istream &from, params p)
 {
   columns.data_typing(p.data_typing);
 
@@ -529,9 +533,10 @@ std::size_t dataframe::read_csv(std::istream &from, params p)
 
   return size();
 }
-std::size_t dataframe::read_csv(std::istream &from)
+
+template<> std::size_t dataframe::read<filetype::csv>(std::istream &from)
 {
-  return read_csv(from, {});
+  return read(from, {});
 }
 
 ///

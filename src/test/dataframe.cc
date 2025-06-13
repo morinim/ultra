@@ -146,7 +146,7 @@ TEST_CASE("Filtering")
   SUBCASE("Random dataframe")
   {
     dataframe d;
-    CHECK(d.read_csv(ss));
+    CHECK(d.read(ss));
     CHECK(d.size() == LINES);
   }
 
@@ -156,7 +156,7 @@ TEST_CASE("Filtering")
     p.filter = [](auto &) { return random::boolean(); };
 
     dataframe d;
-    d.read_csv(ss, p);
+    d.read(ss, p);
 
     const auto half(LINES / 2);
     CHECK(10 * d.size() <= 11 * half);
@@ -179,7 +179,7 @@ TEST_CASE("load_csv headers")
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read_csv(wine, p) == debug::WINE_COUNT);
+  CHECK(d.read(wine, p) == debug::WINE_COUNT);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol);
@@ -240,7 +240,7 @@ TEST_CASE("load_csv output_index")
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read_csv(abalone, p) == debug::ABALONE_COUNT);
+  CHECK(d.read(abalone, p) == debug::ABALONE_COUNT);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol);
@@ -288,7 +288,7 @@ TEST_CASE("load_csv_no_output_index")
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+  CHECK(d.read(ecoli, p) == debug::ECOLI_COUNT);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol + 1);
@@ -344,7 +344,7 @@ TEST_CASE("load_csv_classification")
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+  CHECK(d.read(iris, p) == debug::IRIS_COUNT);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol);
@@ -421,7 +421,7 @@ std::istringstream iris_xrff(R"(
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read_xrff(iris_xrff) == 10);
+  CHECK(d.read<src::filetype::xrff>(iris_xrff) == 10);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol);

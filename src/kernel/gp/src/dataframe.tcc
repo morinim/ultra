@@ -126,7 +126,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 /// \return              number of elements parsed (0 in case of error)
 ///
 template<RangeOfSizedRanges R>
-std::size_t dataframe::read_table(const R &container, params p)
+std::size_t dataframe::read(const R &container, params p)
 {
   columns.data_typing(p.data_typing);
 
@@ -152,9 +152,9 @@ std::size_t dataframe::read_table(const R &container, params p)
 }
 
 template<RangeOfSizedRanges R>
-std::size_t dataframe::read_table(const R &container)
+std::size_t dataframe::read(const R &container)
 {
-  return read_table(container, {});
+  return read(container, {});
 }
 
 ///
@@ -169,7 +169,7 @@ std::size_t dataframe::read_table(const R &container)
 ///
 template<RangeOfSizedRanges R> dataframe::dataframe(const R &t, params p)
 {
-  read_table(t, p);
+  read(t, p);
   Ensures(is_valid());
 }
 

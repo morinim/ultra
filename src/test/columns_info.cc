@@ -38,12 +38,12 @@ TEST_CASE_FIXTURE(fixture_ci, "wine categories weak")
   SUBCASE("stringstream")
   {
     std::istringstream wine(debug::wine);
-    CHECK(d.read_csv(wine) == debug::WINE_COUNT);
+    CHECK(d.read(wine) == debug::WINE_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::wine_table) == debug::WINE_COUNT);
+    CHECK(d.read(debug::wine_table) == debug::WINE_COUNT);
   }
 
   CHECK(d.is_valid());
@@ -146,12 +146,12 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
   SUBCASE("stringstream")
   {
     std::istringstream abalone(debug::abalone);
-    CHECK(d.read_csv(abalone, p) == debug::ABALONE_COUNT);
+    CHECK(d.read(abalone, p) == debug::ABALONE_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::abalone_table, p) == debug::ABALONE_COUNT);
+    CHECK(d.read(debug::abalone_table, p) == debug::ABALONE_COUNT);
   }
 
   CHECK(d.is_valid());
@@ -201,15 +201,15 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
   {
     std::istringstream abalone(debug::abalone);
 
-    CHECK(d.read_csv(abalone,
-                     src::dataframe::params().strong_data_typing().output(8))
+    CHECK(d.read(abalone,
+                 src::dataframe::params().strong_data_typing().output(8))
           == debug::ABALONE_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::abalone_table,
-                       src::dataframe::params().strong_data_typing().output(8))
+    CHECK(d.read(debug::abalone_table,
+                 src::dataframe::params().strong_data_typing().output(8))
           == debug::ABALONE_COUNT);
   }
 
@@ -270,12 +270,12 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
   SUBCASE("stringstream")
   {
     std::istringstream ecoli(debug::ecoli);
-    CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+    CHECK(d.read(ecoli, p) == debug::ECOLI_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::ecoli_table, p) == debug::ECOLI_COUNT);
+    CHECK(d.read(debug::ecoli_table, p) == debug::ECOLI_COUNT);
   }
 
   CHECK(d.is_valid());
@@ -332,12 +332,12 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
   SUBCASE("stringstream")
   {
     std::istringstream ecoli(debug::ecoli);
-    CHECK(d.read_csv(ecoli, p) == debug::ECOLI_COUNT);
+    CHECK(d.read(ecoli, p) == debug::ECOLI_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::ecoli_table, p) == debug::ECOLI_COUNT);
+    CHECK(d.read(debug::ecoli_table, p) == debug::ECOLI_COUNT);
   }
 
   CHECK(d.is_valid());
@@ -396,12 +396,12 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
   SUBCASE("stringstream")
   {
     std::istringstream iris(debug::iris);
-    CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+    CHECK(d.read(iris, p) == debug::IRIS_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::iris_table, p) == debug::IRIS_COUNT);
+    CHECK(d.read(debug::iris_table, p) == debug::IRIS_COUNT);
   }
 
   CHECK(d.is_valid());
@@ -431,12 +431,12 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
   SUBCASE("stringstream")
   {
     std::istringstream iris(debug::iris);
-    CHECK(d.read_csv(iris, p) == debug::IRIS_COUNT);
+    CHECK(d.read(iris, p) == debug::IRIS_COUNT);
   }
 
   SUBCASE("table")
   {
-    CHECK(d.read_table(debug::iris_table, p) == debug::IRIS_COUNT);
+    CHECK(d.read(debug::iris_table, p) == debug::IRIS_COUNT);
   }
 
   CHECK(d.is_valid());
