@@ -25,7 +25,7 @@ struct fixture1
                                  a1, 0.1, 1, d1
                                  a2, 0.2, 2, d2)"};
 
-  std::vector<ultra::src::record_t> dataset2 =
+  ultra::src::raw_data dataset2 =
   {
     { "A", "B", "C",  "D"},
     {"a0", 0.0,   0, "d0"},

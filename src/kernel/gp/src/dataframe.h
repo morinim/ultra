@@ -38,9 +38,11 @@ using class_t = std::size_t;
 /// A raw observation or data entry, typically read from an input source.
 ///
 /// The ETL chain is:
-/// > INPUT SOURCE -> raw record -> processed example --(push_back)-> dataframe
-///                   `record_t`    `example`
+/// INPUT SOURCE   -> raw record -> processed example --(push_back)-> dataframe
+/// `raw_data`/file   `record_t`    `example`
 using record_t = std::vector<value_t>;
+
+using raw_data = std::vector<record_t>;
 
 ///
 /// Stores a single processed element (row) of the dataset.

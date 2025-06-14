@@ -22,19 +22,20 @@ int main()
   using namespace ultra;
 
   // DATA SAMPLE (output, input)
-  // (the target function is `x + sin(x)`)
-  std::istringstream training(R"(
-    -9.456,-10.0
-    -8.989, -8.0
-    -5.721, -6.0
-    -3.243, -4.0
-    -2.909, -2.0
-     0.000,  0.0
-     2.909,  2.0
-     3.243,  4.0
-     5.721,  6.0
-     8.989,  8.0
-  )");
+  src::raw_data training =  // the target function is `y = x + sin(x)`
+  {
+    {   "Y",  "X"},
+    {-9.456,-10.0},
+    {-8.989, -8.0},
+    {-5.721, -6.0},
+    {-3.243, -4.0},
+    {-2.909, -2.0},
+    { 0.000,  0.0},
+    { 2.909,  2.0},
+    { 3.243,  4.0},
+    { 5.721,  6.0},
+    { 8.989,  8.0}
+  };
 
   // READING INPUT DATA
   src::problem prob(training);
