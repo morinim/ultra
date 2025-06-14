@@ -421,7 +421,7 @@ std::istringstream iris_xrff(R"(
   CHECK(d.columns.size() == 0);
   CHECK(d.columns.empty());
 
-  CHECK(d.read<src::filetype::xrff>(iris_xrff) == 10);
+  CHECK(d.read(iris_xrff) == 10);
   CHECK(d.is_valid());
 
   CHECK(d.columns.size() == ncol);

@@ -42,8 +42,6 @@ using class_t = std::size_t;
 ///                   `record_t`    `example`
 using record_t = std::vector<value_t>;
 
-enum class filetype {csv, xrff};
-
 ///
 /// Stores a single processed element (row) of the dataset.
 ///
@@ -124,8 +122,8 @@ public:
   // ---- Convenience ----
   std::size_t read(const std::filesystem::path &);
   std::size_t read(const std::filesystem::path &, const params &);
-  template<filetype = filetype::csv> std::size_t read(std::istream &);
-  template<filetype = filetype::csv> std::size_t read(std::istream &, params);
+  std::size_t read(std::istream &);
+  std::size_t read(std::istream &, params);
   template<RangeOfSizedRanges R> std::size_t read(const R &);
   template<RangeOfSizedRanges R> std::size_t read(const R &, params);
   [[nodiscard]] bool operator!() const noexcept;

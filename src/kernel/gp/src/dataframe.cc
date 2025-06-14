@@ -20,6 +20,40 @@
 
 #include <algorithm>
 
+namespace
+{
+
+// You can read the first few kilobytes from the stream and look for the
+// typical signs of XML:
+// - an optional XML declaration: `<?xml version="1.0"?>`;
+// - a root element starting with `<tagname>`'
+// This is fast and only reads a small chunk but isn't 100% accurate.
+[[nodiscard]] bool looks_like_xml(std::istream &input)
+{
+  const auto original_pos(input.tellg());  // save current stream position
+
+  constexpr std::streamsize max_probe {4096};
+  std::string buffer(max_probe, '\0');
+
+  input.read(buffer.data(), max_probe);
+
+  // Restore stream position.
+  input.clear();  // clear eof flag if set
+  input.seekg(original_pos);
+
+  // Trim leading whitespace.
+  const auto first_non_space(buffer.find_first_not_of(" \t\r\n"));
+  if (first_non_space == std::string::npos)
+    return false;
+
+  const char *p(buffer.c_str() + first_non_space);
+
+  // Check for "<?xml" or "<".
+  return std::strncmp(p, "<?xml", 5) == 0 || *p == '<';
+}
+
+}  // namespace
+
 namespace ultra::src
 {
 
@@ -75,8 +109,8 @@ namespace ultra::src
 /// \param[in] is input stream
 /// \param[in] p  additional, optional, parameters (see `params` structure)
 ///
-/// \remark
-/// Data from the input stream must be in CSV format.
+/// \note
+/// Data from the input stream can be in either CSV or XRFF format.
 ///
 dataframe::dataframe(std::istream &is, const params &p)
 {
@@ -86,13 +120,15 @@ dataframe::dataframe(std::istream &is, const params &p)
 }
 dataframe::dataframe(std::istream &is) : dataframe(is, {}) {}
 
-
 ///
 /// New datafame instance containing the learning collection from a file.
 ///
 /// \param[in] fn name of the file containing the learning collection (CSV /
 ///               XRFF format)
 /// \param[in] p  additional, optional, parameters (see `params` structure)
+///
+/// \note
+/// Data from the input stream can be in either CSV or XRFF format.
 ///
 dataframe::dataframe(const std::filesystem::path &fn, const params &p)
 {
@@ -551,6 +587,19 @@ std::size_t dataframe::read(const std::filesystem::path &fn, const params &p)
 std::size_t dataframe::read(const std::filesystem::path &fn)
 {
   return read(fn, {});
+}
+
+std::size_t dataframe::read(std::istream &from, params p)
+{
+  if (looks_like_xml(from))
+    return read_xrff(from, p);
+  else
+    return read_csv(from, p);
+}
+
+std::size_t dataframe::read(std::istream &from)
+{
+  return read(from, {});
 }
 
 ///
