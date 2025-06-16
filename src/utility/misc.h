@@ -269,7 +269,7 @@ template<std::floating_point T> [[nodiscard]] bool issmall(T v)
 ///
 template<class T>
 requires std::is_arithmetic_v<T>
-[[nodiscard]] bool isnonnegative(T v)
+[[nodiscard]] bool isnonnegative(T v) noexcept
 {
   return v >= static_cast<T>(0);
 }
@@ -348,7 +348,7 @@ template<std::ranges::contiguous_range C>
 /// \param[in] v1 a floating point number
 /// \param[in] v2 a floating point number
 /// \param[in] e  max relative error. If we want 99.999% accuracy then we
-///               should pass `0.00001`
+///               should pass `0.0001`
 /// \return       `true` if the difference between `v1` and `v2` is *small*
 ///               compared to their magnitude
 ///
@@ -357,7 +357,7 @@ template<std::ranges::contiguous_range C>
 /// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 ///
 template<std::floating_point T>
-[[nodiscard]] bool almost_equal(T v1, T v2, T e = 0.00001)
+[[nodiscard]] bool almost_equal(T v1, T v2, T e = 0.0001)
 {
   // Handles special values of `v1` / `v2 (infinity, Nan...).
   // `std::equal_to` (usually) avoids warnings with floating point comparison.
@@ -386,7 +386,7 @@ template<std::floating_point T>
 }
 
 template<std::integral T>
-[[nodiscard]] bool almost_equal(T v1, T v2)
+[[nodiscard]] bool almost_equal(T v1, T v2) noexcept
 {
   return v1 == v2;
 }
