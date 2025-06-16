@@ -23,12 +23,28 @@ jobs:
       matrix:
         config:
         - {
+            name: "ARM Ubuntu GCC Debug",
+            build_type: "Debug",
+            os: ubuntu-24.04-arm,
+            shell: bash,
+            generator: default,
+            cc: "gcc", cxx: "g++"
+          }
+        - {
             name: "ARM Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-24.04-arm,
             shell: bash,
             generator: default,
             cc: "gcc", cxx: "g++"
+          }
+        - {
+            name: "ARM Ubuntu GCC TSan",
+            build_type: "Release",
+            os: ubuntu-24.04-arm,
+            shell: bash,
+            generator: default,
+            cc: "gcc -fsanitize=thread", cxx: "g++ -fsanitize=thread"
           }
         - {
             name: "ARM Windows MSVC Release",
