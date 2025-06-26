@@ -10,13 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <iostream>
-
 #include "kernel/value.h"
 #include "kernel/nullary.h"
 #include "kernel/symbol_set.h"
 #include "kernel/gp/src/variable.h"
 #include "utility/misc.h"
+
+#include <iostream>
 
 namespace ultra
 {
@@ -129,9 +129,6 @@ std::ostream &operator<<(std::ostream &o, const value_t &v)
 /// \param[out] v  value_t coming from the input stream
 /// \return       `true` if the object has been loaded correctly
 ///
-/// \remark
-/// `d_void` values are completely skipped.
-///
 /// \note
 /// If the load operation isn't successful `v` isn't modified.
 ///
@@ -141,22 +138,30 @@ bool load(std::istream &in, const symbol_set &ss, value_t &v)
   if (!(in >> d))
     return false;
 
-  value_t t;
   switch (d)
   {
   case d_address:
     if (int x; in >> x)
-      t = param_address(x);
+    {
+      v = param_address(x);
+      return true;
+    }
     break;
 
   case d_double:
     if (double x; load_float_from_stream(in, &x))
-      t = x;
+    {
+      v = x;
+      return true;
+    }
     break;
 
   case d_int:
     if (int x; in >> x)
-      t = x;
+    {
+      v = x;
+      return true;
+    }
     break;
 
   case d_ivector:
@@ -166,36 +171,43 @@ bool load(std::istream &in, const symbol_set &ss, value_t &v)
       for (auto &e : iv)
         if (!(in >> e))
           break;
-      t = iv;
+      v = iv;
+      return true;
     }
     break;
 
   case d_nullary:
     if (symbol::opcode_t x; in >> x)
       if (const auto *n = get_if<nullary>(ss.decode(x)))
-        t = n;
+      {
+        v = n;
+        return true;
+      }
     break;
 
   case d_string:
     if (std::string s; in >> s)
-      t = s;
+    {
+      v = s;
+      return true;
+    }
     break;
 
   case d_variable:
     if (std::string name; in >> name)
       if (const auto *n = get_if<D_VARIABLE>(ss.decode(name)))
-        t = n;
+      {
+        v = n;
+        return true;
+      }
     break;
 
   case d_void:
-    break;
+    v = D_VOID{};
+    return true;
   }
 
-  if (!has_value(t))
-    return false;
-
-  v = t;
-  return true;
+  return false;
 }
 
 ///
