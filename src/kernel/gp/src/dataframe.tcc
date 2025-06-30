@@ -101,7 +101,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
                             bool add_instance)
 {
   Expects(!r.empty());
-  Expects(!output_index || *output_index < std::ranges::distance(r));
+  Expects(output_index < static_cast<std::size_t>(std::ranges::distance(r)));
 
   r = internal::output_column_first(r, output_index);
 
