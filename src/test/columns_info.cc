@@ -417,7 +417,6 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
   CHECK(cs.domain_of_category(0) == d_double);
 
-
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
 }
 
