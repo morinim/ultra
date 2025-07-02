@@ -280,8 +280,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
     {
       // Note:
       // * the maximum single class error is `1.0`;
-      // * the maximum average class error is
-      //   `1.0 / dat.classes()`;
+      // * the maximum average class error is `1.0 / dat.classes()`;
       // So `-1.0` is like to say that we have a complete failure.
       d -= 1.0;
     }
