@@ -20,6 +20,12 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+namespace ultra::src::internal
+{
+bool compatible(const function::param_data_types &,
+                const std::vector<std::string> &, const columns_info &);
+}
+
 TEST_SUITE("SRC::PROBLEM")
 {
 
@@ -120,6 +126,49 @@ TEST_CASE("setup_terminals")
 
     CHECK(p.data.selected().size() == debug::IRIS_COUNT);
     CHECK(p.data[src::dataset_t::validation].empty());
+  }
+}
+
+TEST_CASE("compatible")
+{
+  using namespace ultra;
+  using ultra::src::internal::compatible;
+
+  SUBCASE("Weak - 0 output")
+  {
+    src::dataframe d(debug::abalone_table);
+
+    symbol::category_t sex(0), length(0), diameter(0), height(0), rings(1);
+    CHECK(compatible({sex}, {"sex"}, d.columns));
+    CHECK(compatible({sex}, {"numeric"}, d.columns));
+    CHECK(compatible({length}, {"length"}, d.columns));
+    CHECK(compatible({length}, {"numeric"}, d.columns));
+    CHECK(compatible({diameter}, {"diameter"}, d.columns));
+    CHECK(compatible({diameter}, {"numeric"}, d.columns));
+    CHECK(compatible({height}, {"height"}, d.columns));
+    CHECK(compatible({height}, {"numeric"}, d.columns));
+    CHECK(compatible({rings}, {"rings"}, d.columns));
+    CHECK(compatible({rings}, {"integer"}, d.columns));
+  }
+
+  SUBCASE("Weak - 8 output")
+  {
+    src::dataframe::params params;
+    params.output_index = 8;
+
+    src::dataframe d(debug::abalone_table, params);
+
+    symbol::category_t sex(1), length(2), diameter(2), height(2), rings(0);
+    CHECK(compatible({sex}, {"sex"}, d.columns));
+    CHECK(compatible({sex}, {"string"}, d.columns));
+    CHECK(compatible({length}, {"length"}, d.columns));
+    CHECK(compatible({length}, {"numeric"}, d.columns));
+    CHECK(compatible({diameter}, {"diameter"}, d.columns));
+    CHECK(compatible({diameter}, {"numeric"}, d.columns));
+    CHECK(compatible({height}, {"height"}, d.columns));
+    CHECK(compatible({height}, {"numeric"}, d.columns));
+    CHECK(compatible({rings}, {"rings"}, d.columns));
+    CHECK(compatible({rings}, {"integer"}, d.columns));
   }
 }
 

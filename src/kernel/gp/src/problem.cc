@@ -23,6 +23,54 @@
 namespace ultra::src
 {
 
+namespace internal
+{
+
+///
+/// Checks if a sequence of categories matches a sequence of domain names.
+///
+/// \param[in] instance a sequence of categories
+/// \param[in] pattern  a mixed vector of category names and domain names
+/// \return             `true` if `instance` match `pattern`
+///
+/// For instance:
+///
+///     category_t km_h, name;
+///     compatible({km_h}, {"km/h"}) == true
+///     compatible({km_h}, {"numeric"}) == true
+///     compatible({km_h}, {"string"}) == false
+///     compatible({km_h}, {"name"}) == false
+///     compatible({name}, {"string"}) == true
+///
+bool compatible(const function::param_data_types &instance,
+                const std::vector<std::string> &pattern,
+                const columns_info &columns)
+{
+  Expects(instance.size() == pattern.size());
+
+  const auto sup(instance.size());
+  for (std::size_t i(0); i < sup; ++i)
+  {
+    const std::string p_i(pattern[i]);
+    const bool generic(from_weka(p_i) != d_void);
+
+    if (generic)  // numeric, string, integer...
+    {
+      if (columns.domain_of_category(instance[i]) != from_weka(p_i))
+        return false;
+    }
+    else
+    {
+      if (instance[i] != columns[p_i].category())
+        return false;
+    }
+  }
+
+  return true;
+}
+
+}  // namespace internal
+
 problem::problem(dataframe d)
 {
   ultraINFO << "Importing dataset...";
@@ -31,7 +79,8 @@ problem::problem(dataframe d)
 
   ultraINFO << "Examples: " << data[dataset_t::training].size()
             << ", features: " << variables()
-            << ", classes: " << classes();
+            << ", classes: " << classes()
+            << ", categories: " << categories();
 
 
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
@@ -89,7 +138,8 @@ bool problem::operator!() const
 ///
 /// Inserts variables and states for nominal attributes into the symbol_set.
 ///
-/// \exception `std::data_format` unsupported state domain
+/// \exception `std::insufficient_data` not enough data to generate a terminal
+///                                     set
 ///
 /// There is a variable for each feature.
 ///
@@ -251,7 +301,7 @@ void problem::setup_symbols()
 ///
 /// Checks if a sequence of categories matches a sequence of domain names.
 ///
-/// \param[in] instance a vector of categories
+/// \param[in] instance a sequence of categories
 /// \param[in] pattern  a mixed vector of category names and domain names
 /// \return             `true` if `instance` match `pattern`
 ///
@@ -267,29 +317,8 @@ void problem::setup_symbols()
 bool problem::compatible(const function::param_data_types &instance,
                          const std::vector<std::string> &pattern) const
 {
-  Expects(instance.size() == pattern.size());
-
-  const auto &columns(data[dataset_t::training].columns);
-
-  const auto sup(instance.size());
-  for (std::size_t i(0); i < sup; ++i)
-  {
-    const std::string p_i(pattern[i]);
-    const bool generic(from_weka(p_i) != d_void);
-
-    if (generic)  // numeric, string, integer...
-    {
-      if (columns.domain_of_category(instance[i]) != from_weka(p_i))
-        return false;
-    }
-    else
-    {
-      if (instance[i] != columns[p_i].category())
-        return false;
-    }
-  }
-
-  return true;
+  return internal::compatible(instance, pattern,
+                              data[dataset_t::training].columns);
 }
 
 ///
