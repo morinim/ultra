@@ -30,13 +30,14 @@ namespace ultra::src
 ///
 /// Category/type management of the dataframe columns.
 ///
-/// - `weak`: columns **having the same domain** (`double with `double`,
-///           `string`s with `string`s...) can be freely mixed by the engine.
+/// - `weak`: columns **that share the same domain** (e.g. `double` with
+///           `double`, `string` with `string`...) can be freely mixed by the
+///           engine.
 /// - `strong`: every column has its own type/category (Strongly Typed Genetic
 /// Programming).
 ///
 /// Even when specifying `typing::weak` the engine won't mix all the columns.
-/// Particularly a unique category will be assigned to:
+/// In particular, a unique category will be assigned to:
 /// - columns associated with distinct domains;
 /// - columns with `d_string` domain.
 ///
@@ -101,7 +102,7 @@ public:
   [[nodiscard]] const column_info &operator[](size_type) const;
   [[nodiscard]] column_info &operator[](size_type);
 
-  [[nodiscard]] column_info operator[](const std::string &) const;
+  [[nodiscard]] const column_info &operator[](const std::string &) const;
 
   [[nodiscard]] const column_info &front() const;
   [[nodiscard]] column_info &front();

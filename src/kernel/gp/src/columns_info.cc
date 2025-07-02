@@ -71,8 +71,8 @@ void columns_info::column_info::add_state(value_t s)
 /// Computes and returns the category assigned to this column.
 ///
 /// \note
-/// This is a computed field: if the value have to be used multiple time store
-/// it in a local variable (buffer).
+/// This is a computed property: if the value needs to be used multiple times,
+/// consider storing it in a local variable.
 ///
 symbol::category_t columns_info::column_info::category() const
 {
@@ -127,16 +127,26 @@ columns_info::column_info &columns_info::operator[](size_type i)
   return cols_[i];
 }
 
-columns_info::column_info columns_info::operator[](
+///
+/// Returns a reference to column_info with specified column header.
+///
+/// \param[in] the name of the column_info to find
+/// \return    a reference to the column_info with the given column header
+///
+/// \exception `std::out_of_range` if the container does not contain a column
+///                                with the specified name
+///
+const columns_info::column_info &columns_info::operator[](
   const std::string &name) const
 {
   const auto it(std::ranges::find_if(
                   cols_,
-                  [name](const auto &c)
-                  {
-                    return c.name() == name;
-                  }));
-  return it == cols_.end() ? column_info(*this) : *it;
+                  [name](const auto &c) { return c.name() == name; }));
+
+  if (it == cols_.end())
+    throw std::out_of_range("Column name doesn't exist");
+
+  return *it;
 }
 
 ///
@@ -232,8 +242,8 @@ void columns_info::push_back(const column_info &v)
 }
 
 ///
-/// Inserts a new column at the beginning of the column list, shifting existing
-/// columns back.
+/// Inserts a new column at the beginning of the list, moving existing
+/// columns forward.
 ///
 /// \param[in] v information about the new column
 ///
