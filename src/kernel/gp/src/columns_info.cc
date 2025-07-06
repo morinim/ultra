@@ -130,8 +130,8 @@ columns_info::column_info &columns_info::operator[](size_type i)
 ///
 /// Returns a reference to column_info with specified column header.
 ///
-/// \param[in] the name of the column_info to find
-/// \return    a reference to the column_info with the given column header
+/// \param[in] name the name of the column_info to find
+/// \return         a reference to the column_info with the given column header
 ///
 /// \exception `std::out_of_range` if the container does not contain a column
 ///                                with the specified name
