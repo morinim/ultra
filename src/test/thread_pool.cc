@@ -544,4 +544,29 @@ TEST_CASE("Ensure wait() can be called multiple times on the same pool")
   CHECK(all_correct_count);
 }
 
+TEST_CASE("Thread pool destruction doesn't hang")
+{
+  for (unsigned n(100); n; --n)
+  {
+    std::atomic<unsigned> counter(0);
+    const auto TOTAL_TASKS(n);
+    {
+      ultra::thread_pool pool(4);
+      for (unsigned i(0); i < TOTAL_TASKS; ++i)
+      {
+        const auto task([i, &counter]
+        {
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+          ++counter;
+        });
+
+        pool.execute(task);
+      }
+    }
+
+    CHECK(counter == TOTAL_TASKS);
+  }
+}
+
 }  // TEST_SUITE("thread_pool")
