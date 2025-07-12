@@ -554,7 +554,7 @@ TEST_CASE("Thread pool destruction doesn't hang")
       ultra::thread_pool pool(4);
       for (unsigned i(0); i < TOTAL_TASKS; ++i)
       {
-        const auto task([i, &counter]
+        const auto task([&counter]
         {
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
