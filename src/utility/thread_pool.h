@@ -121,8 +121,6 @@ public:
     if (!accepting_tasks_)
       throw std::runtime_error("submit was invoked on stopped thread_pool");
 
-    increment_task_counter();
-
     using return_type = std::invoke_result_t<std::decay_t<F>,
                                              std::decay_t<Args>...>;
     std::packaged_task<return_type()> task(
@@ -132,6 +130,7 @@ public:
       });
 
     auto res(task.get_future());
+
     enqueue_task(std::move(task));
     return res;
   }
@@ -151,8 +150,6 @@ public:
   {
     if (!accepting_tasks_)
       throw std::runtime_error("execute was invoked on stopped thread_pool");
-
-    increment_task_counter();
 
     std::packaged_task<void()> task(
       [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable
@@ -224,16 +221,13 @@ private:
   template <class Task>void enqueue_task(Task &&task)
   {
     {
-      std::lock_guard lock(mutex_);
-      tasks_.emplace(std::forward<Task>(task));
-    }
-    cv_available_.notify_one();
-  }
+      std::scoped_lock lk(mutex_, task_counter_mutex_);
 
-  void increment_task_counter()
-  {
-    std::lock_guard lock(task_counter_mutex_);
-    ++task_counter_;
+      tasks_.emplace(std::forward<Task>(task));
+      ++task_counter_;
+    }
+
+    cv_available_.notify_one();
   }
 
   mutable std::mutex mutex_;  // protects tasks_ and condition variables
