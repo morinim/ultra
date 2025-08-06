@@ -33,7 +33,8 @@ double accuracy_metric::operator()(const core_reg_oracle *o,
     {
       const auto res((*o)(e.input));
       return has_value(res)
-             && almost_equal(std::get<D_DOUBLE>(res), label_as<D_DOUBLE>(e));
+             && almost_equal(lexical_cast<D_DOUBLE>(res),
+                             label_as<D_DOUBLE>(e));
     }));
 
   return static_cast<double>(ok) / static_cast<double>(d.size());

@@ -169,7 +169,7 @@ double rmae_error_functor<P>::operator()(const example &example) const
 
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
-    const auto approx(std::get<D_DOUBLE>(foreseen));
+    const auto approx(lexical_cast<D_DOUBLE>(foreseen));
     const auto target(label_as<D_DOUBLE>(example));
 
     const auto delta(std::fabs(target - approx));
