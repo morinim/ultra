@@ -167,15 +167,6 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
-  if (evolution.mate_zone && evolution.tournament_size
-      && evolution.tournament_size > evolution.mate_zone)
-  {
-    ultraERROR << "`tournament_size` (" << evolution.tournament_size
-               << ") cannot be greater than `mate_zone` ("
-               << evolution.mate_zone << ")";
-    return false;
-  }
-
   if (population.min_individuals == 1)
   {
     ultraERROR << "At least 2 individuals for layer";
