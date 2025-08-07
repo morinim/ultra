@@ -52,6 +52,32 @@ template<class A> concept ArithmeticFloatingType =
   && (std::is_floating_point_v<A>
       || std::is_floating_point_v<typename A::value_type>);
 
+/// Trait to enable bitmask operators for a given enum type.
+///
+/// \tparam E enum type to check
+///
+template<class E> struct is_bitmask_enum : std::false_type {};
+
+
+/// Convenience variable template to check if an enum is enabled for bitmask
+/// operations.
+///
+/// You will specialise this later for your enums.
+///
+template<class E>
+inline constexpr bool is_bitmask_enum_v = is_bitmask_enum<E>::value;
+
+
+///
+/// Concept that checks if a type is an enum and has bitmask operations
+/// enabled.
+///
+/// This ensures that bitwise operators are only available for enums that
+/// explicitly opt in.
+///
+template<class E>
+concept bitmask_enum = is_bitmask_enum_v<E> && std::is_enum_v<E>;
+
 // *******************************************************************
 // Classes
 // *******************************************************************
@@ -243,6 +269,93 @@ namespace crc32
 [[nodiscard]] std::string replace_all(std::string, const std::string &,
                                       const std::string &);
 [[nodiscard]] std::string trim(const std::string &);
+
+template<typename T> concept IsEnum = std::is_enum_v<T>;
+
+///
+/// Encapsulate the logic to convert a scoped enumeration element to its
+/// integer value.
+///
+/// \tparam E a scoped enumeration
+///
+/// \param[in] v element of an enum class
+/// \return      the integer value of `v`
+///
+template<IsEnum E>
+[[nodiscard]] constexpr std::underlying_type_t<E> as_integer(E v)
+{
+  return static_cast<std::underlying_type_t<E>>(v);
+}
+
+///
+/// Bitwise OR operator for bitmask-enabled enums.
+///
+/// \param[in] lhs left-hand operand
+/// \param[in] rhs right-hand operand
+/// \return        result of bitwise the operation
+///
+template<bitmask_enum E>
+[[nodiscard]] constexpr E operator|(E lhs, E rhs) noexcept
+{
+  return static_cast<E>(as_integer(lhs) | as_integer(rhs));
+}
+
+///
+/// Bitwise AND operator for bitmask-enabled enums.
+///
+/// \param[in] lhs left-hand operand
+/// \param[in] rhs right-hand operand
+/// \return        result of bitwise the operation
+///
+template<bitmask_enum E>
+[[nodiscard]] constexpr E operator&(E lhs, E rhs) noexcept
+{
+  return static_cast<E>(as_integer(lhs) & as_integer(rhs));
+}
+
+///
+/// Bitwise XOR operator for bitmask-enabled enums.
+///
+/// \param[in] lhs left-hand operand
+/// \param[in] rhs right-hand operand
+/// \return        result of bitwise the operation
+///
+template<bitmask_enum E>
+[[nodiscard]] constexpr E operator^(E lhs, E rhs) noexcept
+{
+  return static_cast<E>(as_integer(lhs) ^ as_integer(rhs));
+}
+
+///
+/// Bitwise NOT operator for bitmask-enabled enums.
+///
+/// \param[in] value the enum value to negate
+/// \return          result of bitwise the operation
+///
+template<bitmask_enum E>
+[[nodiscard]] constexpr E operator~(E value) noexcept
+{
+  return static_cast<E>(~as_integer(value));
+}
+
+
+///
+/// Helper function to check if a specific flag is set in a bitmask.
+///
+/// \tparam E bitmask-enabled enum type
+///
+/// \param[in] value the combined bitmask value
+/// \param[in] flag  the flag(s) to test for
+/// \return          true if all bits in `flag` are set in `value`, false
+///                  otherwise
+/// This uses bitwise AND to check if all bits in `flag` are also set in
+/// `value`.
+///
+template<bitmask_enum E>
+[[nodiscard]] constexpr bool has_flag(E value, E flag) noexcept
+{
+  return as_integer(value & flag) != 0;
+}
 
 ///
 /// Check if a value is almost equal to zero.
@@ -447,23 +560,6 @@ bool load_float_from_stream(std::istream &in, T *i)
 
   *i = val;
   return true;
-}
-
-template<typename T> concept IsEnum = std::is_enum_v<T>;
-
-///
-/// Encapsulate the logic to convert a scoped enumeration element to its
-/// integer value.
-///
-/// \tparam E a scoped enumeration
-///
-/// \param[in] v element of an enum class
-/// \return      the integer value of `v`
-///
-template<IsEnum E>
-[[nodiscard]] constexpr std::underlying_type_t<E> as_integer(E v)
-{
-  return static_cast<std::underlying_type_t<E>>(v);
 }
 
 ///

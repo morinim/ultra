@@ -21,6 +21,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+enum class myenum : unsigned
+{
+  disabled = 0, A = 1, B = 2, C = 4, all = 7
+};
+
+/// Enable bitmask operations for `init`.
+template<> struct ultra::is_bitmask_enum<myenum> : std::true_type {};
+
 TEST_SUITE("MISC")
 {
 
@@ -340,6 +348,50 @@ TEST_CASE("CRC32 with parallel processes")
   CHECK(fs::exists(data_file));
 
   cleanup();
+}
+
+TEST_CASE("Bitmask enum")
+{
+  using namespace ultra;
+
+  myenum off(myenum::disabled);
+  myenum a(myenum::A), b(myenum::B), c(myenum::C);
+  myenum all(a|b|c);
+
+  CHECK(!has_flag(off, myenum::A));
+  CHECK(!has_flag(off, myenum::B));
+  CHECK(!has_flag(off, myenum::C));
+  CHECK(!has_flag(off, myenum::all));
+
+  CHECK(has_flag(all, myenum::A));
+  CHECK(has_flag(all, myenum::B));
+  CHECK(has_flag(all, myenum::C));
+  CHECK(has_flag(all, myenum::all));
+  CHECK(as_integer(all & a));
+  CHECK(as_integer(all & b));
+  CHECK(as_integer(all & c));
+
+  CHECK(!has_flag(all ^ a, a));
+  CHECK(!has_flag(all ^ b, b));
+  CHECK(!has_flag(all ^ c, c));
+  CHECK(has_flag(all ^ a, b));
+  CHECK(has_flag(all ^ a, c));
+  CHECK(has_flag(all ^ b, a));
+  CHECK(has_flag(all ^ b, c));
+  CHECK(has_flag(all ^ c, a));
+  CHECK(has_flag(all ^ c, b));
+
+  CHECK(has_flag(a, myenum::A));
+  CHECK(!has_flag(a, myenum::B));
+  CHECK(!has_flag(a, myenum::C));
+
+  CHECK(!has_flag(b, myenum::A));
+  CHECK(has_flag(b, myenum::B));
+  CHECK(!has_flag(b, myenum::C));
+
+  CHECK(!has_flag(c, myenum::A));
+  CHECK(!has_flag(c, myenum::B));
+  CHECK(has_flag(c, myenum::C));
 }
 
 }  // TEST_SUITE("MISC")
