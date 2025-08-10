@@ -13,12 +13,13 @@
 #if !defined(ULTRA_SYMBOL_SET_H)
 #define      ULTRA_SYMBOL_SET_H
 
+#include "kernel/terminal.h"
+#include "kernel/gp/function.h"
+
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <string>
-
-#include "kernel/terminal.h"
-#include "kernel/gp/function.h"
 
 namespace ultra
 {
@@ -56,10 +57,9 @@ public:
 
   [[nodiscard]] std::size_t size() const noexcept;
 
-  [[nodiscard]] auto begin() noexcept;
-  [[nodiscard]] auto begin() const noexcept;
-  [[nodiscard]] auto end() noexcept;
-  [[nodiscard]] auto end() const noexcept;
+  [[nodiscard]] auto begin() noexcept { return elems_.begin(); }
+  [[nodiscard]] auto begin() const noexcept { return elems_.begin(); }
+  [[nodiscard]] auto end() const noexcept { return elems_.end(); }
 
   [[nodiscard]] w_symbol::weight_t sum() const noexcept;
 
@@ -133,6 +133,10 @@ public:
     symbol::category_t = symbol::default_category) const noexcept;
   [[nodiscard]] std::size_t terminals(
     symbol::category_t = symbol::default_category) const noexcept;
+  [[nodiscard]] std::size_t variables(
+    symbol::category_t = symbol::default_category) const noexcept;
+  template<class S> [[nodiscard]] std::size_t count_if(
+    symbol::category_t = symbol::default_category) const noexcept;
 
   // ---- Lookup / symbol access ----
   [[nodiscard]] const symbol *roulette(
@@ -172,6 +176,25 @@ private:
   // - `views_[0].all.size()` is the number of symbols in category `0`
   std::vector<internal::collection> views_ {};
 };
+
+///
+/// \tparam    S a type of symbol
+/// \param[in] c a category
+/// \return      number of symbols of type `S` in category `c`
+///
+template<class S>
+std::size_t symbol_set::count_if(symbol::category_t c) const noexcept
+{
+  if (c >= categories())
+    return 0;
+
+  if constexpr (std::derived_from<S, function>)
+    return std::ranges::count_if(
+      views_[c].functions, [](const auto &ws) { return is<S>(ws.sym); });
+  else
+    return std::ranges::count_if(
+      views_[c].terminals, [](const auto &ws) { return is<S>(ws.sym); });
+}
 
 ///
 /// Adds a symbol to the symbol set.

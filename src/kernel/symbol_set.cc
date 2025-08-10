@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <algorithm>
-#include <set>
-
 #include "kernel/symbol_set.h"
 #include "kernel/random.h"
 #include "utility/log.h"
@@ -43,26 +40,6 @@ bool is_function(const w_symbol &ws)
 sum_container::sum_container(std::string n) : name_(std::move(n))
 {
   Expects(!name_.empty());
-}
-
-auto sum_container::begin() noexcept
-{
-  return elems_.begin();
-}
-
-auto sum_container::begin() const noexcept
-{
-  return elems_.begin();
-}
-
-auto sum_container::end() noexcept
-{
-  return elems_.end();
-}
-
-auto sum_container::end() const noexcept
-{
-  return elems_.end();
 }
 
 w_symbol::weight_t sum_container::sum() const noexcept
