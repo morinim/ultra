@@ -47,13 +47,17 @@ TEST_CASE("Constructor / Insertion")
     ss.insert<real::div>();
     ss.insert<real::mul>();
     CHECK(ss.categories() == 1);
+    CHECK(ss.functions() == 6);
+    CHECK(ss.functions() == ss.count_if<ultra::function>());
     CHECK(!ss.terminals());
+    CHECK(ss.terminals() == ss.count_if<ultra::terminal>());
     CHECK(!ss.enough_terminals());
     CHECK(ss.categories_missing_terminal()
           == std::set{symbol::default_category});
 
     ss.insert<real::number>();
     CHECK(ss.categories() == 1);
+    CHECK(ss.functions() == 6);
     CHECK(ss.terminals() == 1);
     CHECK(ss.enough_terminals());
     CHECK(ss.categories_missing_terminal().empty());
@@ -73,14 +77,24 @@ TEST_CASE("Constructor / Insertion")
     ss.insert<real::number>();
     ss.insert<str::ife>(0, function::param_data_types{1, 1, 0, 0});
     CHECK(ss.categories() == 1);
+    CHECK(ss.functions() == 2);
+    CHECK(ss.functions() == ss.count_if<ultra::function>());
     CHECK(ss.terminals() == 1);
+    CHECK(ss.count_if<real::number>() == 1);
+    CHECK(ss.terminals() == ss.count_if<ultra::terminal>());
     CHECK(!ss.enough_terminals());
     CHECK(ss.categories_missing_terminal() == std::set<symbol::category_t>{1});
 
     ss.insert<str::literal>("apple", 1);
     CHECK(ss.categories() == 2);
+    CHECK(ss.functions(0) == 2);
+    CHECK(ss.functions(1) == ss.count_if<ultra::function>(1));
     CHECK(ss.terminals(0) == 1);
     CHECK(ss.terminals(1) == 1);
+    CHECK(ss.count_if<real::number>(0) == 1);
+    CHECK(ss.count_if<str::literal>(0) == 0);
+    CHECK(ss.count_if<real::number>(1) == 0);
+    CHECK(ss.count_if<str::literal>(1) == 1);
     CHECK(ss.enough_terminals());
     CHECK(ss.categories_missing_terminal().empty());
     CHECK(ss.is_valid());

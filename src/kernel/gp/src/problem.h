@@ -20,6 +20,38 @@
 #include <filesystem>
 #include <string>
 
+namespace ultra
+{
+
+///
+/// Bitmask flags for configuring symbol initialisation stages.
+///
+/// Can be combined using bitwise operators.
+///
+enum class symbol_init : unsigned
+{
+  disabled   =  0,  /// No initialisation
+  variables  =  1,  /// Initialises input variables
+  attributes =  2,  /// Initialises attributes
+  ephemerals =  4,  /// Initialises ephemeral values
+  functions  =  8,  /// Initialises the function set
+  all        = 15,  /// Initialises everything
+};
+
+/// Enable bitmask operations for symbol_init.
+template<> struct is_bitmask_enum<symbol_init> : std::true_type {};
+
+///
+/// By default, the only terminals automatically initialised are variables and
+/// attributes.
+/// This is sensible because users can often deduce more appropriate ranges for
+/// ephemerals.
+///
+constexpr symbol_init def_terminal_init =
+  symbol_init::variables | symbol_init::attributes;
+
+}  // namespace ultra
+
 namespace ultra::src
 {
 
@@ -34,13 +66,13 @@ public:
   /// New empty instance of src_problem.
   ///
   /// \warning
-  /// User **must** initialize:
+  /// The user **must** initialise:
   /// - the training dataset;
-  /// - the entire symbol set (functions and terminals)
-  /// before starting the evolution.
+  /// - the complete symbol set (functions and terminals) before starting the
+  ///   evolution.
   problem() = default;
 
-  explicit problem(dataframe);
+  explicit problem(dataframe, symbol_init = def_terminal_init);
   explicit problem(const std::filesystem::path &,
                    const dataframe::params & = {});
   explicit problem(std::istream &, const dataframe::params & = {});
@@ -55,8 +87,8 @@ public:
 
   // ---- Misc ----
   [[nodiscard]] bool operator!() const;
-  void setup_symbols();
-  void setup_terminals();
+  void setup_symbols(symbol_init = symbol_init::all);
+  void setup_terminals(symbol_init = def_terminal_init);
   [[nodiscard]] bool is_valid() const override;
 
   // ---- Public data members ----

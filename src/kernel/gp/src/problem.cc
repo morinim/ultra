@@ -31,7 +31,7 @@ namespace internal
 ///
 /// \param[in] instance a sequence of categories
 /// \param[in] pattern  a mixed vector of category names and domain names
-/// \return             `true` if `instance` match `pattern`
+/// \return             `true` if `instance` matches `pattern`
 ///
 /// For instance:
 ///
@@ -71,7 +71,18 @@ bool compatible(const function::param_data_types &instance,
 
 }  // namespace internal
 
-problem::problem(dataframe d)
+///
+/// Initialises the problem with a dataset and a specified set of symbols
+///
+/// \param[in] d          input dataframe
+/// \param[in] init_flags initialisation type (see `symbol_init` enum)
+///
+/// By default, terminals directly derived from the data (variables / labels)
+/// are automatically inserted; any additional terminals (ephemeral random
+/// constants, problem-specific constants...) and functions must be inserted
+/// manually.
+///
+problem::problem(dataframe d, symbol_init init_flags)
 {
   ultraINFO << "Importing dataset...";
   data[dataset_t::training] = std::move(d);
@@ -82,26 +93,26 @@ problem::problem(dataframe d)
             << ", classes: " << classes()
             << ", categories: " << categories();
 
-
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
   data[dataset_t::test].clone_schema(data[dataset_t::training]);
 
-  setup_terminals();
+  setup_terminals(init_flags);
 }
 
 ///
-/// Initializes problem dataset with examples coming from a file.
+/// Initialises the problem dataset with examples loaded from a file.
 ///
 /// \param[in] ds name of the dataset file (CSV or XRFF format)
-/// \param[in] p  additional, optional, parameters (see `dataframe::params`
+/// \param[in] p  additional optional parameters (see `dataframe::params`
 ///               structure)
 ///
 /// \warning
-/// - Users **must** specify, at least, the functions to be used;
-/// - terminals directly derived from the data (variables / labels) are
-///   automatically inserted;
-/// - any additional terminal (ephemeral random constant, problem specific
-///   constant...) can be manually inserted.
+/// Users **must** also specify the functions to be used.
+///
+/// \remark
+/// Terminals directly derived from the data (variables / labels) are
+/// automatically inserted. Any additional terminals (ephemeral random
+/// constants, problem specific constants...) can be inserted manually.
 ///
 problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
   : problem(dataframe(ds, p))
@@ -109,18 +120,19 @@ problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
 }
 
 ///
-/// Initializes problem dataset with examples coming from a file.
+/// Initialises the problem dataset with examples loaded from a file.
 ///
 /// \param[in] ds dataset
-/// \param[in] p  additional, optional, parameters (see `dataframe::params`
+/// \param[in] p  additional optional parameters (see `dataframe::params`
 ///               structure)
 ///
 /// \warning
-/// - Users **must** specify, at least, the functions to be used;
-/// - terminals directly derived from the data (variables / labels) are
-///   automatically inserted;
-/// - any additional terminal (ephemeral random constant, problem specific
-///   constants...) can be manually inserted.
+/// Users **must** also specify the functions to be used.
+///
+/// \remark
+/// Terminals directly derived from the data (variables / labels) are
+/// automatically inserted. Any additional terminals (ephemeral random
+/// constants, problem specific constants...) can be inserted manually.
 ///
 problem::problem(std::istream &ds, const dataframe::params &p)
   : problem(dataframe(ds, p))
@@ -136,17 +148,17 @@ bool problem::operator!() const
 }
 
 ///
-/// Inserts variables and states for nominal attributes into the symbol_set.
+/// Initialises the terminal set according to a given initialisation type.
+///
+/// \param[in] init_flags initialisation type (see `symbol_init` enum)
 ///
 /// \exception `std::insufficient_data` not enough data to generate a terminal
 ///                                     set
 ///
-/// There is a variable for each feature.
+/// There is a variable for each feature. The names used for variables, if not
+/// specified in the dataset, are in the `X1`, ... `Xn` form.
 ///
-/// The names used for variables, if not specified in the dataset, are in the
-/// form `X1`, ... `Xn`.
-///
-void problem::setup_terminals()
+void problem::setup_terminals(symbol_init init_flags)
 {
   ultraINFO << "Setting up terminals...";
 
@@ -155,88 +167,143 @@ void problem::setup_terminals()
     throw exception::insufficient_data("Cannot generate the terminal set");
 
   // ********* Sets up variables *********
-  std::map<symbol::category_t, std::string> variables;
-  for (std::size_t i(1); i < columns.size(); ++i)
+  if (has_flag(init_flags, symbol_init::variables))
   {
-    // Sets up the variables (features).
-    const auto name(columns[i].name().empty() ? "X" + std::to_string(i)
-                                              : columns[i].name());
-    const auto category(columns[i].category());
-
-    if (insert<variable>(i - 1, name, category))
-      variables[category] += " `" + name + "`";
-  }
-
-  for (const auto &[category, inserted] : variables)
-    if (!inserted.empty())
+    std::map<symbol::category_t, std::string> variables;
+    for (std::size_t i(1); i < columns.size(); ++i)
     {
-      ultraINFO << "Category " << category << " variables:" << inserted;
+      // Sets up the variables (features).
+      const auto name(columns[i].name().empty() ? "X" + std::to_string(i)
+                                                : columns[i].name());
+      const auto category(columns[i].category());
+
+      if (insert<variable>(i - 1, name, category))
+        variables[category] += " `" + name + "`";
     }
+
+    for (const auto &[category, inserted] : variables)
+      if (!inserted.empty())
+      {
+        ultraINFO << "Category " << category << " variables:" << inserted;
+      }
+  }
 
   // ********* Sets up nominal attributes *********
-  std::map<symbol::category_t, std::set<value_t>> attributes;
-  for (std::size_t i(1); i < columns.size(); ++i)
+  if (has_flag(init_flags, symbol_init::attributes))
   {
-    const auto category(columns[i].category());
-
-    if (!attributes.contains(category))
-      attributes[category] = {};
-
-    for (const auto &s : columns[i].states())
+    std::map<symbol::category_t, std::set<value_t>> attributes;
+    for (std::size_t i(1); i < columns.size(); ++i)
     {
-      if (attributes[category].contains(s))
-        continue;
+      const auto category(columns[i].category());
 
-      switch (columns[i].domain())
+      if (!attributes.contains(category))
+        attributes[category] = {};
+
+      for (const auto &s : columns[i].states())
       {
-      case d_double:
-        insert<real::literal>(std::get<D_DOUBLE>(s), category);
-        break;
-      case d_int:
-        insert<integer::literal>(std::get<D_INT>(s), category);
-        break;
-      case d_string:
-        insert<str::literal>(std::get<D_STRING>(s), category);
-        break;
-      default:
-        exception::insufficient_data("Cannot generate the terminal set");
-      }
+        if (attributes[category].contains(s))
+          continue;
 
-      attributes[category].insert(s);
+        switch (columns[i].domain())
+        {
+        case d_double:
+          insert<real::literal>(std::get<D_DOUBLE>(s), category);
+          break;
+        case d_int:
+          insert<integer::literal>(std::get<D_INT>(s), category);
+          break;
+        case d_string:
+          insert<str::literal>(std::get<D_STRING>(s), category);
+          break;
+        default:
+          ultraWARNING << "Attribute '" << s << "' from column `"
+                       << columns[i].name() << "` not inserted";
+        }
+
+        attributes[category].insert(s);
+      }
     }
+
+    for (const auto &[category, inserted] : attributes)
+      if (!inserted.empty())
+      {
+        std::string attributes_in_category;
+
+        for (const auto &attribute : inserted)
+          attributes_in_category += " `" + lexical_cast<std::string>(attribute)
+                                    + "`";
+
+        ultraINFO << "Category " << category << " attributes: "
+                  << attributes_in_category;
+      }
   }
 
-  for (const auto &[category, inserted] : attributes)
-    if (!inserted.empty())
+  if (has_flag(init_flags, symbol_init::ephemerals))
+  {
+    for (auto category : columns.used_categories())
     {
-      std::string attributes_in_category;
+      terminal *inserted_terminal(nullptr);
+      const auto domain(columns.domain_of_category(category));
 
-      for (const auto &attribute : inserted)
-        attributes_in_category += " `" + lexical_cast<std::string>(attribute)
-                                  + "`";
+      switch (domain)
+      {
+      case d_double:
+        inserted_terminal = insert<real::number>(-100.0, 100.0, category);
+        break;
 
-      ultraINFO << "Category " << category << " attributes: "
-                << attributes_in_category;
+      case d_int:
+        inserted_terminal = insert<integer::number>(-100, 100, category);
+        break;
+
+      default:
+        break;
+      }
+
+      if (inserted_terminal)
+      {
+        ultraINFO << "Category " << category << " ephemeral `"
+                  << inserted_terminal->name() << '`';
+      }
     }
+  }
 
   ultraINFO << "...terminals ready";
 }
 
 ///
-/// Automatic set up of a symbol set.
+/// Automatically sets up the symbol set.
 ///
-/// A predefined set is arranged (useful for simple problems: single category
-/// regression / classification).
+/// \param[in] init_flags initialisation type (see `symbol_init` enum)
 ///
-/// Multi-category tasks are supported but the result is suboptimal.
+/// A predefined set is created, which is useful for simple problems (e.g.
+/// single category regression or classification).
+///
+/// \remark
+/// **If the terminal set is not empty, it will not be modified** (the
+/// initialisation type specified via `init_flags` is ignored). The same
+/// applies to the function set.
 ///
 /// \warning
-/// Data should be loaded before symbols: without data we don't know, among
-/// other things, the features of the dataset.
+/// - Data must be loaded before creating symbols, as without data it is
+///   impossibile to determine, among other things, the dataset's features.
+/// - Multi-category tasks are supported, but the result may be suboptimal.
 ///
-void problem::setup_symbols()
+void problem::setup_symbols(symbol_init init_flags)
 {
   ultraINFO << "Automatically setting up symbol set...";
+
+  if (sset.terminals())
+  {
+    ultraWARNING << "Terminals already present, initialisation skipped";
+  }
+  else
+    setup_terminals(init_flags);
+
+  if (sset.functions())
+  {
+    ultraWARNING << "Functions already present, initialisation skipped";
+    return;
+  }
 
   std::map<symbol::category_t, std::string> symbols;
   const auto add_symbol([&symbols](symbol *s)
@@ -245,49 +312,48 @@ void problem::setup_symbols()
       symbols[s->category()] += " `" + s->name() + "`";
   });
 
-  if (!sset.terminals())
-    setup_terminals();
-
   for (const auto used_categories(
          data[dataset_t::training].columns.used_categories());
        auto category : used_categories)
   {
-    if (const auto domain(
-          data[dataset_t::training].columns.domain_of_category(category));
-        numerical_data_type(domain))
+    const auto domain(
+      data[dataset_t::training].columns.domain_of_category(category));
+
+    switch (domain)
     {
-      add_symbol(insert<real::abs>(category));
+    case d_double:
       add_symbol(insert<real::add>(category));
       add_symbol(insert<real::div>(
                    category, function::param_data_types{category, category}));
       add_symbol(insert<real::ln>(category));
       add_symbol(insert<real::mul>(
                    category, function::param_data_types{category, category}));
+      add_symbol(insert<real::sin>(category));
+      add_symbol(insert<real::sub>(category));
+      break;
+
+    case d_int:
+      add_symbol(insert<integer::add>(category));
       add_symbol(insert<real::mod>(
                    category, function::param_data_types{category, category}));
+      add_symbol(insert<integer::mul>(
+                   category, function::param_data_types{category, category}));
       add_symbol(insert<real::sub>(category));
-    }
-    else if (domain == d_string)
-    {
+      break;
+
+    case d_string:
       add_symbol(insert<str::ife>(
                    symbol::default_category,
                    function::param_data_types{category, category,
                                               symbol::default_category,
                                               symbol::default_category}));
+      break;
+
+    default:
+      ultraWARNING << "Unable to insert functions for category " << category;
+      break;
     }
   }
-
-  for (const auto categories(sset.categories_missing_terminal());
-       auto category : categories)
-    if (const auto domain(
-          data[dataset_t::training].columns.domain_of_category(category));
-        numerical_data_type(domain))
-    {
-      if (domain == d_double)
-        add_symbol(insert<real::number>(-100.0, 100.0, category));
-      else
-        add_symbol(insert<integer::number>(-100, 100, category));
-    }
 
   for (const auto &[category, names] : symbols)
     if (!names.empty())
@@ -339,7 +405,7 @@ std::size_t problem::classes() const noexcept
 }
 
 ///
-/// \return dimension of the input vectors (i.e. the number of variable of
+/// \return dimension of the input vectors (i.e. the number of variables in
 ///         the problem)
 ///
 std::size_t problem::variables() const noexcept
