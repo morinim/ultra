@@ -54,6 +54,42 @@ bool imgui_demo_panel {false};
 
 
 /*********************************************************************
+ * A normal distribution that supports works when standard deviation is zero.
+ ********************************************************************/
+template<class RealType = double>
+class degenerate_normal_distribution
+{
+public:
+  using result_type = RealType;
+
+  struct param_type
+  {
+    RealType mean {0.0};
+    RealType stddev {1.0};
+
+    param_type(RealType m, RealType sd) : mean(m), stddev(sd) {}
+  };
+
+  degenerate_normal_distribution(RealType mean, RealType stddev)
+    : params_(mean, stddev),
+      dist_(mean, ultra::issmall(stddev) ? RealType(1) : stddev)
+  {}
+
+  void reset() { dist_.reset(); }
+
+  template<class URNG>
+  [[nodiscard]] result_type operator()(URNG &g)
+  {
+    return ultra::issmall(params_.stddev) ? params_.mean : dist_(g);
+  }
+
+private:
+  param_type params_;
+  std::normal_distribution<RealType> dist_;
+};
+
+
+/*********************************************************************
  * Dynamic file - related data structures
  ********************************************************************/
 struct dynamic_data
@@ -561,23 +597,32 @@ void render_success_rate()
 void render_dynamic(bool update)
 {
   static std::vector<dynamic_sequence> dynamic_runs;
+  static dynamic_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (dynamic_runs.empty())
+      dynamic_runs.push_back(buffer);
+    else
+      dynamic_runs.back() = buffer;
+  }
 
   if (const auto data = dynamic_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!dynamic_runs.empty() && !buffer.empty())
+        dynamic_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (dynamic_runs.empty() || !dynamic_runs.back().empty())
         dynamic_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static dynamic_sequence buffer;
       buffer.push_back(*data);
-
-      if (update)
-        dynamic_runs.back() = buffer;
-    }
   }
 
   static bool show_best(true);
@@ -707,23 +752,32 @@ void render_dynamic(bool update)
 void render_population(bool update)
 {
   static std::vector<population_sequence> population_runs;
+  static population_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (population_runs.empty())
+      population_runs.push_back(buffer);
+    else
+      population_runs.back() = buffer;
+  }
 
   if (auto data = population_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!population_runs.empty() && !buffer.empty())
+        population_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (population_runs.empty() || !population_runs.back().empty())
         population_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static population_sequence buffer;
       buffer.update(*data);
-
-      if (update)
-        population_runs.back() = buffer;
-    }
   }
 
   for (std::size_t run(population_runs.size()); run--;)
@@ -844,8 +898,8 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
       {
         if (layer < lr.size())
         {
-          std::normal_distribution fit_nd(lr.fit_mean[layer],
-                                          lr.fit_std_dev[layer]);
+          degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
+                                                lr.fit_std_dev[layer]);
 
           const std::size_t full(parts * lr.individuals[layer] / ind_max);
 
@@ -964,23 +1018,32 @@ enum class layer_info {age, fitness};
 void render_layers(layer_info li, bool update)
 {
   static std::vector<layers_sequence> layers_runs;
+  static layers_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (layers_runs.empty())
+      layers_runs.push_back(buffer);
+    else
+      layers_runs.back() = buffer;
+  }
 
   if (auto data = layers_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!layers_runs.empty() && !buffer.empty())
+        layers_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (layers_runs.empty() || !layers_runs.back().empty())
         layers_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static layers_sequence buffer;
       buffer.update(*data);
-
-      if (update)
-        layers_runs.back() = buffer;
-    }
   }
 
   if (li == layer_info::age)
