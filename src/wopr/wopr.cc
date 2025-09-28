@@ -1357,44 +1357,52 @@ std::string random_string()
   return result;
 }
 
+class read_log_file
+{
+public:
+  explicit read_log_file(const std::filesystem::path &);
+
+  std::optional<std::string> get_line();
+
+private:
+  std::ifstream file_;
+  std::streampos position_ {0};
+};
+
+read_log_file::read_log_file(const std::filesystem::path &filename)
+  : file_(filename)
+{
+  if (!filename.empty() && !file_)
+    throw std::runtime_error("Failed to open file for reading");
+}
+
 //
 // Reads a single log file into a queue buffer.
 // Takes advantage of the fact that a line is complete if a newline has been
 // reached.
 //
-void read_log_file(std::stop_token stoken,
-                   const std::filesystem::path &filename,
-                   ultra::ts_queue<std::string> &buffer)
+std::optional<std::string> read_log_file::get_line()
 {
-  std::ifstream file(filename);
-  if (!file)
-    throw std::runtime_error("Failed to open file for reading");
-
-  std::streampos position(0);
-
-  while (!stoken.stop_requested())
+  if (file_.is_open())
   {
-    std::string line;
-
     // Seek to the last known position.
-    file.clear();
-    file.seekg(position);
+    file_.clear();
+    file_.seekg(position_);
 
-    while (std::getline(file, line))
-      if (!file.eof())
+    if (std::string line; std::getline(file_, line))
+    {
+      if (file_.bad())
+        throw std::runtime_error("Error occurred while reading the file.");
+
+      if (!file_.eof())
       {
-        position = file.tellg();  // update the position for the next read
-        buffer.push(line);
+        position_ = file_.tellg();  // update the position for the next read
+        return line;
       }
-
-    if (file.bad())
-      throw std::runtime_error("Error occurred while reading the file.");
-
-    assert(file.eof());
-
-    // Small delay before checking for new data.
-    std::this_thread::sleep_for(150ms);
+    }
   }
+
+  return {};
 }
 
 //
@@ -1407,41 +1415,27 @@ void get_logs(std::stop_token stoken)
          || !slog.layers_file_path.empty()
          || !slog.population_file_path.empty());
 
-  std::jthread read_dynamic;
-  ultra::ts_queue<std::string> dynamic_buffer;
-  if (!slog.dynamic_file_path.empty())
-    read_dynamic = std::jthread(read_log_file, slog.dynamic_file_path,
-                                std::ref(dynamic_buffer));
-
-  std::jthread read_population;
-  ultra::ts_queue<std::string> population_buffer;
-  if (!slog.population_file_path.empty())
-    read_population = std::jthread(read_log_file, slog.population_file_path,
-                                   std::ref(population_buffer));
-
-  std::jthread read_layers;
-  ultra::ts_queue<std::string> layers_buffer;
-  if (!slog.layers_file_path.empty())
-    read_layers = std::jthread(read_log_file, slog.layers_file_path,
-                               std::ref(layers_buffer));
+  read_log_file dynamic_log(slog.dynamic_file_path);
+  read_log_file population_log(slog.population_file_path);
+  read_log_file layers_log(slog.layers_file_path);
 
   ultra::timer last_read;
 
   while (!stoken.stop_requested())
   {
-    if (const auto line(dynamic_buffer.try_pop()); line)
+    if (const auto line(dynamic_log.get_line()); line)
     {
       dynamic_queue.push(dynamic_data(*line));
       last_read.restart();
     }
 
-    if (const auto line(population_buffer.try_pop()); line)
+    if (const auto line(population_log.get_line()); line)
     {
       population_queue.push(population_line(*line));
       last_read.restart();
     }
 
-    if (const auto line(layers_buffer.try_pop()); line)
+    if (const auto line(layers_log.get_line()); line)
     {
       layers_queue.push(layers_line(*line));
       last_read.restart();
