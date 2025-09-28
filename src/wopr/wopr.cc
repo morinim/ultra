@@ -1505,16 +1505,13 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr monitor [log folder]\n"
+  "> wopr monitor [log folder or specific test name]\n"
   "\n"
   "  The log folder must contain at least one search log produced by Ultra.\n"
   "  If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
-  "  --basename <name>\n"
-  "      Restrict monitoring to log files matching the `basename_*.txt`\n"
-  "      format.\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
   "  --nogui\n"
@@ -1582,16 +1579,28 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   using namespace ultra;
 
   const auto &pos_args(cmdl.pos_args());
-  const std::filesystem::path log_folder(pos_args.size() <= 2
-                                         ? "./" : pos_args[2]);
+
+  std::filesystem::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
+
+  std::filesystem::path log_folder;
+  std::string basename;
+
+  if (std::filesystem::is_directory(log_object))
+    log_folder = log_object;
+  else
+  {
+    basename = log_object.filename();
+
+    log_folder = log_object.parent_path();
+    if (log_folder.empty())
+      log_folder = "./";
+  }
 
   if (!std::filesystem::is_directory(log_folder))
   {
     std::cerr << log_folder << " isn't a directory\n";
     return false;
   }
-
-  const std::string basename(cmdl("basename", "").str());
 
   slog.base_dir = log_folder;
   slog.summary_file_path = "";
@@ -1605,8 +1614,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   std::vector<std::filesystem::path> layers_file_paths;
   std::vector<std::filesystem::path> population_file_paths;
 
-  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty() ||
-      slog.population_file_path.empty())
+  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty()
+      || slog.population_file_path.empty())
     for (const auto &entry : std::filesystem::directory_iterator(log_folder))
       if (entry.is_regular_file()
           && ultra::iequals(entry.path().extension(), ".txt"))
@@ -1641,17 +1650,16 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
             || layers_file_paths.size() > 1
             || population_file_paths.size() > 1)
         {
-          std::cerr << "Too many log files.\n"
-                    << "Use `--basename` switch to specify a test.\n";
+          std::cerr << "Too many log files.\n";
           return false;
         }
       }
 
-  if (slog.dynamic_file_path.empty())
+  if (slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
     slog.dynamic_file_path = dynamic_file_paths.front();
-  if (slog.layers_file_path.empty())
+  if (slog.layers_file_path.empty() && !layers_file_paths.empty())
     slog.layers_file_path = layers_file_paths.front();
-  if (slog.population_file_path.empty())
+  if (slog.population_file_path.empty() && !population_file_paths.empty())
     slog.population_file_path = population_file_paths.front();
 
   if (!std::filesystem::exists(slog.dynamic_file_path)
