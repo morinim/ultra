@@ -2,7 +2,7 @@
 
 find_package(Threads)
 
-file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc 8queens/*.cc knapsack/*.cc nonogram/*.cc pathfinding/*.cc polyomino/*.cc sonar/*.cc symbolic_regression/*.cc)
+file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc 8queens/*.cc knapsack/*.cc nonogram/*.cc pathfinding/*.cc petalrose/*.cc polyomino/*.cc sonar/*.cc symbolic_regression/*.cc)
 foreach (example_src ${EXAMPLES_SRC})
   # Gets the filename (`example`) without directory / longest extension
   # (`NAME_WE`) from the full filename (${example_src})
@@ -13,5 +13,5 @@ foreach (example_src ${EXAMPLES_SRC})
 endforeach()
 
 # Resources needed by examples
-file(COPY ${ULTRA_SOURCE_DIR}/../data/sonar.csv
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${ULTRA_SOURCE_DIR}/../data/sonar.csv ${ULTRA_SOURCE_DIR}/../data/petalrose.csv DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
