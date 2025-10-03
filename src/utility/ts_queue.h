@@ -165,9 +165,9 @@ public:
   }
 
 private:
-  std::queue<T> queue_ {};           // underlying queue
   mutable std::mutex mutex_ {};      // for thread synchronization
   std::condition_variable cond_ {};  // for signaling
+  std::queue<T> queue_ {};           // underlying queue
 };  // class ts_queue
 
 }  // namespace ultra

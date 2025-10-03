@@ -19,11 +19,11 @@
 #include <string>
 #include <vector>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
-#include "imgui/backends/imgui_impl_sdl2.h"
-#include "imgui/backends/imgui_impl_sdlrenderer2.h"
+#include <SDL3/SDL.h>
+//#include <SDL3_image/SDL_image.h>
+//#include <SDL3_ttf/SDL_ttf.h>
+#include "imgui/backends/imgui_impl_sdl3.h"
+#include "imgui/backends/imgui_impl_sdlrenderer3.h"
 
 #include "implot/implot.h"
 
@@ -55,26 +55,13 @@ public:
   window &operator=(window) = delete;
   window &operator=(window &&) = delete;
 
-  [[nodiscard]] TTF_Font *get_native_font() const;
   [[nodiscard]] SDL_Renderer *get_native_renderer() const;
   [[nodiscard]] SDL_Window *get_native_window() const;
 
 private:
   SDL_Window *window_ {nullptr};
   SDL_Renderer *renderer_ {nullptr};
-  TTF_Font *font_ {nullptr};
 };
-
-namespace dpi_handler
-{
-
-[[nodiscard]] float get_scale();
-[[nodiscard]] window_size get_dpi_aware_window_size(const window::settings &);
-
-void set_render_scale(SDL_Renderer *);
-void set_global_font_scaling(ImGuiIO *);
-
-}  // namespace dpi_handler
 
 namespace resources
 {

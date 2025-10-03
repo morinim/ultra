@@ -54,6 +54,42 @@ bool imgui_demo_panel {false};
 
 
 /*********************************************************************
+ * A normal distribution that supports works when standard deviation is zero.
+ ********************************************************************/
+template<class RealType = double>
+class degenerate_normal_distribution
+{
+public:
+  using result_type = RealType;
+
+  struct param_type
+  {
+    RealType mean {0.0};
+    RealType stddev {1.0};
+
+    param_type(RealType m, RealType sd) : mean(m), stddev(sd) {}
+  };
+
+  degenerate_normal_distribution(RealType mean, RealType stddev)
+    : params_(mean, stddev),
+      dist_(mean, ultra::issmall(stddev) ? RealType(1) : stddev)
+  {}
+
+  void reset() { dist_.reset(); }
+
+  template<class URNG>
+  [[nodiscard]] result_type operator()(URNG &g)
+  {
+    return ultra::issmall(params_.stddev) ? params_.mean : dist_(g);
+  }
+
+private:
+  param_type params_;
+  std::normal_distribution<RealType> dist_;
+};
+
+
+/*********************************************************************
  * Dynamic file - related data structures
  ********************************************************************/
 struct dynamic_data
@@ -561,23 +597,32 @@ void render_success_rate()
 void render_dynamic(bool update)
 {
   static std::vector<dynamic_sequence> dynamic_runs;
+  static dynamic_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (dynamic_runs.empty())
+      dynamic_runs.push_back(buffer);
+    else
+      dynamic_runs.back() = buffer;
+  }
 
   if (const auto data = dynamic_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!dynamic_runs.empty() && !buffer.empty())
+        dynamic_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (dynamic_runs.empty() || !dynamic_runs.back().empty())
         dynamic_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static dynamic_sequence buffer;
       buffer.push_back(*data);
-
-      if (update)
-        dynamic_runs.back() = buffer;
-    }
   }
 
   static bool show_best(true);
@@ -707,23 +752,32 @@ void render_dynamic(bool update)
 void render_population(bool update)
 {
   static std::vector<population_sequence> population_runs;
+  static population_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (population_runs.empty())
+      population_runs.push_back(buffer);
+    else
+      population_runs.back() = buffer;
+  }
 
   if (auto data = population_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!population_runs.empty() && !buffer.empty())
+        population_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (population_runs.empty() || !population_runs.back().empty())
         population_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static population_sequence buffer;
       buffer.update(*data);
-
-      if (update)
-        population_runs.back() = buffer;
-    }
   }
 
   for (std::size_t run(population_runs.size()); run--;)
@@ -844,8 +898,8 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
       {
         if (layer < lr.size())
         {
-          std::normal_distribution fit_nd(lr.fit_mean[layer],
-                                          lr.fit_std_dev[layer]);
+          degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
+                                                lr.fit_std_dev[layer]);
 
           const std::size_t full(parts * lr.individuals[layer] / ind_max);
 
@@ -964,23 +1018,32 @@ enum class layer_info {age, fitness};
 void render_layers(layer_info li, bool update)
 {
   static std::vector<layers_sequence> layers_runs;
+  static layers_sequence buffer;
+
+  if (update && !buffer.empty())
+  {
+    if (layers_runs.empty())
+      layers_runs.push_back(buffer);
+    else
+      layers_runs.back() = buffer;
+  }
 
   if (auto data = layers_queue.try_pop())
   {
     if (data->new_run)
     {
+      // Check for unplotted data.
+      if (!layers_runs.empty() && !buffer.empty())
+        layers_runs.back() = buffer;
+
       // Skip multiple empty lines.
       if (layers_runs.empty() || !layers_runs.back().empty())
         layers_runs.push_back({});
+
+      buffer = {};
     }
     else
-    {
-      static layers_sequence buffer;
       buffer.update(*data);
-
-      if (update)
-        layers_runs.back() = buffer;
-    }
   }
 
   if (li == layer_info::age)
@@ -1294,44 +1357,52 @@ std::string random_string()
   return result;
 }
 
+class read_log_file
+{
+public:
+  explicit read_log_file(const std::filesystem::path &);
+
+  std::optional<std::string> get_line();
+
+private:
+  std::ifstream file_;
+  std::streampos position_ {0};
+};
+
+read_log_file::read_log_file(const std::filesystem::path &filename)
+  : file_(filename)
+{
+  if (!filename.empty() && !file_)
+    throw std::runtime_error("Failed to open file for reading");
+}
+
 //
 // Reads a single log file into a queue buffer.
 // Takes advantage of the fact that a line is complete if a newline has been
 // reached.
 //
-void read_log_file(std::stop_token stoken,
-                   const std::filesystem::path &filename,
-                   ultra::ts_queue<std::string> &buffer)
+std::optional<std::string> read_log_file::get_line()
 {
-  std::ifstream file(filename);
-  if (!file)
-    throw std::runtime_error("Failed to open file for reading");
-
-  std::streampos position(0);
-
-  while (!stoken.stop_requested())
+  if (file_.is_open())
   {
-    std::string line;
-
     // Seek to the last known position.
-    file.clear();
-    file.seekg(position);
+    file_.clear();
+    file_.seekg(position_);
 
-    while (std::getline(file, line))
-      if (!file.eof())
+    if (std::string line; std::getline(file_, line))
+    {
+      if (file_.bad())
+        throw std::runtime_error("Error occurred while reading the file.");
+
+      if (!file_.eof())
       {
-        position = file.tellg();  // update the position for the next read
-        buffer.push(line);
+        position_ = file_.tellg();  // update the position for the next read
+        return line;
       }
-
-    if (file.bad())
-      throw std::runtime_error("Error occurred while reading the file.");
-
-    assert(file.eof());
-
-    // Small delay before checking for new data.
-    std::this_thread::sleep_for(150ms);
+    }
   }
+
+  return {};
 }
 
 //
@@ -1344,41 +1415,27 @@ void get_logs(std::stop_token stoken)
          || !slog.layers_file_path.empty()
          || !slog.population_file_path.empty());
 
-  std::jthread read_dynamic;
-  ultra::ts_queue<std::string> dynamic_buffer;
-  if (!slog.dynamic_file_path.empty())
-    read_dynamic = std::jthread(read_log_file, slog.dynamic_file_path,
-                                std::ref(dynamic_buffer));
-
-  std::jthread read_population;
-  ultra::ts_queue<std::string> population_buffer;
-  if (!slog.population_file_path.empty())
-    read_population = std::jthread(read_log_file, slog.population_file_path,
-                                   std::ref(population_buffer));
-
-  std::jthread read_layers;
-  ultra::ts_queue<std::string> layers_buffer;
-  if (!slog.layers_file_path.empty())
-    read_layers = std::jthread(read_log_file, slog.layers_file_path,
-                               std::ref(layers_buffer));
+  read_log_file dynamic_log(slog.dynamic_file_path);
+  read_log_file population_log(slog.population_file_path);
+  read_log_file layers_log(slog.layers_file_path);
 
   ultra::timer last_read;
 
   while (!stoken.stop_requested())
   {
-    if (const auto line(dynamic_buffer.try_pop()); line)
+    if (const auto line(dynamic_log.get_line()); line)
     {
       dynamic_queue.push(dynamic_data(*line));
       last_read.restart();
     }
 
-    if (const auto line(population_buffer.try_pop()); line)
+    if (const auto line(population_log.get_line()); line)
     {
       population_queue.push(population_line(*line));
       last_read.restart();
     }
 
-    if (const auto line(layers_buffer.try_pop()); line)
+    if (const auto line(layers_log.get_line()); line)
     {
       layers_queue.push(layers_line(*line));
       last_read.restart();
@@ -1448,16 +1505,13 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr monitor [log folder]\n"
+  "> wopr monitor [log folder or specific test name]\n"
   "\n"
   "  The log folder must contain at least one search log produced by Ultra.\n"
   "  If omitted, the current working directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
-  "  --basename <name>\n"
-  "      Restrict monitoring to log files matching the `basename_*.txt`\n"
-  "      format.\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
   "  --nogui\n"
@@ -1525,16 +1579,28 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   using namespace ultra;
 
   const auto &pos_args(cmdl.pos_args());
-  const std::filesystem::path log_folder(pos_args.size() <= 2
-                                         ? "./" : pos_args[2]);
+
+  std::filesystem::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
+
+  std::filesystem::path log_folder;
+  std::string basename;
+
+  if (std::filesystem::is_directory(log_object))
+    log_folder = log_object;
+  else
+  {
+    basename = log_object.filename();
+
+    log_folder = log_object.parent_path();
+    if (log_folder.empty())
+      log_folder = "./";
+  }
 
   if (!std::filesystem::is_directory(log_folder))
   {
     std::cerr << log_folder << " isn't a directory\n";
     return false;
   }
-
-  const std::string basename(cmdl("basename", "").str());
 
   slog.base_dir = log_folder;
   slog.summary_file_path = "";
@@ -1548,8 +1614,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   std::vector<std::filesystem::path> layers_file_paths;
   std::vector<std::filesystem::path> population_file_paths;
 
-  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty() ||
-      slog.population_file_path.empty())
+  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty()
+      || slog.population_file_path.empty())
     for (const auto &entry : std::filesystem::directory_iterator(log_folder))
       if (entry.is_regular_file()
           && ultra::iequals(entry.path().extension(), ".txt"))
@@ -1584,17 +1650,16 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
             || layers_file_paths.size() > 1
             || population_file_paths.size() > 1)
         {
-          std::cerr << "Too many log files.\n"
-                    << "Use `--basename` switch to specify a test.\n";
+          std::cerr << "Too many log files.\n";
           return false;
         }
       }
 
-  if (slog.dynamic_file_path.empty())
+  if (slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
     slog.dynamic_file_path = dynamic_file_paths.front();
-  if (slog.layers_file_path.empty())
+  if (slog.layers_file_path.empty() && !layers_file_paths.empty())
     slog.layers_file_path = layers_file_paths.front();
-  if (slog.population_file_path.empty())
+  if (slog.population_file_path.empty() && !population_file_paths.empty())
     slog.population_file_path = population_file_paths.front();
 
   if (!std::filesystem::exists(slog.dynamic_file_path)
