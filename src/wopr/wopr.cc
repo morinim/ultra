@@ -482,8 +482,8 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
       good_runs.insert(run);
 }
 
-std::vector<summary_data> summaries;
 std::shared_mutex summaries_mutex;
+std::vector<summary_data> summaries;
 
 // Doesn't require a mutex since it's compiled before starting testing and
 // then used in read-only mode.
@@ -1455,7 +1455,12 @@ void get_summaries(std::stop_token stoken)
 {
   assert(!test_collection.empty());
 
-  summaries.resize(test_collection.size());
+  {
+    std::lock_guard guard(summaries_mutex);
+    summaries.resize(test_collection.size());
+  }
+
+  assert(test_collection.size() == summaries.size());
 
   while (!stoken.stop_requested())
   {
