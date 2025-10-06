@@ -525,7 +525,7 @@ void render_runs()
 
   std::vector<const char *> labels_chr(labels.size());
   std::ranges::transform(labels, labels_chr.begin(),
-                         [](const auto &str) { return str.data(); });
+                         [](const auto &str) noexcept { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
   std::vector<double> positions(test_collection.size());
@@ -1217,19 +1217,19 @@ void render_test(const imgui_app::program &prg, bool *p_open)
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
   ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
 
-  static bool show_best_check(true);
+  static bool show_runs_check(true);
   static bool show_success_rate_check(true);
   static bool show_3_check(true);
   static bool show_4_check(true);
 
-  static bool mxz_best(false);
+  static bool mxz_runs(false);
   static bool mxz_success_rate(false);
   static bool mxz_3(false);
   static bool mxz_4(false);
 
   if (ImGui::Begin("Test##Window", p_open))
   {
-    ImGui::Checkbox("best", &show_best_check);
+    ImGui::Checkbox("runs", &show_runs_check);
     ImGui::SameLine();
     ImGui::Checkbox("success rate", &show_success_rate_check);
     ImGui::SameLine();
@@ -1241,47 +1241,47 @@ void render_test(const imgui_app::program &prg, bool *p_open)
                        "%s", random_string().c_str());
     ImGui::Separator();
 
-    const bool show_best(
-      show_best_check
+    const bool show_runs(
+      show_runs_check
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_3 && show_3_check)
       && !(mxz_4 && show_4_check));
     const bool show_success_rate(
       show_success_rate_check
-      && !(mxz_best && show_best_check)
+      && !(mxz_runs && show_best_check)
       && !(mxz_3 && show_3_check)
       && !(mxz_4 && show_4_check));
     const bool show_3(
       show_3_check
-      && !(mxz_best && show_best_check)
+      && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_4 && show_4_check));
     const bool show_4(
       show_4_check
-      && !(mxz_best && show_best_check)
+      && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_3 && show_3_check));
 
     const int available_width(ImGui::GetContentRegionAvail().x - 4);
     const int available_height(ImGui::GetContentRegionAvail().y - 4);
 
-    const int w1(show_best && show_success_rate ? available_width/2
-                                    : available_width);
+    const int w1(show_runs && show_success_rate ? available_width/2
+                                                : available_width);
     const int h1(show_3 || show_4 ? available_height/2
                                   : available_height);
-    if (show_best)
+    if (show_runs)
     {
-      const auto w(mxz_best ? available_width : w1);
-      const auto h(mxz_best ? available_height : h1);
+      const auto w(mxz_runs ? available_width : w1);
+      const auto h(mxz_runs ? available_height : h1);
 
-      ImGui::BeginChild("Best##ChildWindow", ImVec2(w, h),
+      ImGui::BeginChild("Runs##ChildWindow", ImVec2(w, h),
                         ImGuiChildFlags_Border);
       ImGui::AlignTextToFramePadding();
-      ImGui::Text("BEST");
+      ImGui::Text("RUNS");
       ImGui::SameLine();
-      if (const std::string bs(mxz_best ? "Minimize##Best" : "Maximize##Best");
+      if (const std::string bs(mxz_runs ? "Minimize##Runs" : "Maximize##Runs");
           ImGui::Button(bs.c_str()))
-        mxz_best = !mxz_best;
+        mxz_runs = !mxz_runs;
 
       render_runs();
       ImGui::EndChild();
@@ -1289,7 +1289,7 @@ void render_test(const imgui_app::program &prg, bool *p_open)
 
     if (show_success_rate)
     {
-      if (show_best)
+      if (show_runs)
         ImGui::SameLine();
 
       const auto w(mxz_success_rate ? available_width : w1);
@@ -1519,12 +1519,8 @@ void cmdl_usage()
   "\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
-  "  --nogui\n"
-  "      Disable the graphical user interface performing the test in headless\n"
-  "      mode.\n"
   "  --population <filepath>\n"
-  "      Allow monitoring of files with names different from the default\n"
-  "      ones.\n"
+  "      Allow monitoring of files with names different from the defaults.\n"
   "  --refresh <seconds>\n"
   "      Set the refresh rate for updating plots.\n"
   "  --window <nr>\n"
@@ -1532,15 +1528,18 @@ void cmdl_usage()
   "\n"
   "> wopr test [folder or file]\n"
   "\n"
-  "  The argument of the test command must point a to folder containing, at\n"
-  "  least, a .csv dataset (and, optionally, a test configuration file) or a\n"
-  "  specific file. If no folder is specified, the current working directory\n"
-  "  is used.\n"
+  "  The argument of the `test` command must point to folder containing, at\n"
+  "  least, one .csv dataset (and optionally a test configuration file), or\n"
+  "  to a specific file. If no folder is specified, the current working\n"
+  "  directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
   "  --generations <nr>\n"
   "      Set the maximum number of generations in a run.\n"
+  "  --nogui\n"
+  "      Disable the graphical user interface performing the test in headless\n"
+  "      mode.\n"
   "  --reference directory <directory>\n"
   "      Specify a directory containing reference results.\n"
   "  --runs <nr>\n"
