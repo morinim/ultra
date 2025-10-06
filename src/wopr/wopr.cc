@@ -1874,15 +1874,9 @@ void test(const imgui_app::program::settings &settings)
     [source](auto test)
     {
       const auto &dataset(test.first);
-      ultra::src::problem prob(dataset);
+      ultra::src::problem prob(ultra::src::dataframe(dataset),
+                               ultra::symbol_init::all);
       prob.params.evolution.generations = test.second.generations;
-
-      prob.insert<ultra::real::sin>();
-      prob.insert<ultra::real::cos>();
-      prob.insert<ultra::real::add>();
-      prob.insert<ultra::real::sub>();
-      prob.insert<ultra::real::div>();
-      prob.insert<ultra::real::mul>();
 
       ultra::src::search s(prob);
 
