@@ -96,7 +96,7 @@ problem::problem(dataframe d, symbol_init init_flags)
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
   data[dataset_t::test].clone_schema(data[dataset_t::training]);
 
-  setup_terminals(init_flags);
+  setup_symbols(init_flags);
 }
 
 ///
@@ -279,9 +279,8 @@ void problem::setup_terminals(symbol_init init_flags)
 /// single category regression or classification).
 ///
 /// \remark
-/// **If the terminal set is not empty, it will not be modified** (the
-/// initialisation type specified via `init_flags` is ignored). The same
-/// applies to the function set.
+/// If the terminal set is not empty, it remains unchanged and `init_flags` are
+/// ignored. The same rule applies to the function set.
 ///
 /// \warning
 /// - Data must be loaded before creating symbols, as without data it is
@@ -304,6 +303,11 @@ void problem::setup_symbols(symbol_init init_flags)
     ultraWARNING << "Functions already present, initialisation skipped";
     return;
   }
+
+  if (!has_flag(init_flags, symbol_init::functions))
+    return;
+
+  ultraINFO << "Setting up functions...";
 
   std::map<symbol::category_t, std::string> symbols;
   const auto add_symbol([&symbols](symbol *s)
@@ -361,6 +365,7 @@ void problem::setup_symbols(symbol_init init_flags)
       ultraINFO << "Category " << category << " symbols:" << names;
     }
 
+  ultraINFO << "...functions ready";
   ultraINFO << "...symbol set ready";
 }
 
