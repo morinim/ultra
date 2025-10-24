@@ -338,11 +338,11 @@ void problem::setup_symbols(symbol_init init_flags)
 
     case d_int:
       add_symbol(insert<integer::add>(category));
-      add_symbol(insert<real::mod>(
+      add_symbol(insert<integer::mod>(
                    category, function::param_data_types{category, category}));
       add_symbol(insert<integer::mul>(
                    category, function::param_data_types{category, category}));
-      add_symbol(insert<real::sub>(category));
+      add_symbol(insert<integer::sub>(category));
       break;
 
     case d_string:
