@@ -39,8 +39,8 @@ bool nogui {false};
 
 struct test_settings
 {
-  unsigned generations;
-  unsigned runs;
+  unsigned generations {100};
+  unsigned runs {1};
   ultra::model_measurements<double> threshold;
 };
 
@@ -51,6 +51,7 @@ bool imgui_demo_panel {false};
 
 
 [[nodiscard]] std::string random_string();
+
 
 
 /*********************************************************************
@@ -590,6 +591,66 @@ void render_success_rate()
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
                           test_collection.size(), 0.5, 0, 0);
+    ImPlot::EndPlot();
+  }
+}
+
+void render_fitness_across_datasets()
+{
+  std::vector<double> fit_mean, fit_std_dev;
+  std::vector<double> runs;
+  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
+  {
+    if (s.fit_mean.size())
+      fit_mean.push_back(s.fit_mean[0]);
+    if (s.fit_std_dev.size())
+      fit_std_dev.push_back(s.fit_std_dev[0]);
+    runs.push_back(s.runs);
+  }
+
+  std::vector<std::string> labels;
+  std::vector<double> ref_fit_mean, ref_fit_std_dev;
+  std::vector<unsigned> ref_runs;
+
+  assert(test_collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test_collection)
+  {
+    {
+      std::ostringstream ss;
+      ss << test.first.stem() << '\n';
+      labels.push_back(ss.str());
+    }
+
+    /*ref_fit_mean.push_back(
+      ref_summaries[i].fit_mean.size()
+      ? ref_summaries[i].fit_mean[0] : fit_mean[i]);
+    ref_fit_std_dev.push_back(
+      ref_summaries[i].fit_std_dev.size()
+      ? ref_summaries[i].fit_std_dev[0] : fit_std_dev[i]);
+    ref_runs.push_back(ref_summaries[i].runs);
+    */
+    ++i;
+  }
+
+  std::vector<const char *> labels_chr(labels.size());
+  std::ranges::transform(labels, labels_chr.begin(),
+                         [](const auto &str) noexcept { return str.data(); });
+
+  std::vector<double> positions(test_collection.size());
+  std::iota(positions.begin(), positions.end(), 0.0);
+
+  const std::string title("Fitness across datasets");
+
+  if (ImPlot::BeginPlot(gui_uid(title), ImVec2(-1, -1), ImPlotFlags_NoLegend))
+  {
+    ImPlot::SetupAxes("Dataset & Fitness", "P(current > ref)",
+                      ImPlotAxisFlags_AutoFit,
+                      ImPlotAxisFlags_AutoFit);
+
+    //ImPlot::PlotBars(*labels_chr.data(), fit_mean.data(), fit_mean.size(), 0.4);
+    ImPlot::PlotErrorBars(labels_chr.front(), positions.data(),
+                          fit_mean.data(), fit_std_dev.data(), fit_mean.size());
+    ImPlot::PlotScatter(labels_chr.front(), positions.data(), fit_mean.data(), fit_mean.size());
     ImPlot::EndPlot();
   }
 }
@@ -1219,12 +1280,12 @@ void render_test(const imgui_app::program &prg, bool *p_open)
 
   static bool show_runs_check(true);
   static bool show_success_rate_check(true);
-  static bool show_3_check(true);
+  static bool show_fitness_across_datasets_check(true);
   static bool show_4_check(true);
 
   static bool mxz_runs(false);
   static bool mxz_success_rate(false);
-  static bool mxz_3(false);
+  static bool mxz_fitness_across_datasets(false);
   static bool mxz_4(false);
 
   if (ImGui::Begin("Test##Window", p_open))
@@ -1233,7 +1294,8 @@ void render_test(const imgui_app::program &prg, bool *p_open)
     ImGui::SameLine();
     ImGui::Checkbox("success rate", &show_success_rate_check);
     ImGui::SameLine();
-    ImGui::Checkbox("3", &show_3_check);
+    ImGui::Checkbox("fitness across datasets",
+                    &show_fitness_across_datasets_check);
     ImGui::SameLine();
     ImGui::Checkbox("4", &show_4_check);
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
@@ -1244,15 +1306,15 @@ void render_test(const imgui_app::program &prg, bool *p_open)
     const bool show_runs(
       show_runs_check
       && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_3 && show_3_check)
+      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
       && !(mxz_4 && show_4_check));
     const bool show_success_rate(
       show_success_rate_check
-      && !(mxz_runs && show_best_check)
-      && !(mxz_3 && show_3_check)
+      && !(mxz_runs && show_runs_check)
+      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
       && !(mxz_4 && show_4_check));
-    const bool show_3(
-      show_3_check
+    const bool show_fitness_across_datasets(
+      show_fitness_across_datasets_check
       && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_4 && show_4_check));
@@ -1260,15 +1322,15 @@ void render_test(const imgui_app::program &prg, bool *p_open)
       show_4_check
       && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_3 && show_3_check));
+      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check));
 
     const int available_width(ImGui::GetContentRegionAvail().x - 4);
     const int available_height(ImGui::GetContentRegionAvail().y - 4);
 
     const int w1(show_runs && show_success_rate ? available_width/2
                                                 : available_width);
-    const int h1(show_3 || show_4 ? available_height/2
-                                  : available_height);
+    const int h1(show_fitness_across_datasets || show_4 ? available_height/2
+                                                        : available_height);
     if (show_runs)
     {
       const auto w(mxz_runs ? available_width : w1);
@@ -1306,6 +1368,26 @@ void render_test(const imgui_app::program &prg, bool *p_open)
         mxz_success_rate = !mxz_success_rate;
 
       render_success_rate();
+      ImGui::EndChild();
+    }
+
+    if (show_fitness_across_datasets)
+    {
+      const auto w(mxz_fitness_across_datasets ? available_width : w1);
+      const auto h(mxz_fitness_across_datasets ? available_height : h1);
+
+      ImGui::BeginChild("Fitness Across Datasets##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Border);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("NON SO");
+      ImGui::SameLine();
+      if (const std::string bs(mxz_fitness_across_datasets
+                               ? "Minimize##FitnessAcrossDatasets"
+                               : "Maximize##FitnessAcrossDatasets");
+          ImGui::Button(bs.c_str()))
+        mxz_fitness_across_datasets = !mxz_fitness_across_datasets;
+
+      render_fitness_across_datasets();
       ImGui::EndChild();
     }
   }
@@ -1460,8 +1542,6 @@ void get_summaries(std::stop_token stoken)
     summaries.resize(test_collection.size());
   }
 
-  assert(test_collection.size() == summaries.size());
-
   while (!stoken.stop_requested())
   {
     for (std::size_t i(0); const auto &test : test_collection)
@@ -1491,6 +1571,59 @@ void get_summaries(std::stop_token stoken)
 
     std::this_thread::sleep_for(3000ms);
   }
+}
+
+[[nodiscard]] ultra::model_measurements<double> extract_threshold(
+  const std::string txt)
+{
+  ultra::model_measurements<double> threshold;
+
+  if (txt.back() == '%')
+  {
+    const auto v(txt.substr(0, txt.size()-1));
+    threshold.accuracy = std::clamp<double>(std::stod(v)/100.0, 0.0, 1.0);
+  }
+  else
+    threshold.fitness = std::stod(txt);
+
+  return threshold;
+}
+
+[[nodiscard]] test_settings read_test_settings(
+  const std::filesystem::path &test_fn)
+{
+  assert(test_fn.extension() == ".csv");
+
+  const auto settings_fn(
+    std::filesystem::path(test_fn).replace_extension(".xml"));
+
+  if (!std::filesystem::exists(settings_fn))
+    return {};
+
+  tinyxml2::XMLDocument doc;
+  if (const auto result(doc.LoadFile(settings_fn.c_str()));
+      result != tinyxml2::XML_SUCCESS)
+  {
+    std::cerr << "Cannot open settings for " << test_fn << '\n';
+    return {};
+  }
+
+  test_settings ret;
+
+  tinyxml2::XMLConstHandle handle(&doc);
+  const auto h_settings(handle.FirstChildElement("ultra"));
+
+  if (const auto *e = h_settings.FirstChildElement("generations").ToElement())
+    ret.generations = e->UnsignedText(ret.generations);
+  if (const auto *e = h_settings.FirstChildElement("runs").ToElement())
+    ret.runs = e->UnsignedText(ret.runs);
+  if (const auto *e = h_settings.FirstChildElement("threshold").ToElement())
+  {
+    if (const char *text = e->GetText())
+      ret.threshold = extract_threshold(std::string(text));
+  }
+
+  return ret;
 }
 
 /*********************************************************************
@@ -1717,6 +1850,30 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 
   const auto &pos_args(cmdl.pos_args());
 
+  const auto show_settings([](const std::filesystem::path &p)
+  {
+    test_settings ts;
+
+    if (const auto i(test_collection.find(p)); i != test_collection.end())
+      ts = i->second;
+
+    std::cout << "Settings for " << p.filename()
+              << "\n  Runs: " << ts.runs
+              << "\n  Generations: " << ts.generations
+              << "\n  Threshold:";
+
+    if (ts.threshold.accuracy || ts.threshold.fitness)
+    {
+      if (ts.threshold.accuracy)
+        std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+      if (ts.threshold.fitness)
+        std::cout << ' ' << *ts.threshold.fitness;
+    }
+    else
+      std::cout << " none";
+    std::cout << '\n';
+  });
+
   if (const std::filesystem::path test_input(pos_args.size() <= 2
                                              ? "./" : pos_args[2]);
       std::filesystem::is_directory(test_input))
@@ -1724,11 +1881,18 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     const std::filesystem::path test_folder(test_input);
 
     for (const auto &entry : std::filesystem::directory_iterator(test_folder))
-      if (ultra::iequals(entry.path().extension(), ".csv"))
-        test_collection.insert({entry.path(), {}});
+      if (const auto path(entry.path());
+          ultra::iequals(path.extension(), ".csv"))
+      {
+        test_collection.insert({path, read_test_settings(path)});
+        show_settings(path);
+      }
   }
   else if (std::filesystem::exists(test_input))
-    test_collection.insert({test_input, {}});
+  {
+    test_collection.insert({test_input, read_test_settings(test_input)});
+    show_settings(test_input);
+  }
   else
   {
     std::cerr << test_input << " isn't a valid input.\n";
@@ -1770,45 +1934,36 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     return false;
   }
 
-  unsigned generations(100);
+  std::optional<unsigned> generations;
   if (const auto v(cmdl("generations").str()); !v.empty())
   {
     generations = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Generations: " << generations << '\n';
+    std::cout << "Generations: " << *generations << '\n';
   }
 
-  unsigned runs(1);
+  std::optional<unsigned> runs;
   if (const auto v(cmdl("runs").str()); !v.empty())
   {
     runs = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Runs: " << runs << '\n';
+    std::cout << "Runs: " << *runs << '\n';
   }
 
-  ultra::model_measurements<double> threshold;
+  std::optional<ultra::model_measurements<double>> threshold;
   if (const auto v(cmdl("threshold").str()); !v.empty())
-  {
-    if (v.back() == '%')
-    {
-      const auto v1(v.substr(0, v.size()-1));
+    threshold = extract_threshold(v);
 
-      threshold.accuracy = std::clamp<double>(std::stod(v1)/100.0, 0.0, 1.0);
-      std::cout << "Threshold: " << *threshold.accuracy * 100.0 << "%\n";
-    }
-    else
+  if (generations || runs || threshold)
+    for (auto &test : test_collection)
     {
-      threshold.fitness = std::stod(v);
-      std::cout << "Threshold: " << *threshold.fitness << '\n';
+      if (generations)
+        test.second.generations = *generations;
+      if (runs)
+        test.second.runs = *runs;
+      if (threshold)
+        test.second.threshold = *threshold;
     }
-  }
 
   nogui = cmdl["nogui"];
-
-  for (auto &test : test_collection)
-  {
-    test.second.generations = generations;
-    test.second.runs = runs;
-    test.second.threshold = threshold;
-  }
 
   return true;
 }
