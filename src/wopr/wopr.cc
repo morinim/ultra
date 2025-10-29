@@ -39,6 +39,8 @@ bool nogui {false};
 
 struct test_settings
 {
+  ultra::src::dataframe::params params {};
+
   unsigned generations {100};
   unsigned runs {1};
   ultra::model_measurements<double> threshold;
@@ -1611,17 +1613,29 @@ void get_summaries(std::stop_token stoken)
   test_settings ret;
 
   tinyxml2::XMLConstHandle handle(&doc);
-  const auto h_settings(handle.FirstChildElement("ultra"));
+  const auto h_ultra(handle.FirstChildElement("ultra"));
 
-  if (const auto *e = h_settings.FirstChildElement("generations").ToElement())
+  const auto h_search(h_ultra.FirstChildElement("search"));
+  if (const auto *e = h_search.FirstChildElement("generations").ToElement())
     ret.generations = e->UnsignedText(ret.generations);
-  if (const auto *e = h_settings.FirstChildElement("runs").ToElement())
+  if (const auto *e = h_search.FirstChildElement("runs").ToElement())
     ret.runs = e->UnsignedText(ret.runs);
-  if (const auto *e = h_settings.FirstChildElement("threshold").ToElement())
+  if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
   {
     if (const char *text = e->GetText())
       ret.threshold = extract_threshold(std::string(text));
   }
+
+  const auto h_dataset(h_ultra.FirstChildElement("dataset"));
+  if (const auto *e = h_dataset.FirstChildElement("output_index").ToElement())
+    if (const char *text = e->GetText())
+    {
+      if (ultra::iequals(text, "last"))
+        ret.params.output_index = ultra::src::dataframe::params::index::back;
+      else if (unsigned output_index;
+               e->QueryUnsignedText(&output_index) == tinyxml2::XML_SUCCESS)
+        ret.params.output_index = output_index;
+    }
 
   return ret;
 }
@@ -2033,8 +2047,9 @@ void test(const imgui_app::program::settings &settings)
     [source](auto test)
     {
       const auto &dataset(test.first);
-      ultra::src::problem prob(ultra::src::dataframe(dataset),
-                               ultra::symbol_init::all);
+      ultra::src::problem prob(
+        ultra::src::dataframe(dataset, test.second.params),
+        ultra::symbol_init::all);
       prob.params.evolution.generations = test.second.generations;
 
       ultra::src::search s(prob);
