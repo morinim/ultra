@@ -28,16 +28,25 @@
 
 using namespace std::chrono_literals;
 
+namespace compare  // comparison-related variables
+{
 
-// Monitoring related variables.
+}
+
+namespace monitor  // monitoring related variables
+{
 ultra::search_log slog {};
-int monitoring_window {0};
+int window {0};
 std::chrono::duration<double> refresh_rate {2s};
 
-// Testing related variables.
+void run(const imgui_app::program::settings &);
+}
+
+namespace test  // testing related variables
+{
 bool nogui {false};
 
-struct test_settings
+struct settings
 {
   ultra::src::dataframe::params params {};
 
@@ -46,7 +55,11 @@ struct test_settings
   ultra::model_measurements<double> threshold;
 };
 
-std::map<std::filesystem::path, test_settings> test_collection;
+std::map<std::filesystem::path, settings> collection;
+
+[[nodiscard]] test::settings read_settings(const std::filesystem::path &);
+void run(const imgui_app::program::settings &);
+}
 
 // Other variables.
 bool imgui_demo_panel {false};
@@ -518,8 +531,8 @@ void render_runs()
 
   std::vector<std::string> labels;
 
-  assert(test_collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test_collection)
+  assert(test::collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test::collection)
   {
     labels.push_back(test.first.stem().string());
     data.push_back(ref_summaries[i].runs);
@@ -531,7 +544,7 @@ void render_runs()
                          [](const auto &str) noexcept { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
-  std::vector<double> positions(test_collection.size());
+  std::vector<double> positions(test::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Test##Runs", &reference_values);
@@ -541,11 +554,11 @@ void render_runs()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Runs",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test::collection.size(),
                            labels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test_collection.size(), 0.5, 0, 0);
+                          test::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -564,8 +577,8 @@ void render_success_rate()
 
   std::vector<std::string> glabels;
 
-  assert(test_collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test_collection)
+  assert(test::collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test::collection)
   {
     glabels.push_back(test.first.stem().string());
     data.push_back(ref_summaries[i].success_rate * 100.0);
@@ -577,7 +590,7 @@ void render_success_rate()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {"Current", "Reference"};
-  std::vector<double> positions(test_collection.size());
+  std::vector<double> positions(test::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Test##Success rate", &reference_values);
@@ -588,11 +601,11 @@ void render_success_rate()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Success rate",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test_collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test::collection.size(),
                            glabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test_collection.size(), 0.5, 0, 0);
+                          test::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -614,8 +627,8 @@ void render_fitness_across_datasets()
   std::vector<double> ref_fit_mean, ref_fit_std_dev;
   std::vector<unsigned> ref_runs;
 
-  assert(test_collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test_collection)
+  assert(test::collection.size() == ref_summaries.size());
+  for (std::size_t i(0); const auto &test : test::collection)
   {
     {
       std::ostringstream ss;
@@ -638,7 +651,7 @@ void render_fitness_across_datasets()
   std::ranges::transform(labels, labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
-  std::vector<double> positions(test_collection.size());
+  std::vector<double> positions(test::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   const std::string title("Fitness across datasets");
@@ -702,8 +715,8 @@ void render_dynamic(bool update)
       {
         const auto &xs(dr.xs);
 
-        std::size_t window(monitoring_window
-                           ? static_cast<std::size_t>(monitoring_window)
+        std::size_t window(monitor::window
+                           ? static_cast<std::size_t>(monitor::window)
                            : std::numeric_limits<std::size_t>::max());
         window = std::min<std::size_t>(xs.size(), window);
 
@@ -1132,7 +1145,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
   static bool mxz_layers_age(false);
 
   static ultra::timer last_update;
-  const bool update(last_update.elapsed() > refresh_rate);
+  const bool update(last_update.elapsed() > monitor::refresh_rate);
 
   if (ImGui::Begin("Monitor##Window", p_open))
   {
@@ -1147,7 +1160,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::Checkbox("Layers age", &show_layers_age_check);
       ImGui::SameLine();
       ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
-      ImGui::SliderInt("##MonitoringWindow", &monitoring_window, 0, 8000,
+      ImGui::SliderInt("##MonitoringWindow", &monitor::window, 0, 8000,
                        "window = %d");
     }
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
@@ -1156,22 +1169,22 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
     ImGui::Separator();
 
     const bool show_dynamic(
-      !slog.dynamic_file_path.empty() && show_dynamic_check
+      !monitor::slog.dynamic_file_path.empty() && show_dynamic_check
       && !(mxz_population && show_population_check)
       && !(mxz_layers_fit && show_layers_fit_check)
       && !(mxz_layers_age && show_layers_age_check));
     const bool show_population(
-      !slog.population_file_path.empty() && show_population_check
+      !monitor::slog.population_file_path.empty() && show_population_check
       && !(mxz_dynamic && show_dynamic_check)
       && !(mxz_layers_fit && show_layers_fit_check)
       && !(mxz_layers_age && show_layers_age_check));
     const bool show_layers_fit(
-      !slog.layers_file_path.empty() && show_layers_fit_check
+      !monitor::slog.layers_file_path.empty() && show_layers_fit_check
       && !(mxz_dynamic && show_dynamic_check)
       && !(mxz_population && show_population_check)
       && !(mxz_layers_age && show_layers_age_check));
     const bool show_layers_age(
-      !slog.layers_file_path.empty() && show_layers_age_check
+      !monitor::slog.layers_file_path.empty() && show_layers_age_check
       && !(mxz_dynamic && show_dynamic_check)
       && !(mxz_population && show_population_check)
       && !(mxz_layers_fit && show_layers_fit_check));
@@ -1495,13 +1508,13 @@ std::optional<std::string> read_log_file::get_line()
 //
 void get_logs(std::stop_token stoken)
 {
-  assert(!slog.dynamic_file_path.empty()
-         || !slog.layers_file_path.empty()
-         || !slog.population_file_path.empty());
+  assert(!monitor::slog.dynamic_file_path.empty()
+         || !monitor::slog.layers_file_path.empty()
+         || !monitor::slog.population_file_path.empty());
 
-  read_log_file dynamic_log(slog.dynamic_file_path);
-  read_log_file population_log(slog.population_file_path);
-  read_log_file layers_log(slog.layers_file_path);
+  read_log_file dynamic_log(monitor::slog.dynamic_file_path);
+  read_log_file population_log(monitor::slog.population_file_path);
+  read_log_file layers_log(monitor::slog.layers_file_path);
 
   ultra::timer last_read;
 
@@ -1537,16 +1550,16 @@ void get_logs(std::stop_token stoken)
 //
 void get_summaries(std::stop_token stoken)
 {
-  assert(!test_collection.empty());
+  assert(!test::collection.empty());
 
   {
     std::lock_guard guard(summaries_mutex);
-    summaries.resize(test_collection.size());
+    summaries.resize(test::collection.size());
   }
 
   while (!stoken.stop_requested())
   {
-    for (std::size_t i(0); const auto &test : test_collection)
+    for (std::size_t i(0); const auto &test : test::collection)
     {
       ++i;
 
@@ -1591,8 +1604,7 @@ void get_summaries(std::stop_token stoken)
   return threshold;
 }
 
-[[nodiscard]] test_settings read_test_settings(
-  const std::filesystem::path &test_fn)
+test::settings test::read_settings(const std::filesystem::path &test_fn)
 {
   assert(test_fn.extension() == ".csv");
 
@@ -1606,11 +1618,11 @@ void get_summaries(std::stop_token stoken)
   if (const auto result(doc.LoadFile(settings_fn.c_str()));
       result != tinyxml2::XML_SUCCESS)
   {
-    std::cerr << "Cannot open settings for " << test_fn << '\n';
+    std::cerr << "Cannot open settings for " << test_fn << ".\n";
     return {};
   }
 
-  test_settings ret;
+  test::settings ret;
 
   tinyxml2::XMLConstHandle handle(&doc);
   const auto h_ultra(handle.FirstChildElement("ultra"));
@@ -1657,10 +1669,17 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr monitor [log folder or specific test name]\n"
+  "> wopr compare <directory> <directory>\n"
   "\n"
-  "  The log folder must contain at least one search log produced by Ultra.\n"
-  "  If omitted, the current working directory is used.\n"
+  "  The first directory is the most important. Only results contained within\n"
+  "  it are considered for comparison with results from the second directory.\n"
+  "\n"
+  "> wopr monitor [log directory or specific test name]\n"
+  "\n"
+  "  The log directory must contain at least one search log produced by\n"
+  "  Ultra. If omitted, the current working directory is used.\n"
+  "  When using a test name, skip the extension (e.g use \"/path/test\" and\n"
+  "  NOT \"/path/test.csv\").\n"
   "\n"
   "  Available switches:\n"
   "\n"
@@ -1673,11 +1692,11 @@ void cmdl_usage()
   "  --window <nr>\n"
   "      Restrict monitoring window to the last `nr` generations.\n"
   "\n"
-  "> wopr test [folder or file]\n"
+  "> wopr test [directory or file]\n"
   "\n"
-  "  The argument of the `test` command must point to folder containing, at\n"
-  "  least, one .csv dataset (and optionally a test configuration file), or\n"
-  "  to a specific file. If no folder is specified, the current working\n"
+  "  The argument of the `test` command must point to a directory containing,\n"
+  "  at least, one .csv dataset (and optionally a test configuration file),\n"
+  "  or to a specific file. If no directory is specified, the current working\n"
   "  directory is used.\n"
   "\n"
   "  Available switches:\n"
@@ -1687,7 +1706,7 @@ void cmdl_usage()
   "  --nogui\n"
   "      Disable the graphical user interface performing the test in headless\n"
   "      mode.\n"
-  "  --reference directory <directory>\n"
+  "  --reference <directory>\n"
   "      Specify a directory containing reference results.\n"
   "  --runs <nr>\n"
   "      Perform the specified number of evolutionary runs.\n"
@@ -1750,24 +1769,27 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 
   if (!fs::is_directory(log_folder))
   {
-    std::cerr << log_folder << " isn't a directory\n";
+    std::cerr << log_folder << " isn't a directory.\n";
     return false;
   }
 
-  slog.base_dir = log_folder;
-  slog.summary_file_path = "";
+  monitor::slog.base_dir = log_folder;
+  monitor::slog.summary_file_path = "";
 
-  slog.dynamic_file_path = build_path(log_folder, cmdl("dynamic", "").str());
-  slog.layers_file_path = build_path(log_folder, cmdl("layers", "").str());
-  slog.population_file_path = build_path(log_folder,
-                                         cmdl("population", "").str());
+  monitor::slog.dynamic_file_path =
+    build_path(log_folder, cmdl("dynamic", "").str());
+  monitor::slog.layers_file_path =
+    build_path(log_folder, cmdl("layers", "").str());
+  monitor::slog.population_file_path =
+    build_path(log_folder, cmdl("population", "").str());
 
   std::vector<fs::path> dynamic_file_paths;
   std::vector<fs::path> layers_file_paths;
   std::vector<fs::path> population_file_paths;
 
-  if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty()
-      || slog.population_file_path.empty())
+  if (monitor::slog.dynamic_file_path.empty()
+      || monitor::slog.layers_file_path.empty()
+      || monitor::slog.population_file_path.empty())
     for (const auto &entry : fs::directory_iterator(log_folder))
       if (entry.is_regular_file()
           && ultra::iequals(entry.path().extension(), ".txt"))
@@ -1775,7 +1797,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
         const std::string fn(entry.path().filename().string());
 
         if (const auto def(search_log::default_dynamic_file);
-            slog.dynamic_file_path.empty()
+            monitor::slog.dynamic_file_path.empty()
             && fn.find(def) != std::string::npos
             && (basename.empty() || fn.find(basename) != std::string::npos))
         {
@@ -1783,7 +1805,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
         }
 
         if (const auto def(search_log::default_layers_file);
-            slog.layers_file_path.empty()
+            monitor::slog.layers_file_path.empty()
             && fn.find(def) != std::string::npos
             && (basename.empty() || fn.find(basename) != std::string::npos))
         {
@@ -1791,7 +1813,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
         }
 
         if (const auto def(search_log::default_population_file);
-            slog.population_file_path.empty()
+            monitor::slog.population_file_path.empty()
             && fn.find(def) != std::string::npos
             && (basename.empty() || fn.find(basename) != std::string::npos))
         {
@@ -1805,29 +1827,30 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
           const auto example(
             fs::path(entry.path()).replace_extension().replace_extension());
           std::cerr << "Too many log files in folder; please choose one (e.g."
-                    << " `wopr monitor " << example << "`)\n";
+                    << " `wopr monitor " << example << "`).\n";
           return false;
         }
       }
 
-  if (slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
-    slog.dynamic_file_path = dynamic_file_paths.front();
-  if (slog.layers_file_path.empty() && !layers_file_paths.empty())
-    slog.layers_file_path = layers_file_paths.front();
-  if (slog.population_file_path.empty() && !population_file_paths.empty())
-    slog.population_file_path = population_file_paths.front();
+  if (monitor::slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
+    monitor::slog.dynamic_file_path = dynamic_file_paths.front();
+  if (monitor::slog.layers_file_path.empty() && !layers_file_paths.empty())
+    monitor::slog.layers_file_path = layers_file_paths.front();
+  if (monitor::slog.population_file_path.empty()
+      && !population_file_paths.empty())
+    monitor::slog.population_file_path = population_file_paths.front();
 
-  if (!fs::exists(slog.dynamic_file_path)
-      && !fs::exists(slog.layers_file_path)
-      && !fs::exists(slog.population_file_path))
+  if (!fs::exists(monitor::slog.dynamic_file_path)
+      && !fs::exists(monitor::slog.layers_file_path)
+      && !fs::exists(monitor::slog.population_file_path))
   {
     std::cerr << "No log file available.\n";
     return false;
   }
 
-  std::cout << "Dynamic file path: " << slog.dynamic_file_path
-            << "\nLayers file path: " << slog.layers_file_path
-            << "\nPopulation file path: " << slog.population_file_path
+  std::cout << "Dynamic file path: " << monitor::slog.dynamic_file_path
+            << "\nLayers file path: " << monitor::slog.layers_file_path
+            << "\nPopulation file path: " << monitor::slog.population_file_path
             << '\n';
 
 
@@ -1835,8 +1858,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   {
     try
     {
-      monitoring_window = std::stoi(v);
-      std::cout << "Monitoring window: " << monitoring_window << '\n';
+      monitor::window = std::stoi(v);
+      std::cout << "Monitoring window: " << monitor::window << '\n';
     }
     catch (...)
     {
@@ -1849,8 +1872,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   {
     try
     {
-      refresh_rate = std::chrono::duration<double>(std::stof(v));
-      std::cout << "Refresh rate: " << refresh_rate.count() << "s\n";
+      monitor::refresh_rate = std::chrono::duration<double>(std::stof(v));
+      std::cout << "Refresh rate: " << monitor::refresh_rate.count() << "s\n";
     }
     catch (...)
     {
@@ -1866,13 +1889,11 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 {
   using namespace ultra;
 
-  const auto &pos_args(cmdl.pos_args());
-
   const auto show_settings([](const std::filesystem::path &p)
   {
-    test_settings ts;
+    test::settings ts;
 
-    if (const auto i(test_collection.find(p)); i != test_collection.end())
+    if (const auto i(test::collection.find(p)); i != test::collection.end())
       ts = i->second;
 
     std::cout << "Settings for " << p.filename()
@@ -1892,6 +1913,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     std::cout << '\n';
   });
 
+  const auto &pos_args(cmdl.pos_args());
+
   if (const std::filesystem::path test_input(pos_args.size() <= 2
                                              ? "./" : pos_args[2]);
       std::filesystem::is_directory(test_input))
@@ -1902,13 +1925,13 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
       if (const auto path(entry.path());
           ultra::iequals(path.extension(), ".csv"))
       {
-        test_collection.insert({path, read_test_settings(path)});
+        test::collection.insert({path, test::read_settings(path)});
         show_settings(path);
       }
   }
   else if (std::filesystem::exists(test_input))
   {
-    test_collection.insert({test_input, read_test_settings(test_input)});
+    test::collection.insert({test_input, test::read_settings(test_input)});
     show_settings(test_input);
   }
   else
@@ -1917,25 +1940,25 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     return false;
   }
 
-  if (test_collection.empty())
+  if (test::collection.empty())
   {
     std::cerr << "No dataset available.\n";
     return false;
   }
 
   std::cout << "Datasets:";
-  for (const auto &test : test_collection)
+  for (const auto &test : test::collection)
     std::cout << ' ' << test.first;
   std::cout << '\n';
 
   if (const std::filesystem::path ref_folder(cmdl("reference", "").str());
       ref_folder.empty())
   {
-    ref_summaries.resize(test_collection.size(), {});
+    ref_summaries.resize(test::collection.size(), {});
   }
   else if (std::filesystem::is_directory(ref_folder))
   {
-    for (const auto &test : test_collection)
+    for (const auto &test : test::collection)
     {
       const auto ref_path(ref_folder
                           / ultra::summary_from_basename(test.first));
@@ -1971,7 +1994,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     threshold = extract_threshold(v);
 
   if (generations || runs || threshold)
-    for (auto &test : test_collection)
+    for (auto &test : test::collection)
     {
       if (generations)
         test.second.generations = *generations;
@@ -1981,7 +2004,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
         test.second.threshold = *threshold;
     }
 
-  nogui = cmdl["nogui"];
+  test::nogui = cmdl["nogui"];
 
   return true;
 }
@@ -2035,7 +2058,7 @@ cmdl_result parse_args(int argc, char *argv[])
 /*********************************************************************
  * MAIN
  ********************************************************************/
-void monitor(const imgui_app::program::settings &settings)
+void monitor::run(const imgui_app::program::settings &settings)
 {
   std::jthread t_logs(get_logs);
 
@@ -2043,7 +2066,7 @@ void monitor(const imgui_app::program::settings &settings)
   prg.run(render_monitor);
 }
 
-void test(const imgui_app::program::settings &settings)
+void test::run(const imgui_app::program::settings &settings)
 {
   std::stop_source source;
 
@@ -2072,23 +2095,23 @@ void test(const imgui_app::program::settings &settings)
 
       s.logger(sl).stop_source(source);
 
-      if (test_collection.size() > 1)
+      if (test::collection.size() > 1)
         s.tag(dataset.stem());
 
       return s.run(test.second.runs, test.second.threshold);
     });
 
-  if (test_collection.size() > 1)
+  if (test::collection.size() > 1)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  for (const auto &test : test_collection)
+  for (const auto &test : test::collection)
     tasks.push_back(std::async(std::launch::async, test_driver, test));
 
   std::jthread t_summaries(get_summaries);
 
-  if (nogui == false)
+  if (test::nogui == false)
   {
     imgui_app::program prg(settings);
     prg.run(render_test);
@@ -2130,9 +2153,9 @@ int main(int argc, char *argv[])
   settings.demo = imgui_demo_panel;
 
   if (result == cmdl_result::monitor)
-    monitor(settings);
+    monitor::run(settings);
   else if (result == cmdl_result::test)
-    test(settings);
+    test::run(settings);
 
   return EXIT_SUCCESS;
 }
