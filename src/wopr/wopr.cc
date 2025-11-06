@@ -1728,15 +1728,16 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
 [[nodiscard]] bool setup_monitor_cmd(argh::parser &cmdl)
 {
   using namespace ultra;
+  namespace fs = std::filesystem;
 
   const auto &pos_args(cmdl.pos_args());
 
-  std::filesystem::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
+  fs::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
 
-  std::filesystem::path log_folder;
+  fs::path log_folder;
   std::string basename;
 
-  if (std::filesystem::is_directory(log_object))
+  if (fs::is_directory(log_object))
     log_folder = log_object;
   else
   {
@@ -1747,7 +1748,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
       log_folder = "./";
   }
 
-  if (!std::filesystem::is_directory(log_folder))
+  if (!fs::is_directory(log_folder))
   {
     std::cerr << log_folder << " isn't a directory\n";
     return false;
@@ -1761,13 +1762,13 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   slog.population_file_path = build_path(log_folder,
                                          cmdl("population", "").str());
 
-  std::vector<std::filesystem::path> dynamic_file_paths;
-  std::vector<std::filesystem::path> layers_file_paths;
-  std::vector<std::filesystem::path> population_file_paths;
+  std::vector<fs::path> dynamic_file_paths;
+  std::vector<fs::path> layers_file_paths;
+  std::vector<fs::path> population_file_paths;
 
   if (slog.dynamic_file_path.empty() || slog.layers_file_path.empty()
       || slog.population_file_path.empty())
-    for (const auto &entry : std::filesystem::directory_iterator(log_folder))
+    for (const auto &entry : fs::directory_iterator(log_folder))
       if (entry.is_regular_file()
           && ultra::iequals(entry.path().extension(), ".txt"))
       {
@@ -1801,7 +1802,10 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
             || layers_file_paths.size() > 1
             || population_file_paths.size() > 1)
         {
-          std::cerr << "Too many log files.\n";
+          const auto example(
+            fs::path(entry.path()).replace_extension().replace_extension());
+          std::cerr << "Too many log files in folder; please choose one (e.g."
+                    << " `wopr monitor " << example << "`)\n";
           return false;
         }
       }
@@ -1813,9 +1817,9 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   if (slog.population_file_path.empty() && !population_file_paths.empty())
     slog.population_file_path = population_file_paths.front();
 
-  if (!std::filesystem::exists(slog.dynamic_file_path)
-      && !std::filesystem::exists(slog.layers_file_path)
-      && !std::filesystem::exists(slog.population_file_path))
+  if (!fs::exists(slog.dynamic_file_path)
+      && !fs::exists(slog.layers_file_path)
+      && !fs::exists(slog.population_file_path))
   {
     std::cerr << "No log file available.\n";
     return false;
