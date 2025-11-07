@@ -28,46 +28,6 @@
 
 using namespace std::chrono_literals;
 
-namespace compare  // comparison-related variables
-{
-
-}
-
-namespace monitor  // monitoring related variables
-{
-ultra::search_log slog {};
-int window {0};
-std::chrono::duration<double> refresh_rate {2s};
-
-void run(const imgui_app::program::settings &);
-}
-
-namespace test  // testing related variables
-{
-bool nogui {false};
-
-struct settings
-{
-  ultra::src::dataframe::params params {};
-
-  unsigned generations {100};
-  unsigned runs {1};
-  ultra::model_measurements<double> threshold;
-};
-
-std::map<std::filesystem::path, settings> collection;
-
-[[nodiscard]] test::settings read_settings(const std::filesystem::path &);
-void run(const imgui_app::program::settings &);
-}
-
-// Other variables.
-bool imgui_demo_panel {false};
-
-
-[[nodiscard]] std::string random_string();
-
-
 
 /*********************************************************************
  * A normal distribution that supports works when standard deviation is zero.
@@ -498,12 +458,66 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
       good_runs.insert(run);
 }
 
-std::shared_mutex summaries_mutex;
-std::vector<summary_data> summaries;
 
-// Doesn't require a mutex since it's compiled before starting testing and
-// then used in read-only mode.
-std::vector<summary_data> ref_summaries;
+/*********************************************************************
+ * Misc data.
+ ********************************************************************/
+namespace monitor  // monitoring related variables
+{
+ultra::search_log slog {};
+int window {0};
+std::chrono::duration<double> refresh_rate {2s};
+
+void run(const imgui_app::program::settings &);
+[[nodiscard]] bool setup_cmd(argh::parser &);
+}
+
+namespace test  // testing and comparison related variables
+{
+bool nogui {false};
+
+enum class mode {compare, test};
+
+struct settings
+{
+  ultra::src::dataframe::params params {};
+
+  unsigned generations {100};
+  unsigned runs {1};
+  ultra::model_measurements<double> threshold {};
+};
+
+struct data
+{
+  data(const settings &s = {}) : conf(s) {}
+
+  settings conf {};
+  summary_data current {};
+  summary_data reference {};
+};
+
+// Protects `data.current`. `std::shared_mutex` is used to allow multiple
+// concurrent readers, while writes (updates to `data.current`) are exclusive.
+// `data.reference` doesn't need a mutex since it's compiled once at program
+// startup.
+std::shared_mutex summary_mutex;
+
+std::map<std::filesystem::path, data> collection;
+
+[[nodiscard]] test::settings read_settings(const std::filesystem::path &);
+[[nodiscard]] std::map<std::filesystem::path, test::data> setup_collection(
+  std::filesystem::path, std::filesystem::path, test::mode);
+
+void run(const imgui_app::program::settings &, mode);
+
+[[nodiscard]] bool setup_compare_cmd(argh::parser &);
+[[nodiscard]] bool setup_test_cmd(argh::parser &);
+}  // namespace test
+
+// Other variables and functions.
+bool imgui_demo_panel {false};
+
+[[nodiscard]] std::string random_string();
 
 
 /*********************************************************************
@@ -526,17 +540,16 @@ void render_runs()
   static bool reference_values {true};
 
   std::vector<unsigned> data;
-  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
-    data.push_back(s.runs);
+  for (std::shared_lock guard(test::summary_mutex);
+       const auto &t : test::collection)
+    data.push_back(t.second.current.runs);
 
   std::vector<std::string> labels;
 
-  assert(test::collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test::collection)
+  for (const auto &t : test::collection)
   {
-    labels.push_back(test.first.stem().string());
-    data.push_back(ref_summaries[i].runs);
-    ++i;
+    labels.push_back(t.first.stem().string());
+    data.push_back(t.second.reference.runs);
   }
 
   std::vector<const char *> labels_chr(labels.size());
@@ -569,20 +582,19 @@ void render_success_rate()
 
   std::vector<double> data;
   std::vector<std::string> rlabels;
-  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
+  for (std::shared_lock guard(test::summary_mutex);
+       const auto &t : test::collection)
   {
-    data.push_back(s.success_rate * 100.0);
-    rlabels.push_back(std::to_string(s.runs));
+    data.push_back(t.second.current.success_rate * 100.0);
+    rlabels.push_back(std::to_string(t.second.current.runs));
   }
 
   std::vector<std::string> glabels;
 
-  assert(test::collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test::collection)
+  for (const auto &t : test::collection)
   {
-    glabels.push_back(test.first.stem().string());
-    data.push_back(ref_summaries[i].success_rate * 100.0);
-    ++i;
+    glabels.push_back(t.first.stem().string());
+    data.push_back(t.second.reference.success_rate * 100.0);
   }
 
   std::vector<const char *> glabels_chr(glabels.size());
@@ -614,37 +626,36 @@ void render_fitness_across_datasets()
 {
   std::vector<double> fit_mean, fit_std_dev;
   std::vector<double> runs;
-  for (std::shared_lock guard(summaries_mutex); const auto &s : summaries)
+  for (std::shared_lock guard(test::summary_mutex);
+       const auto &t : test::collection)
   {
-    if (s.fit_mean.size())
-      fit_mean.push_back(s.fit_mean[0]);
-    if (s.fit_std_dev.size())
-      fit_std_dev.push_back(s.fit_std_dev[0]);
-    runs.push_back(s.runs);
+    if (t.second.current.fit_mean.size())
+      fit_mean.push_back(t.second.current.fit_mean[0]);
+    if (t.second.current.fit_std_dev.size())
+      fit_std_dev.push_back(t.second.current.fit_std_dev[0]);
+    runs.push_back(t.second.current.runs);
   }
 
   std::vector<std::string> labels;
   std::vector<double> ref_fit_mean, ref_fit_std_dev;
   std::vector<unsigned> ref_runs;
 
-  assert(test::collection.size() == ref_summaries.size());
-  for (std::size_t i(0); const auto &test : test::collection)
+  for (const auto &t : test::collection)
   {
     {
       std::ostringstream ss;
-      ss << test.first.stem() << '\n';
+      ss << t.first.stem() << '\n';
       labels.push_back(ss.str());
     }
 
     /*ref_fit_mean.push_back(
-      ref_summaries[i].fit_mean.size()
-      ? ref_summaries[i].fit_mean[0] : fit_mean[i]);
+      t.second.reference.fit_mean.size()
+      ? t.second.reference..fit_mean[0] : fit_mean[i]);
     ref_fit_std_dev.push_back(
-      ref_summaries[i].fit_std_dev.size()
-      ? ref_summaries[i].fit_std_dev[0] : fit_std_dev[i]);
-    ref_runs.push_back(ref_summaries[i].runs);
+      t.second.reference.fit_std_dev.size()
+      ? t.second.reference.fit_std_dev[0] : fit_std_dev[i]);
+    ref_runs.push_back(t.second.reference.runs);
     */
-    ++i;
   }
 
   std::vector<const char *> labels_chr(labels.size());
@@ -1552,17 +1563,10 @@ void get_summaries(std::stop_token stoken)
 {
   assert(!test::collection.empty());
 
-  {
-    std::lock_guard guard(summaries_mutex);
-    summaries.resize(test::collection.size());
-  }
-
   while (!stoken.stop_requested())
   {
-    for (std::size_t i(0); const auto &test : test::collection)
+    for (auto &test : test::collection)
     {
-      ++i;
-
       const auto &dataset(test.first);
       const std::filesystem::path base_dir(dataset.parent_path());
       const auto xml_fn(base_dir / ultra::summary_from_basename(dataset));
@@ -1580,8 +1584,8 @@ void get_summaries(std::stop_token stoken)
           continue;
       }
 
-      std::lock_guard guard(summaries_mutex);
-      summaries[i-1] = summary_data(summary);
+      std::lock_guard guard(test::summary_mutex);
+      test.second.current = summary_data(summary);
     }
 
     std::this_thread::sleep_for(3000ms);
@@ -1655,7 +1659,7 @@ test::settings test::read_settings(const std::filesystem::path &test_fn)
 /*********************************************************************
  * Command line
  ********************************************************************/
-enum class cmdl_result {error, help, monitor, test};
+enum class cmdl_result {compare, error, help, monitor, test};
 
 void cmdl_usage()
 {
@@ -1744,7 +1748,111 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
-[[nodiscard]] bool setup_monitor_cmd(argh::parser &cmdl)
+std::map<std::filesystem::path, test::data> test::setup_collection(
+  std::filesystem::path in1, std::filesystem::path in2, mode m)
+{
+  using namespace ultra;
+  namespace fs = std::filesystem;
+
+  if (in1.empty())
+    in1 = "./";
+
+  if (in1 == in2)
+  {
+    std::cerr << "Same file or directory for comparison.\n";
+    return {};
+  }
+
+  const auto show_settings([](const std::filesystem::path &p)
+  {
+    test::settings ts;
+
+    if (const auto i(test::collection.find(p)); i != test::collection.end())
+      ts = i->second.conf;
+
+    std::cout << "Settings for " << p.filename()
+              << "\n  Runs: " << ts.runs
+              << "\n  Generations: " << ts.generations
+              << "\n  Threshold:";
+
+    if (ts.threshold.accuracy || ts.threshold.fitness)
+    {
+      if (ts.threshold.accuracy)
+        std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+      if (ts.threshold.fitness)
+        std::cout << ' ' << *ts.threshold.fitness;
+    }
+    else
+      std::cout << " none";
+    std::cout << '\n';
+  });
+
+  std::map<fs::path, test::data> ret;
+
+  if (fs::is_directory(in1))
+  {
+    const auto base_folder(in1);
+
+    for (const auto &entry : fs::directory_iterator(base_folder))
+      if (const auto path(entry.path());
+          ultra::iequals(path.extension(), ".csv"))
+      {
+        if (m == mode::test)
+        {
+          ret.insert({path, test::read_settings(path)});
+          show_settings(path);
+        }
+        else
+          ret.insert({path, {}});
+      }
+  }
+  else if (fs::exists(in1))
+  {
+    if (m == mode::test)
+    {
+      ret.insert({in1, test::read_settings(in1)});
+      show_settings(in1);
+    }
+    else
+      ret.insert({in1, {}});
+  }
+  else
+  {
+    std::cerr << in1 << " isn't a valid input.\n";
+    return {};
+  }
+
+  if (ret.empty())
+  {
+    std::cerr << "No dataset available.\n";
+    return {};
+  }
+
+  std::cout << "Datasets:";
+  for (const auto &ds : ret)
+    std::cout << ' ' << ds.first;
+  std::cout << '\n';
+
+  if (fs::is_directory(in2))
+  {
+    for (auto &t : ret)
+    {
+      const auto path(in2 / ultra::summary_from_basename(t.first));
+
+      if (fs::exists(path))
+        t.second.reference = summary_data(path);
+    }
+  }
+  else if (!in2.empty())
+  {
+    std::cerr << in2 << " isn't a directory.\n";
+    return {};
+  }
+
+  return ret;
+}
+
+bool monitor::setup_cmd(argh::parser &cmdl)
 {
   using namespace ultra;
   namespace fs = std::filesystem;
@@ -1885,95 +1993,44 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return true;
 }
 
-[[nodiscard]] bool setup_test_cmd(argh::parser &cmdl)
+bool test::setup_compare_cmd(argh::parser &cmdl)
 {
-  using namespace ultra;
-
-  const auto show_settings([](const std::filesystem::path &p)
-  {
-    test::settings ts;
-
-    if (const auto i(test::collection.find(p)); i != test::collection.end())
-      ts = i->second;
-
-    std::cout << "Settings for " << p.filename()
-              << "\n  Runs: " << ts.runs
-              << "\n  Generations: " << ts.generations
-              << "\n  Threshold:";
-
-    if (ts.threshold.accuracy || ts.threshold.fitness)
-    {
-      if (ts.threshold.accuracy)
-        std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
-      if (ts.threshold.fitness)
-        std::cout << ' ' << *ts.threshold.fitness;
-    }
-    else
-      std::cout << " none";
-    std::cout << '\n';
-  });
-
   const auto &pos_args(cmdl.pos_args());
 
-  if (const std::filesystem::path test_input(pos_args.size() <= 2
-                                             ? "./" : pos_args[2]);
-      std::filesystem::is_directory(test_input))
+  if (pos_args.size() <= 2)
   {
-    const std::filesystem::path test_folder(test_input);
-
-    for (const auto &entry : std::filesystem::directory_iterator(test_folder))
-      if (const auto path(entry.path());
-          ultra::iequals(path.extension(), ".csv"))
-      {
-        test::collection.insert({path, test::read_settings(path)});
-        show_settings(path);
-      }
-  }
-  else if (std::filesystem::exists(test_input))
-  {
-    test::collection.insert({test_input, test::read_settings(test_input)});
-    show_settings(test_input);
-  }
-  else
-  {
-    std::cerr << test_input << " isn't a valid input.\n";
+    std::cerr << "At least one directory must be specified.\n";
     return false;
   }
+
+  const std::filesystem::path cmp1(pos_args.size() == 3 ? "./"
+                                                        : pos_args[2]);
+  const std::filesystem::path cmp2(pos_args.size() == 3 ? pos_args[2]
+                                                        : pos_args[3]);
+
+  test::collection = setup_collection(cmp1, cmp2, mode::compare);
 
   if (test::collection.empty())
-  {
-    std::cerr << "No dataset available.\n";
     return false;
-  }
 
-  std::cout << "Datasets:";
-  for (const auto &test : test::collection)
-    std::cout << ' ' << test.first;
-  std::cout << '\n';
+  return true;
+}
 
-  if (const std::filesystem::path ref_folder(cmdl("reference", "").str());
-      ref_folder.empty())
-  {
-    ref_summaries.resize(test::collection.size(), {});
-  }
-  else if (std::filesystem::is_directory(ref_folder))
-  {
-    for (const auto &test : test::collection)
-    {
-      const auto ref_path(ref_folder
-                          / ultra::summary_from_basename(test.first));
+bool test::setup_test_cmd(argh::parser &cmdl)
+{
+  const auto &pos_args(cmdl.pos_args());
 
-      if (std::filesystem::exists(ref_path))
-        ref_summaries.push_back(summary_data(ref_path));
-      else
-        ref_summaries.push_back({});
-    }
-  }
-  else
-  {
-    std::cerr << ref_folder << " isn't a directory.\n";
+  for (const auto &a : pos_args)
+    std::cout << a << std::endl;
+
+  const std::filesystem::path test_input(pos_args.size() <= 2 ? "./"
+                                                              : pos_args[2]);
+  const std::filesystem::path ref_folder(cmdl("reference", "").str());
+
+  test::collection = setup_collection(test_input, ref_folder, mode::test);
+
+  if (test::collection.empty())
     return false;
-  }
 
   std::optional<unsigned> generations;
   if (const auto v(cmdl("generations").str()); !v.empty())
@@ -1997,11 +2054,11 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
     for (auto &test : test::collection)
     {
       if (generations)
-        test.second.generations = *generations;
+        test.second.conf.generations = *generations;
       if (runs)
-        test.second.runs = *runs;
+        test.second.conf.runs = *runs;
       if (threshold)
-        test.second.threshold = *threshold;
+        test.second.conf.threshold = *threshold;
     }
 
   test::nogui = cmdl["nogui"];
@@ -2026,9 +2083,10 @@ cmdl_result parse_args(int argc, char *argv[])
 
   cmdl.parse(argc, argv);
 
+  const std::string cmd_compare("compare");
   const std::string cmd_monitor("monitor");
   const std::string cmd_test("test");
-  const std::set<std::string> cmds({cmd_monitor, cmd_test});
+  const std::set<std::string> cmds({cmd_compare, cmd_monitor, cmd_test});
 
   const auto &pos_args(cmdl.pos_args());
 
@@ -2041,15 +2099,17 @@ cmdl_result parse_args(int argc, char *argv[])
 
   if (!cmds.contains(cmd))
   {
-    std::cerr << "Unknown command.\n";
+    std::cerr << "Unknown command `" << cmd << "`.\n";
     return cmdl_result::error;
   }
 
   imgui_demo_panel = cmdl["imguidemo"];
 
-  if (cmd == cmd_monitor && setup_monitor_cmd(cmdl))
+  if (cmd == cmd_compare && test::setup_compare_cmd(cmdl))
+    return cmdl_result::compare;
+  else if (cmd == cmd_monitor && monitor::setup_cmd(cmdl))
     return cmdl_result::monitor;
-  else if (cmd == cmd_test  && setup_test_cmd(cmdl))
+  else if (cmd == cmd_test  && test::setup_test_cmd(cmdl))
     return cmdl_result::test;
 
   return cmdl_result::error;
@@ -2066,7 +2126,7 @@ void monitor::run(const imgui_app::program::settings &settings)
   prg.run(render_monitor);
 }
 
-void test::run(const imgui_app::program::settings &settings)
+void test::run(const imgui_app::program::settings &settings, mode m)
 {
   std::stop_source source;
 
@@ -2075,9 +2135,9 @@ void test::run(const imgui_app::program::settings &settings)
     {
       const auto &dataset(test.first);
       ultra::src::problem prob(
-        ultra::src::dataframe(dataset, test.second.params),
+        ultra::src::dataframe(dataset, test.second.conf.params),
         ultra::symbol_init::all);
-      prob.params.evolution.generations = test.second.generations;
+      prob.params.evolution.generations = test.second.conf.generations;
 
       ultra::src::search s(prob);
 
@@ -2098,16 +2158,17 @@ void test::run(const imgui_app::program::settings &settings)
       if (test::collection.size() > 1)
         s.tag(dataset.stem());
 
-      return s.run(test.second.runs, test.second.threshold);
+      return s.run(test.second.conf.runs, test.second.conf.threshold);
     });
 
-  if (test::collection.size() > 1)
+  if (test::collection.size() > 1 && m == mode::test)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  for (const auto &test : test::collection)
-    tasks.push_back(std::async(std::launch::async, test_driver, test));
+  if (m == mode::test)
+    for (const auto &test : test::collection)
+      tasks.push_back(std::async(std::launch::async, test_driver, test));
 
   std::jthread t_summaries(get_summaries);
 
@@ -2122,7 +2183,8 @@ void test::run(const imgui_app::program::settings &settings)
   const auto task_completed(
     [](const auto &future)
     {
-      return future.wait_for(0ms) == std::future_status::ready;
+      return !future.valid()
+             || future.wait_for(0ms) == std::future_status::ready;
     });
 
   while (!std::ranges::all_of(tasks, task_completed))
@@ -2152,10 +2214,12 @@ int main(int argc, char *argv[])
   settings.w_related.title = "WOPR";
   settings.demo = imgui_demo_panel;
 
-  if (result == cmdl_result::monitor)
+  if (result == cmdl_result::compare)
+    test::run(settings, test::mode::compare);
+  else if (result == cmdl_result::monitor)
     monitor::run(settings);
   else if (result == cmdl_result::test)
-    test::run(settings);
+    test::run(settings, test::mode::test);
 
   return EXIT_SUCCESS;
 }
