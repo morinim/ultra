@@ -515,6 +515,9 @@ void run(const imgui_app::program::settings &, mode);
 }  // namespace test
 
 // Other variables and functions.
+const char *current_str = "Current";
+const char *reference_str = "Reference";
+
 bool imgui_demo_panel {false};
 
 [[nodiscard]] std::string random_string();
@@ -556,7 +559,7 @@ void render_runs()
   std::ranges::transform(labels, labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
-  const std::vector ilabels = {"Current", "Reference"};
+  const std::vector ilabels = {current_str, reference_str};
   std::vector<double> positions(test::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
@@ -601,7 +604,7 @@ void render_success_rate()
   std::ranges::transform(glabels, glabels_chr.begin(),
                          [](const auto &str) { return str.data(); });
 
-  const std::vector ilabels = {"Current", "Reference"};
+  const std::vector ilabels = {current_str, reference_str};
   std::vector<double> positions(test::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
@@ -624,21 +627,38 @@ void render_success_rate()
 
 void render_fitness_across_datasets()
 {
-  std::vector<double> fit_mean, fit_std_dev;
+  if (!test::collection.size())
+    return;
+
+  const auto square_dim([](std::size_t n)
+  {
+    return static_cast<std::size_t>(std::ceil(std::sqrt(n)));
+  });
+
+  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+  std::vector<double> best_fit, fit_mean, fit_std_dev;
   std::vector<double> runs;
   for (std::shared_lock guard(test::summary_mutex);
        const auto &t : test::collection)
   {
+    if (t.second.current.best_fit.size())
+      best_fit.push_back(t.second.current.best_fit[0]);
+    else
+      best_fit.push_back(qnan);
     if (t.second.current.fit_mean.size())
       fit_mean.push_back(t.second.current.fit_mean[0]);
+    else
+      fit_mean.push_back(qnan);
     if (t.second.current.fit_std_dev.size())
       fit_std_dev.push_back(t.second.current.fit_std_dev[0]);
+    else
+      fit_std_dev.push_back(qnan);
     runs.push_back(t.second.current.runs);
   }
 
   std::vector<std::string> labels;
-  std::vector<double> ref_fit_mean, ref_fit_std_dev;
-  std::vector<unsigned> ref_runs;
+  std::vector<double> ref_best_fit, ref_fit_mean, ref_fit_std_dev;
+  std::vector<double> ref_runs;
 
   for (const auto &t : test::collection)
   {
@@ -648,18 +668,23 @@ void render_fitness_across_datasets()
       labels.push_back(ss.str());
     }
 
-    /*ref_fit_mean.push_back(
-      t.second.reference.fit_mean.size()
-      ? t.second.reference..fit_mean[0] : fit_mean[i]);
-    ref_fit_std_dev.push_back(
-      t.second.reference.fit_std_dev.size()
-      ? t.second.reference.fit_std_dev[0] : fit_std_dev[i]);
+    if (t.second.reference.best_fit.size())
+      ref_best_fit.push_back(t.second.reference.best_fit[0]);
+    else
+      ref_best_fit.push_back(qnan);
+    if (t.second.reference.fit_mean.size())
+      ref_fit_mean.push_back(t.second.reference.fit_mean[0]);
+    else
+      ref_fit_mean.push_back(qnan);
+    if (t.second.reference.fit_std_dev.size())
+      ref_fit_std_dev.push_back(t.second.reference.fit_std_dev[0]);
+    else
+      ref_fit_mean.push_back(qnan);
     ref_runs.push_back(t.second.reference.runs);
-    */
   }
 
-  std::vector<const char *> labels_chr(labels.size());
-  std::ranges::transform(labels, labels_chr.begin(),
+  std::vector<const char *> plot_labels_chr(labels.size());
+  std::ranges::transform(labels, plot_labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
   std::vector<double> positions(test::collection.size());
@@ -667,17 +692,67 @@ void render_fitness_across_datasets()
 
   const std::string title("Fitness across datasets");
 
-  if (ImPlot::BeginPlot(gui_uid(title), ImVec2(-1, -1), ImPlotFlags_NoLegend))
-  {
-    ImPlot::SetupAxes("Dataset & Fitness", "P(current > ref)",
-                      ImPlotAxisFlags_AutoFit,
-                      ImPlotAxisFlags_AutoFit);
+  const auto n(square_dim(test::collection.size()));
 
-    //ImPlot::PlotBars(*labels_chr.data(), fit_mean.data(), fit_mean.size(), 0.4);
-    ImPlot::PlotErrorBars(labels_chr.front(), positions.data(),
-                          fit_mean.data(), fit_std_dev.data(), fit_mean.size());
-    ImPlot::PlotScatter(labels_chr.front(), positions.data(), fit_mean.data(), fit_mean.size());
-    ImPlot::EndPlot();
+  if (ImPlot::BeginSubplots(title.c_str(), n, n, ImVec2(-1, -1),
+                            ImPlotSubplotFlags_NoLegend))
+  {
+    for (std::size_t i(0); i < test::collection.size(); ++i)
+    {
+      bool style_pushed(false);
+
+      if (best_fit[i] < ref_best_fit[i])
+      {
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.2));
+        style_pushed = true;
+      }
+
+      if (ImPlot::BeginPlot(plot_labels_chr[i]))
+      {
+        ImPlot::SetupAxesLimits(std::min(runs[i], ref_runs[i]) - 1.0,
+                                std::max(runs[i], ref_runs[i]) + 1.0,
+                                0.0, 0.0);
+
+        ImPlot::SetupAxes("Runs", "Fitness",
+                          0, ImPlotAxisFlags_AutoFit);
+
+        {
+          const std::vector xs = { runs[i] };
+          const std::vector ys = { fit_mean[i] };
+          const std::vector ys_dev = { fit_std_dev[i] };
+          const std::vector ys_best = { best_fit[i] };
+
+          ImPlot::PlotErrorBars(current_str, xs.data(),
+                                ys.data(), ys_dev.data(), xs.size());
+          ImPlot::PlotScatter(current_str, xs.data(), ys.data(), xs.size());
+          ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
+          ImPlot::PlotScatter(current_str, xs.data(), ys_best.data(),
+                              xs.size());
+        }
+
+        {
+          const std::vector xs = { ultra::almost_equal(runs[i], ref_runs[i])
+                                   ? ref_runs[i]+0.1 : ref_runs[i]};
+          const std::vector ys = { ref_fit_mean[i] };
+          const std::vector ys_dev = { ref_fit_std_dev[i] };
+          const std::vector ys_best = { ref_best_fit[i] };
+
+          ImPlot::PlotErrorBars(reference_str, xs.data(),
+                                ys.data(), ys_dev.data(), xs.size());
+          ImPlot::PlotScatter(reference_str, xs.data(), ys.data(), xs.size());
+          ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
+          ImPlot::PlotScatter(reference_str, xs.data(), ys_best.data(),
+                              xs.size());
+        }
+
+        ImPlot::EndPlot();
+      }
+
+      if (style_pushed)
+        ImPlot::PopStyleColor();
+    }
+
+    ImPlot::EndSubplots();
   }
 }
 
