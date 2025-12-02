@@ -107,52 +107,49 @@ void program::run(std::function<void (const program &, bool *)> render_main)
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    if (!minimized_)
+    if (ImGui::BeginMainMenuBar())
     {
-      if (ImGui::BeginMainMenuBar())
+      if (ImGui::BeginMenu("File"))
       {
-        if (ImGui::BeginMenu("File"))
-        {
-          if (ImGui::MenuItem("Exit", "Alt+Q"))
-            stop();
+        if (ImGui::MenuItem("Exit", "Alt+Q"))
+          stop();
 
-          ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("View"))
-        {
-          ImGui::MenuItem("Main", nullptr, &show_main_panel_);
-          if (settings_.demo)
-            ImGui::MenuItem("ImGui Demo Panel", nullptr, &show_demo_panel_);
-          ImGui::EndMenu();
-        }
-
-        ImGui::EndMainMenuBar();
+        ImGui::EndMenu();
       }
 
-      menu_height_ = ImGui::GetFrameHeight();
+      if (ImGui::BeginMenu("View"))
+      {
+        ImGui::MenuItem("Main", nullptr, &show_main_panel_);
+        if (settings_.demo)
+          ImGui::MenuItem("ImGui Demo Panel", nullptr, &show_demo_panel_);
+        ImGui::EndMenu();
+      }
 
-      // Implement your GUI here...
-      if (show_main_panel_)
-        render_main(*this, &show_main_panel_);
-
-      // ImGUI demo panel.
-      if (show_demo_panel_)
-        ImGui::ShowDemoWindow(&show_demo_panel_);
+      ImGui::EndMainMenuBar();
     }
 
-    // Render and present.
-    ImGui::Render();
+    menu_height_ = ImGui::GetFrameHeight();
 
-    SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
-                           SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(window_->get_native_renderer());
+    // Implement your GUI here...
+    if (show_main_panel_)
+      render_main(*this, &show_main_panel_);
 
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),
-                                          window_->get_native_renderer());
-
-    SDL_RenderPresent(window_->get_native_renderer());
+    // ImGUI demo panel.
+    if (show_demo_panel_)
+      ImGui::ShowDemoWindow(&show_demo_panel_);
   }
+
+  // Render and present.
+  ImGui::Render();
+
+  SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
+                         SDL_ALPHA_OPAQUE);
+  SDL_RenderClear(window_->get_native_renderer());
+
+  ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),
+                                        window_->get_native_renderer());
+
+  SDL_RenderPresent(window_->get_native_renderer());
 }
 
 SDL_Rect program::free_area() const
