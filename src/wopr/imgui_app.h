@@ -45,6 +45,9 @@ public:
 
     int width  {1000};
     int height  {720};
+
+    SDL_WindowFlags flags {SDL_WINDOW_RESIZABLE
+                           | SDL_WINDOW_HIGH_PIXEL_DENSITY};
   };
 
   explicit window(const settings &settings);
@@ -52,7 +55,7 @@ public:
 
   window(const window &) = delete;
   window(window &&) = delete;
-  window &operator=(window) = delete;
+  window &operator=(const window &) = delete;
   window &operator=(window &&) = delete;
 
   [[nodiscard]] SDL_Renderer *get_native_renderer() const;
@@ -88,19 +91,19 @@ public:
 
   program(const program &) = delete;
   program(program &&) = delete;
-  program &operator=(program) = delete;
+  program &operator=(const program &) = delete;
   program& operator=(program &&) = delete;
 
   void run(std::function<void(const program &, bool *)>);
   void stop();
 
-  window &get_window() { return *window_; }
+  [[nodiscard]] window &get_window() { return *window_; }
 
   SDL_Rect free_area() const;
 
   void on_event(const SDL_WindowEvent &);
   void on_minimize();
-  void on_shown();
+  void on_show();
   void on_close();
 
 private:

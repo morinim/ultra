@@ -2287,6 +2287,7 @@ int main(int argc, char *argv[])
 
   imgui_app::program::settings settings;
   settings.w_related.title = "WOPR";
+  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
   settings.demo = imgui_demo_panel;
 
   if (result == cmdl_result::compare)

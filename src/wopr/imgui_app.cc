@@ -26,10 +26,7 @@ namespace imgui_app
 
 window::window(const window::settings &s)
 {
-  const auto w_flags(static_cast<SDL_WindowFlags>(
-                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
-
-  window_ = SDL_CreateWindow(s.title.c_str(), 400, 400, w_flags);
+  window_ = SDL_CreateWindow(s.title.c_str(), s.width, s.height, s.flags);
 
   renderer_ = SDL_CreateRenderer(window_, nullptr);
   if (!renderer_)
@@ -135,7 +132,7 @@ void program::run(std::function<void (const program &, bool *)> render_main)
 
       menu_height_ = ImGui::GetFrameHeight();
 
-      // Whatever GUI to implement here ...
+      // Implement your GUI here...
       if (show_main_panel_)
         render_main(*this, &show_main_panel_);
 
@@ -182,7 +179,7 @@ void program::on_event(const SDL_WindowEvent &event)
   case SDL_EVENT_WINDOW_RESIZED:
     return;
   case SDL_EVENT_WINDOW_SHOWN:
-    return on_shown();
+    return on_show();
   default:
     // Do nothing otherwise
     return;
@@ -194,7 +191,7 @@ void program::on_minimize()
   minimized_ = true;
 }
 
-void program::on_shown()
+void program::on_show()
 {
   minimized_ = false;
 }
