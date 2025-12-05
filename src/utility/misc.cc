@@ -13,7 +13,6 @@
 #include "utility/misc.h"
 #include "kernel/nullary.h"
 
-#include <array>
 #include <atomic>
 #include <charconv>
 #include <system_error>

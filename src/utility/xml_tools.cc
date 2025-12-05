@@ -13,6 +13,8 @@
 #include "utility/xml_tools.h"
 #include "utility/assert.h"
 
+#include <array>
+
 namespace ultra
 {
 
