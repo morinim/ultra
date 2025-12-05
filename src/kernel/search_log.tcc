@@ -17,40 +17,6 @@
 #if !defined(ULTRA_SEARCH_LOG_TCC)
 #define      ULTRA_SEARCH_LOG_TCC
 
-namespace internal
-{
-
-//
-// A convenient arrangement for inserting stream-aware objects into
-// `XMLPrinter`.
-//
-// \tparam T type of the value
-//
-// \param[out] p output device
-// \param[in]  e new xml element
-// \param[in]  v new xml element's value
-//
-template<class T>
-void set_text(tinyxml2::XMLPrinter &p, const std::string &e, const T &v)
-{
-  std::string str_v;
-
-  if constexpr (std::is_same_v<T, std::string>)
-    str_v = v;
-  else
-  {
-    std::ostringstream ss;
-    ss << v;
-    str_v = ss.str();
-  }
-
-  p.OpenElement(e.c_str());
-  p.PushText(str_v.c_str());
-  p.CloseElement(e.c_str());
-}
-
-}  // namespace internal
-
 template<Individual I, Fitness F>
 void search_log::save_dynamic(const summary<I, F> &sum,
                               const distribution<F> &fit_dist)
@@ -206,7 +172,6 @@ template<Individual I, Fitness F> void search_log::save_summary(
   doc.OpenElement("ultra");
   doc.OpenElement("summary");
 
-  using internal::set_text;
   set_text(doc, "runs", stats.runs);
   set_text(doc, "elapsed_time", stats.elapsed.count());
   set_text(doc, "success_rate", success_rate);

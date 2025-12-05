@@ -18,7 +18,7 @@
 
 #include "kernel/evolution_summary.h"
 #include "kernel/search_stats.h"
-#include "tinyxml2/tinyxml2.h"
+#include "utility/xml_tools.h"
 
 namespace ultra
 {

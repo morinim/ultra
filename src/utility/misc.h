@@ -10,8 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_UTILITY_H)
-#define      ULTRA_UTILITY_H
+#if !defined(ULTRA_MISC_H)
+#define      ULTRA_MISC_H
 
 #include "kernel/value.h"
 
@@ -251,15 +251,6 @@ private:
 // *******************************************************************
 // Functions
 // *******************************************************************
-
-namespace crc32
-{
-
-[[nodiscard]] std::uint32_t calculate(const std::string &) noexcept;
-[[nodiscard]] std::string embed_xml_signature(const std::string &);
-[[nodiscard]] bool verify_xml_signature(const std::string &);
-
-}  // namespace crc32
 
 [[nodiscard]] bool is_integer(std::string);
 [[nodiscard]] bool is_number(std::string);
