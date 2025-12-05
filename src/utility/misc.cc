@@ -15,6 +15,7 @@
 
 #include <atomic>
 #include <charconv>
+#include <sstream>
 #include <system_error>
 #include <thread>
 

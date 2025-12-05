@@ -14,6 +14,7 @@
 #include "utility/assert.h"
 
 #include <array>
+#include <sstream>
 
 namespace ultra
 {

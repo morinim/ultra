@@ -24,7 +24,6 @@
 #include <fstream>
 #include <numeric>
 #include <ranges>
-#include <sstream>
 
 namespace ultra
 {
