@@ -169,44 +169,49 @@ template<Individual I, Fitness F> void search_log::save_summary(
 
   tinyxml2::XMLPrinter doc;
 
-  doc.OpenElement("ultra");
-  doc.OpenElement("summary");
+  {
+    xml_closer ultra_e(doc, "ultra");
 
-  set_text(doc, "runs", stats.runs);
-  set_text(doc, "elapsed_time", stats.elapsed.count());
-  set_text(doc, "success_rate", success_rate);
+    {
+      xml_closer summary_e(doc, "summary");
 
-  doc.OpenElement("distributions");
+      set_text(doc, "runs", stats.runs);
+      set_text(doc, "elapsed_time", stats.elapsed.count());
+      set_text(doc, "success_rate", success_rate);
 
-  doc.OpenElement("fitness");
-  set_text(doc, "mean", stats.fitness_distribution.mean());
-  set_text(doc, "standard_deviation",
-           stats.fitness_distribution.standard_deviation());
-  doc.CloseElement();  // fitness
+      {
+        xml_closer distributions_e(doc, "distributions");
 
-  doc.CloseElement();  // distributions
+        {
+          xml_closer fitness_e(doc, "fitness");
+          set_text(doc, "mean", stats.fitness_distribution.mean());
+          set_text(doc, "standard_deviation",
+                   stats.fitness_distribution.standard_deviation());
+        }  // fitness
+      }  // distributions
 
-  doc.OpenElement("best");
-  if (stats.best_measurements.fitness)
-    set_text(doc, "fitness", *stats.best_measurements.fitness);
-  if (stats.best_measurements.accuracy)
-    set_text(doc, "accuracy", *stats.best_measurements.accuracy);
-  set_text(doc, "run", stats.best_run);
+      {
+        xml_closer best_e(doc, "best");
+        if (stats.best_measurements.fitness)
+          set_text(doc, "fitness", *stats.best_measurements.fitness);
+        if (stats.best_measurements.accuracy)
+          set_text(doc, "accuracy", *stats.best_measurements.accuracy);
+        set_text(doc, "run", stats.best_run);
 
-  std::ostringstream ss;
-  ss << out::in_line << stats.best_individual;
-  set_text(doc, "code", ss.str());
-  doc.CloseElement();  // best
+        std::ostringstream ss;
+        ss << out::in_line << stats.best_individual;
+        set_text(doc, "code", ss.str());
+      }  // best
 
-  doc.OpenElement("solutions");
-  for (const auto &gr : stats.good_runs)
-    set_text(doc, "run", gr);
-  doc.CloseElement();  // solutions
+      {
+        xml_closer solutions_e(doc, "solutions");
+        for (const auto &gr : stats.good_runs)
+          set_text(doc, "run", gr);
+      }  // solutions
+    }  // summary
 
-  doc.CloseElement();  // summary
-
-  set_text(doc, "checksum", "00000000");
-  doc.CloseElement();  // ultra
+    set_text(doc, "checksum", "00000000");
+  }  // ultra
 
   const std::string base_xml(doc.CStr());
   const std::string signed_xml(ultra::crc32::embed_xml_signature(base_xml));

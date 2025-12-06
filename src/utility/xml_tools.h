@@ -31,6 +31,36 @@ namespace crc32
 
 }  // namespace crc32
 
+///
+/// RAII wrapper for `tinyxml2::XMLPrinter::OpenElement`.
+///
+/// Automatically calls `CloseElement()` on the printer when the object goes
+/// out of scope (i.e. when its destructor is called).
+///
+class xml_closer
+{
+public:
+  /// Constructor that calls `OpenElement` on the printer.
+  ///
+  /// \param[out] p    reference to the tinyxml2::XMLPrinter
+  /// \param[in]  name the name of the element to open
+  xml_closer(tinyxml2::XMLPrinter &p, const std::string& name) : printer_(p)
+  {
+    printer_.OpenElement(name.c_str());
+  }
+
+  /// Destructor that calls CloseElement on the printer.
+  ///
+  /// The resource is released here.
+  ~xml_closer() { printer_.CloseElement(); }
+
+  xml_closer(const xml_closer &) = delete;
+  xml_closer &operator=(const xml_closer &) = delete;
+
+private:
+  tinyxml2::XMLPrinter &printer_;
+};
+
 #include "utility/xml_tools.tcc"
 
 }  // namespace ultra

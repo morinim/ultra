@@ -11,6 +11,7 @@
  */
 
 #include "utility/xml_tools.h"
+#include "utility/misc.h"
 
 #include <chrono>
 #include <filesystem>
@@ -21,6 +22,21 @@
 
 TEST_SUITE("XML TOOLS")
 {
+
+TEST_CASE("xml_closer")
+{
+  tinyxml2::XMLPrinter p;
+
+  const std::string base("base");
+  const std::string output("Test string");
+
+  {
+    ultra::xml_closer element(p, base.c_str());
+    p.PushText(output.c_str());
+  }
+
+  CHECK(ultra::trim(p.CStr()) == "<"+base+">"+output+"</"+base+">");
+}
 
 TEST_CASE("Base CRC32")
 {
