@@ -35,7 +35,8 @@ TEST_CASE("xml_closer")
     p.PushText(output.c_str());
   }
 
-  CHECK(ultra::trim(p.CStr()) == "<"+base+">"+output+"</"+base+">");
+  CHECK(ultra::trim(p.CStr())
+        == "<" + base + ">" + output + "</" + base + ">");
 }
 
 TEST_CASE("Base CRC32")

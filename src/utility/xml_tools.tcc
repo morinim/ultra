@@ -41,7 +41,7 @@ void set_text(tinyxml2::XMLPrinter &p, const std::string &e, const T &v)
     str_v = ss.str();
   }
 
-  xml_closer element(p, e.c_str());
+  xml_closer element(p, e);
   p.PushText(str_v.c_str());
 }
 

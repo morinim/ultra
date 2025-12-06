@@ -13,6 +13,8 @@
 #if !defined(ULTRA_XML_TOOLS_H)
 #define      ULTRA_XML_TOOLS_H
 
+#include "utility/assert.h"
+
 #include "tinyxml2/tinyxml2.h"
 
 #include <cstdint>
@@ -44,9 +46,15 @@ public:
   ///
   /// \param[out] p    reference to the tinyxml2::XMLPrinter
   /// \param[in]  name the name of the element to open
-  xml_closer(tinyxml2::XMLPrinter &p, const std::string& name) : printer_(p)
+  xml_closer(tinyxml2::XMLPrinter &p, const std::string &name) : printer_(p)
   {
     printer_.OpenElement(name.c_str());
+  }
+
+  xml_closer(tinyxml2::XMLPrinter &p, const char *name) : printer_(p)
+  {
+    Expects(name);
+    printer_.OpenElement(name);
   }
 
   /// Destructor that calls CloseElement on the printer.
