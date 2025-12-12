@@ -1,7 +1,7 @@
 [![Ultra](https://github.com/morinim/ultra/wiki/img/logo.png)][homepage]
 [![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
 
-![C++20](https://img.shields.io/badge/c%2B%2B-20-blue.svg)
+![C++23](https://img.shields.io/badge/c%2B%2B-23-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-cross--platform-lightgrey)
 [![Build and test all platforms](https://github.com/morinim/ultra/actions/workflows/build_release.yml/badge.svg)][build_status]
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
@@ -22,7 +22,7 @@ Ultra is a scalable, high-performance C++ framework for evolutionary algorithms,
 It is suitable for [classification][classification], [symbolic regression][sr], content-based image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
 
 - concurrency support
-- modern, standard ISO C++20 source code
+- modern, standard ISO C++23 source code
 - flexibility and speed
 - easy integration with other systems
 - simple addition of features and modules
@@ -129,7 +129,7 @@ However, since core members of the Ultra project have no access to these platfor
 
 ### Mandatory
 
-* A C++20-standard-compliant compiler
+* A C++23-standard-compliant compiler
 * [CMake][cmake]
 
 ### Optional
