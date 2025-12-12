@@ -229,7 +229,7 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 
 ---
 
-*USQUE AD FINEM ET **ULTRA***
+***ULTRA** FINES*
 
 
 [agent]: https://github.com/morinim/ultra
