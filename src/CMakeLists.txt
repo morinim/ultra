@@ -40,8 +40,8 @@ endif()
 
 add_compile_options(${OTHER_FLAGS} ${WARN_FLAGS})
 
-# Compiler must support the C++20 standard.
-set(CMAKE_CXX_STANDARD 20)
+# Compiler must support the C++23 standard.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
