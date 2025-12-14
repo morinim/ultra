@@ -17,6 +17,13 @@
 #if !defined(ULTRA_FITNESS_TCC)
 #define      ULTRA_FITNESS_TCC
 
+///
+/// Builds a fitness from a list of values.
+///
+inline constexpr fitnd::fitnd(std::initializer_list<double> l) : vect_(l)
+{
+}
+
 template<Fitness F>
 [[nodiscard]] constexpr F lowest() noexcept
 {

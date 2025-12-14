@@ -54,8 +54,7 @@ namespace ultra
 /// in the other notation.
 ///
 template<class F> concept Fitness =
-  OrderedArithmeticType<F>
-  && (std::ranges::sized_range<F> || (requires { requires F(-1) < F(0); }));
+  OrderedArithmeticType<F> && requires { requires F{-1} < F{0}; };
 
 template<class F> concept MultiDimFitness =
   Fitness<F> && std::ranges::sized_range<F>;
@@ -93,8 +92,8 @@ public:
   using const_iterator = values_t::const_iterator;
   using difference_type = values_t::difference_type;
 
-  fitnd() = default;
-  fitnd(std::initializer_list<double>);
+  constexpr fitnd() = default;
+  constexpr fitnd(std::initializer_list<double>);
   fitnd(values_t);
   fitnd(with_size, value_type = std::numeric_limits<value_type>::lowest());
 

@@ -18,13 +18,6 @@ namespace ultra
 {
 
 ///
-/// Builds a fitness from a list of values.
-///
-fitnd::fitnd(std::initializer_list<double> l) : vect_(l)
-{
-}
-
-///
 /// Fills the fitness with copies of a given value.
 ///
 /// \param[in] s dimension of the the fitness vector
