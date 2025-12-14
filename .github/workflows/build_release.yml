@@ -145,11 +145,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Switch default GCC/G++ to latest version available
+      - name: Switch default G++ to latest version available
         if: ${{matrix.config.os == 'ubuntu-latest'}}
-        run: |
-		  sudo update-alternatives --set gcc /usr/bin/gcc-14 || true
-          sudo update-alternatives --set g++ /usr/bin/g++-14 || true
+        run: sudo update-alternatives --set g++ /usr/bin/g++-14 || true
 
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
