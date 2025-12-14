@@ -108,7 +108,7 @@ jobs:
             os: windows-latest,
             shell: cmd,
             generator: "MinGW Makefiles",
-            cc: "gcc-14", cxx: "g++-14"
+            cc: "gcc", cxx: "g++"
           }
         - {
             name: "Intel Windows MSVC Debug",
