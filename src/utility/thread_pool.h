@@ -75,7 +75,7 @@ public:
           {
             for (;;)
             {
-              std::packaged_task<void()> task;
+              task_type task;
 
               {
                 std::unique_lock lock(mutex_);
@@ -89,6 +89,9 @@ public:
                 tasks_.pop();
               }
 
+              // Execute the type-erased wrapper. Destruction of the underlying
+              // packaged_task (via `shared_ptr` or `move_only_function`'s
+              // capture) is now decoupled from thread pool synchronization.
               task();
 
               if (std::lock_guard lock(task_counter_mutex_);
@@ -121,18 +124,49 @@ public:
     if (!accepting_tasks_)
       throw std::runtime_error("submit was invoked on stopped thread_pool");
 
-    using return_type = std::invoke_result_t<std::decay_t<F>,
-                                             std::decay_t<Args>...>;
+    using return_type = std::invoke_result_t<F, Args...>;;
+
+#if defined(__cpp_lib_move_only_function)
+    // Uses the highly efficient, zero-overhead `std::packaged_task` moved
+    // directly into the `std::move_only_function` wrapper. This maintains the
+    // task's move semantics and avoids extra heap allocation or atomic
+    // ref-counting. This is the preferred modern approach.
     std::packaged_task<return_type()> task(
-      [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable
+      [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
       {
-        return f(std::forward<Args>(args)...);
+        return std::invoke(fn, std::move(as)...);
       });
 
-    auto res(task.get_future());
+    auto result(task.get_future());
 
-    enqueue_task(std::move(task));
-    return res;
+    // We're not storing a `std::packaged_task` inside the queue. We're storing
+    // it inside the type-erased wrapper.
+    //
+    // Think of it as:
+    // queue
+    // +-- move_only_function<void()>
+    //     +-- packaged_task<return_type()>
+    //         +-- user lambda
+    //
+    // This composition is exactly what move_only_function was designed for.
+    enqueue_task([t = std::move(task)] mutable { t(); });
+#else
+    // This introduces overhead (heap allocation, atomic ref-counting) but is
+    // necessary to use `std::function` (which requires the callable to be
+    // copy-constructible, which `std::packaged_task` is not) while ensuring
+    // task lifetime safety.
+    const auto task(std::make_shared<std::packaged_task<return_type()>>(
+      [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
+      {
+        return std::invoke(fn, std::move(as)...);
+      }));
+
+    auto result(task->get_future());
+
+    enqueue_task([task] { (*task)(); });
+#endif
+
+    return result;
   }
 
   /// Executes a task without returning a future.
@@ -151,13 +185,23 @@ public:
     if (!accepting_tasks_)
       throw std::runtime_error("execute was invoked on stopped thread_pool");
 
-    std::packaged_task<void()> task(
-      [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable
-      {
-        f(std::forward<Args>(args)...);
-      });
+#if defined(__cpp_lib_move_only_function)
+  std::packaged_task<void()> task(
+    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
+    {
+      std::invoke(fn, std::move(as)...);
+    });
 
-    enqueue_task(std::move(task));
+  enqueue_task([t = std::move(task)] mutable { t(); });
+#else
+  const auto task(std::make_shared<std::packaged_task<void()>>(
+    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
+    {
+      std::invoke(fn, std::move(as)...);
+    }));
+
+  enqueue_task([task] { (*task)(); });
+#endif
   }
 
   /// Gets the number of worker threads in the pool.
@@ -244,12 +288,12 @@ private:
 
   std::atomic<bool> accepting_tasks_ {true};
 
-  // `packaged_task<void()>` can store any callable, destroyable, movable
-  // object that can be invoked with signature `void()`, which includes
-  // `packaged_task<R()>`! It has an `operator() with signature `void()` since
-  // the return value comes out of a `std::future`
-  // (e.g see https://stackoverflow.com/a/31078143/3235496).
-  std::queue<std::packaged_task<void()>> tasks_;
+#if defined(__cpp_lib_move_only_function)
+  using task_type = std::move_only_function<void()>;
+#else
+  using task_type = std::function<void()>;
+#endif
+  std::queue<task_type> tasks_;
 
   // Placing the thread-related object at the end helps ensure that when other
   // data member are being destroyed, no thread will attempt to access a

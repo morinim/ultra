@@ -363,7 +363,7 @@ void recursive_sequential_sum(std::atomic<int> &counter, int count,
   if (count > 1)
   {
     pool.submit(recursive_sequential_sum,
-                 std::ref(counter), count - 1, std::ref(pool));
+                std::ref(counter), count - 1, std::ref(pool));
   }
 }
 
