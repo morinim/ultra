@@ -11,6 +11,7 @@
  */
 
 #include <chrono>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -22,6 +23,9 @@ namespace ultra
 
 log::level log::reporting_level {log::lINFO};
 std::unique_ptr<std::ostream> log::stream_ {nullptr};
+std::mutex log::emit_mutex_;
+thread_local std::ostringstream log::tls_buffer_;
+
 
 ///
 /// Sets the logging level of a message.
@@ -40,8 +44,10 @@ std::unique_ptr<std::ostream> log::stream_ {nullptr};
 ///
 std::ostringstream &log::get(level l)
 {
-  level_ = std::min(lFATAL, l);
-  return os;
+  level_ = std::min(lOFF, l);
+  tls_buffer_.str({});
+  tls_buffer_.clear();
+  return tls_buffer_;
 }
 
 log::~log()
@@ -51,24 +57,42 @@ log::~log()
     "DEBUG", "INFO", "", "", "WARNING", "ERROR", "FATAL", ""
   };
 
+  const auto message(tls_buffer_.str());
+
+  std::lock_guard lock(emit_mutex_);
+
   if (stream_)  // `stream_`, if available, gets all the messages
   {
-    using namespace std::chrono;
-    const std::time_t t_c(system_clock::to_time_t(system_clock::now()));
+    const auto now(std::chrono::system_clock::now());
+    const std::time_t t_c(std::chrono::system_clock::to_time_t(now));
 
-    std::osyncstream(*stream_) << std::put_time(std::localtime(&t_c), "%F %T")
-                               << '\t' << tags[level_]
-                               << '\t' << os.str() << std::endl;
+    // Do not flush (`\n`) for generic streams.
+    // Also remember the `localtime` is not thread-safe on POSIX (returns a
+    // pointer to static storage). It's safe here because we hold
+    // `emit_mutex_`.
+    *stream_ << std::put_time(std::localtime(&t_c), "%F %T")
+             << '\t' << tags[level_] << '\t' << message << '\n';
   }
 
   if (level_ >= reporting_level)  // `cout` is selective
   {
-    std::string tag;
-    if (level_ != lSTDOUT and level_ != lPAROUT)
-      tag = "[" + tags[level_] + "] ";
-
     const std::string clear_line(std::string(60, ' ') + std::string(1, '\r'));
-    std::osyncstream(std::cout) << clear_line << tag << os.str() << std::endl;
+    std::cout << clear_line;
+
+    if (level_ != lSTDOUT && level_ != lPAROUT)
+      std::cout << '[' << tags[level_] << "] ";
+
+    // Flush (`std::endl`) for console.
+    std::cout << message << std::endl;
+  }
+}
+
+void log::flush()
+{
+  if (stream_)
+  {
+    std::lock_guard lock(emit_mutex_);
+    stream_->flush();
   }
 }
 
@@ -84,6 +108,7 @@ log::~log()
 std::filesystem::path log::setup_stream(const std::string &base)
 {
   using namespace std::chrono;
+
   const std::time_t t_c(system_clock::to_time_t(system_clock::now()));
 
   std::ostringstream fn;

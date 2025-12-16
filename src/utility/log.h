@@ -15,8 +15,10 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
+#include <ostream>
 #include <sstream>
-#include <syncstream>
+#include <string>
 
 namespace ultra
 {
@@ -28,7 +30,7 @@ namespace ultra
 /// This is derived from the code presented in "Logging in C++" by Petru
 /// Marginean (DDJ Sep 2007)
 ///
-class log
+class log final
 {
 public:
   /// The log level.
@@ -53,19 +55,22 @@ public:
 
   static std::filesystem::path setup_stream(const std::string & = "ultra");
 
+  static void flush();
+
   log() = default;
   log(const log &) = delete;
   log &operator=(const log &) = delete;
 
-  virtual ~log();
+  ~log();
 
   [[nodiscard]] std::ostringstream &get(level = lSTDOUT);
 
-protected:
-  std::ostringstream os {};
-
 private:
+  // Thread-local buffer for message construction.
+  static thread_local std::ostringstream tls_buffer_;
+
   static std::unique_ptr<std::ostream> stream_;  // long term log stream
+  static std::mutex emit_mutex_;                 // protects the final emission
 
   level level_ {lSTDOUT};  // current log level
 };
@@ -100,11 +105,11 @@ private:
 /// When the `NDEBUG` is defined all the debug-level logging is eliminated at
 /// compile time.
 #if defined(NDEBUG)
-#define ultraPRINT(level) if (level == log::lDEBUG);\
-                          else if (level < log::reporting_level);\
+#define ultraPRINT(level) if ((level) == log::lDEBUG);               \
+                          else if ((level) < log::reporting_level);  \
                           else ultra::log().get(level)
 #else
-#define ultraPRINT(level) if (level < log::reporting_level);\
+#define ultraPRINT(level) if ((level) < log::reporting_level);  \
                           else ultra::log().get(level)
 #endif
 

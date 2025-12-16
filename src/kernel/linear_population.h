@@ -14,6 +14,7 @@
 #define      ULTRA_LINEAR_POPULATION_H
 
 #include <algorithm>
+#include <mutex>
 #include <numeric>
 #include <shared_mutex>
 

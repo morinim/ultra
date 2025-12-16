@@ -43,6 +43,7 @@ TEST_CASE("Reporting level")
   log::reporting_level = log::lOFF;
   msg = "Fatal message";
   ultraFATAL << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(!std::getline(logstream, line));
@@ -50,14 +51,17 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lFATAL;
   ultraFATAL << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
+    std::cout << '"' << line << '"' << std::endl;
     CHECK(line.find(msg) != std::string::npos);
   }
 
   msg = "Error message";
   ultraERROR << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -66,6 +70,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lERROR;
   ultraERROR << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -84,6 +89,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lWARNING;
   ultraWARNING << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -94,6 +100,7 @@ TEST_CASE("Reporting level")
 
   msg = "ParOut message";
   ultraPAROUT << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -104,6 +111,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lPAROUT;
   ultraPAROUT << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -115,6 +123,7 @@ TEST_CASE("Reporting level")
 
   msg = "StdOut message";
   ultraSTDOUT << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -126,6 +135,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lSTDOUT;
   ultraSTDOUT << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -138,6 +148,7 @@ TEST_CASE("Reporting level")
 
   msg = "Info message";
   ultraINFO << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -150,6 +161,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lINFO;
   ultraINFO << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -164,6 +176,7 @@ TEST_CASE("Reporting level")
 #if !defined(NDEBUG)
   msg = "Debug message";
   ultraDEBUG << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -177,6 +190,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lDEBUG;
   ultraDEBUG << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
@@ -189,6 +203,7 @@ TEST_CASE("Reporting level")
     CHECK(line.find(msg) != std::string::npos);
   }
 #endif
+
 }
 
 }  // TEST_SUITE("LOG")
