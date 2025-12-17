@@ -1,0 +1,12 @@
+# libc++ false positive:
+# std::promise / std::future internal condition variable teardown
+# triggered when promise is destroyed shortly after set_value().
+#
+# This is a known ThreadSanitizer limitation with libc++ and is
+# standards-compliant behaviour.
+#
+# https://github.com/llvm/llvm-project/issues/104892
+#
+race:std::__1::promise
+race:std::__1::future
+race:std::__1::packaged_task

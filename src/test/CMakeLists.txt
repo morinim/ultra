@@ -12,5 +12,14 @@ foreach (test_src ${TESTS_SRC})
 
   if (NOT ${test} MATCHES "^speed_")
     add_test(NAME ${test} COMMAND ${test})
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set_tests_properties(${test} PROPERTIES ENVIRONMENT
+        "TSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/utility/tsan.supp")
+    endif()
   endif()
 endforeach()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  message("libc++ and TSAN, enabling ${CMAKE_SOURCE_DIR}/utility/tsan.supp")
+endif()
