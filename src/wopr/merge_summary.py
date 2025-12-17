@@ -9,6 +9,8 @@
 #
 #  A command line utility to simplify xrff preprocessing.
 #
+#  \see https://ultraevolution.org/blog/combine_test_batches/
+#
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -54,14 +56,14 @@ def embed_xml_signature(xml: str) -> str:
 #  Helpers for combining mean and standard deviation
 # ---------------------------------------------------------------------
 
-def combine_mean(m1, s1, n1, m2, s2, n2):
+def combine_mean(m1, n1, m2, n2):
     """Pooled mean."""
     return (n1 * m1 + n2 * m2) / (n1 + n2)
 
 
 def combine_std(m1, s1, n1, m2, s2, n2):
     """Unbiased pooled standard deviation."""
-    M = combine_mean(m1, s1, n1, m2, s2, n2)
+    M = combine_mean(m1, n1, m2, n2)
     num = (
         (n1 - 1) * s1 * s1 +
         (n2 - 1) * s2 * s2 +
