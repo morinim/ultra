@@ -421,8 +421,6 @@ void recursive_parallel_sort(int *begin, int *end, int split_level,
 
 TEST_CASE("Recursive parallel sort")
 {
-  std::cout << "TSAN_OPTIONS=" << std::getenv("TSAN_OPTIONS") << '\n';
-
   std::vector<int> data(10000);
   std::iota(data.begin(), data.end(), 0);
 

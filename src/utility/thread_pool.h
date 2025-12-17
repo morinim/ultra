@@ -124,7 +124,7 @@ public:
     if (!accepting_tasks_)
       throw std::runtime_error("submit was invoked on stopped thread_pool");
 
-    using return_type = std::invoke_result_t<F, Args...>;;
+    using return_type = std::invoke_result_t<F, Args...>;
 
 #if defined(__cpp_lib_move_only_function)
     // Uses the highly efficient, zero-overhead `std::packaged_task` moved
