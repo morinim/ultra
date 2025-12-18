@@ -75,7 +75,7 @@
 			"environment":
 			{
                 "CC": "clang",
-				"CXX": "clang++",
+				"CXX": "clang++ --stdlib=libc++",
 				"SPECIFIC_WARN_FLAGS": "-Wdocumentation;-Warc-repeated-use-of-weak;-Wbitfield-enum-conversion;-Wclass-varargs;-Wconditional-uninitialized;-Wthread-safety;-Wconsumed;-Wdirect-ivar-access;-Wexpansion-to-defined;-Winconsistent-missing-destructor-override;-Winfinite-recursion;-Wloop-analysis;-Wmethod-signatures;-Wmismatched-tags;-Wnonportable-system-include-path;-Wnull-pointer-arithmetic;-Wover-aligned;-Woverriding-method-mismatch;-Wpch-date-time;-Wpragmas;-Wreserved-user-defined-literal;-Wretained-language-linkage;-Wsemicolon-before-method-body;-Wsometimes-uninitialized;-Wstring-conversion;-Wsuper-class-method-mismatch;-Wtautological-compare;-Wundefined-reinterpret-cast;-Wunreachable-code;-Wcomma;-Wduplicate-method-arg;-Wduplicate-method-match;-Wdynamic-exception-spec;-Wempty-translation-unit;-Wexplicit-ownership-type;-Wignored-qualifiers;-Wredundant-parens;-Wstatic-in-inline;-Wzero-length-array;-Wunneeded-internal-declaration"
 			}
 		},
