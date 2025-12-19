@@ -314,6 +314,58 @@ const distribution<double> &analyzer<I, F>::length_dist(const P &g) const
 template<Individual I, Fitness F>
 bool analyzer<I, F>::is_valid() const
 {
+  const auto ad(age_dist());
+  const auto cts(crossover_types());
+  const auto fd(fit_dist());
+  const auto ld(length_dist());
+
+  for (const auto &g : group_stat_)
+  {
+    if (g.age.min() < ad.min())
+      return false;
+    if (g.age.max() > ad.max())
+      return false;
+
+    if (g.fitness.min() < fd.min())
+      return false;
+    if (g.fitness.max() > fd.max())
+      return false;
+
+    if (g.length.min() < ld.min())
+      return false;
+    if (g.length.max() > ld.max())
+      return false;
+
+    if constexpr (has_active_crossover_type<I>)
+    {
+      std::size_t sum_cross(0);
+
+      for (auto [type,num] : g.crossover_type)
+      {
+        sum_cross += num;
+
+        if (type >= I::NUM_CROSSOVERS)
+          return false;
+
+        if (num > cts.at(type))
+          return false;
+      }
+
+      if (sum_cross != g.age.size())
+        return false;
+    }
+    else
+    {
+      if (!g.crossover_type.empty())
+        return false;
+    }
+
+    if (g.age.size() != g.length.size())
+      return false;
+    if (g.fitness.size() > g.age.size())  // could be smaller, invalid fitness
+      return false;                       // values are skipped
+  }
+
   return true;
 }
 

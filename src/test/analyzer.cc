@@ -57,6 +57,8 @@ TEST_CASE_FIXTURE(fixture1, "Base GP")
         for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
           az.add(*it, eva(*it) / l, it.uid());
 
+        CHECK(az.is_valid());
+
         const auto n(l * i);
         CHECK(az.age_dist().size() == n);
         CHECK(az.fit_dist().size() == n);
@@ -116,6 +118,8 @@ TEST_CASE_FIXTURE(fixture4, "Base DE")
         analyzer<IND, double> az;
         for (auto it(pop.begin()), end(pop.end()); it != end; ++it)
           az.add(*it, eva(*it) / l, it.uid());
+
+        CHECK(az.is_valid());
 
         const auto n(l * i);
         CHECK(az.age_dist().size() == n);
