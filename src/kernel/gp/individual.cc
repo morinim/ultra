@@ -517,6 +517,14 @@ unsigned individual::mutation(const problem &prb)
 }
 
 ///
+/// \return the active crossover type for `this` individual
+///
+individual::crossover_t individual::active_crossover_type() const noexcept
+{
+  return active_crossover_type_;
+}
+
+///
 /// \param[in] in input stream
 /// \param[in] ss active symbol set
 /// \return       `true` if the object has been loaded correctly

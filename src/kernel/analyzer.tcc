@@ -17,6 +17,26 @@
 #if !defined(ULTRA_ANALYZER_TCC)
 #define      ULTRA_ANALYZER_TCC
 
+namespace internal
+{
+
+inline std::map<int, unsigned> merge_ct(const auto &ct1, const auto &ct2)
+{
+  std::map<int, unsigned> ret(ct1);
+
+  for (const auto &[ct, n] : ct2)
+    ret[ct] += n;
+
+  return ret;
+}
+
+}  // namespace internal
+
+template<class C> concept has_active_crossover_type = requires(const C &c)
+{
+  { c.active_crossover_type() } -> std::convertible_to<int>;
+};
+
 template<Individual I, Fitness F>
 group_stat<I, F>::group_stat(population_uid id) : uid(id)
 {
@@ -43,6 +63,9 @@ void group_stat<I, F>::add(const I &ind, const F &f)
   using std::isfinite;
   if (isfinite(f))
     fitness.add(f);
+
+  if constexpr (has_active_crossover_type<I>)
+    ++crossover_type[ind.active_crossover_type()];
 }
 
 template<Individual I, Fitness F>
@@ -53,6 +76,8 @@ void group_stat<I, F>::merge(group_stat gs)
   age.merge(gs.age);
   fitness.merge(gs.fitness);
   length.merge(gs.length);
+
+  crossover_type = internal::merge_ct(crossover_type, gs.crossover_type);
 }
 
 ///
@@ -123,6 +148,44 @@ group_stat<I, F> analyzer<I, F>::overall_group_stat() const
     ret.merge(gs);
 
   return ret;
+}
+
+///
+/// \return statistics about the crossover operators.
+///         The `.empty()` method of the returned value can be `true`
+///
+template<Individual I, Fitness F>
+auto analyzer<I, F>::crossover_types() const
+{
+  decltype(group_stat<I, F>::crossover_type) ret;
+  for (const auto &gs : group_stat_)
+    ret = internal::merge_ct(ret, gs.crossover_type);
+
+  return ret;
+}
+
+///
+/// \param[in] g the UID of a population / subpopulation
+/// \return      statistics about the crossover operators used in group `g`
+///
+template<Individual I, Fitness F>
+const auto &analyzer<I, F>::crossover_types(population_uid g) const
+{
+  const auto *ptr(group(g));
+  assert(ptr);
+
+  return ptr->crossover_type;
+}
+
+///
+/// \param[in] g a population / subpopulation
+/// \return      statistics about the crossover operators used in group `g`
+///
+template<Individual I, Fitness F>
+template<Population P>
+const auto &analyzer<I, F>::crossover_types(const P &g) const
+{
+  return crossover_types(g.uid());
 }
 
 ///

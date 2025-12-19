@@ -61,6 +61,8 @@ public:
                               const individual &, const individual &);
   unsigned mutation(const problem &);
 
+  [[nodiscard]] crossover_t active_crossover_type() const noexcept;
+
   // ---- Iterators ----
   using const_exon_iterator = internal::basic_exon_iterator<true>;
   using exon_iterator = internal::basic_exon_iterator<false>;

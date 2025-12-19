@@ -13,16 +13,17 @@
 #if !defined(ULTRA_ANALYZER_H)
 #define      ULTRA_ANALYZER_H
 
-#include <concepts>
-#include <future>
-#include <vector>
-
 #include "kernel/distribution.h"
 #include "kernel/evaluator.h"
 #include "kernel/population.h"
 #include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 #include "kernel/gp/team.h"
+
+#include <concepts>
+#include <future>
+#include <numeric>
+#include <vector>
 
 namespace ultra
 {
@@ -40,6 +41,8 @@ struct group_stat
   distribution<double>    age {};
   distribution<F>     fitness {};
   distribution<double> length {};
+
+  std::map<int, unsigned> crossover_type {};
 };
 
 ///
@@ -69,14 +72,18 @@ public:
   [[nodiscard]] group_stat<I, F> overall_group_stat() const;
 
   [[nodiscard]] distribution<double> age_dist() const;
+  [[nodiscard]] auto crossover_types() const;
   [[nodiscard]] distribution<F> fit_dist() const;
   [[nodiscard]] distribution<double> length_dist() const;
 
   [[nodiscard]] const distribution<double> &age_dist(population_uid) const;
+  [[nodiscard]] const auto &crossover_types(population_uid) const;
   [[nodiscard]] const distribution<F> &fit_dist(population_uid) const;
   [[nodiscard]] const distribution<double> &length_dist(population_uid) const;
 
   template<Population P> [[nodiscard]] const distribution<double> &age_dist(
+    const P &) const;
+  template<Population P> [[nodiscard]] const auto &crossover_types(
     const P &) const;
   template<Population P> [[nodiscard]] const distribution<F> &fit_dist(
     const P &) const;
