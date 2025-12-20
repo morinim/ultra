@@ -48,13 +48,13 @@ public:
 
   explicit layered_population(const ultra::problem &, bool = true);
 
-  // Layer-related
+  // Layer-related.
   [[nodiscard]] const layer_t &front() const;
   [[nodiscard]] layer_t &front();
   [[nodiscard]] const layer_t &back() const;
   [[nodiscard]] layer_t &back();
 
-  [[nodiscard]] std::size_t layers() const;
+  [[nodiscard]] std::size_t layers() const noexcept;
   [[nodiscard]] const layer_t &layer(std::size_t) const;
   [[nodiscard]] layer_t &layer(std::size_t);
 
@@ -68,7 +68,7 @@ public:
 
   [[nodiscard]] std::size_t size() const;
 
-  // Misc
+  // Misc.
   void inc_age();
 
   [[nodiscard]] const ultra::problem &problem() const;

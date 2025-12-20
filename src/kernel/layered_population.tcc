@@ -143,7 +143,7 @@ void layered_population<I>::init(layer_t &l)
 /// increasing with the generation number).
 ///
 template<Individual I>
-std::size_t layered_population<I>::layers() const
+std::size_t layered_population<I>::layers() const noexcept
 {
   return layers_.size();
 }
