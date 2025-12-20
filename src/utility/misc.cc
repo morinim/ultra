@@ -28,10 +28,14 @@ namespace ultra
 /// \return        `true` if all elements in both strings are same (case
 ///                insensitively)
 ///
+/// \warning Uses the C locale (`<cctype>`).
+///
 bool iequals(const std::string &lhs, const std::string &rhs)
 {
+  // KEEP `unsigned char`. Changing to `auto` or `char` could trigger UB in
+  // case of negative values.
   return std::ranges::equal(lhs, rhs,
-                            [](auto c1, auto c2)
+                            [](unsigned char c1, unsigned char c2)
                             { return std::tolower(c1) == std::tolower(c2); });
 }
 
