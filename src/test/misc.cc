@@ -285,6 +285,12 @@ TEST_CASE("Bitmask enum")
   CHECK(!has_flag(c, myenum::A));
   CHECK(!has_flag(c, myenum::B));
   CHECK(has_flag(c, myenum::C));
+
+  CHECK(has_flag(all, all));
+  CHECK(has_flag(myenum::A|myenum::C, myenum::A|myenum::C));
+  CHECK(!has_flag(myenum::A|myenum::C, myenum::A|myenum::B));
+
+  CHECK(has_flag(myenum::A, myenum{}));
 }
 
 }  // TEST_SUITE("MISC")

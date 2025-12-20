@@ -336,15 +336,19 @@ template<bitmask_enum E>
 ///
 /// \param[in] value the combined bitmask value
 /// \param[in] flag  the flag(s) to test for
-/// \return          true if all bits in `flag` are set in `value`, false
+/// \return          `true` if all bits in `flag` are set in `value`, `false`
 ///                  otherwise
 /// This uses bitwise AND to check if all bits in `flag` are also set in
 /// `value`.
 ///
+/// \remark
+/// Edge case: `has_flag(value, E{}) == true`; this is mathematically
+/// consistent and is what most libs do.
+///
 template<bitmask_enum E>
 [[nodiscard]] constexpr bool has_flag(E value, E flag) noexcept
 {
-  return as_integer(value & flag) != 0;
+  return (value & flag) == flag;
 }
 
 ///
