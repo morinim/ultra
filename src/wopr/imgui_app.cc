@@ -10,9 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <stdexcept>
-
 #include "imgui_app.h"
+
+#include <stdexcept>
 
 namespace
 {
@@ -137,19 +137,21 @@ void program::run(std::function<void (const program &, bool *)> render_main)
     // ImGUI demo panel.
     if (show_demo_panel_)
       ImGui::ShowDemoWindow(&show_demo_panel_);
+
+    // ---- END FRAME ----
+
+    // Render and present.
+    ImGui::Render();
+
+    SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
+                           SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(window_->get_native_renderer());
+
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),
+                                          window_->get_native_renderer());
+
+    SDL_RenderPresent(window_->get_native_renderer());
   }
-
-  // Render and present.
-  ImGui::Render();
-
-  SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
-                         SDL_ALPHA_OPAQUE);
-  SDL_RenderClear(window_->get_native_renderer());
-
-  ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),
-                                        window_->get_native_renderer());
-
-  SDL_RenderPresent(window_->get_native_renderer());
 }
 
 SDL_Rect program::free_area() const
