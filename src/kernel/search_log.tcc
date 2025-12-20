@@ -43,6 +43,17 @@ void search_log::save_dynamic(const summary<I, F> &sum,
                << ' ' << length_dist.standard_deviation()
                << ' ' << static_cast<unsigned>(length_dist.max());
 
+  dynamic_file << " {";
+  for (bool first(true); const auto &[k, v] : sum.az.crossover_types())
+  {
+    if (!first)
+      dynamic_file << ',';
+
+    first = false;
+    dynamic_file << k << ':' << v;
+  }
+  dynamic_file << '}';
+
   if (best.ind.empty())
     dynamic_file << " ?";
   else
@@ -216,8 +227,7 @@ template<Individual I, Fitness F> void search_log::save_summary(
   const std::string base_xml(doc.CStr());
   const std::string signed_xml(ultra::crc32::embed_xml_signature(base_xml));
 
-  const auto path(build_path(summary_file_path));
-  if (std::ofstream out(path); out)
+  if (std::ofstream out(build_path(summary_file_path)); out)
     out << signed_xml << std::flush;
 }
 

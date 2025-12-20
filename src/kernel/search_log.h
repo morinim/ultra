@@ -13,12 +13,12 @@
 #if !defined(ULTRA_SEARCH_LOG_H)
 #define      ULTRA_SEARCH_LOG_H
 
-#include <filesystem>
-#include <fstream>
-
 #include "kernel/evolution_summary.h"
 #include "kernel/search_stats.h"
 #include "utility/xml_tools.h"
+
+#include <filesystem>
+#include <fstream>
 
 namespace ultra
 {
@@ -69,7 +69,8 @@ public:
   std::filesystem::path summary_file_path {default_summary_file};
 
 private:
-  std::filesystem::path build_path(const std::filesystem::path &) const;
+  [[nodiscard]] std::filesystem::path build_path(
+    const std::filesystem::path &) const;
   bool open();
 
   template<Individual I, Fitness F> void save_dynamic(

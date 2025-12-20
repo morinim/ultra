@@ -68,8 +68,9 @@ private:
 /*********************************************************************
  * Dynamic file - related data structures
  ********************************************************************/
-struct dynamic_data
+class dynamic_data
 {
+public:
   explicit dynamic_data(const std::string &);
 
   bool new_run {false};
@@ -84,7 +85,13 @@ struct dynamic_data
   double len_std_dev {};
   unsigned len_max {};
 
+  std::map<int, unsigned> crossover_types {};
+
   std::string best_prg {};
+
+private:
+  static bool parse_python_dict(std::istringstream &,
+                                std::map<int, unsigned> &);
 };
 
 dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
@@ -100,8 +107,53 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
         || !(ss >> len_mean)
         || !(ss >> len_std_dev)
         || !(ss >> len_max)
+        || !parse_python_dict(ss, crossover_types)
         || !std::getline(ss, best_prg))
       throw ultra::exception::data_format("Cannot parse dynamic file line");
+  }
+}
+
+bool dynamic_data::parse_python_dict(std::istringstream &ss,
+                                     std::map<int, unsigned> &m)
+{
+  char c;
+  int key;
+  unsigned value;
+
+  m = {};
+
+  ss >> std::skipws >> c;  // '{'
+  if (!ss || c != '{')
+    return false;
+
+  ss >> std::skipws;
+  if (ss.peek() == '}')  // empty map
+  {
+    ss.get();
+    return true;
+  }
+
+  while (true)
+  {
+    if (!(ss >> key))
+      return false;
+
+    ss >> std::skipws >> c;
+    if (!ss || c != ':')
+      return false;
+
+    if (!(ss >> value))
+      return false;
+
+    m[key] = value;
+
+    if (!(ss >> std::skipws >> c))  // ',' or '}'
+      return false;
+
+    if (c == '}')
+      return true;
+    if (c != ',')
+      return false;
   }
 }
 
