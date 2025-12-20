@@ -13,16 +13,16 @@
 #if !defined(ULTRA_LAYERED_POPULATION_H)
 #define      ULTRA_LAYERED_POPULATION_H
 
-#include <algorithm>
-#include <list>
-#include <numeric>
-
 #include "kernel/linear_population.h"
 #include "kernel/problem.h"
 #include "kernel/random.h"
 
 #include "utility/log.h"
 #include "utility/misc.h"
+
+#include <algorithm>
+#include <list>
+#include <numeric>
 
 namespace ultra
 {
