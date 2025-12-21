@@ -386,7 +386,7 @@ requires std::is_arithmetic_v<T>
 /// \return        `val` rounded to a fixed, ultra-specific, number of decimals
 ///
 template<ArithmeticFloatingType T>
-[[nodiscard]] T round_to(T val, T float_epsilon = 0.0001)
+[[nodiscard]] T round_to(T val, T float_epsilon = T(0.0001))
 {
   val /= float_epsilon;
   val = std::round(val);
@@ -607,6 +607,8 @@ template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 ///
 /// Calculates the Hamming distance between two ranges.
 ///
+/// \tparam R range type
+///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparsion
 /// \return        a numeric measurement of the difference between `lhs` and
@@ -618,9 +620,9 @@ template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 template<std::ranges::range R>
 [[nodiscard]] unsigned hamming_distance(const R &lhs, const R &rhs)
 {
-  Expects(lhs.size() == rhs.size());
-  return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0u,
-                            std::plus{}, std::not_equal_to{});
+  Expects(std::ranges::distance(lhs) == std::ranges::distance(rhs));
+  return std::transform_reduce(lhs.begin(), lhs.end(), rhs.begin(), 0u,
+                               std::plus{}, std::not_equal_to{});
 }
 
 }  // namespace ultra
