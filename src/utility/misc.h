@@ -135,6 +135,8 @@ private:
 namespace internal
 {
 
+// Internal trait: extracts argument and return type from evaluator-style
+// callables. Assumes exactly one non-templated unary `operator()`.
 template<class> struct closure_info;
 
 template<class F>  // overloaded operator() (e.g. std::function)
