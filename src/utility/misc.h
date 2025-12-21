@@ -413,21 +413,55 @@ template<class T> [[nodiscard]] T lexical_cast(const value_t &);
 template<class T> [[nodiscard]] T lexical_cast(std::chrono::milliseconds);
 
 ///
-/// Checks if an iterator is within a range.
+/// Checks whether an iterator refers to an element within a given range.
 ///
-/// \param[in] it    iterator to be checked
-/// \param[in] range a given range
-/// \return          `true` if `it` is within `range`
+/// \tparam R a range type
+///
+/// \param[in] it iterator to be tested
+/// \param[in] r  range to test against
+/// \return       `true` if `it` refers to an element of `r`, `false` otherwise
+///
+/// The check is performed with compile-time dispatch based on the iterator
+/// category:
+/// - **contiguous iterators** are checked in constant time using address
+///   bounds;
+/// - **random-access iterators** are checked in constant time using ordering;
+/// - **other forward iterators** fall back to a linear scan.
+///
+/// The function does not dereference `it` in the fast paths and does not
+/// assume any particular relationship between iterator value and container
+/// ownership beyond what the iterator category guarantees.
+///
+/// \complexity
+/// - *O(1)* for contiguous and random-access iterators;
+/// - *O(n)* for other forward iterators.
 ///
 template<std::ranges::range R>
-[[nodiscard]] bool iterator_of(std::ranges::iterator_t<const R> it,
-                               const R &range)
+[[nodiscard]] bool iterator_of(std::ranges::iterator_t<const R> it, const R &r)
 {
-  return std::ranges::any_of(range,
-                             [it](const auto &v)
-                             {
-                               return std::addressof(v) == std::addressof(*it);
-                             });
+  using It = std::ranges::iterator_t<const R>;
+
+  if constexpr (std::contiguous_iterator<It>)
+  {
+    const auto *p(std::to_address(it));
+    const auto *b(std::to_address(r.begin()));
+    const auto *e(std::to_address(r.end()));
+    return b <= p && p < e;
+  }
+  else if constexpr (std::random_access_iterator<It>)
+  {
+    // This avoids relying on `<=`, which some custom iterators implement
+    // poorly.
+    return !(it < r.begin()) && it < r.end();
+  }
+  else
+  {
+    for (auto cur(r.begin()); cur != r.end(); ++cur)
+      if (cur == it)
+        return true;
+
+    return false;
+  }
 }
 
 ///
