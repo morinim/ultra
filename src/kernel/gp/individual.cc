@@ -114,17 +114,17 @@ locus::index_t individual::size() const noexcept
 ///
 /// \return a range to iterate through exons (active genes).
 ///
-basic_range<individual::exon_iterator> individual::exons()
+exon_view individual::exons()
 {
-  return {exon_iterator(*this), exon_iterator()};
+  return exon_view(*this);
 }
 
 ///
 /// \return a const range to iterate through exons (active genes).
 ///
-basic_range<individual::const_exon_iterator> individual::cexons() const
+const_exon_view individual::cexons() const
 {
-  return {const_exon_iterator(*this), const_exon_iterator()};
+  return const_exon_view(*this);
 }
 
 ///

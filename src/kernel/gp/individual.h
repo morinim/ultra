@@ -25,7 +25,7 @@
 namespace ultra::gp
 {
 
-#include "kernel/gp/individual_iterator.tcc"
+#include "kernel/gp/individual_exon_view.tcc"
 
 ///
 /// A single member of a genetic programming population.
@@ -67,17 +67,17 @@ public:
   using const_exon_iterator = internal::basic_exon_iterator<true>;
   using exon_iterator = internal::basic_exon_iterator<false>;
 
-  [[nodiscard]] basic_range<const_exon_iterator> cexons() const;
+  [[nodiscard]] const_exon_view cexons() const;
 
   [[nodiscard]] auto begin() const noexcept { return genome_.cbegin(); }
   [[nodiscard]] auto end() const noexcept { return genome_.cend(); }
   [[nodiscard]] auto begin() noexcept { return genome_.cbegin(); }
 
+private:
   template<bool> friend class internal::basic_exon_iterator;
 
-private:
   // ---- Private member functions ----
-  [[nodiscard]] basic_range<exon_iterator> exons();
+  [[nodiscard]] exon_view exons();
 
   void pack(const locus &, std::vector<std::byte> *) const;
   [[nodiscard]] hash_t hash() const;

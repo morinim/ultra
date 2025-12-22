@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_GP_INDIVIDUAL_H)
+#if !defined(ULTRA_GP_INDIVIDUAL_EXON_VIEW_TCC)
 #  error "Don't include this file directly, include the specific .h instead"
 #endif
 
@@ -23,13 +23,33 @@ namespace internal
 {
 
 ///
-/// Iterator to scan the active genes of an individual.
+/// Sentinel type marking the end of exon iteration.
+///
+/// The sentinel compares equal to an exon iterator when no further active
+/// loci remain to be explored.
+///
+/// \remark This sentinel is intentionally stateless.
+///
+struct exon_sentinel {};
+
+///
+/// Input iterator over the active genes (exons) of an individual.
+///
+/// The iterator performs a dependency-driven traversal starting from the
+/// individual's output locus. Each increment explores the arguments of the
+/// current gene and discovers additional active loci.
+///
+/// \tparam is_const if `true`, the iterator provides read-only access
 ///
 template<bool is_const>
 class basic_exon_iterator
 {
 public:
+  /// Iterator concept for ranges.
+  using iterator_concept = std::input_iterator_tag;
+  /// Iterator category for legacy algorithms.
   using iterator_category = std::input_iterator_tag;
+
   using difference_type = std::ptrdiff_t;
   using value_type = gene;
   using pointer = value_type *;
@@ -41,16 +61,18 @@ public:
   using ref= std::conditional_t<is_const, const_reference, reference>;
   using ind= std::conditional_t<is_const, const gp::individual, gp::individual>;
 
-  /// Builds an empty iterator.
+  /// Constructs an iterator starting from the output locus.
   ///
-  /// Empty iterator is used as sentry (it's the value returned by end()).
-  basic_exon_iterator() = default;
-
-  /// \param[in] id an individual
+  /// \param[in] id the individual being iterated
   explicit basic_exon_iterator(ind &id)
     : loci_({id.start()}), ind_(std::addressof(id)) {}
 
-  /// \return iterator representing the next active gene
+  /// Advances the iterator to the next active gene.
+  ///
+  /// Discovers new active loci by inspecting the arguments of the current
+  /// gene.
+  ///
+  /// \return reference to this iterator
   basic_exon_iterator &operator++()
   {
     if (!loci_.empty())
@@ -67,7 +89,7 @@ public:
     return *this;
   }
 
-  /// \return iterator to the current active gene
+  /// Advances the iterator and returns the previous state.
   basic_exon_iterator operator++(int)
   {
     basic_exon_iterator tmp(*this);
@@ -75,27 +97,44 @@ public:
     return tmp;
   }
 
-  /// \param[in] rhs second term of comparison
-  /// \return        `true` if iterators point to the same locus or they are
-  ///                both to the end
-  [[nodiscard]] bool operator==(const basic_exon_iterator &rhs) const noexcept
+  /// Compares the iterator with the end sentinel.
+  ///
+  /// \return `true` if no further active loci remain.
+  [[nodiscard]] bool operator==(exon_sentinel) const noexcept
   {
-    Ensures(!ind_ || !rhs.ind_ || ind_ == rhs.ind_);
-
-    return loci_.empty() == rhs.loci_.empty()
-           && (loci_.empty() || locus() == rhs.locus());
-
-    // Cannot use the expression
-    //     loci_.cbegin() == rhs.loci_.cbegin()
-    // since comparison of iterators from different containers are illegal.
+    return loci_.empty();
   }
 
-  /// \return reference to the current locus of the individual
+  /// Inequality comparison with the sentinel.
+  [[nodiscard]] bool operator!=(exon_sentinel s) const noexcept
+  {
+    return !(*this == s);
+  }
+
+  /// Symmetric sentinel comparison.
+  friend bool operator==(exon_sentinel s,
+                         const basic_exon_iterator &it) noexcept
+  {
+    return it == s;
+  }
+
+  /// Symmetric sentinel comparison.
+  friend bool operator!=(exon_sentinel s,
+                         const basic_exon_iterator &it) noexcept
+  {
+    return !(it == s);
+  }
+
+  /// Dereferences the iterator.
+  ///
+  /// \return reference to the current active gene
   [[nodiscard]] ref &operator*() const
   {
     return ind_->genome_(locus());
   }
 
+  /// Member access to the current gene.
+  ///
   /// \return pointer to the current locus of the individual
   [[nodiscard]] ptr operator->() const
   {
@@ -111,10 +150,11 @@ public:
 private:
   // For different implementation see `test/speed_gp_individual_iterator.cc`.
 
-  // A partial set of active loci to be explored.
+  // Set of active loci yet to be explored (ordered descending). Aka frontier,
+  // pending or worklist.
   std::set<ultra::locus, std::greater<ultra::locus>> loci_ {};
 
-  // A pointer to the individual we are iterating on.
+  // Pointer to the individual being iterated.
   ind *ind_ {nullptr};
 };
 
