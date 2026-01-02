@@ -28,7 +28,9 @@ namespace internal
 /// The sentinel compares equal to an exon iterator when no further active
 /// loci remain to be explored.
 ///
-/// \remark This sentinel is intentionally stateless.
+/// \remark
+/// This sentinel is intentionally stateless, as termination is determined
+/// solely by the iterator's internal frontier.
 ///
 struct exon_sentinel {};
 
@@ -77,13 +79,16 @@ public:
   {
     if (!loci_.empty())
     {
-      const auto &g(operator*());
+      const auto &g(operator*());  // must be evaluated before erase()
+
+      // Erasing first makes the tree shallower and reduces comparison work
+      // during subsequent insertions: we remove the comparison hotspot and
+      // the erased element was the one most likely to be compared against.
+      loci_.erase(loci_.begin());
 
       for (const auto &a : g.args)
         if (a.index() == d_address)
           loci_.insert(g.locus_of_argument(a));
-
-      loci_.erase(loci_.begin());
     }
 
     return *this;
@@ -92,7 +97,7 @@ public:
   /// Advances the iterator and returns the previous state.
   basic_exon_iterator operator++(int)
   {
-    basic_exon_iterator tmp(*this);
+    const auto tmp(*this);
     operator++();
     return tmp;
   }
@@ -150,8 +155,7 @@ public:
 private:
   // For different implementation see `test/speed_gp_individual_iterator.cc`.
 
-  // Set of active loci yet to be explored (ordered descending). Aka frontier,
-  // pending or worklist.
+  // Ordered frontier of active loci.
   std::set<ultra::locus, std::greater<ultra::locus>> loci_ {};
 
   // Pointer to the individual being iterated.
