@@ -17,8 +17,10 @@
 #include "test/fixture1.h"
 
 #include <algorithm>
+#if defined(__cpp_lib_flat_set)
+#  include <flat_set>
+#endif
 #include <queue>
-#include <flat_set>
 
 struct common_elems
 {
@@ -203,6 +205,7 @@ private:
   ind *ind_ {};
 };
 
+#if defined(__cpp_lib_flat_set)
 class iterator4 : public common_elems
 {
 public:
@@ -240,6 +243,7 @@ private:
   std::flat_set<ultra::locus, std::greater<ultra::locus>> loci_ {};
   ind *ind_ {};
 };
+#endif
 
 
 template<class IT>
@@ -323,7 +327,9 @@ int main()
   // -------------------------------------------------------------------------
 
   volatile std::size_t out4(0);
+#if defined(__cpp_lib_flat_set)
   out4 = test_alternative<iterator3>("Flat set", sup, ind_db);
+#endif
 
   const bool ok(out == out1 && out1 == out2 && out2 == out3 && out3 == out4);
 
