@@ -28,6 +28,8 @@
 
 using namespace std::chrono_literals;
 
+using crossover_types_map = std::map<int, unsigned>;
+
 
 /*********************************************************************
  * A normal distribution that supports works when standard deviation is zero.
@@ -85,13 +87,12 @@ public:
   double len_std_dev {};
   unsigned len_max {};
 
-  std::map<int, unsigned> crossover_types {};
+  crossover_types_map crossover_types {};
 
   std::string best_prg {};
 
 private:
-  static bool parse_python_dict(std::istringstream &,
-                                std::map<int, unsigned> &);
+  static bool parse_python_dict(std::istringstream &, crossover_types_map &);
 };
 
 dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
@@ -114,7 +115,7 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 }
 
 bool dynamic_data::parse_python_dict(std::istringstream &ss,
-                                     std::map<int, unsigned> &m)
+                                     crossover_types_map &m)
 {
   char c;
   int key;
@@ -169,6 +170,9 @@ struct dynamic_sequence
   std::vector<double> len_std_dev {};
   std::vector<double> len_max {};
 
+  std::map<crossover_types_map::key_type,
+           std::vector<double>> crossover_types {};
+
   std::vector<std::string> best_prg {};
 
   [[nodiscard]] bool empty() const noexcept { return xs.empty(); }
@@ -183,6 +187,9 @@ struct dynamic_sequence
     len_mean.push_back(dd.len_mean);
     len_std_dev.push_back(dd.len_std_dev);
     len_max.push_back(dd.len_max);
+
+    for (const auto &[key, val] : dd.crossover_types)
+      crossover_types[key].push_back(val);
 
     if (best_prg.empty() || best_prg.back() != dd.best_prg)
       best_prg.push_back(dd.best_prg);
@@ -948,6 +955,33 @@ void render_dynamic(bool update)
               ImPlot::PlotLine(gui_uid("Longest", run),
                                get_window(xs),
                                get_window(dr.len_max),
+                               window);
+            }
+
+            ImPlot::EndPlot();
+          }
+
+          ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem(gui_uid("Crossover dynamics", run)))
+        {
+          if (ImPlot::BeginPlot(gui_uid("##Crossover types by generation", run),
+                                ImVec2(-1, -1), ImPlotFlags_NoTitle))
+          {
+            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+            ImPlot::SetupAxes(
+              "Generation", "Crossover spreading",
+              ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+            // ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+            for (const auto &[ct, nums] : dr.crossover_types)
+            {
+              const std::string type("CT" + std::to_string(ct));
+              ImPlot::PlotLine(gui_uid(type.c_str(), run),
+                               get_window(xs),
+                               get_window(nums),
                                window);
             }
 
