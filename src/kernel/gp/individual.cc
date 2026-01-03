@@ -402,14 +402,14 @@ individual crossover(const problem &,
                      const individual &lhs, const individual &rhs)
 {
   Expects(lhs.size() == rhs.size());
-  Expects(std::distance(lhs.begin(), lhs.end())
-          == std::distance(rhs.begin(), rhs.end()));
+  Expects(std::ranges::distance(lhs) == std::ranges::distance(rhs));
 
   const bool b(random::boolean());
   const auto &from(b ? rhs : lhs);
   auto          to(b ? lhs : rhs);
 
-  const auto genes(std::distance(from.begin(), from.end()));
+  const auto genes(std::ranges::distance(from));
+  Expects(genes > 1);
 
   switch (from.active_crossover_type_)
   {
