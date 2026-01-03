@@ -731,7 +731,7 @@ void render_fitness_across_datasets()
     if (t.second.reference.fit_std_dev.size())
       ref_fit_std_dev.push_back(t.second.reference.fit_std_dev[0]);
     else
-      ref_fit_mean.push_back(qnan);
+      ref_fit_std_dev.push_back(qnan);
     ref_runs.push_back(t.second.reference.runs);
   }
 
