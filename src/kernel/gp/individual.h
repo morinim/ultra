@@ -71,7 +71,6 @@ public:
 
   [[nodiscard]] auto begin() const noexcept { return genome_.cbegin(); }
   [[nodiscard]] auto end() const noexcept { return genome_.cend(); }
-  [[nodiscard]] auto begin() noexcept { return genome_.cbegin(); }
 
 private:
   template<bool> friend class internal::basic_exon_iterator;
