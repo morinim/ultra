@@ -39,8 +39,8 @@ public:
   using iterator       = genome_t::iterator;
   using value_type     = genome_t::value_type;
 
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
 
   [[nodiscard]] iterator begin();
   [[nodiscard]] iterator end();

@@ -48,7 +48,7 @@ individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
 ///
 /// \return a const iterator pointing to the first gene
 ///
-individual::const_iterator individual::begin() const
+individual::const_iterator individual::begin() const noexcept
 {
   return genome_.begin();
 }
@@ -56,7 +56,7 @@ individual::const_iterator individual::begin() const
 ///
 /// \return a const iterator pointing to (one) past the last gene
 ///
-individual::const_iterator individual::end() const
+individual::const_iterator individual::end() const noexcept
 {
   return genome_.end();
 }
@@ -122,6 +122,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
   Expects(v.size() == parameters());
 
   genome_ = v;
+  signature_.clear();
 
   Ensures(is_valid());
   return *this;

@@ -108,6 +108,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
   Expects(v.size() == parameters());
 
   genome_ = v;
+  signature_.clear();
 
   Ensures(is_valid());
   return *this;
