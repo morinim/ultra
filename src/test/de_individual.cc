@@ -157,22 +157,65 @@ TEST_CASE_FIXTURE(fixture4, "Signature")
 {
   using namespace ultra;
 
-  const auto cmp([](const de::individual &lhs, const de::individual &rhs)
+  SUBCASE("Calculation")
   {
-    using value_type = de::individual::value_type;
+    const auto cmp([](const de::individual &lhs, const de::individual &rhs)
+    {
+      using value_type = de::individual::value_type;
 
-    return std::vector<value_type>(lhs) < std::vector<value_type>(rhs);
-  });
+      return std::vector<value_type>(lhs) < std::vector<value_type>(rhs);
+    });
 
-  std::set<de::individual, decltype(cmp)> sample;
-  std::generate_n(std::inserter(sample, sample.begin()), 200,
-                  [this] { return de::individual(prob); });
+    std::set<de::individual, decltype(cmp)> sample;
+    std::generate_n(std::inserter(sample, sample.begin()), 200,
+                    [this] { return de::individual(prob); });
 
-  std::set<hash_t> samplehash;
-  std::ranges::transform(sample, std::inserter(samplehash, samplehash.begin()),
-                         [](const auto &prg) { return prg.signature(); });
+    std::set<hash_t> samplehash;
+    std::ranges::transform(sample, std::inserter(samplehash,
+                                                 samplehash.begin()),
+                           [](const auto &prg) { return prg.signature(); });
 
-  CHECK(sample.size() == samplehash.size());
+    // Distinct genomes must produce distinct signatures.
+    CHECK(sample.size() == samplehash.size());
+  }
+
+  SUBCASE("Semantic consistency")
+  {
+    for (unsigned cycles(100); cycles; --cycles)
+    {
+      de::individual ind(prob), ind2(ind);
+
+      // --- Idempotence ---
+      // Calling signature() multiple times yields the same value.
+      const auto s1(ind.signature());
+      const auto s2(ind.signature());
+      CHECK(s1 == s2);
+      CHECK(!s1.empty());
+
+      // --- Copy stability ---
+      // Copying an individual preserves the signature.
+      CHECK(ind.signature() == ind2.signature());
+
+      // --- Reconstruction stability ---
+      // Rebuilding from genome values preserves the signature.
+      const std::vector<de::individual::value_type> vec(ind);
+      de::individual ind3;
+
+      CHECK(ind3.empty());
+      ind3 = vec;
+      CHECK(ind3.signature() == ind.signature());
+
+      // --- Mutation invalidation ---
+      // Any genome change must change or at least invalidate the signature.
+      ind.apply([](auto &v) { v += 1.0; });
+      const auto s3(ind.signature());
+      CHECK(s3 != s1);
+
+      // --- Post-mutation idempotence ---
+      // After mutation, repeated calls still return the same value.
+      CHECK(ind.signature() == s3);
+    }
+  }
 }
 
 TEST_CASE_FIXTURE(fixture4, "apply")
