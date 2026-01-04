@@ -61,18 +61,6 @@ individual::const_iterator individual::end() const noexcept
 }
 
 ///
-/// \return an iterator pointing to the first gene
-///
-/// \remark
-/// Cannot be used for modification (it would create problem with the
-/// signature).
-///
-individual::const_iterator individual::begin() noexcept
-{
-  return genome_.begin();
-}
-
-///
 /// Returns a reference to the gene at specified location.
 ///
 /// \param[in] i position of the gene to return
