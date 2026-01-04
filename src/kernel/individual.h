@@ -32,6 +32,10 @@ namespace ultra
 ///
 /// \note AKA chromosome.
 ///
+/// \note
+/// Thread-safety guarantees are type-specific. See derived class
+/// documentation.
+///
 class individual
 {
 public:

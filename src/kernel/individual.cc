@@ -75,7 +75,6 @@ bool individual::load(std::istream &in, const symbol_set &ss)
   age_ = t_age;
 
   // We don't save/load signature: it can be easily calculated on the fly.
-  signature_.clear();
 
   return true;
 }

@@ -56,6 +56,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
                                });
       }
 
+  signature_ = hash();
   Ensures(is_valid());
 }
 
@@ -79,6 +80,7 @@ individual::individual(const std::vector<gene> &gv)
   for (const auto &g : gv)
     genome_(i++, g.category()) = g;
 
+  signature_ = hash();
   Ensures(is_valid());
 }
 
@@ -213,10 +215,15 @@ hash_t individual::hash() const
 }
 
 ///
+/// Returns the structural signature of the individual.
+///
+/// \return the signature of this individual
+///
+/// The signature is a hash representing the logical structure of the
+/// individual. It may be computed lazily and cached internally.
+///
 /// Signature maps syntactically distinct (but logically equivalent)
 /// individuals to the same value.
-///
-/// \return the signature of this individual.
 ///
 /// In other words identical individuals at genotypic level have the same
 /// signature; different individuals at the genotipic level may be mapped
@@ -226,11 +233,21 @@ hash_t individual::hash() const
 /// This is a very interesting  property, useful for individual comparison,
 /// information retrieval, entropy calculation...
 ///
-hash_t individual::signature() const
+/// \note Thread safety
+/// `gp::individual` is a value type with no internal synchronisation.
+///
+/// The structural signature is computed eagerly and stored as part of the
+/// object state. As a consequence:
+/// - `signature()` does not modify internal state;
+/// - concurrent calls to `signature()` on the same instance are safe,
+///   provided the instance is not mutated concurrently.
+///
+/// Any operation that mutates the individual is not thread-safe and must not
+/// run concurrently with `signature()` or any other member function unless
+/// externally synchronised.
+///
+hash_t individual::signature() const noexcept
 {
-  if (signature_.empty())
-    signature_ = hash();
-
   return signature_;
 }
 
@@ -456,7 +473,7 @@ individual crossover(const problem &,
 
   to.active_crossover_type_ = from.active_crossover_type_;
   to.set_if_older_age(from.age());
-  to.signature_.clear();
+  to.signature_ = to.hash();
 
   Ensures(to.is_valid());
   return to;
@@ -510,7 +527,7 @@ unsigned individual::mutation(const problem &prb)
     }
 
   if (n)
-    signature_.clear();
+    signature_ = hash();
 
   Ensures(is_valid());
   return n;
@@ -571,6 +588,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
   }
 
   genome_ = genome;
+  signature_ = hash();
 
   return true;
 }

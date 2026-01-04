@@ -211,6 +211,16 @@ std::size_t individual::size() const noexcept
 /// signature is calculated just at the first call and then stored inside the
 /// individual.
 ///
+/// \note Thread safety
+/// `hga::individual` is a value type with no internal synchronisation.
+///
+/// The signature may be computed lazily and cached internally.
+/// Consequently, `signature()` is not thread-safe when invoked concurrently
+/// on the same instance, even if no other mutation occurs.
+///
+/// External synchronisation is required for shared access to the same instance.
+/// Concurrent access to distinct instances is safe.
+///
 hash_t individual::signature() const
 {
   if (signature_.empty())
@@ -536,6 +546,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
       return false;
 
   genome_ = v;
+  signature_.clear();
 
   return true;
 }

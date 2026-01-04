@@ -72,8 +72,7 @@ private:
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
-  // *** Private data members ***
-
+  // ---- Private data members ----
   // This is the genome: the entire collection of genes (the entirety of an
   // organism's hereditary information).
   genome_t genome_;

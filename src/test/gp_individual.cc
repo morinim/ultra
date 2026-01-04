@@ -10,13 +10,15 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <sstream>
-
 #include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
 #include "test/fixture2.h"
 #include "test/fixture3.h"
+
+#include <future>
+#include <latch>
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -239,9 +241,41 @@ TEST_CASE_FIXTURE(fixture1, "Signature")
     const D_INT val(z->opcode());
     gp::individual ind_integer({
                                  {f_add, {val, val}}  // [0] ADD val val
-                              });
+                               });
 
     CHECK(ind_opcode.signature() != ind_integer.signature());
+  }
+
+  SUBCASE("Thread-safe under concurrent access")
+  {
+    // Increase contention.
+    const auto threads(std::thread::hardware_concurrency() * 2);
+
+    for (unsigned cycles(1000); cycles; --cycles)
+    {
+      gp::individual ind(prob);
+
+      std::latch start(1);
+
+      const auto task([&]
+      {
+        start.wait();
+        return ind.signature();
+      });
+
+      std::vector<std::future<ultra::hash_t>> futures;
+      futures.reserve(threads);
+
+      for (unsigned i(0); i < threads; ++i)
+        futures.push_back(std::async(std::launch::async, task));
+
+      start.count_down();
+
+      const auto ref(futures.front().get());
+
+      for (std::size_t i = 1; i < futures.size(); ++i)
+        CHECK(futures[i].get() == ref);
+    }
   }
 }
 

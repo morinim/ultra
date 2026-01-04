@@ -13,14 +13,14 @@
 #if !defined(ULTRA_GP_INDIVIDUAL_H)
 #define      ULTRA_GP_INDIVIDUAL_H
 
-#include <set>
-
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 #include "kernel/random.h"
 #include "kernel/gp/gene.h"
 #include "utility/matrix.h"
 #include "utility/misc.h"
+
+#include <set>
 
 namespace ultra::gp
 {
@@ -32,6 +32,19 @@ namespace ultra::gp
 ///
 /// Straight Line Program (SLP) is the encoding / data structure used to
 /// represent the individual.
+///
+/// \note Thread safety
+/// `gp::individual` is a value type with no internal synchronisation.
+///
+/// The structural signature is computed eagerly and stored as part of the
+/// object state. As a consequence:
+/// - `signature()` does not modify internal state;
+/// - concurrent calls to `signature()` on the same instance are safe,
+///   provided the instance is not mutated concurrently.
+///
+/// Any operation that mutates the individual is not thread-safe and must not
+/// run concurrently with `signature()` or any other member function unless
+/// externally synchronised.
 ///
 class individual final : public ultra::individual
 {
@@ -45,7 +58,7 @@ public:
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] locus::index_t size() const noexcept;
 
-  [[nodiscard]] hash_t signature() const;
+  [[nodiscard]] hash_t signature() const noexcept;
 
   [[nodiscard]] const gene &operator[](const locus &) const;
   [[nodiscard]] locus start() const noexcept;

@@ -231,6 +231,17 @@ std::size_t active_slots(const individual &ind) noexcept
 ///
 /// Identical individuals, at genotypic level, have same signature.
 ///
+/// \remark Thread safety
+/// `de::individual` is a value type with no internal synchronisation.
+///
+/// The signature may be computed lazily and cached internally.
+/// As a result:
+/// - `signature()` may write to internal state despite being `const`;
+/// - concurrent calls to `signature()` on the same instance are not safe and
+///   result in undefined behaviour unless externally synchronised.
+///
+/// Concurrent access to distinct `de::individual` instances is always safe.
+///
 hash_t individual::signature() const
 {
   if (signature_.empty())
@@ -364,6 +375,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &)
       return false;
 
   genome_ = v;
+  signature_.clear();
 
   return true;
 }
