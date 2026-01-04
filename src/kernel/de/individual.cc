@@ -62,22 +62,6 @@ individual::const_iterator individual::end() const noexcept
 }
 
 ///
-/// \return an iterator pointing to the first gene
-///
-individual::iterator individual::begin()
-{
-  return genome_.begin();
-}
-
-///
-/// \return an iterator pointing to (one) past the last gene
-///
-individual::iterator individual::end()
-{
-  return genome_.end();
-}
-
-///
 /// Returns a reference to the gene at specified location.
 ///
 /// \param[in] i position of the gene to return
@@ -211,9 +195,17 @@ bool individual::empty() const noexcept
 ///
 /// \return the number of parameters stored in the individual
 ///
-std::size_t individual::parameters() const noexcept
+std::size_t individual::size() const noexcept
 {
   return genome_.size();
+}
+
+///
+/// \return the number of parameters stored in the individual
+///
+std::size_t individual::parameters() const noexcept
+{
+  return size();
 }
 
 ///

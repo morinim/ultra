@@ -36,8 +36,12 @@ double f(ultra::de::individual start)
 {
   double ret(0.0);
 
-  for (auto &s : start)
-    s = std::round(s);
+  {
+    std::vector<double> vec(start);
+    for (auto &v : vec)
+      v = std::round(v);
+    start = vec;
+  }
 
   for (unsigned i(0); i < start.parameters(); ++i)
   {

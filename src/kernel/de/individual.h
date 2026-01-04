@@ -30,47 +30,51 @@ namespace ultra::de
 class individual final : public ultra::individual
 {
 public:
+  // ---- Constructors ----
   individual() = default;
   explicit individual(const ultra::problem &);
 
-  // Iterators.
+  // ---- Member types ----
   using genome_t       = std::vector<double>;
   using const_iterator = genome_t::const_iterator;
   using iterator       = genome_t::iterator;
   using value_type     = genome_t::value_type;
 
+  // ---- Iterators ----
   [[nodiscard]] const_iterator begin() const noexcept;
   [[nodiscard]] const_iterator end() const noexcept;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] iterator end();
-
+  // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
   [[nodiscard]] value_type &operator[](std::size_t);
 
-  [[nodiscard]] operator std::vector<value_type>() const noexcept;
-  individual &operator=(const std::vector<value_type> &);
-
+  // ---- Recombination operators ----
   [[nodiscard]] individual crossover(double, const interval<double> &,
                                      const individual &, const individual &,
                                      const individual &) const;
 
+  // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
+  [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] std::size_t parameters() const noexcept;
+
+  // ---- Misc ----
+  [[nodiscard]] operator std::vector<value_type>() const noexcept;
+  individual &operator=(const std::vector<value_type> &);
 
   [[nodiscard]] hash_t signature() const;
 
   [[nodiscard]] bool is_valid() const;
 
 private:
-  // *** Private support methods ***
+  // ---- Private support methods ----
   [[nodiscard]] hash_t hash() const;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
-  // *** Private data members ***
+  // ---- Private data members ----
 
   // This is the genome: the entire collection of genes (the entirety of an
   // organism's hereditary information).
