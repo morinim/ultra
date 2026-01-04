@@ -77,13 +77,6 @@ individual::value_type individual::operator[](std::size_t i) const
   return genome_[i];
 }
 
-individual::value_type &individual::operator[](std::size_t i)
-{
-  Expects(i < parameters());
-  signature_.clear();
-  return genome_[i];
-}
-
 ///
 /// This is sweet "syntactic sugar" to manage individuals as real value
 /// vectors.

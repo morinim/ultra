@@ -46,7 +46,11 @@ public:
 
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
-  [[nodiscard]] value_type &operator[](std::size_t);
+
+  template<class F> requires std::invocable<F &, value_type &>
+  void apply(std::size_t, std::size_t, F &&);
+  template<class F> requires std::invocable<F &, value_type &>
+  void apply(F &&);
 
   // ---- Recombination operators ----
   [[nodiscard]] individual crossover(double, const interval<double> &,
@@ -90,6 +94,8 @@ private:
 std::ostream &graphviz(std::ostream &, const individual &);
 std::ostream &in_line(std::ostream &, const individual &);
 std::ostream &operator<<(std::ostream &, const individual &);
+
+#include "kernel/de/individual.tcc"
 
 }  // namespace ultra::de
 
