@@ -47,7 +47,6 @@ public:
   unsigned mutation(const problem &);
   friend individual crossover(const problem &,
                               const individual &, const individual &);
-  friend individual pmx_crossover(const individual &, const individual &);
 
   // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
@@ -71,7 +70,7 @@ private:
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
-  // *** Private data members ***
+  // ---- Private data members ----
 
   // This is the genome: the entire collection of genes (the entirety of an
   // organism's hereditary information).
