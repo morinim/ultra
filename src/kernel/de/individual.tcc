@@ -48,7 +48,7 @@ template<class F>
 requires std::invocable<F &, individual::value_type &>
 void individual::apply(F &&f)
 {
-  apply(0, size(), f);
+  apply(0, size(), std::forward<F>(f));
 }
 
 #endif  // include guard
