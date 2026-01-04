@@ -175,6 +175,28 @@ TEST_CASE_FIXTURE(fixture4, "Signature")
   CHECK(sample.size() == samplehash.size());
 }
 
+TEST_CASE_FIXTURE(fixture4, "apply")
+{
+  using namespace ultra;
+
+  for (unsigned cycles(100); cycles; --cycles)
+  {
+    de::individual ind(prob);
+
+    ind.apply([](auto &v) { v = std::fabs(v); });
+    CHECK(std::ranges::all_of(ind, [](auto v) { return v >= 0.0; }));
+
+    const auto half(ind.size() / 2);
+    ind.apply(0, half, [](auto &v) { v = -1.0; });
+    CHECK(std::ranges::count_if(ind, [](auto v) { return v < 0.0; }) == half);
+
+    const auto s1(ind.signature());
+    ind.apply(0, half, [](auto &v) { v += 1.0; });
+    const auto s2(ind.signature());
+    CHECK(s1 != s2);
+  }
+}
+
 TEST_CASE_FIXTURE(fixture4, "Serialization")
 {
   using namespace ultra;
