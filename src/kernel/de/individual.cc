@@ -96,7 +96,7 @@ individual::operator std::vector<individual::value_type>() const noexcept
 ///
 individual &individual::operator=(const std::vector<individual::value_type> &v)
 {
-  Expects(v.size() == parameters());
+  Expects(empty() || v.size() == size());
 
   genome_ = v;
   signature_.clear();
