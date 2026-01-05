@@ -16,9 +16,9 @@
 
 #include "test/fixture4.h"
 
-
 #include <cstdlib>
 #include <future>
+#include <iterator>
 #include <latch>
 #include <set>
 #include <sstream>
