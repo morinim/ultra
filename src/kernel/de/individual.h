@@ -49,6 +49,7 @@ public:
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
 
+  // ---- Modifiers ----
   template<class F> requires std::invocable<F &, individual::value_type &>
   void apply(std::size_t, std::size_t, F &&);
   template<class F> requires std::invocable<F &, individual::value_type &>
@@ -68,7 +69,7 @@ public:
   [[nodiscard]] operator std::vector<value_type>() const noexcept;
   individual &operator=(const std::vector<value_type> &);
 
-  [[nodiscard]] hash_t signature() const;
+  [[nodiscard]] hash_t signature() const noexcept;
 
   [[nodiscard]] bool is_valid() const;
 
@@ -87,7 +88,7 @@ private:
   genome_t genome_;
 };  // class individual
 
-
+// ---- Non-member functions ----
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] double distance(const individual &, const individual &);
 [[nodiscard]] std::size_t active_slots(const individual &) noexcept;

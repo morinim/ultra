@@ -10,14 +10,14 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <algorithm>
-
 #include "kernel/de/individual.h"
 #include "kernel/hash_t.h"
 #include "kernel/random.h"
 
 #include "utility/log.h"
 #include "utility/misc.h"
+
+#include <algorithm>
 
 namespace ultra::de
 {
@@ -42,6 +42,8 @@ individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
       return std::get<D_DOUBLE>(p.sset.roulette_terminal(n++));
     });
 
+  signature_ = hash();
+
   Ensures(is_valid());
 }
 
@@ -62,7 +64,7 @@ individual::const_iterator individual::end() const noexcept
 }
 
 ///
-/// Returns a reference to the gene at specified location.
+/// Returns the value of the gene at specified location.
 ///
 /// \param[in] i position of the gene to return
 /// \return      the requested gene
@@ -99,7 +101,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
   Expects(empty() || v.size() == size());
 
   genome_ = v;
-  signature_.clear();
+  signature_ = hash();
 
   Ensures(is_valid());
   return *this;
@@ -172,7 +174,7 @@ individual individual::crossover(double p, const interval<double> &f,
 
   ret.set_if_older_age(std::max({age(), a.age()}));
 
-  ret.signature_.clear();
+  ret.signature_ = ret.hash();
   Ensures(ret.is_valid());
   return ret;
 }
@@ -182,7 +184,7 @@ individual individual::crossover(double p, const interval<double> &f,
 ///
 bool individual::empty() const noexcept
 {
-  return !parameters();
+  return genome_.empty();
 }
 
 ///
@@ -220,19 +222,16 @@ std::size_t active_slots(const individual &ind) noexcept
 /// \remark Thread safety
 /// `de::individual` is a value type with no internal synchronisation.
 ///
-/// The signature may be computed lazily and cached internally.
-/// As a result:
-/// - `signature()` may write to internal state despite being `const`;
-/// - concurrent calls to `signature()` on the same instance are not safe and
-///   result in undefined behaviour unless externally synchronised.
+/// The structural signature is computed eagerly and stored as part of the
+/// object state. As a consequence:
+/// - `signature()` does not modify internal state;
+/// - concurrent calls to `signature()` on the same instance are safe,
+///   provided the instance is not mutated concurrently.
 ///
 /// Concurrent access to distinct `de::individual` instances is always safe.
 ///
-hash_t individual::signature() const
+hash_t individual::signature() const noexcept
 {
-  if (signature_.empty())
-    signature_ = hash();
-
   return signature_;
 }
 
@@ -246,7 +245,8 @@ hash_t individual::signature() const
 hash_t individual::hash() const
 {
   const auto len(genome_.size() * sizeof(genome_[0]));
-  return ultra::hash::hash128(genome_.data(), len);
+
+  return len ? ultra::hash::hash128(genome_.data(), len) : hash_t();
 }
 
 ///
@@ -307,7 +307,7 @@ double distance(const individual &lhs, const individual &rhs)
 
   return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0.0,
                             std::plus{},
-                            [](auto a, auto b) { return std::fabs(a - b); });
+                            [](auto a, auto b) { return std::abs(a - b); });
 }
 
 ///
@@ -323,7 +323,7 @@ bool individual::is_valid() const
       return false;
     }
 
-    if (!signature_.empty())
+    if (!signature().empty())
     {
       ultraERROR << "Empty individual must have empty signature";
       return false;
@@ -331,10 +331,10 @@ bool individual::is_valid() const
 
     return true;
   }
-
-  if (!signature_.empty() && signature_ != hash())
+  else /* !empty() */ if (signature() != hash())
   {
-    ultraERROR << "Wrong signature: " << signature_ << " should be " << hash();
+    ultraERROR << "Wrong signature: " << signature() << " should be "
+               << hash();
     return false;
   }
 
@@ -361,7 +361,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &)
       return false;
 
   genome_ = v;
-  signature_.clear();
+  signature_ = hash();
 
   return true;
 }

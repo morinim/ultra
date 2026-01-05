@@ -41,7 +41,7 @@ void individual::apply(std::size_t first, std::size_t last, F &&f)
   for (std::size_t i(first); i < last; ++i)
     std::invoke(f, genome_[i]);
 
-  signature_.clear();
+  signature_ = hash();
 }
 
 template<class F>
