@@ -49,9 +49,9 @@ public:
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
 
-  template<class F> requires std::invocable<F &, value_type &>
+  template<class F> requires std::invocable<F &, individual::value_type &>
   void apply(std::size_t, std::size_t, F &&);
-  template<class F> requires std::invocable<F &, value_type &>
+  template<class F> requires std::invocable<F &, individual::value_type &>
   void apply(F &&);
 
   // ---- Recombination operators ----
