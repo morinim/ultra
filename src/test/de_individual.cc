@@ -10,15 +10,18 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <set>
-#include <sstream>
-
 #include "kernel/de/individual.h"
 
 #include "utility/misc.h"
 
 #include "test/fixture4.h"
+
+
+#include <cstdlib>
+#include <future>
+#include <latch>
+#include <set>
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -216,6 +219,40 @@ TEST_CASE_FIXTURE(fixture4, "Signature")
       CHECK(ind.signature() == s3);
     }
   }
+
+  SUBCASE("Thread-safe under concurrent access")
+  {
+    // Increase contention.
+    const auto hc(std::thread::hardware_concurrency());
+    const auto threads(std::max(1u, hc * 2));
+
+    for (unsigned cycles(1000); cycles; --cycles)
+    {
+      de::individual ind(prob);
+
+      std::latch start(1);
+
+      const auto task([&]
+      {
+        start.wait();
+        return ind.signature();
+      });
+
+      std::vector<std::future<ultra::hash_t>> futures;
+      futures.reserve(threads);
+
+      for (unsigned i(0); i < threads; ++i)
+        futures.push_back(std::async(std::launch::async, task));
+
+      start.count_down();
+
+      const auto ref(futures.front().get());
+      CHECK(!ref.empty());
+
+      for (std::size_t i = 1; i < futures.size(); ++i)
+        CHECK(futures[i].get() == ref);
+    }
+  }
 }
 
 TEST_CASE_FIXTURE(fixture4, "apply")
@@ -244,32 +281,38 @@ TEST_CASE_FIXTURE(fixture4, "Serialization")
 {
   using namespace ultra;
 
-  for (unsigned i(0); i < 2000; ++i)
+  SUBCASE("Standard save/load")
   {
-    std::stringstream ss;
+    for (unsigned i(0); i < 2000; ++i)
+    {
+      std::stringstream ss;
 
-    de::individual i1(prob);
-    i1.inc_age(random::sup(100u));
+      de::individual i1(prob);
+      i1.inc_age(random::sup(100u));
 
-    CHECK(i1.save(ss));
+      CHECK(i1.save(ss));
 
-    de::individual i2(prob);
-    CHECK(i2.load(ss));
-    CHECK(i2.is_valid());
+      de::individual i2(prob);
+      CHECK(i2.load(ss));
+      CHECK(i2.is_valid());
 
-    CHECK(i1 == i2);
+      CHECK(i1 == i2);
+    }
   }
 
-  std::stringstream ss;
-  de::individual empty;
-  CHECK(empty.save(ss));
+  SUBCASE("Empty individual")
+  {
+    std::stringstream ss;
+    de::individual empty;
+    CHECK(empty.save(ss));
 
-  de::individual empty1;
-  CHECK(empty1.load(ss));
-  CHECK(empty1.is_valid());
-  CHECK(empty1.empty());
+    de::individual empty1;
+    CHECK(empty1.load(ss));
+    CHECK(empty1.is_valid());
+    CHECK(empty1.empty());
 
-  CHECK(empty == empty1);
+    CHECK(empty == empty1);
+  }
 }
 
 }  // TEST_SUITE("DE INDIVIDUAL")
