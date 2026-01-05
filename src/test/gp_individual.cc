@@ -249,7 +249,8 @@ TEST_CASE_FIXTURE(fixture1, "Signature")
   SUBCASE("Thread-safe under concurrent access")
   {
     // Increase contention.
-    const auto threads(std::thread::hardware_concurrency() * 2);
+    const auto hc(std::thread::hardware_concurrency());
+    const auto threads(std::max(1u, hc * 2));
 
     for (unsigned cycles(1000); cycles; --cycles)
     {
@@ -272,6 +273,7 @@ TEST_CASE_FIXTURE(fixture1, "Signature")
       start.count_down();
 
       const auto ref(futures.front().get());
+      CHECK(!ref.empty());
 
       for (std::size_t i = 1; i < futures.size(); ++i)
         CHECK(futures[i].get() == ref);
@@ -394,25 +396,42 @@ TEST_CASE_FIXTURE(fixture3, "Random locus")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Serialization")
+TEST_CASE_FIXTURE(fixture1, "Serialisation")
 {
   using namespace ultra;
 
-  for (unsigned i(0); i < 2000; ++i)
+  SUBCASE("Standard save/load sequence")
+  {
+    for (unsigned i(0); i < 2000; ++i)
+    {
+      std::stringstream ss;
+      gp::individual i1(prob);
+
+      for (auto j(random::sup(10)); j; --j)
+        i1.inc_age();
+
+      CHECK(i1.save(ss));
+
+      gp::individual i2(prob);
+      CHECK(i2.load(ss, prob.sset));
+      CHECK(i2.is_valid());
+
+      CHECK(i1 == i2);
+    }
+  }
+
+  SUBCASE("Empty individual")
   {
     std::stringstream ss;
-    gp::individual i1(prob);
+    gp::individual empty;
+    CHECK(empty.save(ss));
 
-    for (auto j(random::sup(10)); j; --j)
-      i1.inc_age();
+    gp::individual empty1;
+    CHECK(empty1.load(ss));
+    CHECK(empty1.is_valid());
+    CHECK(empty1.empty());
 
-    CHECK(i1.save(ss));
-
-    gp::individual i2(prob);
-    CHECK(i2.load(ss, prob.sset));
-    CHECK(i2.is_valid());
-
-    CHECK(i1 == i2);
+    CHECK(empty == empty1);
   }
 }
 

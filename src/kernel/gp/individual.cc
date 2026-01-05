@@ -203,7 +203,8 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
 ///
 hash_t individual::hash() const
 {
-  Expects(size());
+  if (!size())
+    return hash_t();
 
   // From an individual to a packed byte stream...
   thread_local std::vector<std::byte> packed;
@@ -282,8 +283,8 @@ bool individual::operator==(const individual &rhs) const noexcept
   const bool eq(genome_ == rhs.genome_);
 
   assert(!eq
-         || signature_.empty() != rhs.signature_.empty()
-         || signature_ == rhs.signature_);
+         || signature().empty() != rhs.signature().empty()
+         || signature() == rhs.signature());
 
   return eq;
 }
@@ -896,7 +897,7 @@ bool individual::is_valid() const
       return false;
     }
 
-    if (!signature_.empty())
+    if (!signature().empty())
     {
       ultraERROR << "Empty individual and non-empty signature";
       return false;
@@ -976,7 +977,7 @@ bool individual::is_valid() const
     return false;
   }
 
-  if (!signature_.empty() && signature_ != hash())
+  if (signature_ != hash())
   {
     ultraERROR << "Actual signature ("
                << signature_ << ") doesn't match the individual` ("
