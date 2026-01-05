@@ -15,6 +15,10 @@
 #include "test/fixture5.h"
 
 #include <cstdlib>
+#include <future>
+#include <iterator>
+#include <latch>
+#include <set>
 #include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -218,36 +222,139 @@ TEST_CASE_FIXTURE(fixture5, "apply")
   }
 }
 
-TEST_CASE_FIXTURE(fixture5, "Serialization")
+TEST_CASE_FIXTURE(fixture5, "Signature")
 {
-  // Non-empty ga::individual serialization.
-  for (unsigned cycles(2000); cycles; --cycles)
+  using namespace ultra;
+
+  SUBCASE("Calculation")
   {
-    std::stringstream ss;
-    ultra::ga::individual i1(prob);
+    const auto cmp([](const ga::individual &lhs, const ga::individual &rhs)
+    {
+      using value_type = ga::individual::value_type;
 
-    i1.inc_age(ultra::random::sup(100));
+      return std::vector<value_type>(lhs) < std::vector<value_type>(rhs);
+    });
 
-    CHECK(i1.save(ss));
+    std::set<ga::individual, decltype(cmp)> sample;
+    std::generate_n(std::inserter(sample, sample.begin()), 200,
+                    [this] { return ga::individual(prob); });
 
-    ultra::ga::individual i2(prob);
-    CHECK(i2.load(ss));
-    CHECK(i2.is_valid());
+    std::set<hash_t> samplehash;
+    std::ranges::transform(sample, std::inserter(samplehash,
+                                                 samplehash.begin()),
+                           [](const auto &prg) { return prg.signature(); });
 
-    CHECK(i1 == i2);
+    // Distinct genomes must produce distinct signatures.
+    CHECK(sample.size() == samplehash.size());
   }
 
-  // Non-empty ga::individual serialization.
-  std::stringstream ss;
-  ultra::ga::individual empty;
-  CHECK(empty.save(ss));
+  SUBCASE("Semantic consistency")
+  {
+    for (unsigned cycles(100); cycles; --cycles)
+    {
+      ga::individual ind(prob), ind2(ind);
 
-  ultra::ga::individual empty1;
-  CHECK(empty1.load(ss));
-  CHECK(empty1.is_valid());
-  CHECK(empty1.empty());
+      // --- Idempotence ---
+      // Calling signature() multiple times yields the same value.
+      const auto s1(ind.signature());
+      const auto s2(ind.signature());
+      CHECK(s1 == s2);
+      CHECK(!s1.empty());
 
-  CHECK(empty == empty1);
+      // --- Copy stability ---
+      // Copying an individual preserves the signature.
+      CHECK(ind.signature() == ind2.signature());
+
+      // --- Reconstruction stability ---
+      // Rebuilding from genome values preserves the signature.
+      const std::vector<ga::individual::value_type> vec(ind);
+      ga::individual ind3;
+
+      CHECK(ind3.empty());
+      ind3 = vec;
+      CHECK(ind3.signature() == ind.signature());
+
+      // --- Mutation invalidation ---
+      // Any genome change must change or at least invalidate the signature.
+      ind.apply([](auto &v) { v += 1.0; });
+      const auto s3(ind.signature());
+      CHECK(s3 != s1);
+
+      // --- Post-mutation idempotence ---
+      // After mutation, repeated calls still return the same value.
+      CHECK(ind.signature() == s3);
+    }
+  }
+
+  SUBCASE("Thread-safe under concurrent access")
+  {
+    // Increase contention.
+    const auto hc(std::thread::hardware_concurrency());
+    const auto threads(std::max(1u, hc * 2));
+
+    for (unsigned cycles(1000); cycles; --cycles)
+    {
+      ga::individual ind(prob);
+
+      std::latch start(1);
+
+      const auto task([&]
+      {
+        start.wait();
+        return ind.signature();
+      });
+
+      std::vector<std::future<ultra::hash_t>> futures;
+      futures.reserve(threads);
+
+      for (unsigned i(0); i < threads; ++i)
+        futures.push_back(std::async(std::launch::async, task));
+
+      start.count_down();
+
+      const auto ref(futures.front().get());
+      CHECK(!ref.empty());
+
+      for (std::size_t i = 1; i < futures.size(); ++i)
+        CHECK(futures[i].get() == ref);
+    }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture5, "Serialisation")
+{
+  SUBCASE("Standard save/load sequence")
+  {
+    for (unsigned cycles(2000); cycles; --cycles)
+    {
+      std::stringstream ss;
+      ultra::ga::individual i1(prob);
+
+      i1.inc_age(ultra::random::sup(100));
+
+      CHECK(i1.save(ss));
+
+      ultra::ga::individual i2(prob);
+      CHECK(i2.load(ss));
+      CHECK(i2.is_valid());
+
+      CHECK(i1 == i2);
+    }
+  }
+
+  SUBCASE("Empty individual")
+  {
+    std::stringstream ss;
+    ultra::ga::individual empty;
+    CHECK(empty.save(ss));
+
+    ultra::ga::individual empty1;
+    CHECK(empty1.load(ss));
+    CHECK(empty1.is_valid());
+    CHECK(empty1.empty());
+
+    CHECK(empty == empty1);
+  }
 }
 
 }  // TEST_SUITE("ga::individual")
