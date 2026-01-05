@@ -16,6 +16,8 @@
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 
+#include <functional>
+
 namespace ultra::ga
 {
 
