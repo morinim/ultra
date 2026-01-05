@@ -17,6 +17,8 @@
 #include "kernel/interval.h"
 #include "kernel/problem.h"
 
+#include <functional>
+
 namespace ultra::de
 {
 
