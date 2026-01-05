@@ -61,7 +61,7 @@ individual::const_iterator individual::end() const noexcept
 }
 
 ///
-/// Returns a reference to the gene at specified location.
+/// Returns the value of the gene at specified location.
 ///
 /// \param[in] i position of the gene to return
 /// \return      the requested gene
@@ -73,13 +73,6 @@ individual::const_iterator individual::end() const noexcept
 individual::value_type individual::operator[](std::size_t i) const
 {
   Expects(i < parameters());
-  return genome_[i];
-}
-
-individual::value_type &individual::operator[](std::size_t i)
-{
-  Expects(i < parameters());
-  signature_.clear();
   return genome_[i];
 }
 
@@ -149,7 +142,7 @@ unsigned individual::mutation(const problem &prb)
 ///
 bool individual::empty() const noexcept
 {
-  return !parameters();
+  return genome_.empty();
 }
 
 ///

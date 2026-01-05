@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <sstream>
-
 #include "kernel/ga/individual.h"
 
 #include "test/fixture5.h"
+
+#include <cstdlib>
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -193,6 +193,28 @@ TEST_CASE_FIXTURE(fixture5, "Standard crossover")
       const bool from_1_or_2(ic[k] == i1[k] || ic[k] == i2[k]);
       CHECK(from_1_or_2);
     }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture5, "apply")
+{
+  using namespace ultra;
+
+  for (unsigned cycles(100); cycles; --cycles)
+  {
+    ga::individual ind(prob);
+
+    ind.apply([](auto &v) { v = std::fabs(v); });
+    CHECK(std::ranges::all_of(ind, [](auto v) { return v >= 0.0; }));
+
+    const auto half(ind.size() / 2);
+    ind.apply(0, half, [](auto &v) { v = -1.0; });
+    CHECK(std::ranges::count_if(ind, [](auto v) { return v < 0.0; }) == half);
+
+    const auto s1(ind.signature());
+    ind.apply(0, half, [](auto &v) { v += 1.0; });
+    const auto s2(ind.signature());
+    CHECK(s1 != s2);
   }
 }
 

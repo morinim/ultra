@@ -41,7 +41,12 @@ public:
 
   // ---- Element access ----
   [[nodiscard]] value_type operator[](std::size_t) const;
-  [[nodiscard]] value_type &operator[](std::size_t);
+
+  // ---- Modifiers ----
+  template<class F> requires std::invocable<F &, individual::value_type &>
+  void apply(std::size_t, std::size_t, F &&);
+  template<class F> requires std::invocable<F &, individual::value_type &>
+  void apply(F &&);
 
   // ---- Recombination operators ----
   unsigned mutation(const problem &);
@@ -78,6 +83,7 @@ private:
 };  // class individual
 
 
+// ---- Non-member functions ----
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] std::size_t active_slots(const individual &) noexcept;
@@ -90,6 +96,8 @@ private:
 std::ostream &graphviz(std::ostream &, const individual &);
 std::ostream &in_line(std::ostream &, const individual &);
 std::ostream &operator<<(std::ostream &, const individual &);
+
+#include "kernel/ga/individual.tcc"
 
 }  // namespace ultra::ga
 
