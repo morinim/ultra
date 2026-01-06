@@ -208,15 +208,15 @@ TEST_CASE_FIXTURE(fixture5, "apply")
   {
     ga::individual ind(prob);
 
-    ind.apply([](auto &v) { v = std::fabs(v); });
+    ind.apply_each([](auto &v) { v = std::fabs(v); });
     CHECK(std::ranges::all_of(ind, [](auto v) { return v >= 0.0; }));
 
     const auto half(ind.size() / 2);
-    ind.apply(0, half, [](auto &v) { v = -1.0; });
+    ind.apply_each(0, half, [](auto &v) { v = -1.0; });
     CHECK(std::ranges::count_if(ind, [](auto v) { return v < 0.0; }) == half);
 
     const auto s1(ind.signature());
-    ind.apply(0, half, [](auto &v) { v += 1.0; });
+    ind.apply_each(0, half, [](auto &v) { v += 1.0; });
     const auto s2(ind.signature());
     CHECK(s1 != s2);
   }
@@ -276,7 +276,7 @@ TEST_CASE_FIXTURE(fixture5, "Signature")
 
       // --- Mutation invalidation ---
       // Any genome change must change or at least invalidate the signature.
-      ind.apply([](auto &v) { v += 1.0; });
+      ind.apply_each([](auto &v) { v += 1.0; });
       const auto s3(ind.signature());
       CHECK(s3 != s1);
 

@@ -32,23 +32,28 @@
 /// \post The individual's signature is recomputed.
 ///
 template<class F>
-requires std::invocable<F &, individual::value_type &>
-void individual::apply(std::size_t first, std::size_t last, F &&f)
+requires
+  std::invocable<F &, individual::value_type &>
+  && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
+void individual::apply_each(std::size_t first, std::size_t last, F &&f)
 {
   Expects(first <= last);
   Expects(last <= parameters());
 
   for (auto i(first); i < last; ++i)
-    std::invoke(f, genome_[i]);
+    std::invoke(std::forward<F>(f), genome_[i]);
 
   signature_ = hash();
+  Ensures(is_valid());
 }
 
 template<class F>
-requires std::invocable<F &, individual::value_type &>
-void individual::apply(F &&f)
+requires
+  std::invocable<F &, individual::value_type &>
+  && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
+void individual::apply_each(F &&f)
 {
-  apply(0, size(), std::forward<F>(f));
+  apply_each(0, size(), std::forward<F>(f));
 }
 
 #endif  // include guard

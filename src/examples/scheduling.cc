@@ -36,7 +36,7 @@ double f(ultra::de::individual start)
 {
   double ret(0.0);
 
-  start.apply([](auto &v) { v = std::round(v); });
+  start.apply_each([](auto &v) { v = std::round(v); });
 
   for (unsigned i(0); i < start.parameters(); ++i)
   {

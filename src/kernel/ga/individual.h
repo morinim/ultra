@@ -50,10 +50,17 @@ public:
   [[nodiscard]] const value_type &operator[](std::size_t) const;
 
   // ---- Modifiers ----
-  template<class F> requires std::invocable<F &, individual::value_type &>
-  void apply(std::size_t, std::size_t, F &&);
-  template<class F> requires std::invocable<F &, individual::value_type &>
-  void apply(F &&);
+  template<class F>
+  requires
+    std::invocable<F &, individual::value_type &>
+    && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
+  void apply_each(std::size_t, std::size_t, F &&);
+
+  template<class F>
+  requires
+    std::invocable<F &, individual::value_type &>
+    && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
+  void apply_each(F &&);
 
   // ---- Recombination operators ----
   unsigned mutation(const problem &);

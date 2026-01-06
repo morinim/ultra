@@ -49,8 +49,9 @@ public:
 
   // ---- Modifiers ----
   template<class F>
-  requires requires(F &f, individual::modify_proxy &m)
-  { { f(m) } -> std::same_as<void>; }
+  requires
+    std::invocable<F &, individual::modify_proxy &>
+    && std::same_as<std::invoke_result_t<F &, individual::modify_proxy&>, void>
   void modify(F &&);
 
   // ---- Recombination operators ----
