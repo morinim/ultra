@@ -10,8 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <algorithm>
-
 #include "kernel/hga/individual.h"
 #include "kernel/hga/primitive.h"
 #include "kernel/hash_t.h"
@@ -19,6 +17,8 @@
 
 #include "utility/log.h"
 #include "utility/misc.h"
+
+#include <algorithm>
 
 namespace ultra::hga
 {
@@ -44,6 +44,7 @@ individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
       return p.sset.front_terminal(n++)->instance();
     });
 
+  signature_ = hash();
   Ensures(is_valid());
 }
 
@@ -101,7 +102,7 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
   Expects(v.size() == parameters());
 
   genome_ = v;
-  signature_.clear();
+  signature_ = hash();
 
   Ensures(is_valid());
   return *this;
@@ -165,7 +166,7 @@ unsigned individual::mutation(const problem &prb)
 ///
 bool individual::empty() const noexcept
 {
-  return !parameters();
+  return genome_.empty();
 }
 
 ///
@@ -193,21 +194,12 @@ std::size_t individual::size() const noexcept
 /// signature is calculated just at the first call and then stored inside the
 /// individual.
 ///
-/// \note Thread safety
-/// `hga::individual` is a value type with no internal synchronisation.
+/// \remark
+/// Concurrent calls to `signature()` on the same instance are safe, provided
+/// the instance is not mutated concurrently.
 ///
-/// The signature may be computed lazily and cached internally.
-/// Consequently, `signature()` is not thread-safe when invoked concurrently
-/// on the same instance, even if no other mutation occurs.
-///
-/// External synchronisation is required for shared access to the same instance.
-/// Concurrent access to distinct instances is safe.
-///
-hash_t individual::signature() const
+hash_t individual::signature() const noexcept
 {
-  if (signature_.empty())
-    signature_ = hash();
-
   return signature_;
 }
 
@@ -458,10 +450,9 @@ std::vector<std::byte> individual::pack() const
 ///
 hash_t individual::hash() const
 {
-  Expects(parameters());
-
   const auto packed(pack());
-  return ultra::hash::hash128(packed.data(), packed.size());
+  return packed.size() ? ultra::hash::hash128(packed.data(), packed.size())
+                       : hash_t();
 }
 
 ///
@@ -488,7 +479,7 @@ bool individual::is_valid() const
       return false;
     }
 
-    if (!signature_.empty())
+    if (!signature().empty())
     {
       ultraERROR << "Empty individual must have empty signature";
       return false;
@@ -496,10 +487,10 @@ bool individual::is_valid() const
 
     return true;
   }
-
-  if (!signature_.empty() && signature_ != hash())
+  else /* !empty() */ if (signature() != hash())
   {
-    ultraERROR << "Wrong signature: " << signature_ << " should be " << hash();
+    ultraERROR << "Wrong signature: " << signature() << " should be "
+               << hash();
     return false;
   }
 
@@ -528,7 +519,7 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
       return false;
 
   genome_ = v;
-  signature_.clear();
+  signature_ = hash();
 
   return true;
 }

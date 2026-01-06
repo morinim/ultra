@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <sstream>
-
 #include "kernel/hga/individual.h"
 
 #include "test/fixture6.h"
+
+#include <cstdlib>
+#include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
