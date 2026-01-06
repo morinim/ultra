@@ -33,18 +33,10 @@ namespace ultra::gp
 /// Straight Line Program (SLP) is the encoding / data structure used to
 /// represent the individual.
 ///
-/// \note Thread safety
-/// `gp::individual` is a value type with no internal synchronisation.
-///
-/// The structural signature is computed eagerly and stored as part of the
-/// object state. As a consequence:
-/// - `signature()` does not modify internal state;
-/// - concurrent calls to `signature()` on the same instance are safe,
-///   provided the instance is not mutated concurrently.
-///
-/// Any operation that mutates the individual is not thread-safe and must not
-/// run concurrently with `signature()` or any other member function unless
-/// externally synchronised.
+/// \note
+/// This class implements a value type with no internal synchronisation. Any
+/// operation that mutates the individual is not thread-safe and must not run
+/// concurrently with any member function unless externally synchronised.
 ///
 class individual final : public ultra::individual
 {
@@ -90,10 +82,10 @@ private:
 
   // ---- Private member functions ----
   [[nodiscard]] exon_view exons();
-
+  [[nodiscard]] hash_t hash() const final;
   void pack(const locus &, std::vector<std::byte> *) const;
-  [[nodiscard]] hash_t hash() const;
 
+  // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
@@ -106,6 +98,8 @@ private:
   crossover_t active_crossover_type_ {random::sup(NUM_CROSSOVERS)};
 };
 
+
+// ---- Non-member functions ----
 [[nodiscard]] unsigned active_slots(const individual &);
 [[nodiscard]] individual crossover(const problem &,
                                    const individual &, const individual &);

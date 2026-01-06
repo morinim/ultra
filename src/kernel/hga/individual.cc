@@ -519,8 +519,6 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
       return false;
 
   genome_ = v;
-  signature_ = hash();
-
   return true;
 }
 

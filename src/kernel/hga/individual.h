@@ -75,7 +75,7 @@ public:
 private:
   // ---- Private support methods ----
   [[nodiscard]] std::vector<std::byte> pack() const;
-  [[nodiscard]] hash_t hash() const;
+  [[nodiscard]] hash_t hash() const final;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;

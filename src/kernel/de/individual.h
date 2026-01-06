@@ -25,6 +25,12 @@ namespace ultra::de
 ///
 /// An individual optimized for differential evolution.
 ///
+///
+/// \note
+/// This class implements a value type with no internal synchronisation. Any
+/// operation that mutates the individual is not thread-safe and must not run
+/// concurrently with any member function unless externally synchronised.
+///
 /// \see
 /// - https://github.com/morinim/ultra/wiki/bibliography#4
 /// - https://github.com/morinim/ultra/wiki/bibliography#5
@@ -47,7 +53,7 @@ public:
   [[nodiscard]] const_iterator end() const noexcept;
 
   // ---- Element access ----
-  [[nodiscard]] value_type operator[](std::size_t) const;
+  [[nodiscard]] const value_type &operator[](std::size_t) const;
 
   // ---- Modifiers ----
   template<class F> requires std::invocable<F &, individual::value_type &>
@@ -75,7 +81,7 @@ public:
 
 private:
   // ---- Private support methods ----
-  [[nodiscard]] hash_t hash() const;
+  [[nodiscard]] hash_t hash() const final;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;

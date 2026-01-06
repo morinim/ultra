@@ -234,18 +234,9 @@ hash_t individual::hash() const
 /// This is a very interesting  property, useful for individual comparison,
 /// information retrieval, entropy calculation...
 ///
-/// \note Thread safety
-/// `gp::individual` is a value type with no internal synchronisation.
-///
-/// The structural signature is computed eagerly and stored as part of the
-/// object state. As a consequence:
-/// - `signature()` does not modify internal state;
-/// - concurrent calls to `signature()` on the same instance are safe,
-///   provided the instance is not mutated concurrently.
-///
-/// Any operation that mutates the individual is not thread-safe and must not
-/// run concurrently with `signature()` or any other member function unless
-/// externally synchronised.
+/// \note
+/// Concurrent calls to `signature()` on the same instance are safe, provided
+/// the instance is not mutated concurrently.
 ///
 hash_t individual::signature() const noexcept
 {
@@ -589,8 +580,6 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
   }
 
   genome_ = genome;
-  signature_ = hash();
-
   return true;
 }
 

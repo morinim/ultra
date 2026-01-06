@@ -13,10 +13,10 @@
 #if !defined(ULTRA_INDIVIDUAL_H)
 #define      ULTRA_INDIVIDUAL_H
 
-#include <fstream>
-
 #include "kernel/hash_t.h"
 #include "kernel/symbol_set.h"
+
+#include <fstream>
 
 namespace ultra
 {
@@ -41,8 +41,8 @@ class individual
 public:
   using age_t = unsigned;
 
-  [[nodiscard]] age_t age() const;
-  void inc_age(unsigned = 1);
+  [[nodiscard]] age_t age() const noexcept;
+  void inc_age(unsigned = 1) noexcept;
 
   // Serialization.
   [[nodiscard]] bool load(std::istream &, const symbol_set & = {});
@@ -51,7 +51,7 @@ public:
 protected:
   ~individual() = default;
 
-  void set_if_older_age(age_t);
+  void set_if_older_age(age_t) noexcept;
 
   // Note that syntactically distinct (but logically equivalent) individuals
   // have the same signature. This is a very interesting  property, useful
@@ -61,6 +61,7 @@ protected:
 private:
   [[nodiscard]] virtual bool load_impl(std::istream &, const symbol_set &) = 0;
   [[nodiscard]] virtual bool save_impl(std::ostream &) const = 0;
+  [[nodiscard]] virtual hash_t hash() const = 0;
 
   age_t age_ {0};
 };  // class individual

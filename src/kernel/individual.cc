@@ -40,7 +40,7 @@ namespace ultra
 /// This differs from conventional measures of age, in which individuals
 /// created through applying some type of variation to an existing
 /// individual (e.g. mutation or recombination) start with an age of `0`.
-individual::age_t individual::age() const
+individual::age_t individual::age() const noexcept
 {
   return age_;
 }
@@ -50,7 +50,7 @@ individual::age_t individual::age() const
 ///
 /// \param[in] delta increment
 ///
-void individual::inc_age(unsigned delta)
+void individual::inc_age(unsigned delta) noexcept
 {
   age_ += delta;
 }
@@ -73,8 +73,7 @@ bool individual::load(std::istream &in, const symbol_set &ss)
     return false;
 
   age_ = t_age;
-
-  // We don't save/load signature: it can be easily calculated on the fly.
+  signature_ = hash();
 
   return true;
 }
@@ -86,6 +85,7 @@ bool individual::load(std::istream &in, const symbol_set &ss)
 bool individual::save(std::ostream &out) const
 {
   out << age() << '\n';
+  // We don't save/load signature: it can be easily calculated on the fly.
 
   return save_impl(out);
 }
@@ -95,7 +95,7 @@ bool individual::save(std::ostream &out) const
 ///
 /// \param[in] rhs_age the age of an individual
 ///
-void individual::set_if_older_age(individual::age_t rhs_age)
+void individual::set_if_older_age(individual::age_t rhs_age) noexcept
 {
   if (age() < rhs_age)
     age_ = rhs_age;

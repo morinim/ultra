@@ -71,7 +71,7 @@ individual::const_iterator individual::end() const noexcept
 /// Accessing a nonexistent element through this operator is undefined
 /// behavior.
 ///
-individual::value_type individual::operator[](std::size_t i) const
+const individual::value_type &individual::operator[](std::size_t i) const
 {
   Expects(i < parameters());
   return genome_[i];
@@ -171,16 +171,9 @@ std::size_t individual::size() const noexcept
 /// signature is calculated just at the first call and then stored inside the
 /// individual.
 ///
-/// \remark Thread safety
-/// `ga::individual` is a value type with no internal synchronisation.
-///
-/// The structural signature is computed eagerly and stored as part of the
-/// object state. As a consequence:
-/// - `signature()` does not modify internal state;
-/// - concurrent calls to `signature()` on the same instance are safe,
-///   provided the instance is not mutated concurrently.
-///
-/// Concurrent access to distinct `ga::individual` instances is always safe.
+/// \remark
+/// Concurrent calls to `signature()` on the same instance are safe, provided
+/// the instance is not mutated concurrently.
 ///
 hash_t individual::signature() const noexcept
 {
@@ -378,8 +371,6 @@ bool individual::load_impl(std::istream &in, const symbol_set &)
       return false;
 
   genome_ = v;
-  signature_ = hash();
-
   return true;
 }
 

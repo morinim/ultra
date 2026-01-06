@@ -24,6 +24,11 @@ namespace ultra::ga
 ///
 /// An GA-individual optimized for combinatorial optimization.
 ///
+/// \note
+/// This class implements a value type with no internal synchronisation. Any
+/// operation that mutates the individual is not thread-safe and must not run
+/// concurrently with any member function unless externally synchronised.
+///
 class individual final : public ultra::individual
 {
 public:
@@ -42,7 +47,7 @@ public:
   [[nodiscard]] const_iterator end() const noexcept;
 
   // ---- Element access ----
-  [[nodiscard]] value_type operator[](std::size_t) const;
+  [[nodiscard]] const value_type &operator[](std::size_t) const;
 
   // ---- Modifiers ----
   template<class F> requires std::invocable<F &, individual::value_type &>
@@ -71,7 +76,7 @@ public:
 
 private:
   // ---- Private support methods ----
-  [[nodiscard]] hash_t hash() const;
+  [[nodiscard]] hash_t hash() const final;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
