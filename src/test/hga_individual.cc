@@ -145,10 +145,21 @@ TEST_CASE("Distance")
 
   hga::individual a(prob), b(prob);
 
-  a[0] = std::vector{0, 1, 2};  b[0] = std::vector{1, 0, 2};
-  a[1] = 0;                     b[1] = 0;
-  a[2] = 1;                     b[2] = 2;
-  a[3] = 2;                     b[3] = 2;
+  a.modify([](auto &m)
+  {
+    m[0] = std::vector{0, 1, 2};
+    m[1] = 0;
+    m[2] = 1;
+    m[3] = 2;
+  });
+
+  b.modify([](auto &m)
+  {
+    m[0] = std::vector{1, 0, 2};
+    m[1] = 0;
+    m[2] = 2;
+    m[3] = 2;
+  });
 
   CHECK(distance(a, b) == 3);
 }
@@ -250,15 +261,15 @@ TEST_CASE_FIXTURE(fixture6, "Signature")
   hga::individual i1(prob), i2(i1);
 
   CHECK(i1.signature() == i2.signature());
-  std::swap(i1[0], i1[i1.parameters() - 1]);
+  i1.modify([](auto &m) { std::swap(m[0], m[m.size() - 1]); });
   CHECK(i1.signature() != i2.signature());
-  std::swap(i1[0], i1[i1.parameters() - 1]);
+  i1.modify([](auto &m) { std::swap(m[0], m[m.size() - 1]); });
   CHECK(i1.signature() == i2.signature());
 
   auto vec(std::get<D_IVECTOR>(i1[0]));
   std::ranges::next_permutation(vec);
 
-  i1[0] = vec;
+  i1.modify([&vec](auto &m) { m[0] = vec; });
   CHECK(i1.signature() != i2.signature());
 }
 

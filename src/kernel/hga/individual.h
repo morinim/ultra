@@ -16,6 +16,8 @@
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 
+#include <functional>
+
 namespace ultra::hga
 {
 
@@ -24,6 +26,9 @@ namespace ultra::hga
 ///
 class individual final : public ultra::individual
 {
+private:
+  class modify_proxy;
+
 public:
   // ---- Constructors ----
   individual() = default;
@@ -40,8 +45,13 @@ public:
   [[nodiscard]] const_iterator end() const noexcept;
 
   // ---- Element access ----
-  [[nodiscard]] value_type operator[](std::size_t) const;
-  [[nodiscard]] value_type &operator[](std::size_t);
+  [[nodiscard]] const value_type &operator[](std::size_t) const;
+
+  // ---- Modifiers ----
+  template<class F>
+  requires requires(F &f, individual::modify_proxy &m)
+  { { f(m) } -> std::same_as<void>; }
+  void modify(F &&);
 
   // ---- Recombination operators ----
   unsigned mutation(const problem &);
@@ -78,6 +88,7 @@ private:
 };  // class individual
 
 
+// ---- Non-member functions ----
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] std::size_t active_slots(const individual &) noexcept;
@@ -90,6 +101,8 @@ private:
 std::ostream &graphviz(std::ostream &, const individual &);
 std::ostream &in_line(std::ostream &, const individual &);
 std::ostream &operator<<(std::ostream &, const individual &);
+
+#include "kernel/hga/individual.tcc"
 
 }  // namespace ultra::hga
 

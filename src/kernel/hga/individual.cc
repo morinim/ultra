@@ -64,25 +64,18 @@ individual::const_iterator individual::end() const noexcept
 }
 
 ///
-/// Returns a reference to the gene at specified location.
+/// Returns the value of the gene at specified location.
 ///
 /// \param[in] i position of the gene to return
 /// \return      the requested gene
 ///
 /// \warning
 /// Accessing a nonexistent element through this operator is undefined
-/// behavior.
+/// behaviour.
 ///
-individual::value_type individual::operator[](std::size_t i) const
+const individual::value_type &individual::operator[](std::size_t i) const
 {
-  Expects(i < parameters());
-  return genome_[i];
-}
-
-individual::value_type &individual::operator[](std::size_t i)
-{
-  Expects(i < parameters());
-  signature_.clear();
+  Expects(i < size());
   return genome_[i];
 }
 
