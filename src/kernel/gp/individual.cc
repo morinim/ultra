@@ -169,30 +169,36 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
   const gene &g(genome_(l));
   pack_opcode(g.func->opcode());
 
-  for (const auto &a : g.args)
-    switch (a.index())
+  for (std::size_t i(0); i < g.args.size(); ++i)
+  {
+    const auto &a(g.args[i]);
+
+    std::visit([&](const auto &v)
     {
-    case d_address:
-      pack(g.locus_of_argument(a), p);
-      break;
-    case d_double:
-      pack_value(std::get<D_DOUBLE>(a));
-      break;
-    case d_int:
-      pack_value(std::get<D_INT>(a));
-      break;
-    case d_nullary:
-      pack_opcode(std::get<const D_NULLARY *>(a)->opcode());
-      break;
-    case d_string:
-      pack_value(std::get<D_STRING>(a));
-      break;
-    case d_variable:
-      pack_opcode(std::get<const D_VARIABLE *>(a)->opcode());
-      break;
-    case d_void:
-      break;
-    }
+      using T = std::decay_t<decltype(v)>;
+
+      if constexpr (std::same_as<T, D_ADDRESS>)
+        pack(g.locus_of_argument(i), p);
+      else if constexpr (std::same_as<T, D_DOUBLE>)
+        pack_value(v);
+      else if constexpr (std::same_as<T, D_INT>)
+        pack_value(v);
+      else if constexpr (std::same_as<T, const D_NULLARY *>)
+        pack_opcode(v->opcode());
+      else if constexpr (std::same_as<T, D_STRING>)
+        pack_value(v);
+      else if constexpr (std::same_as<T, const D_VARIABLE *>)
+        pack_opcode(v->opcode());
+      else if constexpr (std::same_as<T, D_IVECTOR>)
+        for (const auto &elem : v)
+          pack_value(elem);
+      else if constexpr (std::same_as<T, D_VOID>)
+        /* nothing */;
+      else
+        static_assert(
+          false, "Non-exhaustive visitor inside `gp::individual::pack`");
+    }, a);
+  }
 }
 
 ///
