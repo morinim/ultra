@@ -99,7 +99,7 @@ individual::operator std::vector<individual::value_type>() const noexcept
 ///
 individual &individual::operator=(const std::vector<individual::value_type> &v)
 {
-  Expects(v.size() == parameters());
+  Expects(empty() || v.size() == parameters());
 
   genome_ = v;
   signature_ = hash();
