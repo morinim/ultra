@@ -42,6 +42,8 @@ public:
   /// without granting additional write access.
   [[nodiscard]] const individual& self() const noexcept { return ind_; }
 
+  [[nodiscard]] auto &genome() noexcept { return ind_.genome_; }
+
   /// Mutable access to a genome element.
   ///
   /// \param[in] i index of the gene to access
