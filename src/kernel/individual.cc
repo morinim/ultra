@@ -24,6 +24,34 @@ namespace ultra
 {
 
 ///
+/// Returns the structural signature of the individual.
+///
+/// \return the signature of this individual
+///
+/// The signature is a hash representing the logical structure of the
+/// individual. It may be computed lazily and cached internally.
+///
+/// Signature maps syntactically distinct (but logically equivalent)
+/// individuals to the same value.
+///
+/// In other words identical individuals at genotypic level have the same
+/// signature; different individuals at the genotipic level may be mapped
+/// to the same signature since real structure/computation is considered and
+/// not the simple storage.
+///
+/// This is a very interesting  property, useful for individual comparison,
+/// information retrieval, entropy calculation...
+///
+/// \note
+/// Concurrent calls to `signature()` on the same instance are safe, provided
+/// the instance is not mutated concurrently.
+///
+hash_t individual::signature() const noexcept
+{
+  return signature_;
+}
+
+///
 /// A measurement of the age of an individual (mainly used for ALPS).
 ///
 /// \return the individual's age

@@ -186,24 +186,6 @@ std::size_t individual::size() const noexcept
 }
 
 ///
-/// The signature (hash value) of this individual.
-///
-/// \return the signature of this individual
-///
-/// Identical individuals, at genotypic level, have same signature. The
-/// signature is calculated just at the first call and then stored inside the
-/// individual.
-///
-/// \remark
-/// Concurrent calls to `signature()` on the same instance are safe, provided
-/// the instance is not mutated concurrently.
-///
-hash_t individual::signature() const noexcept
-{
-  return signature_;
-}
-
-///
 /// Calculates the Hamming distance between two individuals.
 ///
 /// \param[in] lhs first term of comparison

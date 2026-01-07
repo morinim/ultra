@@ -69,8 +69,6 @@ public:
 
   individual &operator=(const std::vector<value_type> &);
 
-  [[nodiscard]] hash_t signature() const noexcept;
-
   [[nodiscard]] bool is_valid() const;
 
 private:

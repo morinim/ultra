@@ -215,20 +215,6 @@ std::size_t active_slots(const individual &ind) noexcept
 }
 
 ///
-/// \return the signature of this individual
-///
-/// Identical individuals, at genotypic level, have same signature.
-///
-/// \remark
-/// Concurrent calls to `signature()` on the same instance are safe, provided
-/// the instance is not mutated concurrently.
-///
-hash_t individual::signature() const noexcept
-{
-  return signature_;
-}
-
-///
 /// Hashes the current individual.
 ///
 /// \return the signature of this individual

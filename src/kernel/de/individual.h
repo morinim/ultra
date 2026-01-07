@@ -82,8 +82,6 @@ public:
   [[nodiscard]] operator std::vector<value_type>() const noexcept;
   individual &operator=(const std::vector<value_type> &);
 
-  [[nodiscard]] hash_t signature() const noexcept;
-
   [[nodiscard]] bool is_valid() const;
 
 private:

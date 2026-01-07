@@ -50,8 +50,6 @@ public:
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] locus::index_t size() const noexcept;
 
-  [[nodiscard]] hash_t signature() const noexcept;
-
   [[nodiscard]] const gene &operator[](const locus &) const;
   [[nodiscard]] locus start() const noexcept;
 

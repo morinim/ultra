@@ -41,6 +41,8 @@ class individual
 public:
   using age_t = unsigned;
 
+  [[nodiscard]] hash_t signature() const noexcept;
+
   [[nodiscard]] age_t age() const noexcept;
   void inc_age(unsigned = 1) noexcept;
 
@@ -56,7 +58,7 @@ protected:
   // Note that syntactically distinct (but logically equivalent) individuals
   // have the same signature. This is a very interesting  property, useful
   // for individual comparison, information retrieval, entropy calculation...
-  mutable hash_t signature_ {};
+  hash_t signature_ {};
 
 private:
   [[nodiscard]] virtual bool load_impl(std::istream &, const symbol_set &) = 0;
