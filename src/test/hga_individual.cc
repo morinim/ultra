@@ -131,6 +131,35 @@ TEST_CASE_FIXTURE(fixture6, "Comparison")
   }
 }
 
+TEST_CASE("Vector assignment")
+{
+  using namespace ultra;
+
+  hga::problem prob;
+  prob.params.init();
+
+  prob.insert<hga::permutation>(3);
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+
+  hga::individual a(prob), a1;
+  a.modify([](auto &m)
+  {
+    m[0] = std::vector{0, 1, 2};
+    m[1] = 0;
+    m[2] = 1;
+    m[3] = 2;
+  });
+
+  CHECK(a != a1);
+
+  a1 = {std::vector{0, 1, 2}, 0, 1, 2};
+
+  CHECK(a == a1);
+  CHECK(a.signature() == a1.signature());
+}
+
 TEST_CASE("Distance")
 {
   using namespace ultra;
@@ -143,23 +172,10 @@ TEST_CASE("Distance")
   prob.insert<hga::integer>(interval(0, 9));
   prob.insert<hga::integer>(interval(0, 9));
 
-  hga::individual a(prob), b(prob);
+  hga::individual a, b;
 
-  a.modify([](auto &m)
-  {
-    m[0] = std::vector{0, 1, 2};
-    m[1] = 0;
-    m[2] = 1;
-    m[3] = 2;
-  });
-
-  b.modify([](auto &m)
-  {
-    m[0] = std::vector{1, 0, 2};
-    m[1] = 0;
-    m[2] = 2;
-    m[3] = 2;
-  });
+  a = {std::vector{0, 1, 2}, 0, 1, 2};
+  b = {std::vector{1, 0, 2}, 0, 2, 2};
 
   CHECK(distance(a, b) == 3);
 }
@@ -173,6 +189,33 @@ TEST_CASE_FIXTURE(fixture6, "Iterators")
     for (unsigned i(0); const auto &g : ind)
       CHECK(g == ind[i++]);
   }
+}
+
+TEST_CASE_FIXTURE(fixture6, "Modify")
+{
+  using namespace ultra;
+
+  hga::problem prob;
+  prob.params.init();
+
+  prob.insert<hga::permutation>(3);
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+  prob.insert<hga::integer>(interval(0, 9));
+
+  hga::individual a(prob), a1;
+
+  CHECK(a != a1);
+  CHECK(a.signature() != a1.signature());
+  CHECK(a1.signature().empty());
+
+  a1.modify([&a](auto &m)
+  {
+    std::ranges::copy(a, std::back_inserter(m.genome()));
+  });
+
+  CHECK(a == a1);
+  CHECK(a.signature() == a1.signature());
 }
 
 TEST_CASE_FIXTURE(fixture6, "Standard crossover")
