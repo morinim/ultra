@@ -434,7 +434,7 @@ individual crossover(const problem &,
   }
 
   case individual::crossover_t::uniform:
-    std::transform(from.begin(), from.end(), to.begin(), to.genome_.begin(),
+    std::ranges::transform(from, to, to.genome_.begin(),
                    [](const auto &g1, const auto &g2)
                    { return random::boolean() ? g1 : g2; });
     break;
