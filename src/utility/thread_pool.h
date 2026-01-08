@@ -81,6 +81,8 @@ public:
                 std::unique_lock lock(mutex_);
                 cv_available_.wait(lock, stop_token,
                                    [this] { return !tasks_.empty(); });
+                // `wait` unblocks either when tasks are available or when
+                // stop is requested.
 
                 if (stop_token.stop_requested() && tasks_.empty())
                   return;
@@ -89,10 +91,14 @@ public:
                 tasks_.pop();
               }
 
-              // Execute the type-erased wrapper. Destruction of the underlying
-              // packaged_task (via `shared_ptr` or `move_only_function`'s
-              // capture) is now decoupled from thread pool synchronization.
-              task();
+              try
+              {
+                task();
+              }
+              catch (...)
+              {
+                // Intentionally swallow exceptions.
+              }
 
               if (std::lock_guard lock(task_counter_mutex_);
                   --task_counter_ == 0)
@@ -116,7 +122,11 @@ public:
   /// \tparam Args argument types to be forwarded to the callable
   /// \return      a future holding the result of the task
   ///
-  /// \throws std::runtime_error if submit is invoked after the pool is stopped.
+  /// \note
+  /// Any exception thrown by the task is captured and rethrown when the
+  /// associated future is accessed.
+  ///
+  /// \throws std::logic_error if submit is invoked after the pool is stopped.
   template<class F, class... Args>
   requires std::invocable<F, Args...>
   auto submit(F &&f, Args&&... args)
@@ -172,29 +182,28 @@ public:
   /// \tparam Args argument types to be forwarded to the callable
   ///
   /// \note
+  /// Unlike `submit`, any exception thrown by the task is not propagated
+  /// to the caller and is silently discarded by the worker thread.
+  ///
   /// Suitable for fire-and-forget tasks.
   ///
-  /// \throws std::runtime_error if execute is called after the pool is stopped.
+  /// \throws std::logic_error if execute is called after the pool is stopped.
   template<class F, class... Args>
   requires std::invocable<F, Args...>
   void execute(F &&f, Args&&... args)
   {
 #if defined(__cpp_lib_move_only_function)
-  std::packaged_task<void()> task(
-    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
+  enqueue_task(
+    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
     {
       std::invoke(fn, std::move(as)...);
     });
-
-  enqueue_task([t = std::move(task)] mutable { t(); });
 #else
-  const auto task(std::make_shared<std::packaged_task<void()>>(
-    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
+  enqueue_task(
+    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
     {
       std::invoke(fn, std::move(as)...);
-    }));
-
-  enqueue_task([task] { (*task)(); });
+    });
 #endif
   }
 
@@ -263,7 +272,7 @@ private:
       std::scoped_lock lk(mutex_, task_counter_mutex_);
 
       if (!accepting_tasks_)
-        throw std::runtime_error("Task submission after shutdown");
+        throw std::logic_error("Task submission after shutdown");
 
       tasks_.emplace(std::forward<Task>(task));
       ++task_counter_;
