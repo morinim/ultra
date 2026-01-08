@@ -441,16 +441,16 @@ individual crossover(const problem &,
 
   default:  // Tree crossover
     {
-      auto crossover_ = [&](const locus &l, const auto &lambda) -> void
+      auto crossover_ = [&](this const auto &self, const locus &l) -> void
       {
         to.genome_(l) = from[l];
 
         for (const auto &al : from[l].args)
           if (std::holds_alternative<D_ADDRESS>(al))
-            lambda(from[l].locus_of_argument(al), lambda);
+            self(from[l].locus_of_argument(al));
       };
 
-      crossover_(random_locus(from), crossover_);
+      crossover_(random_locus(from));
     }
     break;
   }
