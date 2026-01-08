@@ -235,6 +235,8 @@ public:
   /// queued.
   void shutdown()
   {
+    if (!accepting_tasks_.exchange(false))
+      return;
     accepting_tasks_ = false;
 
     for (auto &worker : workers_)
@@ -271,7 +273,7 @@ private:
     cv_available_.notify_one();
   }
 
-  mutable std::mutex mutex_;  // protects tasks_ and condition variables
+  mutable std::mutex mutex_;  // protects `tasks_` and condition variables
 
   // A `stop_token` requires additional synchronization which is provided only
   // by the `wait` method of `std::condition_variable_any`.
