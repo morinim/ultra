@@ -434,7 +434,13 @@ individual crossover(const problem &,
   }
 
   case individual::crossover_t::uniform:
-    std::ranges::transform(from, to, to.genome_.begin(),
+    // NOTE: we are intentionally using `std::transform` instead of
+    // `std::ranges::transform`. As of Clang 18.1.3, using ranges here
+    // triggers a known Internal Compiler Error (ICE) in the frontend:
+    // "error: cannot compile this l-value expression yet".
+    // Do not refactor to ranges until CI confirms Clang stability for
+    // nested lambda expressions in this context.
+    std::transform(from.begin(), from.end(), to.begin(), to.genome_.begin(),
                    [](const auto &g1, const auto &g2)
                    { return random::boolean() ? g1 : g2; });
     break;
