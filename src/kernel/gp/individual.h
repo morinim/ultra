@@ -81,7 +81,7 @@ private:
   // ---- Private member functions ----
   [[nodiscard]] exon_view exons();
   [[nodiscard]] hash_t hash() const final;
-  void pack(const locus &, std::vector<std::byte> *) const;
+  void pack(const locus &, hash_sink &) const;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;

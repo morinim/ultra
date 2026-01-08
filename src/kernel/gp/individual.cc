@@ -130,28 +130,48 @@ const_exon_view individual::cexons() const
 }
 
 ///
-/// Maps syntactically distinct (but logically equivalent) individuals to the
-/// same byte stream.
+/// Serialises an individual (or subtree) into a byte stream.
 ///
-/// \param[in]  l locus in this individual
-/// \param[out] p byte stream compacted version of the gene sequence
-///               starting at locus `l`
+/// \param[in]  l    root locus to be serialised
+/// \param[out] sink destination sink receiving the serialised bytes
 ///
-/// Useful for individual comparison / information retrieval.
+/// This function walks the structure rooted at `l` and emits a *canonical*
+/// sequence of bytes representing its semantic content. The resulting byte
+/// stream is independent of memory addresses and implementation details; it's
+/// stable across executions and platforms.
 ///
-void individual::pack(const locus &l, std::vector<std::byte> *p) const
+/// ### Design goals
+/// - **Determinism**. Identical individuals always produce identical byte
+///   streams.
+/// - **Completeness**. All information relevant to semantics and identity is
+///   included.
+/// - **Stability**. Changes in memory layout do not affect the output.
+/// - **Composability**. Complex structures are packed by recursively packing
+///   their components.
+///
+/// ### Notes
+/// - `pack` performs no hashing by itself; it only defines *what* bytes are
+///   emitted and in which order;
+/// - the choice of hash function or storage strategy is delegated entirely
+///   to the sink;
+/// - the byte stream produced by `pack` is suitable for incremental
+///   processing.
+///
+/// \see murmurhash3_sink
+///
+void individual::pack(const locus &l, hash_sink &sink) const
 {
-  const auto pack_span([&p](const std::span<const std::byte> data)
+  const auto pack_span([&](const std::span<const std::byte> bytes)
   {
-    p->insert(p->end(), data.begin(), data.end());
+    sink.write(bytes);
   });
 
-  const auto pack_value([&](const auto &data)
+  const auto pack_value([&](const auto &v)
   {
-    pack_span(bytes_view(data));
+    pack_span(bytes_view(v));
   });
 
-  const auto pack_opcode([&](const symbol::opcode_t &opcode)
+  const auto pack_opcode([&](symbol::opcode_t opcode)
   {
     Expects(std::in_range<std::uint16_t>(opcode));
 
@@ -178,16 +198,12 @@ void individual::pack(const locus &l, std::vector<std::byte> *p) const
       using T = std::decay_t<decltype(v)>;
 
       if constexpr (std::same_as<T, D_ADDRESS>)
-        pack(g.locus_of_argument(i), p);
-      else if constexpr (std::same_as<T, D_DOUBLE>)
+        pack(g.locus_of_argument(i), sink);
+      else if constexpr (std::same_as<T, D_INT> || std::same_as<T, D_DOUBLE>
+                         || std::same_as<T, D_STRING>)
         pack_value(v);
-      else if constexpr (std::same_as<T, D_INT>)
-        pack_value(v);
-      else if constexpr (std::same_as<T, const D_NULLARY *>)
-        pack_opcode(v->opcode());
-      else if constexpr (std::same_as<T, D_STRING>)
-        pack_value(v);
-      else if constexpr (std::same_as<T, const D_VARIABLE *>)
+      else if constexpr (std::same_as<T, const D_NULLARY *>
+                         || std::same_as<T, const D_VARIABLE *>)
         pack_opcode(v->opcode());
       else if constexpr (std::same_as<T, D_IVECTOR>)
         for (const auto &elem : v)
@@ -213,12 +229,10 @@ hash_t individual::hash() const
     return hash_t();
 
   // From an individual to a packed byte stream...
-  thread_local std::vector<std::byte> packed;
+  hash_sink sink;
 
-  packed.clear();
-  pack(start(), &packed);
-
-  return ultra::hash::hash128(packed.data(), packed.size());
+  pack(start(), sink);
+  return sink.final();
 }
 
 ///
