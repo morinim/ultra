@@ -18,9 +18,12 @@
 #define      ULTRA_LINEAR_POPULATION_TCC
 
 ///
-/// Creates a random population.
+/// Constructs a random population for a given problem.
 ///
-/// \param[in] p current problem
+/// \param[in] p the problem definition
+///
+/// The population size is initialised according to the problem parameters.
+/// Individuals are created using `I(p)`.
 ///
 template<Individual I>
 linear_population<I>::linear_population(const ultra::problem &p)
@@ -32,21 +35,32 @@ linear_population<I>::linear_population(const ultra::problem &p)
 }
 
 ///
-/// Clear the current population and creates a new random one.
+/// Clears the population and creates a new random one.
 ///
-/// \param[in] p current problem
+/// \param[in] p the problem definition
+///
+/// \pre allowed() >= min_allowed_
+///
+/// \post size() == allowed()
+///
+/// Individuals are constructed using the provided problem definition.
+/// The number of created individuals equals `allowed()`.
 ///
 template<Individual I>
 void linear_population<I>::reset(const ultra::problem &p)
 {
+  Expects(allowed() >= min_allowed_);
+
   members_.clear();
   std::generate_n(std::back_inserter(members_), allowed(),
                   [&p] { return I(p); });
 }
 
 ///
-/// \param[in] i index of an individual
-/// \return      a reference to the individual at index `i`
+/// Access an individual by index.
+///
+/// \param[in] i index of the individual
+/// \return      a reference to the individual at position `i`
 ///
 template<Individual I>
 I &linear_population<I>::operator[](std::size_t i)
@@ -56,8 +70,10 @@ I &linear_population<I>::operator[](std::size_t i)
 }
 
 ///
-/// \param[in] i index of an individual
-/// \return      a constant reference to the individual at index `i`
+/// Access an individual by index (const).
+///
+/// \param[in] i index of the individual
+/// \return      a reference to the individual at position `i`
 ///
 template<Individual I>
 const I &linear_population<I>::operator[](std::size_t i) const
@@ -67,7 +83,7 @@ const I &linear_population<I>::operator[](std::size_t i) const
 }
 
 ///
-/// \return number of individuals in this layer
+/// \return number of individuals in this population
 ///
 template<Individual I>
 std::size_t linear_population<I>::size() const noexcept
@@ -76,10 +92,10 @@ std::size_t linear_population<I>::size() const noexcept
 }
 
 ///
-/// \return number of individuals in this layer
+/// \return number of individuals in this population
 ///
 /// \remark
-/// Thread safe version fo size().
+/// Thread safe version of size().
 ///
 template<Individual I>
 std::size_t linear_population<I>::safe_size() const
@@ -89,7 +105,7 @@ std::size_t linear_population<I>::safe_size() const
 }
 
 ///
-/// \return reference max age for current layer
+/// \return the maximum allowed age for individuals
 ///
 template<Individual I>
 unsigned linear_population<I>::max_age() const noexcept
@@ -98,7 +114,9 @@ unsigned linear_population<I>::max_age() const noexcept
 }
 
 ///
-/// \param[in] m set the reference max age for the current layer
+/// Sets the reference maximum age.
+///
+/// \param[in] m the new maximum age
 ///
 template<Individual I>
 void linear_population<I>::max_age(unsigned m) noexcept
@@ -106,6 +124,12 @@ void linear_population<I>::max_age(unsigned m) noexcept
   max_age_ = m;
 }
 
+///
+/// \return the mutex protecting the population
+///
+/// This mutex must be used by clients to synchronise concurrent access to the
+/// population.
+///
 template<Individual I>
 std::shared_mutex &linear_population<I>::mutex() const
 {
@@ -113,24 +137,27 @@ std::shared_mutex &linear_population<I>::mutex() const
 }
 
 ///
-/// \return number of individuals allowed in this layer
+/// \return the maximum number of allowed individuals
 ///
 /// \note
 /// `size() <= allowed()`
 ///
 template<Individual I>
-std::size_t linear_population<I>::allowed() const
+std::size_t linear_population<I>::allowed() const noexcept
 {
   return allowed_;
 }
 
 ///
-/// Sets the number of individuals allowed in this layer.
+/// Sets the maximum number of allowed individuals.
 ///
-/// \param[in] n number of allowed individuals
+/// \param[in] n the new maximum population size
 ///
-/// If the layer contains more individuals than the amount allowed, the surplus
-/// is erased.
+/// If the population size exceeds the new limit, surplus individuals are
+/// removed from the end of the sequence.
+///
+/// The value is clamped so that it's never less than the minimum allowed
+/// population size.
 ///
 template<Individual I>
 void linear_population<I>::allowed(std::size_t n)
@@ -152,11 +179,7 @@ void linear_population<I>::allowed(std::size_t n)
 }
 
 ///
-/// \return `true` if the layer is empty
-///
-/// \remark
-/// This function does not modify the layer in any way. To clear the content of
-/// a layer, see `layer_t::clear`.
+/// \return `true` if the population is empty
 ///
 template<Individual I>
 bool linear_population<I>::empty() const noexcept
@@ -165,7 +188,9 @@ bool linear_population<I>::empty() const noexcept
 }
 
 ///
-/// Removes all elements from the layer.
+/// Removes all individuals from the population.
+///
+/// After this call `size() == 0`.
 ///
 template<Individual I>
 void linear_population<I>::clear() noexcept
@@ -174,9 +199,12 @@ void linear_population<I>::clear() noexcept
 }
 
 ///
-/// Adds individual `i` to this layer.
+/// Adds an individual to the population.
 ///
-/// \param[in] i an individual
+/// \param[in] i the individual to add
+///
+/// The individual is added only if the population size is strictly less than
+/// the allowed maximum.
 ///
 template<Individual I>
 void linear_population<I>::push_back(const I &i)
@@ -186,53 +214,57 @@ void linear_population<I>::push_back(const I &i)
 }
 
 ///
-/// Removes the last individual of this layer.
+/// Removes the last individual from the population.
+///
+/// \pre empty() == false
 ///
 template<Individual I>
 void linear_population<I>::pop_back()
 {
+  Expects(!empty());
   members_.pop_back();
 }
 
 ///
-/// \return a const iterator to the beginning of the given range
+/// \return a const iterator to the first individual
 ///
 template<Individual I>
 typename linear_population<I>::const_iterator
-linear_population<I>::begin() const
+linear_population<I>::begin() const noexcept
 {
   return members_.begin();
 }
 
 ///
-/// \return an iterator to the beginning of the given range
+/// \return an iterator to the first individual
 ///
 template<Individual I>
-typename linear_population<I>::iterator linear_population<I>::begin()
+typename linear_population<I>::iterator linear_population<I>::begin() noexcept
 {
   return members_.begin();
 }
 
 ///
-/// \return a const iterator to the end of the given range
+/// \return a const iterator past the last individual.
 ///
 template<Individual I>
-typename linear_population<I>::const_iterator linear_population<I>::end() const
+typename linear_population<I>::const_iterator
+linear_population<I>::end() const noexcept
 {
   return members_.end();
 }
 
 ///
-/// \return a iterator to the end of the given range
+/// \return an iterator past the last individual
 ///
 template<Individual I>
-typename linear_population<I>::iterator linear_population<I>::end()
+typename linear_population<I>::iterator linear_population<I>::end() noexcept
 {
   return members_.end();
 }
 
 ///
-/// Increments the age of each individual of the population
+/// Increments the age of all individuals.
 ///
 template<Individual I>
 void linear_population<I>::inc_age()
@@ -241,12 +273,13 @@ void linear_population<I>::inc_age()
 }
 
 ///
-/// \param[in] in input stream
-/// \param[in] ss symbol_set (for building of the individuals)
-/// \return       `true` if population has been correctly loaded
+/// Loads the population from a stream.
 ///
-/// \note
-/// The current population isn't changed if the load operation fails.
+/// \param[in] in input stream
+/// \param[in] ss symbol_set used to rebuild individuals
+/// \return       `true` on success, `false` otherwise
+///
+/// \note On failure, the population remains unchanged.
 ///
 template<Individual I>
 bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
@@ -255,8 +288,15 @@ bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
   if (!(in >> tmp_max_age))
     return false;
 
+  std::size_t tmp_min_allowed;
+  if (!(in >> tmp_min_allowed))
+    return false;
+
   std::size_t tmp_allowed;
   if (!(in >> tmp_allowed))
+    return false;
+
+  if (tmp_allowed < tmp_min_allowed)
     return false;
 
   std::size_t n_elem;
@@ -275,20 +315,25 @@ bool linear_population<I>::load(std::istream &in, const symbol_set &ss)
       tmp_members.push_back(ind);
 
   max_age(tmp_max_age);
+  members_ = std::move(tmp_members);
+  min_allowed_ = tmp_min_allowed;
   allowed(tmp_allowed);
-  members_ = tmp_members;
 
+  Ensures(is_valid());
   return true;
 }
 
 ///
+/// Saves the population to a stream.
+///
 /// \param[out] out output stream
-/// \return         `true` if population has been correctly saved
+/// \return         `true` on success, `false` otherwise
 ///
 template<Individual I>
 bool linear_population<I>::save(std::ostream &out) const
 {
-  out << max_age() << ' ' << allowed() << ' ' << size() << '\n';
+  out << max_age() << ' ' << min_allowed_ << ' ' << allowed() << ' ' << size()
+      << '\n';
 
   for (const auto &prg : *this)
     if (!prg.save(out))
@@ -298,10 +343,10 @@ bool linear_population<I>::save(std::ostream &out) const
 }
 
 ///
-/// \return a numerical unique ID of this population
+/// \return a numerical unique identifier of this population
 ///
 /// \note
-/// The ID is unique considering the current application instance.
+/// The ID is unique within the current application instance.
 ///
 template<Individual I>
 population_uid linear_population<I>::uid() const noexcept
@@ -310,7 +355,9 @@ population_uid linear_population<I>::uid() const noexcept
 }
 
 ///
-/// \return `true` if the object passes the internal consistency check
+/// Checks the internal consistency of the population.
+///
+/// \return `true` if the population is internally consistent
 ///
 template<Individual I>
 bool linear_population<I>::is_valid() const
