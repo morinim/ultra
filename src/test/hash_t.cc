@@ -36,20 +36,15 @@ TEST_CASE("Type hash_t")
 
 // This should hopefully be a thorough and unambiguous test of whether the hash
 // is correctly implemented.
-TEST_CASE("Murmur Hash")
+TEST_CASE("murmurhash3")
 {
   using std::byte;
-  using ultra::hash_t;
 
-  const unsigned hashbytes(128 / 8);
+  constexpr std::size_t hash_bytes(128 / 8);
 
-  byte *const key(new byte[256]);
-  byte *const hashes(new byte[hashbytes * 256]);
-  byte *const final(new byte[hashbytes]);
-
-  std::memset(key, 0, 256);
-  std::memset(hashes, 0, hashbytes * 256);
-  std::memset(final, 0, hashbytes);
+  std::array<byte, 256> key {};
+  std::array<byte, hash_bytes * 256> hashes {};
+  std::array<byte, hash_bytes> final {};
 
   // Hash keys of the form {0}, {0,1}, {0,1,2}... up to N=255, using 256-N as
   // the seed.
@@ -57,30 +52,47 @@ TEST_CASE("Murmur Hash")
   {
     key[i] = static_cast<byte>(i);
 
-    auto h(ultra::hash::hash128(key, i, 256 - i));
-    reinterpret_cast<std::uint64_t *>(&hashes[i * hashbytes])[0] = h.data[0];
-    reinterpret_cast<std::uint64_t *>(&hashes[i * hashbytes])[1] = h.data[1];
+    const auto h(ultra::hash::hash128(key.data(), i, 256 - i));
+
+    std::memcpy(hashes.data() + i*hash_bytes, h.data, hash_bytes);
   }
 
-  // Then hash the result array.
-  auto h(ultra::hash::hash128(hashes, hashbytes * 256, 0));
-  reinterpret_cast<std::uint64_t *>(final)[0] = h.data[0];
-  reinterpret_cast<std::uint64_t *>(final)[1] = h.data[1];
+  // Hash the result array.
+  const auto h(ultra::hash::hash128(hashes.data(), hashes.size(), 0));
 
-  // The first four bytes of that hash, interpreted as a little-endian integer,
-  // is our verification value.
+  std::memcpy(final.data(), h.data, hash_bytes);
+
+  // First four bytes interpreted as a little-endian uint32.
   const auto verification((static_cast<std::uint32_t>(final[0]) <<  0u) |
                           (static_cast<std::uint32_t>(final[1]) <<  8u) |
                           (static_cast<std::uint32_t>(final[2]) << 16u) |
                           (static_cast<std::uint32_t>(final[3]) << 24u));
 
-  delete [] key;
-  delete [] hashes;
-  delete [] final;
-
   //----------
 
   CHECK(verification == 0x6384BA69);
-}  // TEST_CASE("Murmur Hash")
+}
+
+// Murmur hash incremental equivalence.
+TEST_CASE("murmurhash3_sink")
+{
+  using std::byte;
+
+  std::array<byte, 256> data{};
+
+  for (std::size_t i(0); i < data.size(); ++i)
+    data[i] = static_cast<byte>(i);
+
+  const auto one_shot(ultra::hash::hash128(data.data(), data.size(), 1234));
+
+  ultra::hash_sink sink(1234);
+  sink.write(std::span<const byte>(data.data(), 100));
+  sink.write(std::span<const byte>(data.data() + 100, 156));
+
+  const auto incremental(sink.final());
+
+  CHECK(one_shot.data[0] == incremental.data[0]);
+  CHECK(one_shot.data[1] == incremental.data[1]);
+}
 
 }  // TEST_SUITE("HASH_T")
