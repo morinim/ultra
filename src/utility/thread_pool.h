@@ -121,9 +121,6 @@ public:
   requires std::invocable<F, Args...>
   auto submit(F &&f, Args&&... args)
   {
-    if (!accepting_tasks_)
-      throw std::runtime_error("submit was invoked on stopped thread_pool");
-
     using return_type = std::invoke_result_t<F, Args...>;
 
 #if defined(__cpp_lib_move_only_function)
@@ -182,9 +179,6 @@ public:
   requires std::invocable<F, Args...>
   void execute(F &&f, Args&&... args)
   {
-    if (!accepting_tasks_)
-      throw std::runtime_error("execute was invoked on stopped thread_pool");
-
 #if defined(__cpp_lib_move_only_function)
   std::packaged_task<void()> task(
     [fn = std::forward<F>(f), ... as = std::forward<Args>(args)]() mutable
@@ -262,10 +256,13 @@ public:
   thread_pool &operator=(const thread_pool &) = delete;
 
 private:
-  template <class Task>void enqueue_task(Task &&task)
+  template<class Task> void enqueue_task(Task &&task)
   {
     {
       std::scoped_lock lk(mutex_, task_counter_mutex_);
+
+      if (!accepting_tasks_)
+        throw std::runtime_error("Task submission after shutdown");
 
       tasks_.emplace(std::forward<Task>(task));
       ++task_counter_;
