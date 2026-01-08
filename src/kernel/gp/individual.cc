@@ -447,16 +447,21 @@ individual crossover(const problem &,
 
   default:  // Tree crossover
     {
-      auto crossover_ = [&](this const auto &self, const locus &l) -> void
+      // FIXME: reverted to a standard lambda capture.
+      // Although fixed in Clang 21, Clang 18.x (current CI/LTS baseline)
+      // suffers from an Internal Compiler Error (ICE) when combining deducing
+      // `this` with nested l-value member access:
+      // "error: cannot compile this l-value expression yet"
+      auto crossover_ = [&](const locus &l, const auto &lambda) -> void
       {
         to.genome_(l) = from[l];
 
         for (const auto &al : from[l].args)
           if (std::holds_alternative<D_ADDRESS>(al))
-            self(from[l].locus_of_argument(al));
+            lambda(from[l].locus_of_argument(al), lambda);
       };
 
-      crossover_(random_locus(from));
+      crossover_(random_locus(from), crossover_);
     }
     break;
   }
