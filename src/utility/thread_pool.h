@@ -237,7 +237,6 @@ public:
   {
     if (!accepting_tasks_.exchange(false))
       return;
-    accepting_tasks_ = false;
 
     for (auto &worker : workers_)
       worker.request_stop();
@@ -248,7 +247,7 @@ public:
   /// Stops all threads and cleans up.
   ///
   /// Signals the threads to stop and notifies all waiting threads.
-  ~thread_pool()
+  ~thread_pool() noexcept
   {
     shutdown();
   }
