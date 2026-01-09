@@ -259,6 +259,9 @@ summary<typename evolution<E>::individual_t,
 
     ultraDEBUG << "Tasks running";
 
+    // Poll the pool state while performing progress reporting and
+    // stop-condition handling. All tasks have already been submitted;
+    // no new tasks will be enqueued during this loop.
     while (pool.has_pending_tasks())
     {
       if (from_last_msg.elapsed() > 2s)

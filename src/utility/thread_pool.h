@@ -126,6 +126,11 @@ public:
   /// Any exception thrown by the task is captured and rethrown when the
   /// associated future is accessed.
   ///
+  /// \remark
+  /// Waiting on the returned future does not guarantee that the thread pool
+  /// has no pending tasks. Use wait() to synchronise with the pool's
+  /// completion state.
+  ///
   /// \throws std::logic_error if submit is invoked after the pool is stopped.
   template<class F, class... Args>
   requires std::invocable<F, Args...>
@@ -223,6 +228,11 @@ public:
 
   /// \return `true` if there are unfinished tasks (i.e. if the task counter is
   ///                nonzero)
+  ///
+  /// \note
+  /// This function provides a non-blocking snapshot of the pool state. It
+  /// must not be used for synchronisation. Use `wait()` to reliably wait for
+  /// task completion.
   [[nodiscard]] bool has_pending_tasks() const noexcept
   {
     std::lock_guard lock(task_counter_mutex_);
@@ -230,6 +240,20 @@ public:
   }
 
   /// Blocks until all tasks have been completed.
+  ///
+  /// This function waits until the thread pool has no queued or running tasks.
+  /// It provides a stronger guarantee than waiting on the futures returned by
+  /// `submit()`.
+  ///
+  /// \note
+  /// A future becoming ready only indicates that the associated task has
+  /// produced its result. It does not imply that the thread pool has finished
+  /// its internal bookkeeping for that task. To reliably observe a quiescent
+  /// pool state (e.g. when checking `has_pending_tasks()` or during shutdown),
+  /// this function must be used.
+  ///
+  /// \see submit()
+  /// \see has_pending_tasks()
   void wait()
   {
     std::unique_lock lock(task_counter_mutex_);
