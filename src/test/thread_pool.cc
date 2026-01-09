@@ -61,8 +61,14 @@ TEST_CASE("Run more tasks than threads")
       thread_ids.insert(std::this_thread::get_id());
     }));
 
-  for (auto &f : futures)
-    f.wait();
+  pool.wait();
+
+  // WARNING: do not use
+  //
+  // for (auto &f : futures)
+  //   f.wait();
+  //
+  // See `thread_pool::wait` documentation.
 
   CHECK(!pool.has_pending_tasks());
   CHECK(pool.queue_size() == 0);
