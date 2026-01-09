@@ -17,12 +17,17 @@ namespace ultra
 {
 
 ///
-/// Utility constructor to input hard-coded genomes.
+/// Constructs an active gene.
 ///
-/// \param[in] f pointer to a function
-/// \param[in] a arguments of the function
+/// \param[in] f pointer to the function symbol
+/// \param[in] a arguments list for the function
 ///
-/// A constructor that makes it easy to write genome "by hand":
+/// \pre `f` must not be null
+/// \pre `a.size() == f->arity()`
+///
+/// This constructor is primarily intended for debugging and hand-crafted
+/// individuals:
+///
 ///     std::vector<gene> g(
 ///     {
 ///       {f_add, {1, 2}},  // [0] ADD 1,2
@@ -37,9 +42,17 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
 }
 
 ///
-/// \param[in] i ordinal of an argument
-/// \return      the locus that `i`-th argument of the current function refers
-///              to
+/// Returns the locus referenced by the `i`-th argument.
+///
+/// \param[in] i index of the argument
+/// \return      the locus addressed by argument `i`
+///
+/// \pre `func != nullptr`
+/// \pre `i < func->arity()`
+/// \pre `args[i]` holds a `D_ADDRESS`
+///
+/// The returned locus uses the category required by the function for the
+/// `i`-th argument.
 ///
 locus gene::locus_of_argument(std::size_t i) const
 {
@@ -51,8 +64,17 @@ locus gene::locus_of_argument(std::size_t i) const
 }
 
 ///
-/// \param[in] a an argument
-/// \return      the locus that `a` argument refers to
+/// Returns the locus referenced by an argument value.
+///
+/// \param[in] a an argument belonging to this gene
+/// \return      the locus addressed by `a`
+///
+/// \pre `func != nullptr`
+/// \pre `a` holds a `D_ADDRESS`
+/// \pre `a` must belong to this gene's argument list
+///
+/// The argument position is inferred from the argument list in order to
+/// recover the correct category.
 ///
 locus gene::locus_of_argument(const arg_pack::value_type &a) const
 {
@@ -64,13 +86,28 @@ locus gene::locus_of_argument(const arg_pack::value_type &a) const
          };
 }
 
+///
+/// Returns the output category of the gene.
+///
+/// \return the category of the function represented by this gene
+///
+/// \pre `func != nullptr`
+///
 symbol::category_t gene::category() const
 {
   Expects(func);
   return func->category();
 }
 
-bool gene::is_valid() const
+///
+/// Checks the internal consistency of the gene.
+///
+/// \return `true` if the gene satisfies its invariants
+///
+/// This function verifies that the gene is either empty or fully initialised
+/// with a matching function and argument list.
+///
+bool gene::is_valid() const noexcept
 {
   return (func && func->arity() == args.size()) || (!func && args.empty());
 }
