@@ -298,7 +298,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 /// \see
 /// size()
 ///
-/// When `category() > 1`, active_functions() can be greater than size(). For
+/// When `category() > 1`, `active_slots()` can be greater than `size()`. For
 /// instance consider the following individual:
 ///
 ///     [0,0] function returning a number
@@ -307,7 +307,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///     [2,1] function returning a string
 ///     [3,0] function [2,1] [1,1] [1,0] [0,0]
 ///
-/// `size() == 4` (four slots / rows) and `active_functions() == 5`.
+/// `size() == 4` (four slots / rows) and `active_slots() == 5`.
 ///
 /// \relates gp::individual
 ///
@@ -969,10 +969,10 @@ bool individual::is_valid() const
     return false;
   }
 
-  if (signature_ != hash())
+  if (signature() != hash())
   {
     ultraERROR << "Actual signature ("
-               << signature_ << ") doesn't match the individual` ("
+               << signature() << ") doesn't match the individual` ("
                << hash() << ')';
     return false;
   }
