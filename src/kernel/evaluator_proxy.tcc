@@ -52,7 +52,7 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
                  << ']';
     }
 
-    // The above comparision may produce false positives.
+    // The above comparison may produce false positives.
     // E.g. it fails if a component of the fitness is function of the program's
     // length.
     // For example if the fitness is a 2D vector (where the first component
@@ -80,8 +80,19 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
 }
 
 ///
-/// \param[in] prg the program (individual/team) whose fitness we want to know
-/// \return        an approximation of the fitness of `prg`
+/// Computes a fast (approximate) fitness value for an individual.
+///
+/// \param[in] prg the individual to evaluate
+/// \return        a (possibly approximate) fitness value
+///
+/// If the underlying evaluator provides a `fast` member function, that
+/// function is invoked. Otherwise, this function falls back to the standard
+/// evaluator call.
+///
+/// The fast evaluation:
+/// - is not cached;
+/// - may return an approximation of the true fitness;
+/// - is intended for heuristics, pre-filtering or speculative evaluation.
 ///
 /// \remark
 /// The approximated ("fast") fitness isn't stored in the cache.
@@ -90,7 +101,7 @@ template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::fast(
   const evaluator_individual_t<E> &prg) const
 {
-  if constexpr (requires { eva_(prg, evaluation_type::fast); })
+  if constexpr (requires { eva_.fast(prg); })
     return eva_.fast(prg);
 
   return eva_(prg);
