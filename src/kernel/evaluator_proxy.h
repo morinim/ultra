@@ -21,10 +21,24 @@
 namespace ultra
 {
 ///
-/// Provides a surrogate for an evaluator to control access to it.
+/// Provides controlled access to an evaluator with transparent caching.
 ///
-/// evaluator_proxy uses a custom internal hash table to cache fitness scores
-/// of individuals.
+/// \tparam E an `Evaluator` type
+///
+/// `evaluator_proxy` acts as a surrogate for an `Evaluator`, adding an
+/// internal cache that stores fitness values keyed by individual signatures.
+/// This avoids repeated evaluation of semantically equivalent individuals and
+/// allows expensive evaluators to be reused efficiently.
+///
+/// The proxy preserves the semantics of the underlying evaluator while
+/// extending its capabilities with:
+/// - memoisation of fitness values;
+/// - optional fast (approximate) evaluation;
+/// - optional persistence of both evaluator state and cache contents.
+///
+/// The cache is logically mutable: cache updates do not alter the observable
+/// behaviour of the evaluator. For this reason, most member functions are
+/// `const`.
 ///
 template<Evaluator E>
 class evaluator_proxy
@@ -51,10 +65,9 @@ public:
   [[nodiscard]] const E &core() const noexcept;
 
 private:
-  // Access to the real evaluator.
-  E eva_;
+  E eva_;  // wrapped evaluator
 
-  // Hash table cache.
+  // Cache storing fitness values indexed by individual signatures.
   mutable cache<evaluator_fitness_t<E>> cache_;
 };
 

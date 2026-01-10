@@ -18,8 +18,11 @@
 #define      ULTRA_EVALUATOR_PROXY_TCC
 
 ///
-/// \param[in] eva the "real" evaluator
-/// \param[in] ts  `2^ts` is the number of elements of the cache
+/// Constructs an evaluator proxy.
+///
+/// \param[in] eva the underlying ("real") evaluator
+/// \param[in] ts  cache size expressed as a bit width; the cache contains
+///                `2^ts` elements
 ///
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
@@ -30,8 +33,14 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
 }
 
 ///
-/// \param[in] prg the program (individual/team) whose fitness we want to know
-/// \return        the fitness of `prg`
+/// Evaluates the fitness of an individual.
+///
+/// \param[in] prg the individual to evaluate
+/// \return        the fitness value
+///
+/// If caching is enabled and a cached value exists for the individual's
+/// signature, the cached fitness is returned. Otherwise, the underlying
+/// evaluator is invoked and the result is stored in the cache.
 ///
 template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
@@ -108,10 +117,14 @@ evaluator_fitness_t<E> evaluator_proxy<E>::fast(
 }
 
 ///
+/// Loads the contents of the evaluation cache.
+///
+/// \param[in,out] in input stream
+/// \return           `true` if the cache was loaded successfully
+///
 /// \warning
-/// If the load operation isn't successful the current object COULD BE changed.
-/// The temporary object needed to holds values from the stream conceivably is
-/// too big to justify the "no change" warranty.
+/// If the load operation fails, the cache may be left in a partially modified
+/// state.
 ///
 template<Evaluator E>
 bool evaluator_proxy<E>::load_cache(std::istream &in) const
@@ -120,11 +133,14 @@ bool evaluator_proxy<E>::load_cache(std::istream &in) const
 }
 
 ///
-/// \param[in] in input stream
-/// \return       `true` if the object loaded correctly
+/// Loads the persistent state of the proxy.
+///
+/// \param[in,out] in input stream
+/// \return           `true` if the proxy was loaded successfully
 ///
 /// \warning
-/// If the load operation isn't successful the current object COULD BE changed.
+/// If the load operation fails, the object may be left in a partially modified
+/// state.
 /// The temporary object needed to holds values from the stream conceivably is
 /// too big to justify the "no change" warranty.
 ///
@@ -135,8 +151,10 @@ bool evaluator_proxy<E>::load(std::istream &in)
 }
 
 ///
-/// \param[out] out output stream
-/// \return         `true` if the object was saved correctly
+/// Saves the contents of the evaluation cache.
+///
+// \param[out] out output stream
+/// \return        `true` if the cache was saved successfully
 ///
 template<Evaluator E>
 bool evaluator_proxy<E>::save_cache(std::ostream &out) const
@@ -145,8 +163,14 @@ bool evaluator_proxy<E>::save_cache(std::ostream &out) const
 }
 
 ///
+/// Saves the persistent state of the proxy.
+///
+/// This function saves:
+/// - the state of the underlying evaluator (if it supports persistence);
+/// - the contents of the evaluation cache.
+///
 /// \param[out] out output stream
-/// \return         `true` if the object was saved correctly
+/// \return         `true` if the proxy was saved successfully
 ///
 template<Evaluator E>
 bool evaluator_proxy<E>::save(std::ostream &out) const
@@ -155,7 +179,10 @@ bool evaluator_proxy<E>::save(std::ostream &out) const
 }
 
 ///
-/// Resets the evaluation cache.
+/// Clears the entire evaluation cache.
+///
+/// Subsequent evaluations will recompute fitness values as if the cache were
+/// empty.
 ///
 template<Evaluator E>
 void evaluator_proxy<E>::clear() const
@@ -164,9 +191,10 @@ void evaluator_proxy<E>::clear() const
 }
 
 ///
-/// Resets a specific element of the evaluation cache.
+/// Clears a specific cache entry.
 ///
-/// \param[in] h the signature of the element to be "forgiven"
+/// \param[in] h signature of the individual whose cached fitness should be
+///              removed
 ///
 template<Evaluator E>
 void evaluator_proxy<E>::clear(const hash_t &h) const
@@ -175,7 +203,9 @@ void evaluator_proxy<E>::clear(const hash_t &h) const
 }
 
 ///
-/// \return a read only reference to the core evaluator.
+/// Provides read-only access to the underlying evaluator.
+///
+/// \return a const reference to the wrapped evaluator
 ///
 template<Evaluator E>
 const E &evaluator_proxy<E>::core() const noexcept
