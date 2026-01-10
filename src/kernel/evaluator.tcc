@@ -70,6 +70,62 @@ double test_evaluator<I>::operator()(const I &prg) const
 }
 
 ///
+/// Loads the persistent state of an evaluator, if supported.
+///
+/// \tparam E an `Evaluator` type
+///
+/// \param[in,out] in input stream
+/// \param[in,out] e  pointer to the evaluator instance
+/// \return           `true` if the evaluator was loaded successfully or if the
+///                   evaluator doesn't support persistence
+///
+/// This function provides optional persistence support for evaluators. If the
+/// evaluator type `E` defines a member function with the signature:
+///
+/// \code
+/// bool load(std::istream &);
+/// \endcode
+///
+/// then that function is invoked. Otherwise, the evaluator is assumed to have
+/// no persistent state and the operation succeeds trivially.
+///
+template<Evaluator E> bool load_eva(std::istream &in, E *e)
+{
+  if constexpr (requires { { e->load(in) } -> std::convertible_to<bool>; })
+    return e->load(in);
+
+  return true;
+}
+
+///
+/// Saves the persistent state of an evaluator, if supported.
+///
+/// \tparam E an `Evaluator` type
+///
+/// \param[out] out output stream
+/// \param[in]  e   evaluator instance
+/// \return         `true` if the evaluator was saved successfully or if the
+///                 evaluator doesn't support persistence
+///
+/// This function provides optional persistence support for evaluators. If the
+/// evaluator type `E` defines a member function with the signature:
+///
+/// \code
+/// bool save(std::ostream &) const;
+/// \endcode
+///
+/// then that function is invoked. Otherwise, the evaluator is assumed to have
+/// no persistent state and the operation succeeds trivially.
+///
+template<Evaluator E> bool save_eva(std::ostream &out, const E &e)
+{
+  if constexpr (requires { { e.save(out) } -> std::convertible_to<bool>; })
+    return e.save(out);
+
+  return true;
+}
+
+///
 /// Adds a fixed delay to each evaluation.
 ///
 /// \param[in] ms the delay duration in applied to every evaluation

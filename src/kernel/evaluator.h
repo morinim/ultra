@@ -47,11 +47,6 @@ concept Evaluator =
 template<Evaluator E> using evaluator_individual_t = closure_arg_t<E>;
 template<Evaluator E> using evaluator_fitness_t = closure_return_t<E>;
 
-// Usually persistance of simple evaluators isn't required. Unusual evaluators
-// have to implement load/save.
-template<Evaluator E> bool load_eva(std::istream &, E *) { return true; }
-template<Evaluator E> bool save_eva(std::ostream &, const E &) { return true; }
-
 enum class evaluation_type {standard, fast};
 
 enum class test_evaluator_type {realistic, fixed, random, age};
