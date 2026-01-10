@@ -70,7 +70,7 @@ double test_evaluator<I>::operator()(const I &prg) const
 /// This is useful for simulating complex evaluators.
 ///
 template<Individual I>
-void test_evaluator<I>::delay(std::chrono::milliseconds ms)
+void test_evaluator<I>::delay(std::chrono::milliseconds ms) noexcept
 {
   delay_ = ms;
 }

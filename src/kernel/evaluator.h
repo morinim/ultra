@@ -26,9 +26,26 @@
 namespace ultra
 {
 
+///
+/// Defines the requirements for a fitness evaluator.
+///
+/// \tparam F evaluator functor or callable type
+/// \tparam I individual type deduced from the callable signature
+///
+/// An Evaluator is a callable object that:
+/// - operates on an `Individual` type;
+/// - can be invoked on a `const` instance of the evaluator;
+/// - returns a value satisfying the `Fitness` concept.
+///
+/// Requiring const-invocability ensures that evaluators can be safely used
+/// through read-only references, which is essential when they are wrapped
+/// by utility classes such as `evaluator_proxy` and invoked concurrently
+/// or through logically-const interfaces.
+///
 template<class F, class I = closure_arg_t<F>>
 concept Evaluator =
-  Individual<I> && std::invocable<F, I> && Fitness<std::invoke_result_t<F, I>>;
+  Individual<I> && std::invocable<const F &, I>
+  && Fitness<std::invoke_result_t<F, I>>;
 
 template<Evaluator E> using evaluator_individual_t = closure_arg_t<E>;
 template<Evaluator E> using evaluator_fitness_t = closure_return_t<E>;
@@ -53,7 +70,7 @@ public:
 
   void delay(std::chrono::milliseconds);
 
-  [[nodiscard]] double operator()(const I &) const;
+  [[nodiscard]] double operator()(const I &) const noexcept;
 
 private:
   const test_evaluator_type et_;
