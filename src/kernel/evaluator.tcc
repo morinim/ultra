@@ -17,6 +17,11 @@
 #if !defined(ULTRA_EVALUATOR_TCC)
 #define      ULTRA_EVALUATOR_TCC
 
+///
+/// Constructs a test evaluator with the specified evaluation strategy.
+///
+/// \param[in] et the evaluation strategy to use
+///
 template<Individual I>
 test_evaluator<I>::test_evaluator(test_evaluator_type et) : et_(et)
 {
@@ -24,18 +29,20 @@ test_evaluator<I>::test_evaluator(test_evaluator_type et) : et_(et)
 }
 
 ///
-/// \param[in] prg a program (individual/team)
-/// \return        fitness value for individual `prg`
+/// Evaluates the fitness of an individual.
 ///
-/// Depending on the type of test_evaluator returns:
-/// - a distinct, random, time-invariant fitness value for each semantically
-///   equivalent `prg` (realistic);
-/// - a random, time-variant fitness value for `prg` (random);
-/// - a fixed, time-invariant fitness value for every individual of the
-///   population (fixed);
-/// - the age of the individual (age). This is useful when using a static
-///   layered_population produced via `make_debug_population` (every individual
-///   has a distinct fitness).
+/// \param[in] prg the individual whose fitness is to be computed
+/// \return        the fitness value
+///
+/// The returned value depends on the evaluator type selected at construction:
+/// - a fixed, time-invariant value for all individuals (`fixed`);
+/// - a random, time-variant value (`random`);
+/// - a deterministic value derived from the individual's signature
+///   (`realistic`);
+/// - the age of the individual (`age`).
+///
+/// If a delay has been configured via `delay`, the evaluation blocks for the
+/// specified duration before computing the fitness.
 ///
 template<Individual I>
 double test_evaluator<I>::operator()(const I &prg) const
@@ -63,11 +70,12 @@ double test_evaluator<I>::operator()(const I &prg) const
 }
 
 ///
-/// Add a fixed delay for every call to the evaluator.
+/// Adds a fixed delay to each evaluation.
 ///
-/// \param[in] ms a delay
+/// \param[in] ms the delay duration in applied to every evaluation
 ///
-/// This is useful for simulating complex evaluators.
+/// This is useful for simulating computationally expensive fitness functions
+/// when testing scheduling, parallelism, or caching behaviour.
 ///
 template<Individual I>
 void test_evaluator<I>::delay(std::chrono::milliseconds ms) noexcept

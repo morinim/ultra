@@ -29,9 +29,6 @@ namespace ultra
 ///
 /// Defines the requirements for a fitness evaluator.
 ///
-/// \tparam F evaluator functor or callable type
-/// \tparam I individual type deduced from the callable signature
-///
 /// An Evaluator is a callable object that:
 /// - operates on an `Individual` type;
 /// - can be invoked on a `const` instance of the evaluator;
@@ -60,7 +57,29 @@ enum class evaluation_type {standard, fast};
 enum class test_evaluator_type {realistic, fixed, random, age};
 
 ///
-/// A fitness function used for debug purpose.
+/// A configurable fitness evaluator intended for testing and debugging.
+///
+/// \tparam I an `Individual` type
+///
+/// test_evaluator provides several simple, deterministic or stochastic fitness
+/// strategies that are useful for:
+/// - validating the behaviour of evolutionary operators;
+/// - benchmarking infrastructure components (e.g. parallel evaluation,
+///   caching, scheduling);
+/// - debugging population dynamics without relying on a real problem domain.
+///
+/// The evaluator can optionally introduce a fixed delay for each evaluation,
+/// allowing simulation of expensive fitness computations.
+///
+/// \note
+/// This evaluator is primarily intended for testing and debugging purposes.
+/// It makes no guarantees about fitness meaningfulness or collision
+/// resistance.
+///
+/// \remark
+/// The class is not thread-safe if `delay` is called concurrently with
+/// evaluation. Concurrent evaluation without modifying the delay is safe
+/// provided that the underlying random generator is thread-safe.
 ///
 template<Individual I>
 class test_evaluator
@@ -68,9 +87,9 @@ class test_evaluator
 public:
   explicit test_evaluator(test_evaluator_type = test_evaluator_type::random);
 
-  void delay(std::chrono::milliseconds);
+  void delay(std::chrono::milliseconds) noexcept;
 
-  [[nodiscard]] double operator()(const I &) const noexcept;
+  [[nodiscard]] double operator()(const I &) const;
 
 private:
   const test_evaluator_type et_;
