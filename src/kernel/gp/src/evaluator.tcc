@@ -18,13 +18,23 @@
 #define      ULTRA_SRC_EVALUATOR_TCC
 
 ///
-/// \param[in] d `multi_dataset` that the evaluator will use
+/// Constructs the evaluator bound to a dataset.
+///
+/// \param[in] d dataset used for fitness evaluation
 ///
 template<class D>
 evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 {
 }
 
+///
+/// Returns the dataset currently used for evaluation.
+///
+/// \return pointer to the active dataset
+///
+/// For `multi_dataset `, this returns the currently selected dataset.
+/// Otherwise, it returns the dataset itself.
+///
 template<class D>
 auto *evaluator<D>::data() const noexcept
 {
@@ -36,7 +46,9 @@ auto *evaluator<D>::data() const noexcept
 
 
 ///
-/// \param[in] d the training dataset
+/// Constructs the evaluator.
+///
+/// \param[in] d training dataset
 ///
 template<Individual P, class F, class D>
 requires ErrorFunction<F, D>
@@ -46,11 +58,11 @@ sum_of_errors_evaluator<P, F, D>::sum_of_errors_evaluator(D &d)
 }
 
 ///
-/// Sums the error reported by the error functor over a training set.
+/// Computes the average error using a configurable sampling step.
 ///
-/// \param[in] prg  program (individual/team) used for fitness evaluation
-/// \param[in] step consider just `1` example every `step`
-/// \return         the fitness (greater is better, max is `0`)
+/// \param[in] prg  program to evaluate
+/// \param[in] step sampling steo (one example every `step`)
+/// \return         fitness value
 ///
 template<Individual P, class F, class D>
 requires ErrorFunction<F, D>
@@ -82,8 +94,10 @@ auto sum_of_errors_evaluator<P, F, D>::sum_of_errors_impl(
 }
 
 ///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
+/// Computes the fitness using all training examples.
+///
+/// \param[in] prg program to evaluate
+/// \return        fitness value (greater is better, max is `0`)
 ///
 template<Individual P, class F, class D>
 requires ErrorFunction<F, D>
@@ -93,8 +107,12 @@ auto sum_of_errors_evaluator<P, F, D>::operator()(const P &prg) const
 }
 
 ///
-/// \param[in] prg program (individual/team) used for fitness evaluation
-/// \return        the fitness (greater is better, max is `0`)
+/// Computes a faster approximation of the fitness.
+///
+/// \param[in] prg program to evaluate
+/// \return        approximate fitness value
+///
+/// \pre The dataset must contain at least 100 examples.
 ///
 /// This function is similar to operator()() but will skip `4` out of `5`
 /// training instances, so it's faster.
@@ -108,9 +126,10 @@ auto sum_of_errors_evaluator<P, F, D>::fast(const P &prg) const
 }
 
 ///
-/// \param[in] prg program (individual/team) to be transformed in an oracle
-/// \return        the oracle associated with `prg` (`nullptr` in case of
-///                errors).
+/// Builds an oracle associated with a program.
+///
+/// \param[in] prg Program to transform into an oracle
+/// \return        oracle instance (`nullptr` in case of errors)
 ///
 template<Individual P, class F, class D>
 requires ErrorFunction<F, D>
@@ -248,6 +267,11 @@ double count_error_functor<P>::operator()(const example &example) const
   return err ? 1.0 : 0.0;
 }
 
+///
+/// Constructs the evaluator.
+///
+/// \param[in] d training dataset
+///
 template<Individual P>
 gaussian_evaluator<P>::gaussian_evaluator(multi_dataset<dataframe> &d)
   : evaluator(d)
@@ -255,8 +279,10 @@ gaussian_evaluator<P>::gaussian_evaluator(multi_dataset<dataframe> &d)
 }
 
 ///
-/// \param[in] prg program used for class recognition
-/// \return        the fitness (greater is better, max is `0`)
+/// Computes the classification fitness.
+///
+/// \param[in] prg program to evaluate
+/// \return        fitness value (greater is better, max is `0`)
 ///
 template<Individual P>
 double gaussian_evaluator<P>::operator()(const P &prg) const
@@ -289,9 +315,10 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 }
 
 ///
-/// \param[in] prg program (individual/team) to be transformed in an oracle
-/// \return        the oracle associated with `prg` (`nullptr` in case of
-///                errors).
+/// Builds a Gaussian oracle for the given program.
+///
+/// \param[in] prg program to transform into an oracle
+/// \return        oracle instance (`nullptr` in case of errors).
 ///
 template<Individual P>
 std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
@@ -299,6 +326,11 @@ std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
   return std::make_unique<gaussian_oracle<P>>(prg, *this->data());
 }
 
+///
+/// Constructs the evaluator.
+///
+/// \param[in] d training dataset
+///
 template<Individual P>
 binary_evaluator<P>::binary_evaluator(multi_dataset<dataframe> &d)
   : evaluator(d)
@@ -306,8 +338,12 @@ binary_evaluator<P>::binary_evaluator(multi_dataset<dataframe> &d)
 }
 
 ///
-/// \param[in] prg program used for class recognition
-/// \return        the fitness (greater is better, max is `0`)
+/// Computes the binary classification fitness.
+///
+/// \param[in] prg program to evaluate
+/// \return        fitness value (greater is better, max is `0`)
+///
+/// \pre the dataset must contain exactly two classes
 ///
 template<Individual P>
 double binary_evaluator<P>::operator()(const P &prg) const
@@ -326,9 +362,10 @@ double binary_evaluator<P>::operator()(const P &prg) const
 }
 
 ///
-/// \param[in] prg program (individual/team) to be transformed in an oracle
-/// \return        the oracle associated with `prg` (`nullptr` in case of
-///                errors).
+/// Builds a binary classification oracle.
+///
+/// \param[in] prg program to transform into an oracle
+/// \return        oracle instance (`nullptr` in case of errors)
 ///
 template<Individual P>
 std::unique_ptr<basic_oracle> binary_evaluator<P>::oracle(const P &prg) const
