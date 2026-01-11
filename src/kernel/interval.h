@@ -13,20 +13,22 @@
 #if !defined(ULTRA_INTERVAL_H)
 #define      ULTRA_INTERVAL_H
 
-#include <utility>
-
 #include "utility/assert.h"
+
+#include <numeric>
+#include <utility>
 
 namespace ultra
 {
 
-template<class A> concept ArithmeticScalar = std::is_arithmetic_v<A>;
+template<class A> concept ArithmeticScalar =
+  std::is_arithmetic_v<A> && !std::same_as<A, bool>;
 
 
 ///
 /// Right-open interval.
 ///
-/// `interval_t{m, u}` specifies the half-open (left-closed, right-open)
+/// `interval{m, u}` represents the half-open (left-closed, right-open)
 /// interval `[m, u[`.
 ///
 template<ArithmeticScalar T>
