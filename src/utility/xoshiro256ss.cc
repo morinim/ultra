@@ -1,7 +1,7 @@
 /**
  *  \file
  *
- *  \copyright Copyright (C) 2018-2025 Manlio Morini.
+ *  \copyright Copyright (C) 2018-2024 Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -11,9 +11,10 @@
  *  \see http://xoroshiro.di.unimi.it/
  */
 
-#include <algorithm>
-
 #include "xoshiro256ss.h"
+
+#include <algorithm>
+#include <iostream>
 
 namespace vigna
 {
@@ -92,11 +93,11 @@ void xoshiro256ss::seed(const std::array<std::uint64_t, 4> &s) noexcept
 ///
 /// Advances the internal state of the engine.
 ///
-/// \param[in] z magnitute in the change of the internal state
+/// \param[in] z magnitude in the change of the internal state
 ///
 /// By any means equivalent to `z` consecutive calls of `operator()`.
 ///
-void xoshiro256ss::discard(unsigned long long z) noexcept
+void xoshiro256ss::discard(std::uint64_t z) noexcept
 {
   while (z--)
     operator()();
@@ -157,7 +158,7 @@ void xoroshiro128p::seed(xoroshiro128p::result_type s) noexcept
 ///
 /// By any means equivalent to `z` consecutive calls of `operator()`.
 ///
-void xoroshiro128p::discard(unsigned long long z) noexcept
+void xoroshiro128p::discard(std::uint64_t z) noexcept
 {
   while (z--)
     operator()();

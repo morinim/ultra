@@ -23,7 +23,8 @@
 #define      PRNG_XOSHIRO_H
 
 #include <array>
-#include <iostream>
+#include <cstdint>
+#include <iosfwd>
 #include <limits>
 #include <random>
 
@@ -114,7 +115,7 @@ public:
 	return result_starstar;
   }
 
-  void discard(unsigned long long) noexcept;
+  void discard(std::uint64_t) noexcept;
   void seed(result_type = def_seed) noexcept;
   void seed(const std::array<std::uint64_t, 4> &) noexcept;
 
@@ -191,7 +192,7 @@ public:
     return result;
   }
 
-  void discard(unsigned long long) noexcept;
+  void discard(std::uint64_t) noexcept;
   void seed(result_type = def_seed) noexcept;
 
 #if __cplusplus >= 202002L
@@ -210,7 +211,7 @@ public:
 private:
   static constexpr result_type def_seed = 0xcced1fc561884152;
 
-  std::array<std::uint64_t, 2> state {};
+  std::array<std::uint64_t, 2> state {def_seed};
 };  // class xoroshiro128p
 
 }  // namespace vigna

@@ -10,11 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <random>
-
 #include "utility/timer.h"
 #include "utility/xoshiro256ss.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <random>
 
 int main()
 {
