@@ -10,18 +10,39 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <atomic>
-
 #include "kernel/random.h"
+
+#include <atomic>
 
 namespace
 {
 
 using namespace ultra::random;
 
-// See:
-// - https://stackoverflow.com/a/77510422/3235496
-// - https://www.johndcook.com/blog/2016/01/29/random-number-generator-seed-mistakes/
+///
+/// Generates a unique seed for pseudo-random number generators.
+///
+/// \param[in] unpredictable if `true`, the initial seed is initialised from
+///            `std::random_device`; otherwise a deterministic seed is used
+/// \return    a unique seed value suitable for seeding a PRNG
+///
+/// This function returns a monotonically increasing seed value shared across
+/// across the entire process. It's used to initialise thread-local random
+/// engines so that each thread receives a distinct and independent random
+/// sequence.
+///
+/// By default, the initial seed value is deterministic, ensuring reproducible
+/// runs. When `unpredictable` is set to true, the initial seed is derived from
+/// `std::random_device`, introducing non-determinism at the process level.
+///
+/// The function is thread-safe and lock-free. Seed generation relies on an
+/// atomic counter with relaxed memory ordering, which is sufficient because no
+/// inter-thread ordering constraints are required.
+///
+/// \see
+/// - https://stackoverflow.com/a/77510422/3235496
+/// - https://www.johndcook.com/blog/2016/01/29/random-number-generator-seed-mistakes/
+///
 [[nodiscard]] engine_t::result_type next_seed(bool unpredictable = false)
 {
   static std::atomic<engine_t::result_type> process_seed(
@@ -69,7 +90,19 @@ engine_t &engine()
 }
 
 ///
-/// Sets the shared engine to an unpredictable state.
+/// Switches the random subsystem to an unpredictable state.
+///
+/// This function initialises the shared seed generator using entropy from
+/// `std::random_device`, ensuring that subsequently created random engines
+/// are seeded unpredictably.
+///
+/// Each thread owns its own thread-local random engine; therefore, only
+/// engines created *after* this call are affected. Existing engines are
+/// left unchanged.
+///
+/// This design allows deterministic and non-deterministic random behaviour
+/// to coexist within the same program, depending on when engines are
+/// initialised.
 ///
 void randomize()
 {
