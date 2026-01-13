@@ -17,7 +17,8 @@ Vulnerability priority is determined by the [CVSS v4.0 Rating][CVSS]:
 
 If you discover a security vulnerability, please **do not open a public issue**.
 
-Instead write at **info~~REMOVE_ME~~@ultraevolution.org**.
+Instead, please use the email specified on our [contact page][contact].
+
 
 ### Our Process
 
@@ -28,4 +29,5 @@ Instead write at **info~~REMOVE_ME~~@ultraevolution.org**.
 We ask that you practice responsible disclosure and refrain from sharing details publicly until a patch has been released.
 
 
+[contact]: https://ultraevolution.org/contact/
 [CVSS]: https://www.first.org/cvss/calculator/4.0
