@@ -277,7 +277,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "({0} % {1})";
+    return "({0}%{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
@@ -408,7 +408,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "(%%1%%-%%2%%)";
+    return "({0}-{1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
