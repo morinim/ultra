@@ -28,6 +28,33 @@ Instead, please use the email specified on our [contact page][contact].
 
 We ask that you practice responsible disclosure and refrain from sharing details publicly until a patch has been released.
 
+---
+
+## Verifying Releases
+
+To ensure the integrity of our software, all important version tags (major releases, minor releases and security fixes) are cryptographically signed.
+
+You can verify these signatures using our [public GPG key][key].
+
+### Verification Steps
+
+Import the key:
+
+```Bash
+gpg --import .github/KEYS
+```
+
+and ensure the imported key matches our official fingerprint: `9EB0 2E6E 5355 2D6E 6B20 C09A CA8B 2AE5 C5E3 D972`
+
+To verify a tag:
+
+```Bash
+git tag -v v1.0.0
+```
+
+A "good signature" message confirms that the release was signed by the ULTRA project and has not been altered since it was tagged.
+
 
 [contact]: https://ultraevolution.org/contact/
 [CVSS]: https://www.first.org/cvss/calculator/4.0
+[key]: https://github.com/morinim/ultra/blob/main/.github/KEYS
