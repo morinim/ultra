@@ -531,11 +531,11 @@ void run(const imgui_app::program::settings &);
 [[nodiscard]] bool setup_cmd(argh::parser &);
 }
 
-namespace test  // testing and comparison related variables
+namespace run  // running/testing and comparison related variables
 {
 bool nogui {false};
 
-enum class mode {compare, test};
+enum class mode {compare, run, summary};
 
 struct settings
 {
@@ -563,15 +563,15 @@ std::shared_mutex summary_mutex;
 
 std::map<std::filesystem::path, data> collection;
 
-[[nodiscard]] test::settings read_settings(const std::filesystem::path &);
-[[nodiscard]] std::map<std::filesystem::path, test::data> setup_collection(
-  std::filesystem::path, std::filesystem::path, test::mode);
+[[nodiscard]] run::settings read_settings(const std::filesystem::path &);
+[[nodiscard]] std::map<std::filesystem::path, run::data> setup_collection(
+  std::filesystem::path, std::filesystem::path, run::mode);
 
 void run(const imgui_app::program::settings &, mode);
 
-[[nodiscard]] bool setup_compare_cmd(argh::parser &);
-[[nodiscard]] bool setup_test_cmd(argh::parser &);
-}  // namespace test
+[[nodiscard]] bool setup_run_cmd(argh::parser &);
+[[nodiscard]] bool setup_summary_cmd(argh::parser &);
+}  // namespace run
 
 // Other variables and functions.
 const char *current_str = "Current";
@@ -602,13 +602,13 @@ void render_runs()
   static bool reference_values {true};
 
   std::vector<unsigned> data;
-  for (std::shared_lock guard(test::summary_mutex);
-       const auto &t : test::collection)
+  for (std::shared_lock guard(run::summary_mutex);
+       const auto &t : run::collection)
     data.push_back(t.second.current.runs);
 
   std::vector<std::string> labels;
 
-  for (const auto &t : test::collection)
+  for (const auto &t : run::collection)
   {
     labels.push_back(t.first.stem().string());
     data.push_back(t.second.reference.runs);
@@ -619,21 +619,21 @@ void render_runs()
                          [](const auto &str) noexcept { return str.data(); });
 
   const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(test::collection.size());
+  std::vector<double> positions(run::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
-  ImGui::Checkbox("Reference values##Test##Runs", &reference_values);
+  ImGui::Checkbox("Reference values##Run##Runs", &reference_values);
 
-  if (ImPlot::BeginPlot("##Runs##Test", ImVec2(-1, -1), ImPlotFlags_NoTitle))
+  if (ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), ImPlotFlags_NoTitle))
   {
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Runs",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test::collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), run::collection.size(),
                            labels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test::collection.size(), 0.5, 0, 0);
+                          run::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -644,8 +644,8 @@ void render_success_rate()
 
   std::vector<double> data;
   std::vector<std::string> rlabels;
-  for (std::shared_lock guard(test::summary_mutex);
-       const auto &t : test::collection)
+  for (std::shared_lock guard(run::summary_mutex);
+       const auto &t : run::collection)
   {
     data.push_back(t.second.current.success_rate * 100.0);
     rlabels.push_back(std::to_string(t.second.current.runs));
@@ -653,7 +653,7 @@ void render_success_rate()
 
   std::vector<std::string> glabels;
 
-  for (const auto &t : test::collection)
+  for (const auto &t : run::collection)
   {
     glabels.push_back(t.first.stem().string());
     data.push_back(t.second.reference.success_rate * 100.0);
@@ -664,29 +664,29 @@ void render_success_rate()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(test::collection.size());
+  std::vector<double> positions(run::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
-  ImGui::Checkbox("Reference values##Test##Success rate", &reference_values);
+  ImGui::Checkbox("Reference values##Run##Success rate", &reference_values);
 
-  if (ImPlot::BeginPlot("##Success rate##Test", ImVec2(-1, -1),
+  if (ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1),
                         ImPlotFlags_NoTitle))
   {
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Success rate",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), test::collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), run::collection.size(),
                            glabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          test::collection.size(), 0.5, 0, 0);
+                          run::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
 
 void render_fitness_across_datasets()
 {
-  if (!test::collection.size())
+  if (!run::collection.size())
     return;
 
   const auto square_dim([](std::size_t n)
@@ -697,8 +697,8 @@ void render_fitness_across_datasets()
   constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
   std::vector<double> best_fit, fit_mean, fit_std_dev;
   std::vector<double> runs;
-  for (std::shared_lock guard(test::summary_mutex);
-       const auto &t : test::collection)
+  for (std::shared_lock guard(run::summary_mutex);
+       const auto &t : run::collection)
   {
     if (t.second.current.best_fit.size())
       best_fit.push_back(t.second.current.best_fit[0]);
@@ -719,7 +719,7 @@ void render_fitness_across_datasets()
   std::vector<double> ref_best_fit, ref_fit_mean, ref_fit_std_dev;
   std::vector<double> ref_runs;
 
-  for (const auto &t : test::collection)
+  for (const auto &t : run::collection)
   {
     {
       std::ostringstream ss;
@@ -746,17 +746,17 @@ void render_fitness_across_datasets()
   std::ranges::transform(labels, plot_labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
-  std::vector<double> positions(test::collection.size());
+  std::vector<double> positions(run::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   const std::string title("Fitness across datasets");
 
-  const auto n(square_dim(test::collection.size()));
+  const auto n(square_dim(run::collection.size()));
 
   if (ImPlot::BeginSubplots(title.c_str(), n, n, ImVec2(-1, -1),
                             ImPlotSubplotFlags_NoLegend))
   {
-    for (std::size_t i(0); i < test::collection.size(); ++i)
+    for (std::size_t i(0); i < run::collection.size(); ++i)
     {
       bool style_pushed(false);
 
@@ -1459,7 +1459,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
     last_update.restart();
 }
 
-void render_test(const imgui_app::program &prg, bool *p_open)
+void render_run(const imgui_app::program &prg, bool *p_open)
 {
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -1475,7 +1475,7 @@ void render_test(const imgui_app::program &prg, bool *p_open)
   static bool mxz_fitness_across_datasets(false);
   static bool mxz_4(false);
 
-  if (ImGui::Begin("Test##Window", p_open))
+  if (ImGui::Begin("Run##Window", p_open))
   {
     ImGui::Checkbox("runs", &show_runs_check);
     ImGui::SameLine();
@@ -1722,11 +1722,11 @@ void get_logs(std::stop_token stoken)
 //
 void get_summaries(std::stop_token stoken)
 {
-  assert(!test::collection.empty());
+  assert(!run::collection.empty());
 
   while (!stoken.stop_requested())
   {
-    for (auto &test : test::collection)
+    for (auto &test : run::collection)
     {
       const auto &dataset(test.first);
       const std::filesystem::path base_dir(dataset.parent_path());
@@ -1745,7 +1745,7 @@ void get_summaries(std::stop_token stoken)
           continue;
       }
 
-      std::lock_guard guard(test::summary_mutex);
+      std::lock_guard guard(run::summary_mutex);
       test.second.current = summary_data(summary);
     }
 
@@ -1769,7 +1769,7 @@ void get_summaries(std::stop_token stoken)
   return threshold;
 }
 
-test::settings test::read_settings(const std::filesystem::path &test_fn)
+run::settings run::read_settings(const std::filesystem::path &test_fn)
 {
   assert(test_fn.extension() == ".csv");
 
@@ -1787,7 +1787,7 @@ test::settings test::read_settings(const std::filesystem::path &test_fn)
     return {};
   }
 
-  test::settings ret;
+  run::settings ret;
 
   tinyxml2::XMLConstHandle handle(&doc);
   const auto h_ultra(handle.FirstChildElement("ultra"));
@@ -1820,7 +1820,7 @@ test::settings test::read_settings(const std::filesystem::path &test_fn)
 /*********************************************************************
  * Command line
  ********************************************************************/
-enum class cmdl_result {compare, error, help, monitor, test};
+enum class cmdl_result {error, help, monitor, run, summary};
 
 void cmdl_usage()
 {
@@ -1834,49 +1834,51 @@ void cmdl_usage()
     << "Please enter your selection:\n"
     << "\n"
     <<
-  "> wopr compare <directory> <directory>\n"
+  "> wopr monitor [path]\n"
   "\n"
-  "  Only results contained within the first directory are considered for\n"
-  "  comparison with results from the second directory.\n"
-  "\n"
-  "> wopr monitor [log directory or specific test name]\n"
-  "\n"
-  "  The directory must contain at least one search log produced by Ultra.\n"
-  "  If omitted, the current working directory is used.\n"
-  "  When using a test name, skip the extension (e.g. use \"/path/test\" and\n"
-  "  NOT \"/path/test.csv\").\n"
+  "  OBSERVE A RUNNING TEST IN REAL-TIME\n"
+  "  The path must point to a directory containing a search log produced by\n"
+  "  Ultra. If omitted, the current working directory is used.\n"
+  "  Omit the file extension when specifying a test path (e.g. use\n"
+  "  \"/path/test\" instead of \"/path/test.csv\").\n"
   "\n"
   "  Available switches:\n"
   "\n"
   "  --dynamic    <filepath>\n"
   "  --layers     <filepath>\n"
   "  --population <filepath>\n"
-  "      Allow monitoring of files with names different from the defaults.\n"
+  "      Monitor files with non-default names.\n"
   "  --refresh <seconds>\n"
   "      Set the refresh rate for updating plots.\n"
   "  --window <nr>\n"
-  "      Restrict monitoring window to the last `nr` generations.\n"
+  "      Restrict the monitoring window to the last `nr` generations.\n"
   "\n"
-  "> wopr test [directory or file]\n"
+  "> wopr run [path]\n"
   "\n"
-  "  The argument must be either a folder containing at least one .csv\n"
-  "  dataset (and optionally a test configuration file), or a specific\n"
-  "  dataset file. If omitted, the current directory is used.\n"
+  "  EXECUTE TESTS ON THE SPECIFIED DATASET(s)\n"
+  "  The argument must be a folder containing at least one .csv dataset\n"
+  "  (and optionally a config file), or a specific dataset file. If omitted,\n"
+  "  the current directory is used.\n"
   "\n"
   "  Available switches:\n"
   "\n"
   "  --generations <nr>\n"
   "      Set the maximum number of generations in a run.\n"
   "  --nogui\n"
-  "      Disable the graphical user interface performing the test in headless\n"
-  "      mode.\n"
+  "      Disable the graphical user interface (headless mode).\n"
   "  --reference <directory>\n"
   "      Specify a directory containing reference results.\n"
   "  --runs <nr>\n"
   "      Perform the specified number of evolutionary runs.\n"
   "  --threshold <val>\n"
-  "      Set the success threshold for a run. If the value ends with '%', it\n"
-  "      is interpreted as accuracy; otherwise, ast a fitness value.\n"
+  "      Set the success threshold. Values ending in '%' are treated as\n"
+  "      accuracy; otherwise, as fitness value.\n"
+  "\n"
+  "> wopr summary <directory> [directory]\n"
+  "\n"
+  "  DISPLAY OR COMPARE STATS FOR COMPLETED TESTS\n"
+  "  Displays a high-level overview of the first directory. If a second\n"
+  "  directory is provided, a comparison is performed.\n"
   "\n"
   "--help\n"
   "    Display this help screen.\n"
@@ -1907,7 +1909,7 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
-std::map<std::filesystem::path, test::data> test::setup_collection(
+std::map<std::filesystem::path, run::data> run::setup_collection(
   std::filesystem::path in1, std::filesystem::path in2, mode m)
 {
   using namespace ultra;
@@ -1924,9 +1926,9 @@ std::map<std::filesystem::path, test::data> test::setup_collection(
 
   const auto show_settings([](const std::filesystem::path &p)
   {
-    test::settings ts;
+    run::settings ts;
 
-    if (const auto i(test::collection.find(p)); i != test::collection.end())
+    if (const auto i(run::collection.find(p)); i != run::collection.end())
       ts = i->second.conf;
 
     std::cout << "Settings for " << p.filename()
@@ -1946,7 +1948,7 @@ std::map<std::filesystem::path, test::data> test::setup_collection(
     std::cout << '\n';
   });
 
-  std::map<fs::path, test::data> ret;
+  std::map<fs::path, run::data> ret;
 
   if (fs::is_directory(in1))
   {
@@ -1956,9 +1958,9 @@ std::map<std::filesystem::path, test::data> test::setup_collection(
       if (const auto path(entry.path());
           ultra::iequals(path.extension(), ".csv"))
       {
-        if (m == mode::test)
+        if (m == mode::run)
         {
-          ret.insert({path, test::read_settings(path)});
+          ret.insert({path, run::read_settings(path)});
           show_settings(path);
         }
         else
@@ -1967,9 +1969,9 @@ std::map<std::filesystem::path, test::data> test::setup_collection(
   }
   else if (fs::exists(in1))
   {
-    if (m == mode::test)
+    if (m == mode::run)
     {
-      ret.insert({in1, test::read_settings(in1)});
+      ret.insert({in1, run::read_settings(in1)});
       show_settings(in1);
     }
     else
@@ -2152,7 +2154,7 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   return true;
 }
 
-bool test::setup_compare_cmd(argh::parser &cmdl)
+bool run::setup_summary_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
@@ -2167,15 +2169,15 @@ bool test::setup_compare_cmd(argh::parser &cmdl)
   const std::filesystem::path cmp2(pos_args.size() == 3 ? pos_args[2]
                                                         : pos_args[3]);
 
-  test::collection = setup_collection(cmp1, cmp2, mode::compare);
+  run::collection = setup_collection(cmp1, cmp2, mode::compare);
 
-  if (test::collection.empty())
+  if (run::collection.empty())
     return false;
 
   return true;
 }
 
-bool test::setup_test_cmd(argh::parser &cmdl)
+bool run::setup_run_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
@@ -2186,9 +2188,9 @@ bool test::setup_test_cmd(argh::parser &cmdl)
                                                               : pos_args[2]);
   const std::filesystem::path ref_folder(cmdl("reference", "").str());
 
-  test::collection = setup_collection(test_input, ref_folder, mode::test);
+  run::collection = setup_collection(test_input, ref_folder, mode::run);
 
-  if (test::collection.empty())
+  if (run::collection.empty())
     return false;
 
   std::optional<unsigned> generations;
@@ -2210,7 +2212,7 @@ bool test::setup_test_cmd(argh::parser &cmdl)
     threshold = extract_threshold(v);
 
   if (generations || runs || threshold)
-    for (auto &test : test::collection)
+    for (auto &test : run::collection)
     {
       if (generations)
         test.second.conf.generations = *generations;
@@ -2220,7 +2222,7 @@ bool test::setup_test_cmd(argh::parser &cmdl)
         test.second.conf.threshold = *threshold;
     }
 
-  test::nogui = cmdl["nogui"];
+  run::nogui = cmdl["nogui"];
 
   return true;
 }
@@ -2242,10 +2244,10 @@ cmdl_result parse_args(int argc, char *argv[])
 
   cmdl.parse(argc, argv);
 
-  const std::string cmd_compare("compare");
   const std::string cmd_monitor("monitor");
-  const std::string cmd_test("test");
-  const std::set<std::string> cmds({cmd_compare, cmd_monitor, cmd_test});
+  const std::string cmd_run("run");
+  const std::string cmd_summary("summary");
+  const std::set<std::string> cmds({cmd_monitor, cmd_run, cmd_summary});
 
   const auto &pos_args(cmdl.pos_args());
 
@@ -2264,12 +2266,12 @@ cmdl_result parse_args(int argc, char *argv[])
 
   imgui_demo_panel = cmdl["imguidemo"];
 
-  if (cmd == cmd_compare && test::setup_compare_cmd(cmdl))
-    return cmdl_result::compare;
+  if (cmd == cmd_summary && run::setup_summary_cmd(cmdl))
+    return cmdl_result::summary;
   else if (cmd == cmd_monitor && monitor::setup_cmd(cmdl))
     return cmdl_result::monitor;
-  else if (cmd == cmd_test  && test::setup_test_cmd(cmdl))
-    return cmdl_result::test;
+  else if (cmd == cmd_run && run::setup_run_cmd(cmdl))
+    return cmdl_result::run;
 
   return cmdl_result::error;
 }
@@ -2285,7 +2287,7 @@ void monitor::run(const imgui_app::program::settings &settings)
   prg.run(render_monitor);
 }
 
-void test::run(const imgui_app::program::settings &settings, mode m)
+void run::run(const imgui_app::program::settings &settings, mode m)
 {
   std::stop_source source;
 
@@ -2314,27 +2316,27 @@ void test::run(const imgui_app::program::settings &settings, mode m)
 
       s.logger(sl).stop_source(source);
 
-      if (test::collection.size() > 1)
+      if (run::collection.size() > 1)
         s.tag(dataset.stem());
 
       return s.run(test.second.conf.runs, test.second.conf.threshold);
     });
 
-  if (test::collection.size() > 1 && m == mode::test)
+  if (run::collection.size() > 1 && m == mode::run)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  if (m == mode::test)
-    for (const auto &test : test::collection)
+  if (m == mode::run)
+    for (const auto &test : run::collection)
       tasks.push_back(std::async(std::launch::async, test_driver, test));
 
   std::jthread t_summaries(get_summaries);
 
-  if (test::nogui == false)
+  if (run::nogui == false)
   {
     imgui_app::program prg(settings);
-    prg.run(render_test);
+    prg.run(render_run);
 
     source.request_stop();
   }
@@ -2374,12 +2376,12 @@ int main(int argc, char *argv[])
   settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
   settings.demo = imgui_demo_panel;
 
-  if (result == cmdl_result::compare)
-    test::run(settings, test::mode::compare);
+  if (result == cmdl_result::summary)
+    run::run(settings, run::mode::compare);
   else if (result == cmdl_result::monitor)
     monitor::run(settings);
-  else if (result == cmdl_result::test)
-    test::run(settings, test::mode::test);
+  else if (result == cmdl_result::run)
+    run::run(settings, run::mode::run);
 
   return EXIT_SUCCESS;
 }
