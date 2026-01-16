@@ -561,6 +561,7 @@ struct data
 std::shared_mutex summary_mutex;
 
 std::map<std::filesystem::path, data> collection;
+bool references_available {false};
 
 [[nodiscard]] settings read_settings(const std::filesystem::path &);
 [[nodiscard]] std::map<std::filesystem::path, data> setup_collection(
@@ -609,41 +610,90 @@ bool imgui_demo_panel {false};
 
 void render_number_of_runs()
 {
-  static bool reference_values {true};
+  static bool show_reference_values {rs::references_available};
+  static const std::vector ilabels {current_str, reference_str};
+  constexpr double bar_width(0.5), half_width(bar_width / 2.0);
+
+
+  const auto size(rs::collection.size());
+  if (!size)
+    return;
 
   std::vector<unsigned> nr_runs;
-  for (std::shared_lock guard(rs::summary_mutex);
-       const auto &[_, data] : rs::collection)
-    nr_runs.push_back(data.current.runs);
-
+  std::vector<unsigned> cap_runs;
   std::vector<std::string> labels;
 
-  for (const auto &[path, data] : rs::collection)
+  unsigned max_runs(0);
+
+  for (std::shared_lock guard(rs::summary_mutex);
+       const auto &[path, data] : rs::collection)
   {
     labels.push_back(path.stem().string());
-    nr_runs.push_back(data.reference.runs);
+    nr_runs.push_back(data.current.runs);
+    cap_runs.push_back(data.conf.runs);
+
+    if (data.current.runs > max_runs)
+      max_runs = data.current.runs;
+    if (data.conf.runs > max_runs)
+      max_runs = data.conf.runs;
   }
+
+  if (show_reference_values)
+    for (const auto &[_, data] : rs::collection)
+    {
+      nr_runs.push_back(data.reference.runs);
+
+      if (data.reference.runs > max_runs)
+        max_runs = data.current.runs;
+    }
 
   std::vector<const char *> labels_chr(labels.size());
   std::ranges::transform(labels, labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
-  const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(rs::collection.size());
+  std::vector<double> positions(size);
   std::iota(positions.begin(), positions.end(), 0.0);
 
-  ImGui::Checkbox("Reference values##Run##Runs", &reference_values);
+  if (rs::references_available)
+    ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
 
-  if (ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), ImPlotFlags_NoTitle))
+  int flags(ImPlotFlags_NoTitle);
+  if (!rs::references_available || !show_reference_values)
+    flags |= ImPlotFlags_NoLegend;
+
+  if (ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
   {
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
-    ImPlot::SetupAxes("Dataset", "Runs",
-                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), rs::collection.size(),
+    if (rs::references_available)
+      ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+
+    ImPlot::SetupAxes("Dataset", "Runs", ImPlotAxisFlags_AutoFit);
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
                            labels_chr.data());
+    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
+
     ImPlot::PlotBarGroups(ilabels.data(), nr_runs.data(),
-                          reference_values ? 2 : 1,
-                          rs::collection.size(), 0.5, 0, 0);
+                          show_reference_values ? 2 : 1, size, bar_width,
+                          0, 0);
+
+    for (std::size_t i(0); i < size; ++i)
+    {
+      if (cap_runs[i] > 1)
+      {
+        const auto di(static_cast<double>(i));
+        const auto dcp(static_cast<double>(cap_runs[i]));
+
+        const double xs[] =
+        {
+          di - half_width, show_reference_values ? di : di + half_width
+        };
+
+        const double ys[] = { dcp, dcp };
+
+        ImPlot::SetNextLineStyle(ImVec4(1, 1, 0, 1), 2.5f); // yellow, thick
+        ImPlot::PlotLine("##TotalRuns", xs, ys, 2);
+      }
+    }
+
     ImPlot::EndPlot();
   }
 }
@@ -2010,7 +2060,10 @@ std::map<std::filesystem::path, rs::data> rs::setup_collection(
       const auto path(in2 / ultra::summary_from_basename(t.first));
 
       if (fs::exists(path))
+      {
         t.second.reference = summary_data(path);
+        references_available = true;
+      }
     }
   }
   else if (!in2.empty())
