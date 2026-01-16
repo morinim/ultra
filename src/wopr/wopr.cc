@@ -527,15 +527,14 @@ ultra::search_log slog {};
 int window {0};
 std::chrono::duration<double> refresh_rate {2s};
 
-void run(const imgui_app::program::settings &);
+void start(const imgui_app::program::settings &);
 [[nodiscard]] bool setup_cmd(argh::parser &);
 }
 
-namespace run  // running/testing and comparison related variables
+namespace rs  // running, testing and comparison related variables
 {
-bool nogui {false};
 
-enum class mode {compare, run, summary};
+enum class exec_mode {run, summary};
 
 struct settings
 {
@@ -563,15 +562,26 @@ std::shared_mutex summary_mutex;
 
 std::map<std::filesystem::path, data> collection;
 
-[[nodiscard]] run::settings read_settings(const std::filesystem::path &);
-[[nodiscard]] std::map<std::filesystem::path, run::data> setup_collection(
-  std::filesystem::path, std::filesystem::path, run::mode);
+[[nodiscard]] settings read_settings(const std::filesystem::path &);
+[[nodiscard]] std::map<std::filesystem::path, data> setup_collection(
+  std::filesystem::path, std::filesystem::path, exec_mode);
 
-void run(const imgui_app::program::settings &, mode);
+namespace run
+{
+bool nogui {false};
 
-[[nodiscard]] bool setup_run_cmd(argh::parser &);
-[[nodiscard]] bool setup_summary_cmd(argh::parser &);
+[[nodiscard]] bool setup_cmd(argh::parser &);
+void start(const imgui_app::program::settings &);
 }  // namespace run
+
+namespace summary
+{
+void get_summaries(std::stop_token);
+[[nodiscard]] bool setup_cmd(argh::parser &);
+void start(const imgui_app::program::settings &);
+}  // namespace summary
+
+}  // namespace rs
 
 // Other variables and functions.
 const char *current_str = "Current";
@@ -597,21 +607,21 @@ bool imgui_demo_panel {false};
   return buffer.c_str();
 }
 
-void render_runs()
+void render_number_of_runs()
 {
   static bool reference_values {true};
 
-  std::vector<unsigned> data;
-  for (std::shared_lock guard(run::summary_mutex);
-       const auto &t : run::collection)
-    data.push_back(t.second.current.runs);
+  std::vector<unsigned> nr_runs;
+  for (std::shared_lock guard(rs::summary_mutex);
+       const auto &[_, data] : rs::collection)
+    nr_runs.push_back(data.current.runs);
 
   std::vector<std::string> labels;
 
-  for (const auto &t : run::collection)
+  for (const auto &[path, data] : rs::collection)
   {
-    labels.push_back(t.first.stem().string());
-    data.push_back(t.second.reference.runs);
+    labels.push_back(path.stem().string());
+    nr_runs.push_back(data.reference.runs);
   }
 
   std::vector<const char *> labels_chr(labels.size());
@@ -619,7 +629,7 @@ void render_runs()
                          [](const auto &str) noexcept { return str.data(); });
 
   const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(run::collection.size());
+  std::vector<double> positions(rs::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Run##Runs", &reference_values);
@@ -629,11 +639,11 @@ void render_runs()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Runs",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), run::collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), rs::collection.size(),
                            labels_chr.data());
-    ImPlot::PlotBarGroups(ilabels.data(), data.data(),
+    ImPlot::PlotBarGroups(ilabels.data(), nr_runs.data(),
                           reference_values ? 2 : 1,
-                          run::collection.size(), 0.5, 0, 0);
+                          rs::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
@@ -644,8 +654,8 @@ void render_success_rate()
 
   std::vector<double> data;
   std::vector<std::string> rlabels;
-  for (std::shared_lock guard(run::summary_mutex);
-       const auto &t : run::collection)
+  for (std::shared_lock guard(rs::summary_mutex);
+       const auto &t : rs::collection)
   {
     data.push_back(t.second.current.success_rate * 100.0);
     rlabels.push_back(std::to_string(t.second.current.runs));
@@ -653,7 +663,7 @@ void render_success_rate()
 
   std::vector<std::string> glabels;
 
-  for (const auto &t : run::collection)
+  for (const auto &t : rs::collection)
   {
     glabels.push_back(t.first.stem().string());
     data.push_back(t.second.reference.success_rate * 100.0);
@@ -664,7 +674,7 @@ void render_success_rate()
                          [](const auto &str) { return str.data(); });
 
   const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(run::collection.size());
+  std::vector<double> positions(rs::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   ImGui::Checkbox("Reference values##Run##Success rate", &reference_values);
@@ -675,18 +685,18 @@ void render_success_rate()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
     ImPlot::SetupAxes("Dataset", "Success rate",
                       ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), run::collection.size(),
+    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), rs::collection.size(),
                            glabels_chr.data());
     ImPlot::PlotBarGroups(ilabels.data(), data.data(),
                           reference_values ? 2 : 1,
-                          run::collection.size(), 0.5, 0, 0);
+                          rs::collection.size(), 0.5, 0, 0);
     ImPlot::EndPlot();
   }
 }
 
 void render_fitness_across_datasets()
 {
-  if (!run::collection.size())
+  if (!rs::collection.size())
     return;
 
   const auto square_dim([](std::size_t n)
@@ -697,8 +707,8 @@ void render_fitness_across_datasets()
   constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
   std::vector<double> best_fit, fit_mean, fit_std_dev;
   std::vector<double> runs;
-  for (std::shared_lock guard(run::summary_mutex);
-       const auto &t : run::collection)
+  for (std::shared_lock guard(rs::summary_mutex);
+       const auto &t : rs::collection)
   {
     if (t.second.current.best_fit.size())
       best_fit.push_back(t.second.current.best_fit[0]);
@@ -719,7 +729,7 @@ void render_fitness_across_datasets()
   std::vector<double> ref_best_fit, ref_fit_mean, ref_fit_std_dev;
   std::vector<double> ref_runs;
 
-  for (const auto &t : run::collection)
+  for (const auto &t : rs::collection)
   {
     {
       std::ostringstream ss;
@@ -746,17 +756,17 @@ void render_fitness_across_datasets()
   std::ranges::transform(labels, plot_labels_chr.begin(),
                          [](const auto &str) noexcept { return str.data(); });
 
-  std::vector<double> positions(run::collection.size());
+  std::vector<double> positions(rs::collection.size());
   std::iota(positions.begin(), positions.end(), 0.0);
 
   const std::string title("Fitness across datasets");
 
-  const auto n(square_dim(run::collection.size()));
+  const auto n(square_dim(rs::collection.size()));
 
   if (ImPlot::BeginSubplots(title.c_str(), n, n, ImVec2(-1, -1),
                             ImPlotSubplotFlags_NoLegend))
   {
-    for (std::size_t i(0); i < run::collection.size(); ++i)
+    for (std::size_t i(0); i < rs::collection.size(); ++i)
     {
       bool style_pushed(false);
 
@@ -1459,7 +1469,8 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
     last_update.restart();
 }
 
-void render_run(const imgui_app::program &prg, bool *p_open)
+// Main window for `run` and `summary` (both single/double dir) commands.
+void render_rs(const imgui_app::program &prg, bool *p_open)
 {
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -1532,7 +1543,7 @@ void render_run(const imgui_app::program &prg, bool *p_open)
           ImGui::Button(bs.c_str()))
         mxz_runs = !mxz_runs;
 
-      render_runs();
+      render_number_of_runs();
       ImGui::EndChild();
     }
 
@@ -1716,17 +1727,15 @@ void get_logs(std::stop_token stoken)
   }
 }
 
-//
 // Asynchronously reads all available summary files into queues for subsequent
 // processing.
-//
-void get_summaries(std::stop_token stoken)
+void rs::summary::get_summaries(std::stop_token stoken)
 {
-  assert(!run::collection.empty());
+  assert(!collection.empty());
 
   while (!stoken.stop_requested())
   {
-    for (auto &test : run::collection)
+    for (auto &test : collection)
     {
       const auto &dataset(test.first);
       const std::filesystem::path base_dir(dataset.parent_path());
@@ -1745,7 +1754,7 @@ void get_summaries(std::stop_token stoken)
           continue;
       }
 
-      std::lock_guard guard(run::summary_mutex);
+      std::lock_guard guard(summary_mutex);
       test.second.current = summary_data(summary);
     }
 
@@ -1769,7 +1778,7 @@ void get_summaries(std::stop_token stoken)
   return threshold;
 }
 
-run::settings run::read_settings(const std::filesystem::path &test_fn)
+rs::settings rs::read_settings(const std::filesystem::path &test_fn)
 {
   assert(test_fn.extension() == ".csv");
 
@@ -1787,7 +1796,7 @@ run::settings run::read_settings(const std::filesystem::path &test_fn)
     return {};
   }
 
-  run::settings ret;
+  settings ret;
 
   tinyxml2::XMLConstHandle handle(&doc);
   const auto h_ultra(handle.FirstChildElement("ultra"));
@@ -1909,8 +1918,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
-std::map<std::filesystem::path, run::data> run::setup_collection(
-  std::filesystem::path in1, std::filesystem::path in2, mode m)
+std::map<std::filesystem::path, rs::data> rs::setup_collection(
+  std::filesystem::path in1, std::filesystem::path in2, exec_mode m)
 {
   using namespace ultra;
   namespace fs = std::filesystem;
@@ -1926,9 +1935,9 @@ std::map<std::filesystem::path, run::data> run::setup_collection(
 
   const auto show_settings([](const std::filesystem::path &p)
   {
-    run::settings ts;
+    settings ts;
 
-    if (const auto i(run::collection.find(p)); i != run::collection.end())
+    if (const auto i(collection.find(p)); i != collection.end())
       ts = i->second.conf;
 
     std::cout << "Settings for " << p.filename()
@@ -1948,7 +1957,7 @@ std::map<std::filesystem::path, run::data> run::setup_collection(
     std::cout << '\n';
   });
 
-  std::map<fs::path, run::data> ret;
+  std::map<fs::path, data> ret;
 
   if (fs::is_directory(in1))
   {
@@ -1958,9 +1967,9 @@ std::map<std::filesystem::path, run::data> run::setup_collection(
       if (const auto path(entry.path());
           ultra::iequals(path.extension(), ".csv"))
       {
-        if (m == mode::run)
+        if (m == exec_mode::run)
         {
-          ret.insert({path, run::read_settings(path)});
+          ret.insert({path, read_settings(path)});
           show_settings(path);
         }
         else
@@ -1969,9 +1978,9 @@ std::map<std::filesystem::path, run::data> run::setup_collection(
   }
   else if (fs::exists(in1))
   {
-    if (m == mode::run)
+    if (m == exec_mode::run)
     {
-      ret.insert({in1, run::read_settings(in1)});
+      ret.insert({in1, read_settings(in1)});
       show_settings(in1);
     }
     else
@@ -2019,6 +2028,7 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   namespace fs = std::filesystem;
 
   const auto &pos_args(cmdl.pos_args());
+  assert(pos_args[1] == cmd_monitor);
 
   fs::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
 
@@ -2154,9 +2164,10 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   return true;
 }
 
-bool run::setup_summary_cmd(argh::parser &cmdl)
+bool rs::summary::setup_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
+  assert(pos_args[1] == cmd_summary);
 
   if (pos_args.size() <= 2)
   {
@@ -2164,22 +2175,24 @@ bool run::setup_summary_cmd(argh::parser &cmdl)
     return false;
   }
 
-  const std::filesystem::path cmp1(pos_args.size() == 3 ? "./"
+
+  const std::filesystem::path dir1(pos_args.size() <= 2 ? "./"
                                                         : pos_args[2]);
-  const std::filesystem::path cmp2(pos_args.size() == 3 ? pos_args[2]
+  const std::filesystem::path dir2(pos_args.size() <= 3 ? ""
                                                         : pos_args[3]);
 
-  run::collection = setup_collection(cmp1, cmp2, mode::compare);
+  collection = setup_collection(dir1, dir2, exec_mode::summary);
 
-  if (run::collection.empty())
+  if (collection.empty())
     return false;
 
   return true;
 }
 
-bool run::setup_run_cmd(argh::parser &cmdl)
+bool rs::run::setup_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
+  assert(pos_args[1] == cmd_run);
 
   for (const auto &a : pos_args)
     std::cout << a << std::endl;
@@ -2188,9 +2201,9 @@ bool run::setup_run_cmd(argh::parser &cmdl)
                                                               : pos_args[2]);
   const std::filesystem::path ref_folder(cmdl("reference", "").str());
 
-  run::collection = setup_collection(test_input, ref_folder, mode::run);
+  collection = setup_collection(test_input, ref_folder, exec_mode::run);
 
-  if (run::collection.empty())
+  if (collection.empty())
     return false;
 
   std::optional<unsigned> generations;
@@ -2212,7 +2225,7 @@ bool run::setup_run_cmd(argh::parser &cmdl)
     threshold = extract_threshold(v);
 
   if (generations || runs || threshold)
-    for (auto &test : run::collection)
+    for (auto &test : collection)
     {
       if (generations)
         test.second.conf.generations = *generations;
@@ -2266,11 +2279,11 @@ cmdl_result parse_args(int argc, char *argv[])
 
   imgui_demo_panel = cmdl["imguidemo"];
 
-  if (cmd == cmd_summary && run::setup_summary_cmd(cmdl))
+  if (cmd == cmd_summary && rs::summary::setup_cmd(cmdl))
     return cmdl_result::summary;
   else if (cmd == cmd_monitor && monitor::setup_cmd(cmdl))
     return cmdl_result::monitor;
-  else if (cmd == cmd_run && run::setup_run_cmd(cmdl))
+  else if (cmd == cmd_run && rs::run::setup_cmd(cmdl))
     return cmdl_result::run;
 
   return cmdl_result::error;
@@ -2279,7 +2292,7 @@ cmdl_result parse_args(int argc, char *argv[])
 /*********************************************************************
  * MAIN
  ********************************************************************/
-void monitor::run(const imgui_app::program::settings &settings)
+void monitor::start(const imgui_app::program::settings &settings)
 {
   std::jthread t_logs(get_logs);
 
@@ -2287,7 +2300,15 @@ void monitor::run(const imgui_app::program::settings &settings)
   prg.run(render_monitor);
 }
 
-void run::run(const imgui_app::program::settings &settings, mode m)
+void rs::summary::start(const imgui_app::program::settings &settings)
+{
+  std::jthread t_summaries(get_summaries);
+
+  imgui_app::program prg(settings);
+  prg.run(render_rs);
+}
+
+void rs::run::start(const imgui_app::program::settings &settings)
 {
   std::stop_source source;
 
@@ -2316,27 +2337,23 @@ void run::run(const imgui_app::program::settings &settings, mode m)
 
       s.logger(sl).stop_source(source);
 
-      if (run::collection.size() > 1)
+      if (collection.size() > 1)
         s.tag(dataset.stem());
 
       return s.run(test.second.conf.runs, test.second.conf.threshold);
     });
 
-  if (run::collection.size() > 1 && m == mode::run)
+  if (collection.size() > 1)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   std::vector<std::future<ultra::search_stats<ultra::gp::individual,
                                               double>>> tasks;
-  if (m == mode::run)
-    for (const auto &test : run::collection)
-      tasks.push_back(std::async(std::launch::async, test_driver, test));
-
-  std::jthread t_summaries(get_summaries);
+  for (const auto &test : collection)
+    tasks.push_back(std::async(std::launch::async, test_driver, test));
 
   if (run::nogui == false)
   {
-    imgui_app::program prg(settings);
-    prg.run(render_run);
+    rs::summary::start(settings);
 
     source.request_stop();
   }
@@ -2350,8 +2367,6 @@ void run::run(const imgui_app::program::settings &settings, mode m)
 
   while (!std::ranges::all_of(tasks, task_completed))
     std::this_thread::sleep_for(100ms);
-
-  t_summaries.request_stop();
 }
 
 int main(int argc, char *argv[])
@@ -2377,11 +2392,11 @@ int main(int argc, char *argv[])
   settings.demo = imgui_demo_panel;
 
   if (result == cmdl_result::summary)
-    run::run(settings, run::mode::compare);
+    rs::summary::start(settings);
   else if (result == cmdl_result::monitor)
-    monitor::run(settings);
+    monitor::start(settings);
   else if (result == cmdl_result::run)
-    run::run(settings, run::mode::run);
+    rs::run::start(settings);
 
   return EXIT_SUCCESS;
 }
