@@ -2081,7 +2081,6 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   namespace fs = std::filesystem;
 
   const auto &pos_args(cmdl.pos_args());
-  assert(pos_args[1] == cmd_monitor);
 
   fs::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
 
@@ -2220,14 +2219,12 @@ bool monitor::setup_cmd(argh::parser &cmdl)
 bool rs::summary::setup_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
-  assert(pos_args[1] == cmd_summary);
 
   if (pos_args.size() <= 2)
   {
     std::cerr << "At least one directory must be specified.\n";
     return false;
   }
-
 
   const std::filesystem::path dir1(pos_args.size() <= 2 ? "./"
                                                         : pos_args[2]);
@@ -2245,7 +2242,6 @@ bool rs::summary::setup_cmd(argh::parser &cmdl)
 bool rs::run::setup_cmd(argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
-  assert(pos_args[1] == cmd_run);
 
   for (const auto &a : pos_args)
     std::cout << a << std::endl;
