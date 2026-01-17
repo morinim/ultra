@@ -558,14 +558,19 @@ struct data
 // concurrent readers, while writes (updates to `data.current`) are exclusive.
 // `data.reference` doesn't need a mutex since it's compiled once at program
 // startup.
-std::shared_mutex summary_mutex;
+std::shared_mutex current_mutex;
 
-std::map<std::filesystem::path, data> collection;
+using collection_t = std::map<const std::filesystem::path, data>;
+
+// After initialisation, `collection` has a stable size, stable ordering,
+// stable paths (keys), stable `conf` and `reference`; only `current` mutates.
+collection_t collection;
+
 bool references_available {false};
 
 [[nodiscard]] settings read_settings(const std::filesystem::path &);
-[[nodiscard]] std::map<std::filesystem::path, data> setup_collection(
-  std::filesystem::path, std::filesystem::path, exec_mode);
+[[nodiscard]] collection_t setup_collection(std::filesystem::path,
+                                            std::filesystem::path, exec_mode);
 
 namespace run
 {
@@ -590,7 +595,17 @@ const char *reference_str = "Reference";
 
 bool imgui_demo_panel {false};
 
+struct labels_data
+{
+  std::vector<std::string> strings;
+  std::vector<const char*> cstrs;
+};
+
+[[nodiscard]] labels_data make_labels(const rs::collection_t &);
+[[nodiscard]] std::vector<double> make_positions(std::size_t);
 [[nodiscard]] std::string random_string();
+[[nodiscard]] std::vector<const char *> to_cstr_vector(
+  const std::vector<std::string> &);
 
 
 /*********************************************************************
@@ -608,140 +623,151 @@ bool imgui_demo_panel {false};
   return buffer.c_str();
 }
 
+// Invariants:
+// - `rs::collection` size and ordering are immutable after initialisation;
+// - `path`, `conf` and `reference` are immutable;
+// - only `current` is synchronised by `current_mutex`.
 void render_number_of_runs()
 {
-  static bool show_reference_values {rs::references_available};
   static const std::vector ilabels {current_str, reference_str};
+
   constexpr double bar_width(0.5), half_width(bar_width / 2.0);
 
-
-  const auto size(rs::collection.size());
+  static const std::size_t size(rs::collection.size());
   if (!size)
     return;
 
-  std::vector<unsigned> nr_runs;
-  std::vector<unsigned> cap_runs;
-  std::vector<std::string> labels;
+  static bool show_reference_values {rs::references_available};
+  if (rs::references_available)
+    ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
 
-  unsigned max_runs(0);
+  const std::size_t group_count(1 + show_reference_values);
 
-  for (std::shared_lock guard(rs::summary_mutex);
-       const auto &[path, data] : rs::collection)
+  struct cap_data
   {
-    labels.push_back(path.stem().string());
-    nr_runs.push_back(data.current.runs);
-    cap_runs.push_back(data.conf.runs);
+    std::vector<unsigned> runs;
+    unsigned max;
+  };
 
-    if (data.current.runs > max_runs)
-      max_runs = data.current.runs;
-    if (data.conf.runs > max_runs)
-      max_runs = data.conf.runs;
+  static const cap_data caps = []
+  {
+    cap_data out;
+    out.max = 0;
+    out.runs.reserve(size);
+
+    for (const auto &[_, data] : rs::collection)
+    {
+      out.runs.push_back(data.conf.runs);
+      out.max = std::max(out.max, data.conf.runs);
+    }
+
+    return out;
+  }();
+
+  std::vector<unsigned> bar_values;
+  bar_values.reserve(size * group_count);
+
+  unsigned max_runs(caps.max);
+
+  for (std::shared_lock guard(rs::current_mutex);
+       const auto &[_, data] : rs::collection)
+  {
+    bar_values.push_back(data.current.runs);
+    max_runs = std::max(max_runs, data.current.runs);
   }
 
   if (show_reference_values)
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[path, data] : rs::collection)
     {
-      nr_runs.push_back(data.reference.runs);
-
-      if (data.reference.runs > max_runs)
-        max_runs = data.current.runs;
+      bar_values.push_back(data.reference.runs);
+      max_runs = std::max(max_runs, data.reference.runs);
     }
 
-  std::vector<const char *> labels_chr(labels.size());
-  std::ranges::transform(labels, labels_chr.begin(),
-                         [](const auto &str) noexcept { return str.data(); });
-
-  std::vector<double> positions(size);
-  std::iota(positions.begin(), positions.end(), 0.0);
-
-  if (rs::references_available)
-    ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
+  static const auto labels(make_labels(rs::collection));
+  static const auto positions(make_positions(size));
 
   int flags(ImPlotFlags_NoTitle);
   if (!rs::references_available || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
-  if (ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
-  {
-    if (rs::references_available)
-      ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+  if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
+    return;
 
-    ImPlot::SetupAxes("Dataset", "Runs", ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
-                           labels_chr.data());
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
+  ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
-    ImPlot::PlotBarGroups(ilabels.data(), nr_runs.data(),
-                          show_reference_values ? 2 : 1, size, bar_width,
-                          0, 0);
+  ImPlot::SetupAxes("Dataset", "Runs", ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
+                         labels.cstrs.data());
+  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
 
-    for (std::size_t i(0); i < size; ++i)
+  // Bars.
+  ImPlot::PlotBarGroups(ilabels.data(), bar_values.data(), group_count, size,
+                        bar_width);
+
+  // Capacity lines.
+  for (std::size_t i(0); i < size; ++i)
+    if (caps.runs[i] > 1)
     {
-      if (cap_runs[i] > 1)
+      const auto di(static_cast<double>(i));
+      const auto dcp(static_cast<double>(caps.runs[i]));
+
+      const double xs[] =
       {
-        const auto di(static_cast<double>(i));
-        const auto dcp(static_cast<double>(cap_runs[i]));
+        di - half_width, show_reference_values ? di : di + half_width
+      };
 
-        const double xs[] =
-        {
-          di - half_width, show_reference_values ? di : di + half_width
-        };
+      const double ys[] = { dcp, dcp };
 
-        const double ys[] = { dcp, dcp };
-
-        ImPlot::SetNextLineStyle(ImVec4(1, 1, 0, 1), 2.5f); // yellow, thick
-        ImPlot::PlotLine("##TotalRuns", xs, ys, 2);
-      }
+      ImPlot::SetNextLineStyle(ImVec4(1, 1, 0, 1), 2.5f); // yellow, thick
+      ImPlot::PlotLine("##TotalRuns", xs, ys, 2);
     }
 
-    ImPlot::EndPlot();
-  }
+  ImPlot::EndPlot();
 }
 
 void render_success_rate()
 {
-  static bool reference_values {true};
+  static const std::vector ilabels {current_str, reference_str};
 
-  std::vector<double> data;
-  std::vector<std::string> rlabels;
-  for (std::shared_lock guard(rs::summary_mutex);
-       const auto &t : rs::collection)
-  {
-    data.push_back(t.second.current.success_rate * 100.0);
-    rlabels.push_back(std::to_string(t.second.current.runs));
-  }
+  static const std::size_t size(rs::collection.size());
+  if (!size)
+    return;
 
-  std::vector<std::string> glabels;
+  static bool show_reference_values {rs::references_available};
+  if (rs::references_available)
+    ImGui::Checkbox("Reference values##Run##Success rate",
+                    &show_reference_values);
+  const std::size_t group_count(1 + show_reference_values);
 
-  for (const auto &t : rs::collection)
-  {
-    glabels.push_back(t.first.stem().string());
-    data.push_back(t.second.reference.success_rate * 100.0);
-  }
+  std::vector<double> sr;
+  sr.reserve(size * group_count);
 
-  std::vector<const char *> glabels_chr(glabels.size());
-  std::ranges::transform(glabels, glabels_chr.begin(),
-                         [](const auto &str) { return str.data(); });
+  for (std::shared_lock guard(rs::current_mutex);
+       const auto &[_, data] : rs::collection)
+    sr.push_back(data.current.success_rate * 100.0);
 
-  const std::vector ilabels = {current_str, reference_str};
-  std::vector<double> positions(rs::collection.size());
-  std::iota(positions.begin(), positions.end(), 0.0);
+  if (show_reference_values)
+    for (const auto &[_, data] : rs::collection)
+      sr.push_back(data.reference.success_rate * 100.0);
 
-  ImGui::Checkbox("Reference values##Run##Success rate", &reference_values);
+  static const auto labels(make_labels(rs::collection));
+  static const auto positions(make_positions(size));
 
-  if (ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1),
-                        ImPlotFlags_NoTitle))
-  {
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
-    ImPlot::SetupAxes("Dataset", "Success rate",
-                      ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-    ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), rs::collection.size(),
-                           glabels_chr.data());
-    ImPlot::PlotBarGroups(ilabels.data(), data.data(),
-                          reference_values ? 2 : 1,
-                          rs::collection.size(), 0.5, 0, 0);
-    ImPlot::EndPlot();
-  }
+  int flags(ImPlotFlags_NoTitle);
+  if (!rs::references_available || !show_reference_values)
+    flags |= ImPlotFlags_NoLegend;
+
+  if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
+    return;
+
+  ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+
+  ImPlot::SetupAxes("Dataset", "Success rate", ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
+                         labels.cstrs.data());
+  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0);
+  ImPlot::PlotBarGroups(ilabels.data(), sr.data(), group_count, size, 0.5);
+  ImPlot::EndPlot();
 }
 
 void render_fitness_across_datasets()
@@ -757,7 +783,7 @@ void render_fitness_across_datasets()
   constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
   std::vector<double> best_fit, fit_mean, fit_std_dev;
   std::vector<double> runs;
-  for (std::shared_lock guard(rs::summary_mutex);
+  for (std::shared_lock guard(rs::current_mutex);
        const auto &t : rs::collection)
   {
     if (t.second.current.best_fit.size())
@@ -1648,6 +1674,42 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
 /*********************************************************************
  * Misc
  ********************************************************************/
+std::vector<double> make_positions(std::size_t n)
+{
+  assert(n);
+
+  std::vector<double> positions(n);
+  std::iota(positions.begin(), positions.end(), 0.0);
+
+  return positions;
+}
+
+std::vector<const char *> to_cstr_vector(const std::vector<std::string> &v)
+{
+  std::vector<const char *> out(v.size());
+
+  std::ranges::transform(v, out.begin(),
+                         [](const auto &str) noexcept { return str.data(); });
+
+  return out;
+}
+
+labels_data make_labels(const rs::collection_t &c)
+{
+  labels_data out;
+
+  out.strings.reserve(c.size());
+  out.cstrs.reserve(c.size());
+
+  for (const auto &[path, _] : c)
+  {
+    out.strings.push_back(path.stem().string());
+    out.cstrs.push_back(out.strings.back().c_str());
+  }
+
+  return out;
+}
+
 std::string random_string()
 {
   constexpr std::size_t length(10);
@@ -1804,7 +1866,7 @@ void rs::summary::get_summaries(std::stop_token stoken)
           continue;
       }
 
-      std::lock_guard guard(summary_mutex);
+      std::lock_guard guard(current_mutex);
       test.second.current = summary_data(summary);
     }
 
@@ -1897,7 +1959,7 @@ void cmdl_usage()
   "\n"
   "  OBSERVE A RUNNING TEST IN REAL-TIME\n"
   "  The path must point to a directory containing a search log produced by\n"
-  "  Ultra. If omitted, the current working directory is used.\n"
+  "  ULTRA. If omitted, the current working directory is used.\n"
   "  Omit the file extension when specifying a test path (e.g. use\n"
   "  \"/path/test\" instead of \"/path/test.csv\").\n"
   "\n"
@@ -1912,6 +1974,7 @@ void cmdl_usage()
   "  --window <nr>\n"
   "      Restrict the monitoring window to the last `nr` generations.\n"
   "\n"
+  "-------------------------------------------------------------------\n"
   "> wopr run [path]\n"
   "\n"
   "  EXECUTE TESTS ON THE SPECIFIED DATASET(s)\n"
@@ -1933,6 +1996,7 @@ void cmdl_usage()
   "      Set the success threshold. Values ending in '%' are treated as\n"
   "      accuracy; otherwise, as fitness value.\n"
   "\n"
+  "-------------------------------------------------------------------\n"
   "> wopr summary <directory> [directory]\n"
   "\n"
   "  DISPLAY OR COMPARE STATS FOR COMPLETED TESTS\n"
@@ -1968,8 +2032,8 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
-std::map<std::filesystem::path, rs::data> rs::setup_collection(
-  std::filesystem::path in1, std::filesystem::path in2, exec_mode m)
+rs::collection_t rs::setup_collection(std::filesystem::path in1,
+                                      std::filesystem::path in2, exec_mode m)
 {
   using namespace ultra;
   namespace fs = std::filesystem;
@@ -2007,7 +2071,7 @@ std::map<std::filesystem::path, rs::data> rs::setup_collection(
     std::cout << '\n';
   });
 
-  std::map<fs::path, data> ret;
+  collection_t ret;
 
   if (fs::is_directory(in1))
   {
