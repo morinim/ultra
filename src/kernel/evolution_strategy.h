@@ -25,19 +25,33 @@ namespace ultra
 {
 
 ///
-/// Defines the skeleton of the evolution, deferring some steps to client
-/// subclasses.
+/// Defines the strategy interface for evolutionary algorithms.
 ///
-/// Selection, recombination and replacement are the main steps of evolution.
-/// In the literature a lot of different algorithms are described and many of
-/// them are implemented in Ultra (not every combination is meaningful).
+/// An `evolution_strategy` encapsulates all strategy-dependent aspects of the
+/// evolutionary process, while leaving the overall control flow to the
+/// `evolution` driver.
 ///
-/// The user can choose, at compile time, how the evolution class should
-/// work via a specialization of `evolution_strategy` class.
+/// The design follows the *Template Method* and *Strategy* patterns:
+/// - `evolution` owns the main generational loop, termination conditions,
+///    concurrency, and logging;
+/// - `evolution_strategy` customises *how* evolution is performed within
+///   each generation.
 ///
-/// In other words the template method design pattern is used to "inject"
-/// selection, recombination and replacement methods specified by the
-/// `evolution_strategy` object into an `evolution` object.
+/// Concrete strategies (e.g. standard evolution, ALPS, differential evolution)
+/// implement this interface to define:
+/// - how parents are selected,
+/// - how offspring are generated,
+/// - how individuals are replaced or promoted,
+/// - how population structure evolves over time.
+///
+/// Strategies are expected to be:
+/// - stateless or minimally stateful;
+/// - reusable across runs;
+/// - independent from the evaluation logic.
+///
+/// \remark
+/// Implementations should avoid performing expensive operations in
+/// constructors; initialisation should be deferred to `init()`.
 ///
 template<Evaluator E>
 class evolution_strategy
@@ -51,10 +65,26 @@ public:
   /// Some evolution strategies force parameters to specific values.
   static parameters shape(const parameters &params) { return params; }
 
-  /// Initial setup performed before evolution starts.
+  /// Initialises the strategy before the first generation.
+  ///
+  /// This method is called once, before the evolutionary loop begins.
+  /// It allows the strategy to:
+  /// - initialise internal state;
+  /// - prepare population structures (e.g. layers, age counters);
+  /// - validate configuration parameters.
+  ///
   template<Population P> void init(P &) const {}
 
-  /// Work to be done at the end of every generation.
+  /// Perform post-generation maintenance.
+  ///
+  /// This hook is called once per generation, after all evolutionary steps
+  /// have been executed.
+  ///
+  /// Typical responsibilities include:
+  /// - updating individual metadata (e.g. age);
+  /// - restructuring the population (e.g. layer promotion or merging);
+  /// - detecting stagnation or convergence.
+  ///
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 

@@ -17,6 +17,20 @@
 #if !defined(ULTRA_EVOLUTION_STRATEGY_TCC)
 #define      ULTRA_EVOLUTION_STRATEGY_TCC
 
+///
+/// Constructs an evolution strategy.
+///
+/// \param[in] prob the optimisation problem
+/// \param[in] eva  the evaluator used to assess individuals
+///
+/// Stores references to the evaluator and the optimisation problem. These
+/// references are shared by all operators composing the strategy (selection,
+/// recombination, replacement).
+///
+/// \remnark
+/// No ownership is taken. No initialisation of the population is performed
+/// here.
+///
 template<Evaluator E>
 evolution_strategy<E>::evolution_strategy(const problem &prob, E &eva)
   : eva_(eva), prob_(prob)
@@ -24,9 +38,28 @@ evolution_strategy<E>::evolution_strategy(const problem &prob, E &eva)
 }
 
 ///
-/// We use an accelerated stop condition when:
-/// - after `max_stuck_gen` generations the situation doesn't change;
-/// - all the individuals have the same fitness.
+/// Performs post-generation bookkeeping.
+///
+/// \tparam P population type
+///
+/// \param[in,out] pop the evolved population
+/// \param[in]     sum summary statistics of the current generation
+///
+/// This method is invoked once per generation, after all evolutionary steps
+/// have completed.
+///
+///  Responsibilities:
+///  - increment the age of all individuals;
+///  - detect stagnation based on:
+///    - number of generations without improvement;
+///    - fitness variance within layers;
+///  - reset layers that are both stagnant and converged.
+///
+///  A layer is reset when (`and` of the points):
+///  - `generation - last_improvement > max_stuck_gen`;
+///  - the fitness variance of the layer is approximately zero.
+///
+/// \note Layer reset preserves the number of layers.
 ///
 template<Evaluator E>
 template<Population P>
@@ -53,6 +86,17 @@ void evolution_strategy<E>::after_generation(
   }
 }
 
+///
+/// Constructs an ALPS evolution strategy.
+///
+/// \param[in] prob the optimisation problem
+/// \param[in] eva  the evaluator used to assess individuals
+///
+/// Initialises ALPS-specific operators:
+/// - age-layered selection;
+/// - recombination;
+/// - age-aware replacement.
+///
 template<Evaluator E>
 alps_es<E>::alps_es(const problem &prob, E &eva)
   : evolution_strategy<E>(prob, eva),
@@ -63,16 +107,25 @@ alps_es<E>::alps_es(const problem &prob, E &eva)
 }
 
 ///
+/// Assembles one ALPS evolutionary step.
+///
+/// \tparam P population type
+///
 /// \param[in] pop             a population. Operations are performed on
 ///                            sub-populations of `pop`
-/// \param[in] iter            iterator pointing to the main subpopulation
-///                            we're going to work on. Other sub-populations
-///                            involved are `std::next(subpop_iter)` and
-///                            `pop.back()`
-/// \param[in] starting_status the starting status (usually generated via
-///                            `summary::starting_status()`)
-/// \return                    a callable object encaspulating the ALPS
-///                            algorithm
+/// \param[in] iter            iterator to the active age layer
+/// \param[in] starting_status evolutionary status snapshot
+/// \return                    a callable performing one ALPS evolutionary step
+///
+/// Builds a callable object encapsulating one iteration of the ALPS
+/// evolutionary process for a specific layer.
+///
+/// The returned callable performs:
+/// - selection from the current layer and all younger layers;
+/// - offspring generation via recombination;
+/// - replacement restricted to the current layer.
+///
+/// \note Executing the callable mutates the population.
 ///
 template<Evaluator E>
 template<Population P>
@@ -100,7 +153,12 @@ auto alps_es<E>::operations(
 }
 
 ///
-/// Sets the initial age of the population members.
+/// Initialises individual ages for ALPS.
+///
+/// \param[in,out] pop the population to initialise
+///
+/// Sets the initial age of all individuals in the population according to
+/// ALPS rules.
 ///
 template<Evaluator E>
 template<Population P>
@@ -110,7 +168,20 @@ void alps_es<E>::init(P &pop)
 }
 
 ///
-/// Increments population's age and checks if it's time to add a new layer.
+/// Performs ALPS-specific post-generation updates.
+///
+/// \param[in,out] pop the population after evolution
+/// \param[in]     sum summary statistics of the current generation
+///
+/// Responsibilities include:
+/// - incrementing individual ages;
+/// - merging equivalent layers;
+/// - shrinking converged layers;
+/// - restoring layer sizes when diversity returns;
+/// - adding new layers at age gaps;
+/// - moving individuals up when maximum layer count is reached.
+///
+/// \remark Structural changes occur only at generation boundaries.
 ///
 template<Evaluator E>
 template<Population P>
@@ -190,11 +261,16 @@ void alps_es<E>::after_generation(P &pop,
 }
 
 ///
-/// \param[out] params generic parameters
-/// \return            strategy specific parameters
+/// Shapes parameters for ALPS evolution.
 ///
-/// \remark
-/// ALPS requires at least two layers.
+/// \param[out] params generic evolution parameters
+/// \return            modified parameters suitable for ALPS
+///
+/// Adjusts generic parameters to values required by ALPS.
+///
+/// In particular enforces a minimum number of age layers.
+///
+/// \note At least two layers are required by ALPS.
 ///
 template<Evaluator E>
 parameters alps_es<E>::shape(parameters params)
@@ -213,24 +289,21 @@ std_es<E>::std_es(const problem &prob, E &eva)
 }
 
 ///
-/// \param[in] pop             a population. Operations are performed on
-///                            sub-groups of `pop`
-/// \param[in] iter            iterator pointing to the main subpopulation
-///                            we're going to work on
-/// \param[in] starting_status the starting status (usually generated via
-///                            `summary::starting_status()`)
-/// \return                    a callable object encaspulating the ALPS
-///                            algorithm
+/// Assembles a standard evolutionary step.
 ///
-/// The standard evolutionary loop:
-/// - select some individuals via tournament selection;
-/// - create a new offspring individual;
-/// - place the offspring into the original population (steady state)
-///   replacing a bad individual.
+/// \tparam P population type
 ///
-/// This whole process repeats until the termination criteria is satisfied.
-/// With any luck, it will produce an individual that solves the problem at
-/// hand.
+/// \param[in] pop             the population
+/// \param[in] iter            iterator to the active layer
+/// \param[in] starting_status evolutionary status snapshot
+/// \return                    a callable performing one evolutionary step
+///
+/// Implements a steady-state evolutionary loop:
+/// - tournament selection;
+/// - recombination;
+/// - replacement within the same layer.
+///
+/// \note No cross-layer interaction occurs.
 ///
 template<Evaluator E>
 template<Population P>
@@ -261,24 +334,21 @@ de_es<E>::de_es(const problem &prob, E &eva)
 }
 
 ///
-/// \param[in] pop             a population. Operations are performed on
-///                            sub-populations of `pop`
-/// \param[in] iter            iterator pointing to the main subpopulation
-///                            we're going to work on
-/// \param[in] starting_status the starting status (usually generated via
-///                            `summary::starting_status()`)
-/// \return                    a callable object encaspulating the ALPS
-///                            algorithm
+/// Assembles a differential evolution step.
 ///
-/// The standard evolutionary loop:
-/// - select some individuals via tournament selection;
-/// - create a new offspring individual;
-/// - place the offspring into the original population (steady state)
-///   replacing a bad individual.
+/// \tparam P population type
 ///
-/// This whole process repeats until the termination criteria is satisfied.
-/// With any luck, it will produce an individual that solves the problem at
-/// hand.
+/// \param[in] pop             the population
+/// \param[in] iter            iterator to the active layer
+/// \param[in] starting_status evolutionary status snapshot
+/// \return                    a callable performing one DE step
+///
+/// Implements differential evolution:
+/// - selection produces both parents and a target individual;
+/// - recombination generates a trial vector;
+/// - replacement compares the trial against the target.
+///
+/// \note Replacement is performed on the selected target only.
 ///
 template<Evaluator E>
 template<Population P>
