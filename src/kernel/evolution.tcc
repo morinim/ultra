@@ -18,8 +18,13 @@
 #define      ULTRA_EVOLUTION_TCC
 
 ///
-/// \param[in] prob starting problem for the evolution
-/// \param[in] eva  evaluator to be used
+/// Construct an evolution object.
+///
+/// \param[in] prob problem definition and evolutionary parameters
+/// \param[in] eva  evaluator used to compute fitness values
+///
+/// Initialises the population according to the supplied problem description
+/// and stores a reference to the evaluator.
 ///
 template<Evaluator E>
 evolution<E>::evolution(const problem &prob, E &eva) : pop_(prob), eva_(eva)
@@ -30,7 +35,14 @@ evolution<E>::evolution(const problem &prob, E &eva) : pop_(prob), eva_(eva)
 }
 
 ///
-/// \return `true` if the evolution should be interrupted
+/// Check whether the evolution should stop.
+///
+/// \return `true` if the evolution must terminate
+///
+/// Evaluates all termination conditions, including:
+/// - planned generation limit;
+/// - user interrupt;
+/// - external stop requests.
 ///
 template<Evaluator E>
 bool evolution<E>::stop_condition() const
@@ -100,15 +112,15 @@ void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
 }
 
 ///
-/// Sets the search/evolution logger.
+/// Attaches a search logger.
 ///
-/// \param[in] sl logger
-/// \return      a reference to *this* object (method chaining / fluent
-///              interface)
+/// \param[in] sl logger instance
+/// \return       reference to *this* object (fluent interface)
 ///
-/// \remark
-/// Logger must be set before calling `run`. By default, data logging is
-/// excluded.
+/// When set, the logger records snapshots of the population and summary data
+/// at the end of each generation.
+///
+/// \remark Logging is disabled by default.
 ///
 template<Evaluator E>
 evolution<E> &evolution<E>::logger(search_log &sl)
@@ -118,14 +130,13 @@ evolution<E> &evolution<E>::logger(search_log &sl)
 }
 
 ///
-/// Sets the identification tag for this object.
+/// Assigns an identification tag.
 ///
-/// \param[in] t identification tag
-/// \return      a reference to *this* object (method chaining / fluent
-///              interface)
+/// \param[in] t tag string
+/// \return      reference to *this* object (fluent interface)
 ///
-/// The tag is used to identify this object when multiple evolutions are
-/// performed in parallel.
+/// The tag is used in progress reporting to distinguish multiple concurrent
+/// evolution instances.
 ///
 template<Evaluator E>
 evolution<E> &evolution<E>::tag(const std::string &t)
@@ -135,15 +146,14 @@ evolution<E> &evolution<E>::tag(const std::string &t)
 }
 
 ///
-/// Sets the shake function.
+/// Sets a per-generation shake function.
 ///
-/// \param[in] f the shaking function
-/// \return      a reference to *this* object (method chaining / fluent
-///              interface)
+/// \param[in] f shake function
+/// \return      reference to *this* object (fluent interface)
 ///
-/// The shake function is called every new generation and is used to alter
-/// the environment of the evolution (i.e. it could change the points for a
-/// symbolic regression problem, the examples for a classification task...).
+/// The shake function is invoked at the beginning of each generation and can
+/// be used to dynamically alter the problem environment (e.g. data resampling,
+/// noise injection...).
 ///
 template<Evaluator E>
 evolution<E> &evolution<E>::shake_function(
@@ -154,11 +164,10 @@ evolution<E> &evolution<E>::shake_function(
 }
 
 ///
-/// Sets a callback function called at the end of every generation.
+/// Registers a callback executed after each generation.
 ///
 /// \param[in] f callback function
-/// \return      a reference to *this* object (method chaining / fluent
-///              interface)
+/// \return      a reference to *this* object (fluent interface)
 ///
 template<Evaluator E>
 evolution<E> &evolution<E>::after_generation(after_generation_callback_t f)
@@ -168,11 +177,13 @@ evolution<E> &evolution<E>::after_generation(after_generation_callback_t f)
 }
 
 ///
-/// Set an external stop source for performing cooperative task shutdown.
+/// Sets an external stop source.
 ///
-/// \param[in] ss stop source to issue a stop request
-/// \return      a reference to *this* object (method chaining / fluent
-///              interface)
+/// \param[in] ss stop source
+/// \return       reference to *this* object (fluent interface)
+///
+/// Enables cooperative cancellation of the evolutionary process from another
+/// execution context.
 ///
 template<Evaluator E>
 evolution<E> &evolution<E>::stop_source(std::stop_source ss)
@@ -181,16 +192,26 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
   return *this;
 }
 
+///
 /// The evolutionary core loop.
 ///
-/// \return a partial summary of the search (see notes)
+/// \tparam ES evolution strategy template
 ///
-/// \note
-/// The return value is a partial summary: the `mode_measurement` section is
-/// only partially filled (fitness) since many metrics are expensive to
-/// calculate and not always significative  (e.g. f1-score for a symbolic
-/// regression problem). The `src_search` class has a simple scheme to
-/// request the computation of additional metrics.
+/// \return a summary describing the outcome of the evolutionary search
+///
+/// Runs the main evolutionary loop using the specified evolution strategy.
+/// The loop proceeds generation by generation until a stop condition is met.
+///
+/// The evolution strategy controls how offspring are generated and inserted
+/// into the population, while this class manages scheduling, monitoring,
+/// logging, and coordination.
+///
+/// The returned summary contains partial statistics: fitness-related measures
+/// are always computed, while more expensive metrics may be omitted unless
+/// explicitly requested elsewhere.
+///
+/// \see evolution_strategy
+/// \see summary
 ///
 template<Evaluator E>
 template<template<class> class ES>
@@ -239,7 +260,7 @@ summary<typename evolution<E>::individual_t,
     });
 
   ultraDEBUG << "Calling evolution_strategy init method";
-  strategy.init(pop_);  // strategy-specific customizatin point
+  strategy.init(pop_);  // strategy-specific customisation point
 
   bool use_sleep(false);
 
@@ -304,6 +325,8 @@ summary<typename evolution<E>::individual_t,
   return sum_;
 }
 
+///
+/// Verify internal consistency.
 ///
 /// \return `true` if the object passes the internal consistency check
 ///

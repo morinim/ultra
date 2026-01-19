@@ -29,12 +29,43 @@ using after_generation_callback_t =
   std::function<void(const layered_population<I> &, const summary<I, F> &)>;
 
 ///
-/// Progressively evolves a population of programs over a series of
-/// generations.
+/// The evolution class orchestrates the iterative improvement of a population
+/// of candidate solutions over multiple generations.
 ///
-/// The evolutionary search uses the Darwinian principle of natural selection
-/// (survival of the fittest) and analogs of various naturally occurring
-/// operations, including crossover (sexual recombination), mutation...
+/// \tparam E evaluator type used to score individuals
+///
+/// It is parameterised by an `Evaluator`, from which it derives:
+/// - the individual representation;
+/// - the fitness type;
+/// - the evaluation semantics.
+///
+/// The evolution process is strategy-driven: the actual evolutionary operators
+/// (selection, variation, replacement) are delegated to an evolution strategy
+/// supplied as a template parameter to \c run().
+///
+/// ### Responsibilities
+/// - Initialise and validate the population.
+/// - Execute the evolutionary loop across generations.
+/// - Dispatch parallel tasks to evolve subpopulations.
+/// - Monitor progress and termination conditions.
+/// - Collect summary statistics and optional logs.
+/// - Invoke user-defined hooks and callbacks.
+///
+/// ### Concurrency model
+/// Evolution supports parallel execution through a thread pool. Each
+/// generation may evolve multiple subpopulations concurrently, while
+/// cooperative cancellation is handled via `std::stop_source`.
+///
+/// ### Customisation points
+/// Users can customise behaviour via:
+/// - evolution strategies;
+/// - per-generation callbacks;
+/// - shake functions;
+/// - logging facilities;
+/// - external stop sources.
+///
+/// \see layered_population
+/// \see evolution_strategy
 ///
 template<Evaluator E>
 class evolution
@@ -46,17 +77,21 @@ public:
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
 
+  // ---- Constructor ----
   explicit evolution(const problem &, E &);
 
+  // ---- Run ----
   template<template<class> class ES>
   summary<individual_t, fitness_t> run();
 
+  // ---- Callback and configuration methods ----
   evolution &after_generation(after_generation_callback_t);
   evolution &logger(search_log &);
   evolution &shake_function(const std::function<bool(unsigned)> &);
   evolution &stop_source(std::stop_source);
   evolution &tag(const std::string &);
 
+  // ---- Misc ----
   [[nodiscard]] bool is_valid() const;
 
 private:
