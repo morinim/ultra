@@ -95,6 +95,7 @@ public:
   // ---- Constructors ----
   columns_info() = default;
   columns_info(const columns_info &);
+  columns_info(const std::vector<std::pair<std::string, domain_t>> &);
 
   columns_info &operator=(const columns_info &);
 

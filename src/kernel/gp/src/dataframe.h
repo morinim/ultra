@@ -54,12 +54,12 @@ using raw_data = std::vector<record_t>;
 ///
 struct example
 {
-  /// The instance we want to make a prediction about. Each element in the
-  /// vector represents a feature.
-  std::vector<value_t> input {};
   /// The expected output for the prediction task: either the predicted
   /// value or the correct label from training data.
   value_t output {};
+  /// The instance we want to make a prediction about. Each element in the
+  /// vector represents a feature.
+  std::vector<value_t> input {};
 
   [[nodiscard]] bool operator==(const example &) const noexcept = default;
 };
@@ -131,6 +131,7 @@ public:
   [[nodiscard]] bool operator!() const noexcept;
 
   bool clone_schema(const dataframe &);
+  bool set_schema(const std::vector<std::pair<std::string, domain_t>> &);
 
   // ---- Capacity ----
   [[nodiscard]] std::size_t size() const noexcept;

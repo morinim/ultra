@@ -93,6 +93,25 @@ columns_info::columns_info(const columns_info &other)
 }
 
 ///
+/// Constructs the object from a user provided-schema.
+///
+/// \param[in] schema user-provided schema for the dataframe
+///
+columns_info::columns_info(
+  const std::vector<std::pair<std::string, domain_t>> &schema)
+{
+  cols_.reserve(schema.size());
+
+  for (const auto &[name, domain] : schema)
+    cols_.push_back(column_info(*this, trim(name), domain));
+
+  // For classification tasks we use discriminant functions and the actual
+  // output type is always numeric.
+  if (cols_.front().domain() == d_string)
+    cols_.front().domain(d_double);
+}
+
+///
 /// Copy assignment operator.
 ///
 /// \param[in] other another container to use as the data source

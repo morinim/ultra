@@ -643,6 +643,25 @@ bool dataframe::clone_schema(const dataframe &other)
 }
 
 ///
+/// Sets the schema of the dataframe.
+///
+/// \param[in] schema the dataframe schema
+/// \return           `true` if schema has been set
+///
+/// \warning
+/// If the current dataframe isn't empty the operation fails.
+///
+bool dataframe::set_schema(
+  const std::vector<std::pair<std::string, domain_t>> &schema)
+{
+  if (!empty())
+    return false;
+
+  columns = columns_info(schema);
+  return columns.size();
+}
+
+///
 /// Exchanges the contents and capacity of the container with those of `other`.
 ///
 /// \param[in] other dataframe to exchange the contents with

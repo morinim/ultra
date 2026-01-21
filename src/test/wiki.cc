@@ -118,4 +118,16 @@ TEST_CASE_FIXTURE(fixture1, "dataframe columns")
   std::cout << "\nThere are " << d.columns.size() << " columns\n";
 }
 
+TEST_CASE_FIXTURE(fixture1, "dataframe columns")
+{
+  using namespace ultra::src;
+
+  d.set_schema({{"A", ultra::d_string}, {"B", ultra::d_double},
+                {"C", ultra::d_double}, {"D", ultra::d_string}});
+
+  d.push_back({"a0", {0.0,   0, "d0"}});
+  d.push_back({"a1", {0.1,   1, "d1"}});
+  d.push_back({"a2", {0.2,   2, "d2"}});
+}
+
 }  // TEST_SUITE("WIKI_DATAFRAME")

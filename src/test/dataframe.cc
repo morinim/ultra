@@ -106,6 +106,44 @@ TEST_CASE("push_back / insert")
   CHECK(std::ranges::equal(d1, d2));
 }
 
+TEST_CASE("set_schema")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  dataframe d;
+
+  d.set_schema({{"Y", d_double},
+                {"X1", d_double}, {"X2", d_double}, {"X3", d_double}});
+
+  const std::size_t nr(1000);
+
+  for (std::size_t i(0); i < nr; ++i)
+  {
+    src::example ex;
+
+    ex.output = random::sup(1000.0);
+    ex.input = std::vector<value_t>{random::sup(1000.0),
+                                    random::sup(1000.0),
+                                    random::sup(1000.0)};
+
+    d.push_back(ex);
+  }
+
+  CHECK(d.columns.size() == 4);
+  CHECK(d.columns[0].name() == "Y");
+  CHECK(d.columns[1].name() == "X1");
+  CHECK(d.columns[2].name() == "X2");
+  CHECK(d.columns[3].name() == "X3");
+  CHECK(std::ranges::all_of(
+          d.columns, [](const auto &c) { return c.domain() == d_double; }));
+
+  CHECK(d.size() == nr);
+  CHECK(d.classes() == 0);
+  CHECK(d.variables() == 3);
+  CHECK(d.is_valid());
+}
+
 TEST_CASE("swap")
 {
   using namespace ultra;
