@@ -191,7 +191,7 @@ TEST_CASE_FIXTURE(fixture6, "Iterators")
   }
 }
 
-TEST_CASE_FIXTURE(fixture6, "Modify")
+TEST_CASE("Modify")
 {
   using namespace ultra;
 
