@@ -864,10 +864,10 @@ void render_fitness_across_datasets()
     {
       ImPlot::SetupAxes("Runs", "Fitness", 0, ImPlotAxisFlags_AutoFit);
 
-      const double min_x(reference.runs[i] && show_reference_values
+      const double min_x(reference.runs[i] > 0.0 && show_reference_values
                          ? 0.95 * std::min(current.runs[i], reference.runs[i])
                          : 0.0);
-      const double max_x(reference.runs[i] && show_reference_values
+      const double max_x(reference.runs[i] > 0.0 && show_reference_values
                          ? 1.05 * std::max(current.runs[i], reference.runs[i])
                          : 2.0 * current.runs[i]);
       ImPlot::SetupAxesLimits(min_x, max_x, 0.0, 0.0);
