@@ -657,6 +657,8 @@ bool dataframe::set_schema(
   if (!empty())
     return false;
 
+  classes_map_.clear();
+
   columns = columns_info(schema);
   return columns.size();
 }
