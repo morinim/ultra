@@ -110,7 +110,8 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
   // Skip lines with wrong number of columns.
   if (static_cast<std::size_t>(std::ranges::distance(r)) != columns.size())
   {
-    ultraWARNING << "Malformed exampled " << size() <<  " skipped";
+    ultraWARNING << "Malformed example " << size()
+                 <<  " skipped (wrong column count)";
     return false;
   }
 
