@@ -32,16 +32,19 @@ concept range_with_insert_at_beginning =
   std::ranges::range<C>
   && has_insert_at_beginning<C, std::ranges::range_value_t<C>>;
 
-// Move the `n`-th element to the front, preserving the order of the other
-// elements.
-// If `n` is empty add an empty column to the front.
-//
-// \note
-// `ranges::rotate` has better efficiency on common implementations with
-// `bidirectional_iterator` or (better) `random_access_iterator`.
-// Implementations (e.g. MSVC STL) may enable vectorization when the iterator
-// type models `contiguous_iterator` and swapping its value type calls neither
-// non-trivial special member function nor ADL-found swap.
+///
+/// Moves the element at position `n` to the front of the prefix `[0, n]`.
+///
+/// \param[in]  n index of the element to move to the front of the prefix
+///
+/// Reorders only the first `n+1` elements of the sequence so that the element
+/// originally at index `n` becomes the first one. The relative order of the
+/// remaining elements in the prefix is preserved.
+///
+/// Elements with index greater than `n` are left unchanged.
+///
+/// \remark If `n` is empty add an empty column to the front.
+///
 template<range_with_insert_at_beginning R>
 [[nodiscard]] R output_column_first(const R &raw, std::optional<std::size_t> n)
 {
@@ -52,9 +55,14 @@ template<range_with_insert_at_beginning R>
 
   if (n)
   {
-    assert(n < std::ranges::distance(raw));
+    assert(*n < static_cast<std::size_t>(std::ranges::distance(raw)));
 
-    if (n > 0)
+    // `ranges::rotate` has better efficiency on common implementations with
+    // `bidirectional_iterator` or (better) `random_access_iterator`.
+    // Implementations (e.g. MSVC STL) may enable vectorization when the
+    // iterator type models `contiguous_iterator` and swapping its value type
+    // calls neither non-trivial special member function nor ADL-found swap.
+    if (*n > 0)
       std::rotate(r.begin(),
                   std::next(r.begin(), *n),
                   std::next(r.begin(), *n + 1));
