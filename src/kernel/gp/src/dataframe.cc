@@ -708,7 +708,7 @@ bool dataframe::is_valid() const
       ultraERROR << "Not enough classes for a classification task";
       return false;
     }
-    if (out_domain != d_double)
+    if (out_domain != d_int)
     {
       ultraERROR << "Wrong output domain (" << out_domain
                  << ") for a classification task";

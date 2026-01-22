@@ -13,16 +13,16 @@
 #if !defined(ULTRA_COLUMNS_INFO_H)
 #define      ULTRA_COLUMNS_INFO_H
 
+#include "kernel/symbol.h"
+#include "kernel/value.h"
+#include "utility/misc.h"
+
 #include <functional>
 #include <iostream>
 #include <optional>
 #include <set>
 #include <string>
 #include <vector>
-
-#include "kernel/symbol.h"
-#include "kernel/value.h"
-#include "utility/misc.h"
 
 namespace ultra::src
 {
@@ -143,6 +143,7 @@ public:
 
 private:
   [[nodiscard]] symbol::category_t category(const column_info &) const;
+  [[nodiscard]] domain_t evaluation_domain(const column_info &) const;
   void settle_task_t();
 
   std::vector<column_info> cols_ {};

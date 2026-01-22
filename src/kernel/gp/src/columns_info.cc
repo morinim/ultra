@@ -120,7 +120,7 @@ void columns_info::settle_task_t()
   case d_string:
     // For classification tasks we use discriminant functions and the actual
     // output type is always numeric.
-    cols_.front().domain(d_double);
+    cols_.front().domain(d_int);
     task_ = task_t::classification;
     break;
 
@@ -295,6 +295,19 @@ void columns_info::push_front(const column_info &v)
   settle_task_t();
 }
 
+///
+/// \param[in] ci a column
+/// \return       the domain of the column as seen by the evaluation engine
+///               (not the stored domain)
+///
+domain_t columns_info::evaluation_domain(const column_info &ci) const
+{
+  if (task() != task_t::classification)
+    return ci.domain();
+
+  return get_index(ci, cols_) > 0 ? ci.domain() : d_double;
+}
+
 symbol::category_t columns_info::category(const column_info &ci) const
 {
   const auto target(get_index(ci, cols_));
@@ -308,15 +321,17 @@ symbol::category_t columns_info::category(const column_info &ci) const
 
   for (std::size_t i(0); i <= target; ++i)  // identifying `i`-th column
   {
+    const domain_t d(evaluation_domain(cols_[i]));
+
     auto id(symbol::undefined_category);
-    if (cols_[i].domain() == d_void)
+    if (d == d_void)
       ;
-    else if (typing_ == typing::strong || cols_[i].domain() == d_string)
+    else if (typing_ == typing::strong || d == d_string)
       id = found_categories++;
     else  // weak typing
     {
       for (std::size_t j(0); j < i; ++j)
-        if (cols_[j].domain() == cols_[i].domain())
+        if (evaluation_domain(cols_[j]) == d)
         {
           id = ret[j];
           break;
@@ -352,7 +367,7 @@ domain_t columns_info::domain_of_category(symbol::category_t target) const
                   cols_,
                   [target](const auto &ci) {return ci.category() == target;}));
 
-  return it == cols_.end() ? d_void : it->domain();
+  return it == cols_.end() ? d_void : evaluation_domain(*it);
 }
 
 ///
@@ -376,8 +391,9 @@ bool columns_info::is_valid() const
       return false;
 
     const auto cat(c.category());
+    const auto dom(evaluation_domain(c));
     for (std::size_t j(i + 1); j < cols_.size(); ++j)
-      if (cat == cols_[j].category() && c.domain() != cols_[j].domain())
+      if (cat == cols_[j].category() && dom != evaluation_domain(cols_[j]))
         return false;
   }
 

@@ -64,7 +64,7 @@ TEST_CASE_FIXTURE(fixture_ci, "wine categories weak")
   CHECK(cs[11].name() == "quality");
 
   CHECK(std::all_of(cs.begin(), std::prev(cs.end()),
-                    [](auto c) { return c.domain() == d_double; }));
+                    [](const auto &c) { return c.domain() == d_double; }));
   CHECK(cs.back().domain() == d_int);
 
   CHECK(cs.domain_of_category(0) == d_double);
@@ -129,14 +129,17 @@ TEST_CASE("wine categories strong")
   CHECK(cs.used_categories()
         == std::set<symbol::category_t>{0,1,2,3,4,5,6,7,8,9,10,11});
 
-  CHECK(std::ranges::all_of(cs.begin(), std::prev(cs.end()),
-                    [](auto c) { return c.domain() == d_double; }));
+  CHECK(std::ranges::all_of(
+          cs.begin(), std::prev(cs.end()),
+          [](auto c) { return c.domain() == d_double; }));
   CHECK(cs.back().domain() == d_int);
 
   CHECK(std::ranges::all_of(
           cs.used_categories(),
-          [&cs] (auto c)
-          { return cs.domain_of_category(c) == (c==11 ? d_int : d_double); }));
+          [&cs] (const auto &c)
+          {
+            return cs.domain_of_category(c) == (c==11 ? d_int : d_double);
+          }));
 
   CHECK(cs.task() == src::task_t::regression);
 }
@@ -259,9 +262,11 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
     switch (c)
     {
     case 0:
-      CHECK(cs.domain_of_category(c) ==    d_int);  break;
+      CHECK(cs.domain_of_category(c) == d_int);
+      break;
     case 1:
-      CHECK(cs.domain_of_category(c) == d_string);  break;
+      CHECK(cs.domain_of_category(c) == d_string);
+      break;
     default:
       CHECK(cs.domain_of_category(c) == d_double);
     }
@@ -429,7 +434,9 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0});
   CHECK(cs.domain_of_category(0) == d_double);
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+  CHECK(cs[0].domain() == d_int);
+  CHECK(std::all_of(std::next(cs.begin()), cs.end(),
+                    [](auto c) { return c.domain() == d_double; }));
 
   CHECK(cs.task() == src::task_t::classification);
 }
@@ -474,7 +481,9 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
   for (auto c : used_categories)
     CHECK(cs.domain_of_category(c) == d_double);
 
-  CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+  CHECK(cs[0].domain() == d_int);
+  CHECK(std::all_of(std::next(cs.begin()), cs.end(),
+                    [](auto c) { return c.domain() == d_double; }));
 
   CHECK(cs.task() == src::task_t::classification);
 }

@@ -136,7 +136,8 @@ TEST_CASE("set_schema")
   CHECK(d.columns[2].name() == "X2");
   CHECK(d.columns[3].name() == "X3");
   CHECK(std::ranges::all_of(
-          d.columns, [](const auto &c) { return c.domain() == d_double; }));
+          d.columns,
+          [](const auto &c) { return c.domain() == d_double; }));
 
   CHECK(d.size() == nr);
   CHECK(d.task() == src::task_t::regression);
@@ -406,8 +407,12 @@ TEST_CASE("load_csv classification")
   std::size_t count(0);
   for (const auto &c: d.columns)
   {
+    if (count == 0)
+      CHECK(c.domain() == d_int);
+    else
+      CHECK(c.domain() == d_double);
+
     ++count;
-    CHECK(c.domain() == d_double);
   }
   CHECK(count == ncol);
 
@@ -484,8 +489,12 @@ std::istringstream iris_xrff(R"(
   std::size_t count(0);
   for (const auto &c: d.columns)
   {
+    if (count == 0)
+      CHECK(c.domain() == d_int);
+    else
+      CHECK(c.domain() == d_double);
+
     ++count;
-    CHECK(c.domain() == d_double);
   }
   CHECK(count == ncol);
 
