@@ -110,7 +110,7 @@ public:
   [[nodiscard]] const_iterator end() const;
 
   // ---- Element access ----
-  [[nodiscard]] value_type front() const;
+  [[nodiscard]] const value_type &front() const;
   [[nodiscard]] value_type &front();
 
   // ---- Modifiers ----
@@ -142,6 +142,7 @@ public:
 
   // ---- Misc ----
   [[nodiscard]] std::string class_name(class_t) const noexcept;
+  [[nodiscard]] task_t task() const noexcept;
 
   [[nodiscard]] bool is_valid() const;
 

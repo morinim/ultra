@@ -71,6 +71,8 @@ TEST_CASE_FIXTURE(fixture_ci, "wine categories weak")
   CHECK(cs.domain_of_category(1) == d_int);
 
   CHECK(cs.used_categories() == std::set<symbol::category_t>{0, 1});
+
+  CHECK(cs.task() == src::task_t::regression);
 }
 
 TEST_CASE("wine categories strong")
@@ -135,6 +137,8 @@ TEST_CASE("wine categories strong")
           cs.used_categories(),
           [&cs] (auto c)
           { return cs.domain_of_category(c) == (c==11 ? d_int : d_double); }));
+
+  CHECK(cs.task() == src::task_t::regression);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
@@ -191,6 +195,8 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories weak")
   CHECK(cs.domain_of_category(0) == d_int);
   CHECK(cs.domain_of_category(1) == d_string);
   CHECK(cs.domain_of_category(2) == d_double);
+
+  CHECK(cs.task() == src::task_t::regression);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
@@ -259,6 +265,8 @@ TEST_CASE_FIXTURE(fixture_ci, "abalone categories strong")
     default:
       CHECK(cs.domain_of_category(c) == d_double);
     }
+
+  CHECK(cs.task() == src::task_t::regression);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
@@ -320,6 +328,8 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories")
   CHECK(cs.domain_of_category(0) == d_string);
   CHECK(cs.domain_of_category(1) == d_double);
   CHECK(cs.domain_of_category(2) == d_string);
+
+  CHECK(cs.task() == src::task_t::unsupervised);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
@@ -385,6 +395,8 @@ TEST_CASE_FIXTURE(fixture_ci, "ecoli categories strong")
 
   for (symbol::category_t c(1); c <= 7; ++c)
     CHECK(cs.domain_of_category(c) == d_double);
+
+  CHECK(cs.task() == src::task_t::unsupervised);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
@@ -418,6 +430,8 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification")
   CHECK(cs.domain_of_category(0) == d_double);
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+
+  CHECK(cs.task() == src::task_t::classification);
 }
 
 TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
@@ -461,6 +475,8 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
     CHECK(cs.domain_of_category(c) == d_double);
 
   CHECK(std::ranges::all_of(cs, [](auto c) { return c.domain() == d_double; }));
+
+  CHECK(cs.task() == src::task_t::classification);
 }
 
 }  // TEST_SUITE("COLUMNS_INFO")

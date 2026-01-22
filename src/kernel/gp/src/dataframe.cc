@@ -66,8 +66,6 @@ namespace ultra::src
 /// \warning
 /// Used only in classification tasks.
 ///
-/// \related example
-///
 [[nodiscard]] class_t label(const example &e)
 {
   Expects(std::holds_alternative<D_INT>(e.output));
@@ -151,6 +149,11 @@ void dataframe::clear()
   dataset_.clear();
 }
 
+task_t dataframe::task() const noexcept
+{
+  return columns.task();
+}
+
 ///
 /// \return reference to the first element of the active dataset
 ///
@@ -190,7 +193,7 @@ dataframe::const_iterator dataframe::end() const
 ///
 /// \remark Calling `front` on an empty dataframe is undefined.
 ///
-dataframe::value_type dataframe::front() const
+const dataframe::value_type &dataframe::front() const
 {
   return dataset_.front();
 }
@@ -240,7 +243,7 @@ class_t dataframe::classes() const noexcept
 ///
 unsigned dataframe::variables() const
 {
-  const auto n(empty() ? 0u : static_cast<unsigned>(begin()->input.size()));
+  const auto n(empty() ? 0u : static_cast<unsigned>(front().input.size()));
 
   Ensures(empty() || n + 1 == columns.size());
   return n;
@@ -262,6 +265,8 @@ void dataframe::push_back(const example &e)
 ///
 class_t dataframe::encode(const value_t &label)
 {
+  Expects(task() == task_t::classification);
+
   const auto str(std::get<D_STRING>(label));
 
   if (!classes_map_.contains(str))
@@ -277,6 +282,8 @@ class_t dataframe::encode(const value_t &label)
 ///
 std::string dataframe::class_name(class_t i) const noexcept
 {
+  Expects(task() == task_t::classification);
+
   for (const auto &p : classes_map_)
     if (p.second == i)
       return p.first;
@@ -392,8 +399,8 @@ std::size_t dataframe::read_xrff(tinyxml2::XMLDocument &doc, const params &p)
 
       // For classification problems we use discriminant functions, so the
       // actual output type is always numeric.
-      if (xml_type == "nominal" || xml_type == "string")
-        xml_type = "numeric";
+      //if (xml_type == "nominal" || xml_type == "string")
+      //  xml_type = "numeric";
     }
 
     a.domain(from_weka(xml_type));
@@ -693,47 +700,60 @@ bool dataframe::is_valid() const
   const auto out_domain(columns.front().domain());
   const auto cl_size(classes());
 
-  switch (out_domain)
+  switch (task())
   {
-  case d_double:  // symbolic regression or classification
-    if (cl_size == 1)
+  case task_t::classification:
+    if (cl_size <= 1)
     {
-      ultraERROR << "Only one class for a classification task";
+      ultraERROR << "Not enough classes for a classification task";
+      return false;
+    }
+    if (out_domain != d_double)
+    {
+      ultraERROR << "Wrong output domain (" << out_domain
+                 << ") for a classification task";
       return false;
     }
     break;
 
-  case d_int:  // symbolic regression
+  case task_t::regression:
     if (cl_size != 0)
     {
       ultraERROR << "Symbolic regression tasks require zero classes";
       return false;
     }
+    if (out_domain != d_double && out_domain != d_int)
+    {
+      ultraERROR << "Wrong output domain (" << out_domain
+                 << ") for a regression task";
+      return false;
+    }
     break;
 
-  case d_void:  // unsupervised learning
+  case task_t::unsupervised:
     if (cl_size != 0)
     {
       ultraERROR << "Unsupervised learning tasks require zero classes";
       return false;
     }
+    if (out_domain != d_void)
+    {
+      ultraERROR << "Wrong output domain (" << out_domain
+                 << ") for a unsupervised task";
+      return false;
+    }
     break;
+  }
 
-  default:
-    ultraERROR << "Unmanaged output column domain";
+  if (const auto in_size(front().input.size());
+      std::ranges::any_of(
+        *this, [in_size](const auto &e) { return e.input.size() != in_size; }))
     return false;
-  }
 
-  const auto in_size(front().input.size());
-
-  for (const auto &e : *this)
-  {
-    if (e.input.size() != in_size)
-      return false;
-
-    if (cl_size && label(e) >= cl_size)
-      return false;
-  }
+  if (task() == task_t::classification
+      && std::ranges::any_of(
+        *this, [cl_size](const auto &e) { return label(e) >= cl_size; }))
+    return false;
 
   return columns.is_valid();
 }

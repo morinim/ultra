@@ -46,6 +46,8 @@ namespace ultra::src
 ///
 enum class typing {weak, strong};
 
+enum class task_t {classification, regression, unsupervised};
+
 template<class R> concept RangeOfSizedRanges =
   std::ranges::range<R>
   && std::ranges::sized_range<std::ranges::range_value_t<R>>;
@@ -135,13 +137,18 @@ public:
 
   [[nodiscard]] domain_t domain_of_category(symbol::category_t) const;
 
+  [[nodiscard]] task_t task() const noexcept;
+
   [[nodiscard]] bool is_valid() const;
 
 private:
   [[nodiscard]] symbol::category_t category(const column_info &) const;
+  void settle_task_t();
 
   std::vector<column_info> cols_ {};
   typing typing_ {typing::weak};
+
+  task_t task_ {task_t::regression};
 };
 
 #include "columns_info.tcc"

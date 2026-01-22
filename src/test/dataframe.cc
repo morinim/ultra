@@ -139,6 +139,7 @@ TEST_CASE("set_schema")
           d.columns, [](const auto &c) { return c.domain() == d_double; }));
 
   CHECK(d.size() == nr);
+  CHECK(d.task() == src::task_t::regression);
   CHECK(d.classes() == 0);
   CHECK(d.variables() == 3);
   CHECK(d.is_valid());
@@ -248,6 +249,7 @@ TEST_CASE("load_csv headers")
   }
   CHECK(count == ncol);
 
+  CHECK(d.task() == src::task_t::regression);
   CHECK(d.classes() == 0);
   CHECK(d.front().input.size() == ncol - 1);
 
@@ -302,6 +304,7 @@ TEST_CASE("load_csv output_index")
   CHECK(d.columns[1].domain() == d_string);
   CHECK(d.columns[2].domain() == d_double);
 
+  CHECK(d.task() == src::task_t::regression);
   CHECK(d.classes() == 0);
   CHECK(d.front().input.size() == ncol - 1);
 
@@ -310,7 +313,7 @@ TEST_CASE("load_csv output_index")
   CHECK(std::holds_alternative<D_DOUBLE>(d.front().input[1]));
 }
 
-TEST_CASE("load_csv_no_output_index")
+TEST_CASE("load_csv no output_index")
 {
   using namespace ultra;
   using ultra::src::dataframe;
@@ -347,6 +350,7 @@ TEST_CASE("load_csv_no_output_index")
   CHECK(d.columns.begin()->name() ==   d.columns.front().name());
   CHECK(d.columns.back().name()   ==     d.columns[ncol].name());
 
+  CHECK(d.columns[0].domain() == d_void);
   CHECK(d.columns[1].domain() == d_string);
   CHECK(d.columns[2].domain() == d_double);
   CHECK(d.columns[3].domain() == d_double);
@@ -357,6 +361,7 @@ TEST_CASE("load_csv_no_output_index")
   CHECK(d.columns[8].domain() == d_double);
   CHECK(d.columns[9].domain() == d_string);
 
+  CHECK(d.task() == src::task_t::unsupervised);
   CHECK(d.classes() == 0);
 
   for (const auto &e : d)
@@ -366,7 +371,7 @@ TEST_CASE("load_csv_no_output_index")
   }
 }
 
-TEST_CASE("load_csv_classification")
+TEST_CASE("load_csv classification")
 {
   using namespace ultra;
   using ultra::src::dataframe;
@@ -406,6 +411,7 @@ TEST_CASE("load_csv_classification")
   }
   CHECK(count == ncol);
 
+  CHECK(d.task() == src::task_t::classification);
   CHECK(d.classes() == 3);
   CHECK(d.front().input.size() == ncol - 1);
 
@@ -414,7 +420,7 @@ TEST_CASE("load_csv_classification")
   CHECK(d.class_name(2) == "Iris-virginica");
 }
 
-TEST_CASE("load_xrff_classification")
+TEST_CASE("load_xrff classification")
 {
   using namespace ultra;
   using ultra::src::dataframe;
@@ -483,6 +489,7 @@ std::istringstream iris_xrff(R"(
   }
   CHECK(count == ncol);
 
+  CHECK(d.task() == src::task_t::classification);
   CHECK(d.classes() == 3);
   CHECK(d.front().input.size() == ncol - 1);
 

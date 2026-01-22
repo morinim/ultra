@@ -10,11 +10,11 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <algorithm>
-
 #include "kernel/gp/src/columns_info.h"
 #include "utility/assert.h"
 #include "utility/misc.h"
+
+#include <algorithm>
 
 namespace ultra::src
 {
@@ -105,10 +105,32 @@ columns_info::columns_info(
   for (const auto &[name, domain] : schema)
     cols_.push_back(column_info(*this, trim(name), domain));
 
-  // For classification tasks we use discriminant functions and the actual
-  // output type is always numeric.
-  if (cols_.front().domain() == d_string)
+  settle_task_t();
+}
+
+task_t columns_info::task() const noexcept
+{
+  return task_;
+}
+
+void columns_info::settle_task_t()
+{
+  switch (cols_.front().domain())
+  {
+  case d_string:
+    // For classification tasks we use discriminant functions and the actual
+    // output type is always numeric.
     cols_.front().domain(d_double);
+    task_ = task_t::classification;
+    break;
+
+  case d_void:
+    task_ = task_t::unsupervised;
+    break;
+
+  default:
+    task_ = task_t::regression;
+  }
 }
 
 ///
@@ -131,6 +153,7 @@ columns_info &columns_info::operator=(const columns_info &other)
       cols_.emplace_back(*this, c.name(), c.domain(), c.states());
 
     typing_ = other.typing_;
+    task_ = other.task_;
   }
 
   return *this;
@@ -269,6 +292,7 @@ void columns_info::push_back(const column_info &v)
 void columns_info::push_front(const column_info &v)
 {
   cols_.insert(begin(), v);
+  settle_task_t();
 }
 
 symbol::category_t columns_info::category(const column_info &ci) const

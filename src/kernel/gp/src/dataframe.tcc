@@ -71,9 +71,9 @@ example dataframe::to_example(const R &r, bool add_instance)
 
       if (i == 0)
       {
-        if (!is_number(lexical_cast<D_STRING>(feature)))  // classification task
+        if (task() == task_t::classification)
           ret.output = static_cast<D_INT>(encode(feature));
-        else  // symbolic regression
+        else
           ret.output = internal::lexical_cast(feature, domain);
       }
       else  // input value
@@ -101,7 +101,9 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
                             bool add_instance)
 {
   Expects(!r.empty());
-  Expects(!output_index || *output_index < std::ranges::distance(r));
+  Expects(
+    !output_index
+    || *output_index < static_cast<std::size_t>(std::ranges::distance(r)));
 
   r = internal::output_column_first(r, output_index);
 

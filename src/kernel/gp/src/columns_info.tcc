@@ -93,6 +93,9 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
   Expects(std::ranges::distance(exs));
   Expects(exs.front().size());
 
+  cols_.clear();
+
+  // Reorders examples to place the output column first.
   std::ranges::transform(
     exs, exs.begin(),
     [&output_index](const auto &r)
@@ -182,10 +185,7 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
       }
     }
 
-  // For classification tasks we use discriminant functions and the actual
-  // output type is always numeric.
-  if (cols_.front().domain() == d_string)
-    cols_.front().domain(d_double);
+  settle_task_t();
 }
 
 #endif  // include guard
