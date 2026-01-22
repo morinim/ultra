@@ -20,37 +20,48 @@
 namespace internal
 {
 
-template<class C, class T>
-concept has_insert_at_beginning = requires(C c, T v)
-{
-  { c.begin() } -> std::input_iterator; // has a begin() returning an iterator
-  { c.insert(c.begin(), v) };           // supports insert at begin
-};
-
-template<class C>
-concept range_with_insert_at_beginning =
-  std::ranges::range<C>
-  && has_insert_at_beginning<C, std::ranges::range_value_t<C>>;
-
 ///
-/// Moves the element at position `n` to the front of the prefix `[0, n]`.
+/// Normalises a row by moving the designated output column to the front.
 ///
-/// \param[in]  n index of the element to move to the front of the prefix
+/// \param[in] raw input row
+/// \param[in] n   optional index of the output column
+/// \returns       a range whose first element represents the output column.
+///                The returned range may be a lazy view or an owning
+///                container, depending on library support.
 ///
-/// Reorders only the first `n+1` elements of the sequence so that the element
-/// originally at index `n` becomes the first one. The relative order of the
-/// remaining elements in the prefix is preserved.
+/// \pre If `n` is provided, it must be a valid index into `raw`
 ///
-/// Elements with index greater than `n` are left unchanged.
+/// If `n` is provided, the element at position `n` is moved to index `0`,
+/// preserving the relative order of the other elements in the prefix
+/// `[0, n]`. Elements with index greater than `n` are left unchanged.
 ///
-/// \remark If `n` is empty add an empty column to the front.
+/// If `n` is empty, a surrogate empty element is inserted at the front,
+/// treating all original elements as input columns.
 ///
-template<range_with_insert_at_beginning R>
-[[nodiscard]] R output_column_first(const R &raw, std::optional<std::size_t> n)
+template<std::ranges::range R>
+[[nodiscard]] auto output_column_first(const R &raw,
+                                       std::optional<std::size_t> n)
 {
   using VT = std::ranges::range_value_t<R>;
   static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
 
+#if defined(__cpp_lib_ranges_concat)  // lazy view
+  if (n)
+  {
+    assert(*n < static_cast<std::size_t>(std::ranges::distance(raw)));
+
+    return raw
+           | std::views::drop(*n) | std::views::take(1)
+           | std::views::concat(raw | std::views::take(*n))
+           | std::views::concat(raw | std::views::drop(*n + 1));
+  }
+
+  // When the output index is missing, all the columns are treated as input
+  // columns (this is obtained adding a surrogate, empty output column).
+
+  // Empty surrogate column + original row.
+  return std::views::single(VT()) | std::views::concat(raw);
+#else  // eager container
   R r(raw);
 
   if (n)
@@ -78,43 +89,61 @@ template<range_with_insert_at_beginning R>
   }
 
   return r;
+#endif
 }
 
 }  // namespace internal
 
 ///
-/// Compiles metadata about the dataframe columns from a sample of examples.
+/// Compiles metadata describing dataframe columns from a sample of rows.
 ///
-/// \param[in] exs          a range of examples. The first row must contain
-///                         column headers
-/// \param[in] output_index optional index specifying the output column
+/// \param[in] exs          a non-empty range of rows. Each row must itself be
+///                         a sized range. The first row must contain column
+///                         headers.
+/// \param[in] output_index optional index of the output column
+///
+/// \pre `exs` must not be empty, and the header row must contain at least
+///            one column
+/// The first row of `exs` is interpreted as the header row. An optional output
+/// column may be designated via `output_index`; when present, the
+/// corresponding column is treated as the output and is normalised to appear
+/// first during analysis.
+///
+/// To limit computational cost, domain inference is performed on a bounded
+/// prefix of the input rows.
 ///
 /// \note
-/// Examples with an incorrect number of columns are skipped.
+/// Rows with insufficient length for a given column index are ignored for that
+/// column during domain inference.
 ///
 template<RangeOfSizedRanges R>
-void columns_info::build(R exs, std::optional<std::size_t> output_index)
+void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
 {
   using VT = std::ranges::range_value_t<std::ranges::range_value_t<R>>;
   static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
 
-  Expects(std::ranges::distance(exs));
+  Expects(!exs.empty());
   Expects(exs.front().size());
 
   cols_.clear();
 
-  // Reorders examples to place the output column first.
-  std::ranges::transform(
-    exs, exs.begin(),
-    [&output_index](const auto &r)
-    {
-      return internal::output_column_first(r, output_index);
-    });
+  // Lazily reorders each row so that the output column is first. Also limits
+  // the analysis to a subset of the available rows.
+  constexpr std::size_t max_domain_samples {1000};
+  const auto normalised_rows(
+    exs | std::views::take(max_domain_samples)
+    | std::views::transform([&output_index](const auto &r)
+      {
+        return internal::output_column_first(r, output_index);
+      }));
 
   // Set up column headers (first row must contain the headers).
-  cols_.reserve(std::ranges::distance(exs.front()));
+  const auto &header_row(*normalised_rows.begin());
+
+  cols_.reserve(std::ranges::distance(header_row));
+
   std::ranges::transform(
-    exs.front(), std::back_inserter(cols_),
+    header_row, std::back_inserter(cols_),
     [this](const auto &name)
     {
       if constexpr (std::same_as<VT, std::string>)
@@ -123,13 +152,14 @@ void columns_info::build(R exs, std::optional<std::size_t> output_index)
         return column_info(*this, trim(lexical_cast<std::string>(name)));
     });
 
+  // Domain inference.
   for (std::size_t idx(0); idx < size(); ++idx)
-    for (auto row(std::next(exs.begin())); row != exs.end(); ++row)
+    for (const auto &row : normalised_rows | std::views::drop(1))
     {
-      if (row->size() <= idx)
+      if (row.size() <= idx)
         continue;
 
-      const auto &value(*std::next(row->begin(), idx));
+      const auto &value(*std::next(row.begin(), idx));
 
       // Sets the domain associated to a column.
       switch (cols_[idx].domain())

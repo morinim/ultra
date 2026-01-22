@@ -131,7 +131,7 @@ public:
   void data_typing(typing) noexcept;
 
   template<RangeOfSizedRanges R>
-  void build(R, std::optional<std::size_t>);
+  void build(const R &, std::optional<std::size_t>);
 
   std::set<symbol::category_t> used_categories() const;
 
