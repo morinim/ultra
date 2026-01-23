@@ -42,7 +42,7 @@ TEST_CASE("Cardinality")
 
   std::istringstream is(debug::iris_full);
   src::problem prob(is);
-  CHECK(!!prob);
+  CHECK(prob.ready());
 
   const auto orig(prob.data.selected());
   const auto examples(prob.data.selected().size());
@@ -82,7 +82,7 @@ TEST_CASE("Probabilities")
 
   std::istringstream is(debug::iris_full);
   src::problem prob(is);
-  CHECK(!!prob);
+  CHECK(prob.ready());
 
   // Output value changed to be used as unique key for example identification.
   int i(0);
@@ -132,7 +132,7 @@ TEST_CASE("Stratify")
 
   std::istringstream is(debug::iris_full);
   src::problem prob(is);
-  CHECK(!!prob);
+  CHECK(prob.ready());
 
   const auto orig(prob.data.selected());
   const auto examples(orig.size());

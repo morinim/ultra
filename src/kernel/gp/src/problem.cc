@@ -140,11 +140,19 @@ problem::problem(std::istream &ds, const dataframe::params &p)
 }
 
 ///
-/// \return `false` if the current problem isn't ready for a run
+/// \return `true` if the problem is ready to start an evolutionary run
 ///
-bool problem::operator!() const
+/// A problem is considered ready when:
+/// - a non-empty training dataset is available;
+/// - the symbol set contains a sufficient number of terminals.
+///
+/// \remark
+/// This check verifies readiness for evolution while `is_valid()` checks
+/// full internal consistency.
+///
+bool problem::ready() const
 {
-  return !data[dataset_t::training].size() || !sset.enough_terminals();
+  return data[dataset_t::training].size() && sset.enough_terminals();
 }
 
 ///

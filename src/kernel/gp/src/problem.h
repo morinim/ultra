@@ -85,8 +85,9 @@ public:
   [[nodiscard]] std::size_t classes() const noexcept;
   [[nodiscard]] std::size_t variables() const noexcept;
 
+  [[nodiscard]] bool ready() const;
+
   // ---- Misc ----
-  [[nodiscard]] bool operator!() const;
   void setup_symbols(symbol_init = symbol_init::all);
   void setup_terminals(symbol_init = def_terminal_init);
   [[nodiscard]] bool is_valid() const override;
