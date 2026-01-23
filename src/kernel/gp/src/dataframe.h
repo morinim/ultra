@@ -96,8 +96,8 @@ public:
   dataframe(std::istream &, const params &);
   explicit dataframe(const std::filesystem::path &);
   dataframe(const std::filesystem::path &, const params &);
-  template<RangeOfSizedRanges R> dataframe(const R &);
-  template<RangeOfSizedRanges R> dataframe(const R &, params);
+  template<DataframeMatrix R> dataframe(const R &);
+  template<DataframeMatrix R> dataframe(const R &, params);
 
   // ---- Iterators ----
   using iterator = examples_t::iterator;
@@ -126,8 +126,8 @@ public:
   std::size_t read(const std::filesystem::path &, const params &);
   std::size_t read(std::istream &);
   std::size_t read(std::istream &, params);
-  template<RangeOfSizedRanges R> std::size_t read(const R &);
-  template<RangeOfSizedRanges R> std::size_t read(const R &, params);
+  template<DataframeMatrix R> std::size_t read(const R &);
+  template<DataframeMatrix R> std::size_t read(const R &, params);
   [[nodiscard]] bool operator!() const noexcept;
 
   bool clone_schema(const dataframe &);

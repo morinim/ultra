@@ -129,7 +129,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 ///                      are used
 /// \return              number of elements parsed (0 in case of error)
 ///
-template<RangeOfSizedRanges R>
+template<DataframeMatrix R>
 std::size_t dataframe::read(const R &container, params p)
 {
   columns.data_typing(p.data_typing);
@@ -155,8 +155,7 @@ std::size_t dataframe::read(const R &container, params p)
   return size();
 }
 
-template<RangeOfSizedRanges R>
-std::size_t dataframe::read(const R &container)
+template<DataframeMatrix R> std::size_t dataframe::read(const R &container)
 {
   return read(container, {});
 }
@@ -171,13 +170,13 @@ std::size_t dataframe::read(const R &container)
 /// \remark
 /// The first row of the table must contain headers.
 ///
-template<RangeOfSizedRanges R> dataframe::dataframe(const R &t, params p)
+template<DataframeMatrix R> dataframe::dataframe(const R &t, params p)
 {
   read(t, p);
   Ensures(is_valid());
 }
 
-template<RangeOfSizedRanges R> dataframe::dataframe(const R &t)
+template<DataframeMatrix R> dataframe::dataframe(const R &t)
   : dataframe(t, {})
 {
 }

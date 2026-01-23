@@ -38,12 +38,11 @@ namespace internal
 /// If `n` is empty, a surrogate empty element is inserted at the front,
 /// treating all original elements as input columns.
 ///
-template<std::ranges::range R>
+template<DataframeRow R>
 [[nodiscard]] auto output_column_first(const R &raw,
                                        std::optional<std::size_t> n)
 {
   using VT = std::ranges::range_value_t<R>;
-  static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
 
 #if defined(__cpp_lib_ranges_concat)  // lazy view
   if (n)
@@ -116,11 +115,10 @@ template<std::ranges::range R>
 /// Rows with insufficient length for a given column index are ignored for that
 /// column during domain inference.
 ///
-template<RangeOfSizedRanges R>
+template<DataframeMatrix R>
 void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
 {
   using VT = std::ranges::range_value_t<std::ranges::range_value_t<R>>;
-  static_assert(std::same_as<VT, value_t> || std::same_as<VT, std::string>);
 
   Expects(!exs.empty());
   Expects(exs.front().size());

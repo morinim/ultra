@@ -48,9 +48,18 @@ enum class typing {weak, strong};
 
 enum class task_t {classification, regression, unsupervised};
 
-template<class R> concept RangeOfSizedRanges =
-  std::ranges::range<R>
-  && std::ranges::sized_range<std::ranges::range_value_t<R>>;
+template<class R>
+concept DataframeRow =
+  std::ranges::forward_range<R>
+  && std::ranges::sized_range<R>
+  && std::copy_constructible<R>
+  && (std::same_as<std::ranges::range_value_t<R>, value_t>
+      || std::same_as<std::ranges::range_value_t<R>, std::string>);
+
+template<class R> concept DataframeMatrix =
+  std::ranges::forward_range<R>
+  && std::ranges::sized_range<R>
+  && DataframeRow<std::ranges::range_value_t<R>>;
 
 ///
 /// Information about the collection of columns (type, name, output index).
@@ -130,7 +139,7 @@ public:
   // ---- Misc ----
   void data_typing(typing) noexcept;
 
-  template<RangeOfSizedRanges R>
+  template<DataframeMatrix R>
   void build(const R &, std::optional<std::size_t>);
 
   std::set<symbol::category_t> used_categories() const;
