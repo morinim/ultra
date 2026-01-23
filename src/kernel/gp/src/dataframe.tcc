@@ -121,13 +121,16 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 }
 
 ///
-/// Loads a matrix into the dataframe.
+/// Populate the dataframe from an in-memory range.
 ///
-/// \param[in] container input data
-/// \param[in] p         additional, optional, parameters (see `params`
-///                      structure). Only `p.data_typing` and `p.output_index`
-///                      are used
-/// \return              number of elements parsed (0 in case of error)
+/// \param[in] container the input data
+/// \param[in] p         parsing and typing parameters. Only `p.data_typing`
+///                      and `p.output_index` are used
+/// \return              the number of rows stored in the dataframe (`0` in
+///                      case of error)
+///
+/// This function clears existing data, infers the schema using
+/// `columns_info::build` and then loads all rows into the dataframe.
 ///
 template<DataframeMatrix R>
 std::size_t dataframe::read(const R &container, params p)
@@ -161,14 +164,16 @@ template<DataframeMatrix R> std::size_t dataframe::read(const R &container)
 }
 
 ///
-/// New dataframe instance containing the learning collection imported from a
-/// range.
+/// Construct a dataframe from a matrix-like range.
 ///
-/// \param[in] t input range
+/// \tparam R a `DataframeMatrix` type
+///
+/// \param[in] t the data source
 /// \param[in] p additional, optional, parameters (see `params` structure)
 ///
 /// \remark
-/// The first row of the table must contain headers.
+/// The first row is interpreted as column headers unless overridden via
+/// parameters.
 ///
 template<DataframeMatrix R> dataframe::dataframe(const R &t, params p)
 {
@@ -176,6 +181,16 @@ template<DataframeMatrix R> dataframe::dataframe(const R &t, params p)
   Ensures(is_valid());
 }
 
+///
+/// Construct a dataframe from a matrix-like range.
+///
+/// \tparam R a `DataframeMatrix` type
+///
+/// \param[in] t the data source
+///
+/// \remark
+/// The first row of the table must contain headers.
+///
 template<DataframeMatrix R> dataframe::dataframe(const R &t)
   : dataframe(t, {})
 {

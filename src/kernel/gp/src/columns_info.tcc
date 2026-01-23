@@ -23,20 +23,24 @@ namespace internal
 ///
 /// Normalises a row by moving the designated output column to the front.
 ///
-/// \param[in] raw input row
-/// \param[in] n   optional index of the output column
+/// \tparam R a `DataframeRow` type
+///
+/// \param[in] raw the original rowthe output column
+/// \param[in] n   optional output column index
 /// \returns       a range whose first element represents the output column.
 ///                The returned range may be a lazy view or an owning
 ///                container, depending on library support.
 ///
 /// \pre If `n` is provided, it must be a valid index into `raw`
 ///
-/// If `n` is provided, the element at position `n` is moved to index `0`,
-/// preserving the relative order of the other elements in the prefix
-/// `[0, n]`. Elements with index greater than `n` are left unchanged.
+/// Given a row and an optional output column index, this helper returns a
+/// range where the output column is logically moved to the front.
 ///
-/// If `n` is empty, a surrogate empty element is inserted at the front,
-/// treating all original elements as input columns.
+/// If no output index is provided, a surrogate empty element is inserted at
+/// the front, and all original elements are treated as input columns.
+///
+/// When available, a lazy concatenation view is used; otherwise, a
+/// materialised container is returned.
 ///
 template<DataframeRow R>
 [[nodiscard]] auto output_column_first(const R &raw,
@@ -94,15 +98,18 @@ template<DataframeRow R>
 }  // namespace internal
 
 ///
-/// Compiles metadata describing dataframe columns from a sample of rows.
+/// Infer column metadata from a dataframe-like range.
 ///
-/// \param[in] exs          a non-empty range of rows. Each row must itself be
-///                         a sized range. The first row must contain column
-///                         headers.
-/// \param[in] output_index optional index of the output column
+/// \tparam R a `DataframeMatrix` type
 ///
-/// \pre `exs` must not be empty, and the header row must contain at least
-///            one column
+/// \param[in] exs          a non-empty range of rows representing the dataset.
+///                         The first row must contain column headers
+/// \param[in] output_index optional index of the output column. If not
+///                         provided, a surrogate output column may be inserted
+///
+/// \pre The range must not be empty
+/// \pre Rows must have non-zero size.
+///
 /// The first row of `exs` is interpreted as the header row. An optional output
 /// column may be designated via `output_index`; when present, the
 /// corresponding column is treated as the output and is normalised to appear

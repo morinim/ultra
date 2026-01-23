@@ -149,6 +149,14 @@ void dataframe::clear()
   dataset_.clear();
 }
 
+///
+/// Return the learning task associated with the dataframe.
+///
+/// \return the inferred or configured task type
+///
+/// The task reflects the role and domain of the output column and may be
+/// classification, regression or unsupervised learning.
+///
 task_t dataframe::task() const noexcept
 {
   return columns.task();
@@ -157,7 +165,7 @@ task_t dataframe::task() const noexcept
 ///
 /// \return reference to the first element of the active dataset
 ///
-dataframe::iterator dataframe::begin()
+dataframe::iterator dataframe::begin() noexcept
 {
   return dataset_.begin();
 }
@@ -165,7 +173,7 @@ dataframe::iterator dataframe::begin()
 ///
 /// \return a constant reference to the first element of the dataset
 ///
-dataframe::const_iterator dataframe::begin() const
+dataframe::const_iterator dataframe::begin() const noexcept
 {
   return dataset_.begin();
 }
@@ -173,7 +181,7 @@ dataframe::const_iterator dataframe::begin() const
 ///
 /// \return a reference to the sentinel element of the active dataset
 ///
-dataframe::iterator dataframe::end()
+dataframe::iterator dataframe::end() noexcept
 {
   return dataset_.end();
 }
@@ -181,7 +189,7 @@ dataframe::iterator dataframe::end()
 ///
 /// \return a constant reference to the sentinel element of the active dataset
 ///
-dataframe::const_iterator dataframe::end() const
+dataframe::const_iterator dataframe::end() const noexcept
 {
   return dataset_.end();
 }
@@ -236,10 +244,13 @@ class_t dataframe::classes() const noexcept
 }
 
 ///
-/// \return input vector dimension
+/// Return the number of input variables.
+///
+/// \return the number of columns used as input variables
 ///
 /// \note
-/// If the dataset is not empty, `variables() + 1 == columns.size()`.
+/// Output columns are excluded from this count (if the dataset is not empty,
+/// `variables() + 1 == columns.size()`).
 ///
 unsigned dataframe::variables() const
 {
@@ -260,8 +271,13 @@ void dataframe::push_back(const example &e)
 }
 
 ///
-/// \param[in] label name of a class of the learning collection
-/// \return          the (numerical) value associated with class `label`
+/// Encode an external class label.
+///
+/// \param[in] label the external label value
+/// \return          the internal class identifier corresponding to the `label`
+///
+/// This function is meaningful only for classification tasks and maps symbolic
+/// or numeric labels to a compact internal representation.
 ///
 class_t dataframe::encode(const value_t &label)
 {
@@ -276,9 +292,11 @@ class_t dataframe::encode(const value_t &label)
 }
 
 ///
-/// \param[in] i the encoded (dataframe::encode()) value of a class
-/// \return      the name of the class encoded by `i` (or an empty string if
-///              such class cannot be find)
+/// Retrieve the external name of a class.
+///
+/// \param[in] i internal class identifier
+/// \return      human-readable name associated with the class (or an empty
+///              string if such class cannot be find)
 ///
 std::string dataframe::class_name(class_t i) const noexcept
 {
@@ -292,11 +310,13 @@ std::string dataframe::class_name(class_t i) const noexcept
 }
 
 ///
-/// Loads a XRFF file from a file into the dataframe.
+/// Read a dataset in XRFF format from a file.
 ///
-/// \param[in] fn the xrff filename
-/// \param[in] p  additional, optional, parameters (see `params` structure)
+/// \param[in] fn input file containing XRFF data
+/// \param[in] p  parsing and typing parameters
 /// \return       number of lines parsed (`0` in case of errors)
+///
+/// XRFF is an XML-based extension of the ARFF format.
 ///
 /// \exception exception::data_format wrong data format for data file
 ///
@@ -314,11 +334,13 @@ std::size_t dataframe::read_xrff(const std::filesystem::path &fn,
 }
 
 ///
-/// Loads a XRFF file from a stream into the dataframe.
+/// Read a dataset in XRFF format from a stream.
 ///
-/// \param[in] in the xrff stream
-/// \param[in] p  additional, optional, parameters (see `params` structure)
+/// \param[in] in input stream containing XRFF data
+/// \param[in] p  parsing and typing parameters
 /// \return       number of lines parsed (`0` in case of errors)
+///
+/// XRFF is an XML-based extension of the ARFF format.
 ///
 /// \exception exception::data_format wrong data format for data file
 ///
@@ -338,11 +360,11 @@ std::size_t dataframe::read_xrff(std::istream &in, params p)
 }
 
 ///
-/// Loads a XRFF document into the active dataset.
+/// Read a dataset in XRFF format from an XML document.
 ///
-/// \param[in] doc object containing the xrff file
-/// \param[in] p   additional, optional, parameters (see `params` structure)
-/// \return        number of lines parsed (`0` in case of errors)
+/// \param[in] doc parsed XML document
+/// \param[in] p   parsing and typing parameters
+/// \return        number of rows successfully read (`0` in case of errors)
 ///
 /// \exception exception::data_format wrong data format for data file
 ///

@@ -67,16 +67,10 @@ struct example
 [[nodiscard]] class_t label(const src::example &);
 
 ///
-/// A 2-dimensional labeled data structure with columns of potentially
-/// different types.
+/// Owning container for tabular data and its schema.
 ///
-/// You can think of it like a spreadsheet or SQL table.
-///
-/// Dataframe:
-/// - is modelled on the corresponding *pandas* object;
-/// - is a forward iterable collection of "monomorphic" examples (all samples
-///   have the same type and arity);
-/// - accepts different kinds of input (CSV and XRFF files).
+/// The dataframe class provides a uniform interface to load, store and
+/// validate datasets coming from files, streams or in-memory ranges.
 ///
 /// \see https://github.com/morinim/ultra/wiki/dataframe
 ///
@@ -104,10 +98,10 @@ public:
   using const_iterator = examples_t::const_iterator;
   using difference_type = examples_t::difference_type;
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] iterator end();
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] iterator begin() noexcept;
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] iterator end() noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
 
   // ---- Element access ----
   [[nodiscard]] const value_type &front() const;

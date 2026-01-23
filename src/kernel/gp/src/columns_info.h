@@ -28,13 +28,13 @@ namespace ultra::src
 {
 
 ///
-/// Category/type management of the dataframe columns.
+/// Strategy used for data typing.
 ///
-/// - `weak`: columns **that share the same domain** (e.g. `double` with
-///           `double`, `string` with `string`...) can be freely mixed by the
-///           engine.
-/// - `strong`: every column has its own type/category (Strongly Typed Genetic
-/// Programming).
+/// - `weak`. Types are inferred permissively: columns **that share the same
+///   domain** (e.g. `double` with `double`, `string` with `string`...) can be
+///   freely mixed by the engine;
+/// - `strong`. Types are inferred strictly: every column has its own
+///   type/category (Strongly Typed Genetic Programming).
 ///
 /// Even when specifying `typing::weak` the engine won't mix all the columns.
 /// In particular, a unique category will be assigned to:
@@ -46,8 +46,27 @@ namespace ultra::src
 ///
 enum class typing {weak, strong};
 
+///
+/// Type of learning task associated with the dataframe.
+///
+/// - `classification`: discrete output variable;
+/// - `regression`: continuous output variable;
+/// - `unsupervised`: no designated output variable.
+///
 enum class task_t {classification, regression, unsupervised};
 
+///
+/// A single row of a generic dataframe.
+///
+/// A DataframeRow models one logical record of a dataframe. It must:
+/// - be a `forward_range` (multi-pass iteration is required);
+/// - be a `sized_range` (the number of columns must be known);
+/// - be copy constructible (rows may be copied during inference);
+/// - expose values of type `value_t` or `std::string`.
+///
+/// This concept deliberately does not require random access, allowing
+/// rows to be represented by lightweight views or containers.
+///
 template<class R>
 concept DataframeRow =
   std::ranges::forward_range<R>
@@ -56,13 +75,32 @@ concept DataframeRow =
   && (std::same_as<std::ranges::range_value_t<R>, value_t>
       || std::same_as<std::ranges::range_value_t<R>, std::string>);
 
+///
+/// A collection of dataframe rows.
+///
+/// A `DataframeMatrix` represents a full tabular dataset. It must:
+/// - be a forward_range and sized_range;
+/// - have elements that satisfy DataframeRow.
+///
+/// The outer range corresponds to rows, while the inner range corresponds to
+/// columns within each row.
+///
 template<class R> concept DataframeMatrix =
   std::ranges::forward_range<R>
   && std::ranges::sized_range<R>
   && DataframeRow<std::ranges::range_value_t<R>>;
 
 ///
-/// Information about the collection of columns (type, name, output index).
+/// Metadata container describing the columns of a dataframe.
+///
+/// This class stores and manages column-level information such as:
+/// - column names;
+/// - inferred domains;
+/// - input/output roles;
+/// - typing constraints.
+///
+/// It also provides facilities to infer such metadata from a dataframe-like
+/// range and to query the resulting schema.
 ///
 /// \related dataframe
 ///

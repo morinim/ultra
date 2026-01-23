@@ -34,32 +34,64 @@ columns_info::column_info::column_info(const columns_info &csi,
   Expects(basic_data_type(domain));
 }
 
+///
+/// Return the column name.
+///
+/// \return name associated with the column
+///
 const std::string &columns_info::column_info::name() const noexcept
 {
   return name_;
 }
 
+///
+/// Set the column name.
+///
+/// \param[in] n new name for the column
+///
 void columns_info::column_info::name(const std::string &n)
 {
   name_ = n;
 }
 
+///
+/// Return the domain of the column.
+///
+/// \return domain describing the column values
+///
 domain_t columns_info::column_info::domain() const noexcept
 {
   return domain_;
 }
 
+///
+/// Set the domain of the column.
+///
+/// \param[in] d new domain
+///
 void columns_info::column_info::domain(domain_t d)
 {
   Expects(basic_data_type(d));
   domain_ = d;
 }
 
+///
+/// Return the set of observed states.
+///
+/// \return set of distinct values observed for the column
+///
+/// This is typically used for categorical domains.
+///
 const std::set<value_t> &columns_info::column_info::states() const noexcept
 {
   return states_;
 }
 
+///
+/// Register a new observed state for the column.
+///
+/// \param[in] s value to add to the set of states
+///
 void columns_info::column_info::add_state(value_t s)
 {
   Expects(basic_data_type(s));
@@ -108,11 +140,21 @@ columns_info::columns_info(
   settle_task_t();
 }
 
+///
+/// Return the learning task inferred for the columns.
+///
+/// \return current task type
+///
 task_t columns_info::task() const noexcept
 {
   return task_;
 }
 
+///
+/// Finalise the learning task after schema inference.
+///
+/// Determines the task type based on column domains and roles.
+///
 void columns_info::settle_task_t()
 {
   switch (cols_.front().domain())
@@ -159,11 +201,23 @@ columns_info &columns_info::operator=(const columns_info &other)
   return *this;
 }
 
+///
+/// Access column metadata by index.
+///
+/// \param[in] i column index
+/// \return      constant reference to the corresponding `column_info`
+///
 const columns_info::column_info &columns_info::operator[](size_type i) const
 {
   return cols_[i];
 }
 
+///
+/// Access column metadata by index.
+///
+/// \param[in] i column index
+/// \return      reference to the corresponding `column_info`
+///
 columns_info::column_info &columns_info::operator[](size_type i)
 {
   return cols_[i];
@@ -308,6 +362,12 @@ domain_t columns_info::evaluation_domain(const column_info &ci) const
   return get_index(ci, cols_) > 0 ? ci.domain() : d_double;
 }
 
+///
+/// Return the symbolic category associated with a column.
+///
+/// \param[in] ci column metadata
+/// \return       category corresponding to the column
+///
 symbol::category_t columns_info::category(const column_info &ci) const
 {
   const auto target(get_index(ci, cols_));
@@ -361,6 +421,12 @@ std::set<symbol::category_t> columns_info::used_categories() const
   return categories;
 }
 
+///
+/// Return the domain associated with a symbol category.
+///
+/// \param[in] target category of interest
+/// \return           domain corresponding to the given category
+///
 domain_t columns_info::domain_of_category(symbol::category_t target) const
 {
   const auto it(std::ranges::find_if(
