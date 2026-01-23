@@ -61,7 +61,7 @@ example dataframe::to_example(const R &r, bool add_instance)
   Expects(static_cast<std::size_t>(std::ranges::distance(r)) == columns.size());
 
   example ret;
-  ret.input.reserve(columns.size() -1);
+  ret.input.reserve(columns.size() - 1);
 
   for (std::size_t i(0); auto feature : r)
   {
