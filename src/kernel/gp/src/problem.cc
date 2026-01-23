@@ -27,7 +27,8 @@ namespace internal
 {
 
 ///
-/// Checks if a sequence of categories matches a sequence of domain names.
+/// Checks if a sequence of categories matches a pattern of category names
+/// and/or domain names.
 ///
 /// \param[in] instance a sequence of categories
 /// \param[in] pattern  a mixed vector of category names and domain names
@@ -41,6 +42,11 @@ namespace internal
 ///     compatible({km_h}, {"string"}) == false
 ///     compatible({km_h}, {"name"}) == false
 ///     compatible({name}, {"string"}) == true
+///
+/// \warning
+/// Column names that coincide with domain identifiers (such as "numeric",
+/// "string", or "integer") cannot be distinguished from domain specifications
+/// and will always be interpreted as domains.
 ///
 bool compatible(const function::param_data_types &instance,
                 const std::vector<std::string> &pattern,
