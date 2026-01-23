@@ -280,7 +280,7 @@ void columns_info::pop_back()
 ///
 void columns_info::push_back(const column_info &v)
 {
-  cols_.push_back(v);
+  cols_.emplace_back(*this, v.name(), v.domain(), v.states());
 }
 
 ///
@@ -291,7 +291,7 @@ void columns_info::push_back(const column_info &v)
 ///
 void columns_info::push_front(const column_info &v)
 {
-  cols_.insert(begin(), v);
+  cols_.emplace(begin(), *this, v.name(), v.domain(), v.states());
   settle_task_t();
 }
 
