@@ -210,32 +210,30 @@ void problem::setup_terminals(symbol_init init_flags)
     {
       const auto category(columns[i].category());
 
-      if (!attributes.contains(category))
-        attributes[category] = {};
-
       for (const auto &s : columns[i].states())
-      {
-        if (attributes[category].contains(s))
-          continue;
-
-        switch (columns[i].domain())
+        if (!attributes[category].contains(s))
         {
-        case d_double:
-          insert<real::literal>(std::get<D_DOUBLE>(s), category);
-          break;
-        case d_int:
-          insert<integer::literal>(std::get<D_INT>(s), category);
-          break;
-        case d_string:
-          insert<str::literal>(std::get<D_STRING>(s), category);
-          break;
-        default:
-          ultraWARNING << "Attribute '" << s << "' from column `"
-                       << columns[i].name() << "` not inserted";
-        }
+          bool ok(false);
 
-        attributes[category].insert(s);
-      }
+          switch (columns[i].domain())
+          {
+          case d_double:
+            ok = insert<real::literal>(std::get<D_DOUBLE>(s), category);
+            break;
+          case d_int:
+            ok = insert<integer::literal>(std::get<D_INT>(s), category);
+            break;
+          case d_string:
+            ok = insert<str::literal>(std::get<D_STRING>(s), category);
+            break;
+          default:
+            ultraWARNING << "Attribute '" << s << "' from column `"
+                         << columns[i].name() << "` not inserted";
+          }
+
+          if (ok)
+            attributes[category].insert(s);
+        }
     }
 
     for (const auto &[category, inserted] : attributes)
@@ -368,7 +366,8 @@ void problem::setup_symbols(symbol_init init_flags)
       break;
 
     default:
-      ultraWARNING << "Unable to insert functions for category " << category;
+      ultraWARNING << "No predefined functions for domain " << domain
+                   << " (category " << category << ')';
       break;
     }
   }
