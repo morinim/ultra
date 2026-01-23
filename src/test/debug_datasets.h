@@ -473,7 +473,14 @@ F,1604.8,188,230.6,1.0
 F,1592.1,188.9,232,1.0
 F,1518.3,184.6,227.2,1.0
 F,1553.6,186.8,230.3,1.0)";
-
+constexpr std::size_t DUPLICATED_VALUE_COUNT = 5;
+constexpr char duplicated_value[] = R"(
+CLASS,COLOUR
+"a","red"
+"b","red"
+"a","blue"
+"b","blue"
+"a","red")";  // duplicate value
 
 }  // namespace ultra::debug
 

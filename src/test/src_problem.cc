@@ -127,6 +127,22 @@ TEST_CASE("setup_terminals")
     CHECK(p.data.selected().size() == debug::IRIS_COUNT);
     CHECK(p.data[src::dataset_t::validation].empty());
   }
+
+  // Given a nominal column with repeated states, when setup_symbols() is
+  // called then exactly one terminal per distinct state is created.
+  SUBCASE("Duplicate nominal states generate a single attribute terminal")
+  {
+    std::istringstream duplicated_value(debug::duplicated_value);
+
+    src::problem p(duplicated_value, src::dataframe::params().header());
+
+    CHECK(p.ready());
+
+    // Exactly two attribute terminals: "red" and "blue"
+    CHECK(p.sset.categories() == 2);
+    CHECK(p.sset.terminals(0) == 0);
+    CHECK(p.sset.terminals(1) == 3);  // "red", "blue" and "COLOUR" variable
+  }
 }
 
 TEST_CASE("compatible")
