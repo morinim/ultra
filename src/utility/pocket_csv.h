@@ -14,11 +14,13 @@
 #define      POCKET_CSV_PARSER_H
 
 #include <algorithm>
+#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
+#include <iostream>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -99,12 +101,21 @@ private:
 };  // class parser
 
 ///
-/// A forward iterator for CSV records.
+/// Input iterator over CSV records.
+///
+/// This iterator models a **single-pass input iterator** backed by an
+/// `std::istream`. Advancing the iterator consumes data from the underlying
+/// stream.
+///
+/// \warning
+/// - Copies of this iterator share the same stream state;
+/// - comparing two non-end iterators for equality is not meaningful;
+/// - the only supported comparison is against the end iterator.
 ///
 class parser::const_iterator
 {
 public:
-  using iterator_category = std::forward_iterator_tag;
+  using iterator_category = std::input_iterator_tag;
   using difference_type = std::ptrdiff_t;
   using value_type = parser::record_t;
   using pointer = value_type *;
@@ -112,6 +123,22 @@ public:
   using reference = value_type &;
   using const_reference = const value_type &;
 
+  /// Constructs a CSV input iterator.
+  ///
+  /// \param[in] is pointer to the input stream to read from; if `nullptr`,
+  ///               constructs an end iterator
+  /// \param[in] f  optional filter function applied to each parsed record;
+  ///               records for which the function returns `false` are skipped
+  /// \param[in] d  CSV dialect used for parsing records
+  ///
+  /// \note
+  /// When constructed with a non-null stream pointer, the iterator
+  /// immediately reads and parses the first available record.
+  ///
+  /// \warning
+  /// This iterator is single-pass: advancing it consumes data from the
+  /// underlying stream and copies of the iterator share the same stream
+  /// state.
   explicit const_iterator(std::istream *is = nullptr,
                           parser::filter_hook_t f = nullptr,
                           const dialect &d = {})
@@ -135,20 +162,20 @@ public:
   [[nodiscard]] const_pointer operator->() const noexcept
   { return &operator*(); }
 
-  /// \param[in] lhs first term of comparison
-  /// \param[in] rhs second term of comparison
-  /// \return        `true` if iterators point to the same line
-  [[nodiscard]] friend bool operator==(const const_iterator &lhs,
-                                       const const_iterator &rhs) noexcept
-  {
-    return lhs.ptr_ == rhs.ptr_
-           && (!lhs.ptr_ || lhs.ptr_->tellg() == rhs.ptr_->tellg());
-  }
-
+  /// Compares two iterators for inequality.
+  ///
+  /// \param[in] lhs first iterator
+  /// \param[in] rhs second iterator
+  /// \return        `true` if the iterators differ
+  ///
+  /// \note
+  /// For this single-pass input iterator, comparison is only meaningful when
+  /// testing against the end iterator. Equality of two non-end iterators
+  /// does not imply interchangeable or repeatable traversal.
   [[nodiscard]] friend bool operator!=(const const_iterator &lhs,
                                        const const_iterator &rhs) noexcept
   {
-    return !(lhs == rhs);
+    return lhs.ptr_ != rhs.ptr_;
   }
 
 private:
@@ -168,6 +195,22 @@ private:
 namespace internal
 {
 
+/// Column classification tag.
+///
+/// Negative values represent semantic categories inferred for the column:
+/// - `number_tag`: numeric column;
+/// - `string_tag`: variable-length string column;
+/// - `skip_tag`: column to be ignored.
+///
+/// Non-negative values are used to encode structural information:
+/// - `0` (`none_tag`) indicates an unspecified or unknown column type;
+/// - a positive value indicates a fixed-length string column, where the value
+///   represents the exact string length.
+///
+/// \note
+/// This enum intentionally overloads semantic tags and structural data.
+/// In particular, positive values do not denote distinct enum constants but
+/// encode the fixed length of string columns.
 enum column_tag {none_tag = 0, skip_tag = -1,
                  number_tag = -2, string_tag = -3};
 
@@ -219,7 +262,7 @@ struct char_stat
 /// Calculates the mode of a sequence of natural numbers.
 ///
 /// \param[in] v a sequence of natural numbers
-/// \return    a vector of `{mode, counter}` pairs (the input sequence may have
+/// \return    a vector of `char_stat` pairs (the input sequence may have
 ///            more than one mode)
 ///
 /// \warning
@@ -261,13 +304,12 @@ struct char_stat
 
 [[nodiscard]] inline column_tag find_column_tag(const std::string &s)
 {
-  const auto ts(internal::trim(s));
-
-  if (ts.empty())
+  if (const auto ts(internal::trim(s)); ts.empty())
     return none_tag;
-  if (internal::is_number(ts))
+  else if (internal::is_number(ts))
     return number_tag;
 
+  // Length is taken from the original field to preserve structural width.
   return static_cast<column_tag>(s.length());
 }
 
@@ -394,14 +436,48 @@ struct char_stat
   return vote_header > 0 ? dialect::HAS_HEADER : dialect::NO_HEADER;
 }
 
+///
+/// Attempts to infer the field delimiter used in a delimited text stream.
+///
+/// \param[in,out] is input stream to analyse. The stream is read sequentially
+///                   and left at the position reached after scanning
+/// \param[in] lines  maximum number of non-empty lines to inspect
+///
+/// \return           the inferred delimiter character, or `\0` if no suitable
+///                   delimiter can be determined. A return value of `\0`
+///                   indicates that the input is likely a single-column file
+///                   with no field delimiter.
+///
+/// The function scans up to `lines` non-empty lines from the input stream and
+/// counts occurrences of a small set of preferred delimiter characters
+/// (`,`, `;`, `\t`, `:`, `|`). A delimiter is selected if it:
+///
+/// - appears a consistent number of times per line (single, non-zero mode);
+/// - occurs in at least ~2/3 of the scanned non-empty lines.
+///
+/// \note
+/// Empty or whitespace-only lines are ignored. If no delimiter satisfies
+/// the consistency criteria, the function fails conservatively and returns
+/// `\0`, which should be interpreted as a single-column input.
+///
 [[nodiscard]] inline char guess_delimiter(std::istream &is, std::size_t lines)
 {
-  const std::vector preferred = {',', ';', '\t', ':', '|'};
+  static const std::vector preferred = {',', ';', '\t', ':', '|'};
+  static const std::bitset<256> is_candidate([]
+  {
+    std::bitset<256> ret;
+
+    for (unsigned char c : preferred)
+      ret[c] = true;
+
+    return ret;
+  }());
 
   // `count[c]` is a vector with information about character `c`. It grows
   // one element every time a new input line is read.
   // `count[c][l]` contains the number of times character `c` appears in line
   // `l`.
+  // `count` only contains entries for preferred delimiter candidates.
   std::map<char, std::vector<unsigned>> count;
 
   std::size_t scanned(0);
@@ -412,11 +488,11 @@ struct char_stat
       continue;
 
     // A new non-empty line. Initially every character has a `0` counter.
-    for (auto c : preferred)
+    for (unsigned char c : preferred)
       count[c].push_back(0u);
 
-    for (auto c : line)
-      if (std::find(preferred.begin(), preferred.end(), c) != preferred.end())
+    for (unsigned char c : line)
+      if (is_candidate[c])
         ++count[c].back();
 
     --lines;
@@ -450,7 +526,7 @@ struct char_stat
                                   }));
 
   if (res->second.char_freq == 0)
-    return '\n';
+    return 0;
 
   // Delimiter must consistently appear in the input lines.
   if (3 * res->second.weight < 2 * scanned)
@@ -711,6 +787,11 @@ inline void parser::const_iterator::get_input()
 /// quotes. This also means the quotes need to be parsed out, this function
 /// accounts for that as well.
 ///
+/// \note
+/// If a quoted field is not terminated before the end of the line, the
+/// remainder of the line is treated as part of the field. Multi-line
+/// quoted fields are not supported.
+///
 inline parser::const_iterator::value_type parser::const_iterator::parse_line(
   const std::string &line)
 {
@@ -728,7 +809,7 @@ inline parser::const_iterator::value_type parser::const_iterator::parse_line(
                         });
 
   const auto length(line.length());
-  for (std::size_t pos(0); pos < length && line[pos]; ++pos)
+  for (std::size_t pos(0); pos < length; ++pos)
   {
     const auto c(line[pos]);
 
@@ -767,7 +848,17 @@ inline parser::const_iterator::value_type parser::const_iterator::parse_line(
       curstring.push_back(c);
   }
 
-  assert(!inquotes);
+  if (inquotes)
+  {
+#ifndef NDEBUG
+    std::cerr << "Warning: unterminated quoted field; line accepted as-is\n";
+#endif
+
+    // Unterminated quoted field: accept the field as-is.
+    // The closing quote is assumed to be missing.
+    // This mirrors what Excel, LibreOffice, and many CSV readers do in
+    // permissive mode.
+  }
 
   add_field(curstring);
 
