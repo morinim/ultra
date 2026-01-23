@@ -10,9 +10,9 @@ add_library(imgui ${IMGUI_SRC})
 include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party/imgui)
 
 # --------- SDL3 library ---------
-# Look for a SDL3 package, for the SDL2 component.
+# Look for a SDL3 package.
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 
-# Link to the actual SDL2 library. SDL3::SDL3 is the shared SDL library,
+# Link to the actual SDL3 library. SDL3::SDL3 is the shared SDL library,
 # SDL3::SDL3-static is the static SDL library.
 target_link_libraries(imgui PRIVATE SDL3::SDL3)

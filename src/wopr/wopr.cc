@@ -1471,7 +1471,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_dynamic ? available_height : h1);
 
       ImGui::BeginChild("Dynamic##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("DYNAMICS");
       ImGui::SameLine();
@@ -1492,7 +1492,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_population ? available_height : h1);
 
       ImGui::BeginChild("Population##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("POPULATION");
       ImGui::SameLine();
@@ -1515,7 +1515,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_layers_fit ? available_height : h2);
 
       ImGui::BeginChild("LayersFitness##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("FITNESS BY LAYER");
       ImGui::SameLine();
@@ -1536,7 +1536,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_layers_age ? available_height : h2);
 
       ImGui::BeginChild("LayersAge##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("AGE BY LAYER");
       ImGui::SameLine();
@@ -1622,7 +1622,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_runs ? available_height : h1);
 
       ImGui::BeginChild("Runs##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("RUNS");
       ImGui::SameLine();
@@ -1643,7 +1643,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_success_rate ? available_height : h1);
 
       ImGui::BeginChild("Success rate##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("SUCCESS RATE");
       ImGui::SameLine();
@@ -1662,7 +1662,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       const auto h(mxz_fitness_across_datasets ? available_height : h1);
 
       ImGui::BeginChild("FADs##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Border);
+                        ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::Text("FITNESS ACROSS DATASETS");
       ImGui::SameLine();
