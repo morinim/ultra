@@ -27,6 +27,18 @@ TEST_CASE("Concepts")
   CHECK(ultra::src::DataSet<ultra::src::dataframe>);
 }
 
+TEST_CASE("dataset_t")
+{
+  using namespace ultra::src;
+
+  // We rely on code like:
+  // - `dataset_t::training <= d && d <= dataset_t::test`;
+  // - `datasets_[as_integer(d)]`.
+  CHECK(ultra::as_integer(dataset_t::training) == 0);
+  CHECK(ultra::as_integer(dataset_t::validation) == 1);
+  CHECK(ultra::as_integer(dataset_t::test) == 2);
+}
+
 TEST_CASE("Base")
 {
   using namespace ultra::src;
