@@ -38,15 +38,18 @@ public:
   {
     params() noexcept {}
 
-    /// Should be between `0` and `100` and represent the proportion of the
-    /// dataset to include in the train split.
-    /// If not positive, the value is automatically set to  `70`..
+    /// Percentage of the dataset used for training.
+    ///
+    /// - Valid range: `1...100`;
+    /// - values `<= 0` default to `70`;
+    /// - values `> 100` are clamped to `100`.
     int training_perc {70};
 
-    /// Should be between `0` and `100` and represent the proportion of the
-    /// dataset to include in the validation split.
-    /// If negative, the value is set to the complement of the training
-    /// percentage.
+    /// Percentage of the dataset used for validation.
+    ///
+    /// - Valid range: `0...(100 - training_perc)`;
+    /// - if negative, it is set to `100 - training_perc`;
+    /// - if too large, it is clamped to `100 - training_perc`.
     int validation_perc {30};
 
     /// Whether or not to shuffle the data before splitting.
@@ -65,7 +68,10 @@ public:
   explicit holdout_validation(src::problem &, params = {});
 
   void training_setup(unsigned) override;
+
+  // Holdout validation uses a single, fixed split
   bool shake(unsigned) override { return false; }
+
   bool validation_setup(unsigned) override;
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override;

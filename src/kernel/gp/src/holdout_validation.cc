@@ -10,10 +10,10 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <iterator>
-
 #include "kernel/gp/src/holdout_validation.h"
 #include "kernel/random.h"
+
+#include <iterator>
 
 namespace
 {
@@ -111,26 +111,20 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
     return;
 
   if (par.training_perc <= 0)
-  {
-    par.training_perc   = 70;  // %
-    par.validation_perc = 30;
-    // test percentage is implicitly 0%
-  }
+    par.training_perc = 70;  // %
   else if (par.training_perc >= 100)
   {
     ultraWARNING << "Holdout with 100% training is unusual";
-    par.training_perc   = 100;
-    par.validation_perc =   0;
-    // test percentage is implicitly 0%
+    par.training_perc = 100;
   }
 
-  if (par.validation_perc < 0)
-    par.validation_perc = 100 - par.training_perc;
-    // test percentage is implicitly 0%
-  else if (const int remaining_perc(100 - par.training_perc);
-           par.validation_perc > remaining_perc)
+  if (const int remaining_perc(100 - par.training_perc);
+      par.validation_perc < 0)
+    par.validation_perc = remaining_perc;
+  else if (par.validation_perc > remaining_perc)
     par.validation_perc = remaining_perc;
 
+  // test percentage is implicitly: 100 - training - validation
   assert(par.training_perc + par.validation_perc <= 100);
 
   validation_set.clone_schema(training_set);
