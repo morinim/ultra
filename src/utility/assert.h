@@ -39,7 +39,7 @@ namespace ultra
 /// the wrong semantics (do you always want to abort in debug mode and check
 /// nothing in productions runs?).
 /// \see C++ Core Guidelines I.6 <https://github.com/isocpp/CppCoreGuidelines/>
-#define Expects(expression)  assert(ULTRA_LIKELY(expression))
+#define Expects(expression)  assert(ULTRA_LIKELY((expression)))
 
 /// Postconditions are often informally stated in a comment that states the
 /// purpose of a function; `Ensures()` can be used to make this more
@@ -51,7 +51,7 @@ namespace ultra
 /// Postconditions of the form "this resource must be released" are best
 /// expressed by RAII.
 /// \see C++ Core Guidelines I.8 <https://github.com/isocpp/CppCoreGuidelines/>
-#define Ensures(expression)  assert(ULTRA_LIKELY(expression))
+#define Ensures(expression)  assert(ULTRA_LIKELY((expression)))
 
 #endif
 
