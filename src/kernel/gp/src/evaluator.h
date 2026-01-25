@@ -37,22 +37,31 @@ concept derived_from_template = requires(Derived &d)
 };
 
 ///
+/// Concept modelling a dataset that exposes training examples suitable for
+/// error evaluation.
+///
+/// Supported forms:
+/// - `multi_dataset<T>`: examples are taken from the currently selected
+///   dataset;
+/// - plain datasets (`DataSet<T>`): examples are taken directly from the
+///   dataset.
+///
+template<class D> concept ErrorDataset =
+  (derived_from_template<D, multi_dataset>
+   && DataSet<decltype(std::declval<D>().selected())>)
+  || DataSet<D>;
+
+///
 /// Concept modelling an error-measuring functor.
 ///
 /// An error function computes the error committed by a program on a single
-/// training example.
+/// training example provided by a compatible dataset.
 ///
-/// Supported dataset types:
-/// - `multi_dataset<T>`: the functor must be invocable with examples from the
-///   currently selected dataset;
-/// - plain datasets (`DataSet<T>`): the functor must be invocable with
-///   examples obtained directly from the dataset.
-///
-template<class F, class D> concept ErrorFunction =
-  (derived_from_template<D, multi_dataset>
-   && DataSet<decltype(std::declval<D>().selected())>
-   && std::invocable<F, decltype(*std::declval<D>().selected().begin())>)
-  || (DataSet<D> && std::invocable<F, decltype(*std::declval<D>().begin())>);
+template<class F, class D>
+concept ErrorFunction =
+  ErrorDataset<D>
+  && (std::invocable<F, decltype(*std::declval<D>().selected().begin())>
+      || std::invocable<F, decltype(*std::declval<D>().begin())>);
 
 ///
 /// Base class for dataset-aware evaluators.
@@ -64,7 +73,7 @@ template<class F, class D> concept ErrorFunction =
 /// It is intended to be used as a protected base class for concrete
 /// evaluators.
 ///
-template<class D>
+template<ErrorDataset D>
 class evaluator
 {
 protected:

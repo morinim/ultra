@@ -22,7 +22,7 @@
 ///
 /// \param[in] d dataset used for fitness evaluation
 ///
-template<class D>
+template<ErrorDataset D>
 evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 {
 }
@@ -35,7 +35,7 @@ evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 /// For `multi_dataset `, this returns the currently selected dataset.
 /// Otherwise, it returns the dataset itself.
 ///
-template<class D>
+template<ErrorDataset D>
 auto *evaluator<D>::data() const noexcept
 {
   if constexpr (derived_from_template<D, multi_dataset>)
