@@ -13,42 +13,65 @@
 #if !defined(ULTRA_MULTI_DATASET_H)
 #define      ULTRA_MULTI_DATASET_H
 
-#include <vector>
-
 #include "utility/assert.h"
 #include "utility/misc.h"
+
+#include <array>
 
 namespace ultra::src
 {
 
-/// Data/simulations are categorised in three sets:
+///
+/// Identifies the role of a dataset within the learning pipeline.
+///
+/// Data/simulations are categorised into three disjoint sets:
 /// - *training* used directly for learning;
-/// - *validation* for controlling overfitting and measuring the performance
-///   of an individual;
-/// - *test* for a forecast of how well an individual will do in the real
-///   world.
+/// - *validation* used to control overfitting and to measure performance;
+/// - *test* used to estimate generalisation performance.
+///
 enum class dataset_t {training, validation, test};
 
 ///
-/// A sized range that contains a series of examples.
+/// A sized range modelling a dataset of examples.
 ///
-template<class DAT> concept DataSet = std::ranges::range<DAT>;
+template<class DAT> concept DataSet = std::ranges::sized_range<DAT>;
 
+///
+/// Container for multiple datasets with a selectable active one.
+///
+/// \tparam D a dataset type satisfying the `DataSet` concept
+///
+/// This class groups together a fixed set of datasets (training, validation,
+/// and test) of the same type and provides convenient access to the currently
+/// selected dataset.
+///
 template<DataSet D>
 class multi_dataset
 {
 public:
-  explicit multi_dataset() = default;
+  /// Constructs an empty multi-dataset.
+  ///
+  /// Each contained dataset is default-constructed. For typical container
+  /// types, this results in empty datasets.
+  multi_dataset() = default;
 
   // ---- Data access ----
   [[nodiscard]] const D &selected() const noexcept;
   [[nodiscard]] D &selected() noexcept;
-  [[nodiscard]] const D &operator[](dataset_t) const;
-  [[nodiscard]] D &operator[](dataset_t);
-  void select(dataset_t);
+  [[nodiscard]] const D &operator[](dataset_t) const noexcept;
+  [[nodiscard]] D &operator[](dataset_t) noexcept;
+  void select(dataset_t) noexcept;
 
 private:
-  std::vector<D> datasets_ { {}, {}, {} };
+  // Number of datasets managed by this class.
+  static constexpr std::size_t dataset_count = 3;
+  static_assert(ultra::as_integer(dataset_t::test) + 1 == dataset_count,
+                "dataset_t enumerators must be contiguous and zero-based");
+
+  // Storage for the datasets, indexed by `dataset_t`.
+  std::array<D, dataset_count> datasets_;
+
+  // Currently selected dataset.
   dataset_t selected_ {dataset_t::training};
 };  // class multi_dataset
 
