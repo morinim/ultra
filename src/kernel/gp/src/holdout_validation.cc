@@ -18,10 +18,13 @@
 namespace
 {
 
+/// Splits `current` into contiguous strata by class label.
 template<std::ranges::range R>
 [[nodiscard]] std::vector<ultra::basic_range<std::ranges::iterator_t<R>>>
 stratification(R &container)
 {
+  Expects(!container.empty());
+
   std::vector<ultra::basic_range<std::ranges::iterator_t<R>>> ret;
 
   for (auto begin_it(container.begin()); begin_it != container.end(); )
@@ -42,6 +45,40 @@ stratification(R &container)
   return ret;
 }
 
+///
+/// Splits a single stratum into training, validation and test datasets.
+///
+/// \tparam R a range type whose elements are compatible with
+///           `ultra::src::dataframe` insertion semantics
+///
+/// \param[in] stratum         a range of examples belonging to the same class
+///                            or stratum
+/// \param[in] training_perc   percentage of examples assigned to the training
+///                            set
+/// \param[in] validation_perc percentage of examples assigned to the
+///                            validation set
+/// \param[out] training_set   destination dataframe receiving the training
+///                            subset
+/// \param[out] validation_set destination dataframe receiving the validation
+///                            subset
+/// \param[out] test_set       destination dataframe receiving the test subset.
+///                            This contains all remaining examples not
+///                            assigned to training or validation
+///
+/// \post
+///  - Each element of `stratum` is inserted into exactly one output dataset.
+///  - The relative order of elements within each subset matches their order
+///    in `stratum`.
+///
+/// This function partitions the examples contained in a `stratum` into three
+/// disjoint datasets according to the given percentage ratios. The split is
+/// typically used as part of a stratified dataset construction, where each
+/// stratum contains examples sharing the same output label.
+///
+/// The function preserves stratification by operating only within the provided
+/// range. No shuffling is performed internally; the order of elements in
+/// `stratum` therefore affects the exact composition of the resulting subsets.
+///
 template<std::ranges::range R>
 void split_dataset(R &stratum, int training_perc, int validation_perc,
                    ultra::src::dataframe &training_set,
@@ -136,6 +173,7 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
     par.validation_perc = remaining_perc;
 
   // test percentage is implicitly: 100 - training - validation
+  assert(0 < par.training_perc + par.validation_perc);
   assert(par.training_perc + par.validation_perc <= 100);
 
   validation_set.clone_schema(training_set);
