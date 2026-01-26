@@ -35,6 +35,97 @@ TEST_CASE("Concepts")
   CHECK(ValidationStrategy<src::holdout_validation>);
 }
 
+TEST_CASE("Constructor")
+{
+  using namespace ultra;
+
+  constexpr auto n(debug::IRIS_FULL_COUNT);
+  std::istringstream is(debug::iris_full);
+  src::problem prob(is);
+
+  src::holdout_validation::params params;
+  params.stratify = false;
+
+  src::holdout_validation::params expected;
+
+  SUBCASE("70/30")
+  {
+    params.training_perc = 70;
+    params.validation_perc = -1;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 70;
+    expected.validation_perc = 30;
+  }
+
+  SUBCASE("0/10")
+  {
+    params.training_perc = 0;
+    params.validation_perc = 10;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 70;
+    expected.validation_perc = 10;
+  }
+
+  SUBCASE("80/-1")
+  {
+    params.training_perc = 80;
+    params.validation_perc = -1;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 80;
+    expected.validation_perc = 20;
+  }
+
+  SUBCASE("80/50")
+  {
+    params.training_perc = 80;
+    params.validation_perc = 50;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 80;
+    expected.validation_perc = 20;
+  }
+
+  SUBCASE("100/anything")
+  {
+    params.training_perc = 100;
+    params.validation_perc = 30;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 100;
+    expected.validation_perc =   0;
+  }
+
+  SUBCASE("-5/5")
+  {
+    params.training_perc = -5;
+    params.validation_perc = 5;
+
+    src::holdout_validation v(prob, params);
+
+    expected.training_perc   = 70;
+    expected.validation_perc =  5;
+  }
+
+  CHECK(expected.training_perc + expected.validation_perc <= 100);
+
+  // Assertions apply to the active SUBCASE only (doctest semantics).
+  const auto train(prob.data[src::dataset_t::training].size());
+  const auto val(  prob.data[src::dataset_t::validation].size());
+  const auto test( prob.data[src::dataset_t::test].size());
+
+  CHECK(train == expected.training_perc * n / 100);
+  CHECK(val   == expected.validation_perc * n / 100);
+  CHECK(train + val + test == n);
+}
+
 TEST_CASE("Cardinality")
 {
   using namespace ultra;

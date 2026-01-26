@@ -96,6 +96,17 @@ namespace ultra::src
 /// Examples from `prob.data(training)` are randomly partitioned into training,
 /// validation and test set according to parameters contained in `par`.
 ///
+/// \note
+/// Behaviour summary (nothing should "jumps" unexpectedly):
+///
+/// User input      Result (train / val / test)
+///   0 / -1          70 / 30 /  0
+///   0 / 10          70 / 10 / 20
+///  80 / -1          80 / 20 /  0
+///  80 / 50          80 / 20 /  0
+/// 100 / anything   100 /  0 /  0
+///  -5 /  5          70 /  5 / 25
+///
 holdout_validation::holdout_validation(src::problem &prob, params par)
   : prob_(prob)
 {
