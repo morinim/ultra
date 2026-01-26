@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <list>
 #include <numeric>
+#include <ranges>
 
 namespace ultra
 {
@@ -58,8 +59,8 @@ public:
   [[nodiscard]] const layer_t &layer(std::size_t) const;
   [[nodiscard]] layer_t &layer(std::size_t);
 
-  [[nodiscard]] basic_range<layer_const_iter> range_of_layers() const;
-  [[nodiscard]] basic_range<layer_iter> range_of_layers();
+  [[nodiscard]] std::ranges::subrange<layer_const_iter> range_of_layers() const;
+  [[nodiscard]] std::ranges::subrange<layer_iter> range_of_layers();
 
   void init(layer_t &);
   void add_layer();
@@ -90,6 +91,8 @@ public:
   [[nodiscard]] bool save(std::ostream &) const;
 
 private:
+  // Holds a non-owning pointer to the associated problem.
+  // The referenced problem must outlive the population.
   const ultra::problem *prob_;
 
   std::list<layer_t> layers_ {};
