@@ -165,6 +165,23 @@ bool holdout_validation::validation_setup(unsigned)
   return true;
 }
 
+///
+/// Creates a polymorphic copy of the validation strategy.
+///
+/// \return a `std::unique_ptr` owning a copy of this validation strategy
+///
+/// \remark
+/// The cloned object shares the same underlying `problem` instance as the
+/// original, since the problem is stored by reference. This is intentional:
+/// validation strategies are lightweight configuration objects and do not
+/// own the problem data.
+///
+/// \note
+/// The caller is responsible for ensuring that the referenced `problem`
+/// outlives all clones created via this method.
+///
+/// \see validation_strategy::clone
+///
 std::unique_ptr<validation_strategy> holdout_validation::clone() const
 {
   return std::make_unique<holdout_validation>(*this);
