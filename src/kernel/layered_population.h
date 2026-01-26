@@ -59,8 +59,8 @@ public:
   [[nodiscard]] const layer_t &layer(std::size_t) const;
   [[nodiscard]] layer_t &layer(std::size_t);
 
-  [[nodiscard]] std::ranges::subrange<layer_const_iter> range_of_layers() const;
-  [[nodiscard]] std::ranges::subrange<layer_iter> range_of_layers();
+  [[nodiscard]] auto range_of_layers() const;
+  [[nodiscard]] auto range_of_layers();
 
   void init(layer_t &);
   void add_layer();

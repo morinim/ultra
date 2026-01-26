@@ -107,17 +107,15 @@ typename layered_population<I>::layer_t &layered_population<I>::back()
 }
 
 template<Individual I>
-std::ranges::subrange<typename layered_population<I>::layer_const_iter>
-layered_population<I>::range_of_layers() const
+auto layered_population<I>::range_of_layers() const
 {
-  return {layers_.begin(), layers_.end()};
+  return std::ranges::subrange(layers_.cbegin(), layers_.cend());
 }
 
 template<Individual I>
-std::ranges::subrange<typename layered_population<I>::layer_iter>
-layered_population<I>::range_of_layers()
+auto layered_population<I>::range_of_layers()
 {
-  return {layers_.begin(), layers_.end()};
+  return std::ranges::subrange(layers_.begin(), layers_.end());
 }
 
 ///
