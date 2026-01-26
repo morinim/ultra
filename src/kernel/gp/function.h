@@ -71,7 +71,7 @@ public:
   /// Fetches a specific input parameter assuming referential transparency.
   /// Referential transparency allows cache based optimization for argument
   /// retrieval. If this kind of optimization isn't required the implementation
-  /// can be a simple call to `fetch_upaque_arg`.
+  /// can be a simple call to `fetch_opaque_arg`.
   [[nodiscard]] virtual value_t fetch_arg(std::size_t) const = 0;
 
   /// Fetches a specific input parameter without assuming referential

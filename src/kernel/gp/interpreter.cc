@@ -35,8 +35,14 @@ interpreter::interpreter(const gp::individual &ind)
 }
 
 ///
-/// \param[in] l locus of the genome we are starting evaluation from
-/// \return      the output value of `this` individual
+/// Executes the associated individual starting from a given locus.
+///
+/// \param[in] l locus identifying the gene from which execution starts
+/// \return      the value produced by evaluating the individual
+///
+/// This function initialises the interpreter state, clears any cached values,
+/// sets the instruction pointer to the specified locus and evaluates the gene
+/// located there.
 ///
 value_t interpreter::run(const locus &l)
 {
@@ -54,7 +60,7 @@ value_t interpreter::run(const locus &l)
 ///
 /// \return the output value of `this` individual
 ///
-/// Usa the first available locus as starting IP.
+/// Use the first available locus as starting IP.
 ///
 value_t interpreter::run()
 {
@@ -71,6 +77,9 @@ value_t interpreter::run()
 /// execution.
 /// This means that side effects are not evaluated to date: WE ASSUME
 /// REFERENTIAL TRANSPARENCY for all the expressions.
+///
+/// This function may internally delegate to `fetch_opaque_arg` when caching
+/// is not applicable.
 ///
 /// \see
 /// - https://en.wikipedia.org/wiki/Referential_transparency
@@ -104,6 +113,29 @@ value_t interpreter::fetch_arg(std::size_t i) const
   return fetch_opaque_arg(i);
 }
 
+///
+/// Fetches the value of an argument without assuming referential transparency.
+///
+/// \param[in] i  index of the argument to fetch
+/// \return       the computed argument value
+///
+/// This function retrieves the value of the `i`-th argument of the current
+/// gene by fully evaluating it, bypassing any memoisation mechanism.
+///
+/// It must be used for arguments whose evaluation may produce side effects or
+/// whose value must always be recomputed.
+///
+/// ### Behaviour by argument type
+/// - *address**: evaluates the referenced gene by temporarily moving the
+///   instruction pointer to the target locus;
+/// - **nullary symbol**: directly evaluates the symbol;
+/// - **variable**: evaluates the variable in the current execution context;
+/// - **immediate value**: returned as-is.
+///
+/// \warning
+/// Calling this function may trigger repeated evaluations of the same
+/// sub-expression. Prefer `fetch_arg` when referential transparency holds.
+///
 value_t interpreter::fetch_opaque_arg(std::size_t i) const
 {
   const gene &g(current_gene());
@@ -134,8 +166,10 @@ value_t interpreter::fetch_opaque_arg(std::size_t i) const
 ///
 /// \return the program associated with this interpreter
 ///
-const gp::individual &interpreter::program() const
+const gp::individual &interpreter::program() const noexcept
 {
+  Expects(prg_);
+
   return *prg_;
 }
 
@@ -144,14 +178,20 @@ const gp::individual &interpreter::program() const
 ///
 bool interpreter::is_valid() const
 {
-  return ip_.index < prg_->size();
+  if (!prg_)
+    return false;
+
+  return ip_.index < prg_->size() && ip_.category < prg_->categories();
 }
 
 ///
-/// A handy short-cut for one-time execution of an individual.
+/// Executes the associated individual starting from its default entry point.
 ///
 /// \param[in] ind individual/program to be run
-/// \return        output value of the individual
+/// \return        the value produced by evaluating the individual
+///
+/// This overload uses the individual's first available locus as the initial
+/// instruction pointer.
 ///
 value_t run(const gp::individual &ind)
 {
