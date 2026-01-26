@@ -188,30 +188,6 @@ template<class F> using closure_return_t =
   std::remove_cvref_t<typename internal::closure_info<std::remove_cvref_t<F>>::return_type>;
 
 ///
-/// A very basic range type.
-///
-template<std::input_iterator Iterator>
-class basic_range
-{
-public:
-  basic_range(Iterator beg_it, Iterator end_it) noexcept
-    : b_(beg_it), e_(end_it) {}
-
-  [[nodiscard]] auto begin() const noexcept { return b_; }
-  [[nodiscard]] auto end() const noexcept { return e_; }
-
-  [[nodiscard]] auto rbegin() const noexcept
-  { return std::reverse_iterator(e_); }
-
-  [[nodiscard]] auto rend() const noexcept
-  { return std::reverse_iterator(b_); }
-
-private:
-  Iterator b_;
-  Iterator e_;
-};
-
-///
 /// A utility class for dealing with the "problem" of noncopyable objects.
 ///
 /// Typical use cases are classes containing a mutex or an unique id.
