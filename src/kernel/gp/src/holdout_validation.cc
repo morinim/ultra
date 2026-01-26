@@ -40,7 +40,7 @@ stratification(R &container)
     ret.push_back({begin_it, end_it});
 
     begin_it = end_it;
-  };
+  }
 
   return ret;
 }
@@ -66,9 +66,7 @@ stratification(R &container)
 ///                            assigned to training or validation
 ///
 /// \post
-///  - Each element of `stratum` is inserted into exactly one output dataset.
-///  - The relative order of elements within each subset matches their order
-///    in `stratum`.
+/// Each element of `stratum` is inserted into exactly one output dataset.
 ///
 /// This function partitions the examples contained in a `stratum` into three
 /// disjoint datasets according to the given percentage ratios. The split is
@@ -128,7 +126,7 @@ namespace ultra::src
 /// Sets up a hold-out validator.
 ///
 /// \param[in] prob current problem
-/// \param[in] par  prarameters for controlling the splitting / subsampling
+/// \param[in] par  parameters for controlling the splitting / subsampling
 ///
 /// Examples from `prob.data(training)` are randomly partitioned into training,
 /// validation and test set according to parameters contained in `par`.
