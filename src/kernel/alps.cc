@@ -29,6 +29,8 @@ namespace ultra::alps
 ///
 unsigned parameters::max_age(std::size_t l) const
 {
+  Expects(age_gap);
+
   // A polynomial aging scheme.
   switch (l)
   {

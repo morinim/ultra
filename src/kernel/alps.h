@@ -13,9 +13,11 @@
 #if !defined(ULTRA_ALPS_H)
 #define      ULTRA_ALPS_H
 
-#include <cstddef>
-
 #include "kernel/population.h"
+
+#include <cstddef>
+#include <functional>
+#include <vector>
 
 namespace ultra::alps
 {
@@ -71,6 +73,26 @@ void set_age(P &pop)
     pop.layer(l).max_age(params.alps.max_age(l, layers));
 }
 
+///
+/// Determines the set of layers whose individuals may be replaced by offspring
+/// generated from the specified layer.
+///
+/// \param[in] pop layered population
+/// \param[in] l   iterator to the layer producing the offspring
+/// \return        a vector of references to the layers eligible for
+///                replacement
+///
+/// \pre `pop` contains at least one layer
+/// \pre `l`   is a valid iterator into `pop.range_of_layers()`
+///
+/// In the ALPS paradigm, replacement is restricted in order to preserve age
+/// stratification. Individuals are typically replaced either within the same
+/// layer or, in some cases, in the oldest layer.
+///
+/// The replacement policy implemented here is:
+/// - if `l` refers to the last (oldest) layer, only that layer is eligible;
+/// - otherwise, both the current layer and the last layer are eligible.
+///
 template<LayeredPopulation P>
 std::vector<std::reference_wrapper<typename P::layer_t>>
 replacement_layers(P &pop, typename P::layer_iter l)
@@ -84,6 +106,26 @@ replacement_layers(P &pop, typename P::layer_iter l)
   return {std::ref(*l), std::ref(pop.back())};
 }
 
+///
+/// Determines the set of layers from which parents may be selected when
+/// generating offspring for the specified layer.
+///
+/// \param[in] pop layered population
+/// \param[in] l   iterator to the layer for which parents are being selected
+/// \return        a vector of constant references to the layers eligible for
+///                parent selection
+///
+/// \pre `pop` contains at least one layer
+/// \pre `l` is a valid iterator into `pop.range_of_layers()`
+///
+/// In ALPS, parent selection is typically restricted to the same age layer or
+/// younger ones, preventing older individuals from influencing younger layers.
+///
+/// The selection policy implemented here is:
+/// - if `l` refers to the first (youngest) layer, only that layer is used;
+/// - otherwise, both the current layer and the immediately younger layer are
+///   used.
+///
 template<LayeredPopulation P>
 std::vector<std::reference_wrapper<const typename P::layer_t>>
 selection_layers(const P &pop, typename P::layer_iter l)
