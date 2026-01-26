@@ -18,14 +18,23 @@
 namespace
 {
 
+template<std::ranges::common_range R>
+using stratum_t = std::ranges::subrange<std::ranges::iterator_t<R>>;
+
+template<std::ranges::common_range R>
+auto make_single_stratum(R &r)
+{
+  return std::vector{std::ranges::subrange(r.begin(), r.end())};
+}
+
 /// Splits `current` into contiguous strata by class label.
-template<std::ranges::range R>
-[[nodiscard]] std::vector<ultra::basic_range<std::ranges::iterator_t<R>>>
+template<std::ranges::common_range R>
+[[nodiscard]] std::vector<stratum_t<R>>
 stratification(R &container)
 {
   Expects(!container.empty());
 
-  std::vector<ultra::basic_range<std::ranges::iterator_t<R>>> ret;
+  std::vector<stratum_t<R>> ret;
 
   for (auto begin_it(container.begin()); begin_it != container.end(); )
   {
@@ -77,7 +86,7 @@ stratification(R &container)
 /// range. No shuffling is performed internally; the order of elements in
 /// `stratum` therefore affects the exact composition of the resulting subsets.
 ///
-template<std::ranges::range R>
+template<std::ranges::common_range R>
 void split_dataset(R &stratum, int training_perc, int validation_perc,
                    ultra::src::dataframe &training_set,
                    ultra::src::dataframe &validation_set,
@@ -186,8 +195,7 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
 
   const std::vector strata(
     prob.classification() && par.stratify
-    ? stratification(input_set)
-    : std::vector{basic_range(input_set.begin(), input_set.end())});
+    ? stratification(input_set) : make_single_stratum(input_set));
 
   for (auto &stratum : strata)
     split_dataset(stratum, par.training_perc, par.validation_perc,
