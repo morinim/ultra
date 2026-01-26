@@ -59,7 +59,7 @@ public:
 
   [[nodiscard]] category_t category() const noexcept;
   [[nodiscard]] opcode_t opcode() const noexcept;
-  [[nodiscard]] std::string name() const noexcept;
+  [[nodiscard]] const std::string &name() const noexcept;
 
   [[nodiscard]] virtual bool is_valid() const;
 
@@ -76,10 +76,9 @@ template<class S> concept Symbol = std::derived_from<S, symbol>;
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr auto get_if(const symbol *s)
+[[nodiscard]] auto get_if(const symbol *s)
 {
-  return dynamic_cast<
-    const std::remove_cvref_t<std::remove_pointer_t<S>> *>(s);
+  return dynamic_cast<const S *>(s);
 }
 
 ///
@@ -87,7 +86,7 @@ template<Symbol S>
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr auto get_if(const symbol &s)
+[[nodiscard]] auto get_if(const symbol &s)
 {
   return get_if<S>(&s);
 }
@@ -97,7 +96,7 @@ template<Symbol S>
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr bool is(const symbol *s)
+[[nodiscard]] bool is(const symbol *s)
 {
   return get_if<S>(s);
 }
@@ -107,7 +106,7 @@ template<Symbol S>
 ///         by `s`. Otherwise, returns a null pointer value.
 ///
 template<Symbol S>
-[[nodiscard]] constexpr bool is(const symbol &s)
+[[nodiscard]] bool is(const symbol &s)
 {
   return is<S>(&s);
 }

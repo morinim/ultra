@@ -39,7 +39,7 @@ symbol::symbol(const std::string &name, category_t c)
 ///
 /// \return the name of the symbol
 ///
-std::string symbol::name() const noexcept
+const std::string &symbol::name() const noexcept
 {
   return name_;
 }
@@ -55,7 +55,6 @@ std::string symbol::name() const noexcept
 void symbol::category(category_t c) noexcept
 {
   Expects(category_ == undefined_category);
-  Expects(c != category_);
 
   category_ = c;
 }
