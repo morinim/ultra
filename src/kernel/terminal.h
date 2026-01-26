@@ -59,8 +59,6 @@ public:
 
 /// Constraint for types modelling a GP terminal.
 ///
-/// \tparam T candidate terminal type
-///
 /// This concept is satisfied by any type that derives from `ultra::terminal`.
 /// It is intended for use in templates that operate specifically on
 /// terminal symbols, enabling clearer intent and improved diagnostics.
