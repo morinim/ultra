@@ -16,51 +16,76 @@
 #include <limits>
 #include <string>
 
-#include "kernel/value.h"
 #include "utility/assert.h"
 
 namespace ultra
 {
 
 ///
-/// Together functions and terminals are referred to as symbols.
+/// Base class for all symbols.
 ///
-/// EA assembles program structures from basic units called functions and
-/// terminals. Functions perform operations on their inputs, which are either
-/// terminals or output from other functions.
+/// In ULTRA, *symbols* are the atomic building blocks from which programs are
+/// constructed. Together, functions (internal nodes) and terminals (leaf
+/// nodes) form the symbol set used by the evolutionary algorithm to assemble
+/// executable program structures.
+///
+/// A symbol is uniquely identified across runs by its name. Symbols may also
+/// belong to a category, which is used to enforce strong typing in GP and to
+/// manage value domains in GA / DE contexts.
+///
+/// \note
+/// Symbols are immutable with respect to their identity (name and opcode).
+/// The category may be assigned after construction only if initially marked
+/// as undefined.
 ///
 class symbol
 {
 public:
-  /// A category provide operations which supplement or supersede those of the
-  /// domain but which are restricted to values lying in the (sub)domain by
-  /// which is parametrized.
-  /// For instance the number 4.0 (in the real domain) may be present in two
-  /// distinct categories: 2 (e.g. the category "km/h") and 3 (e.g. the
-  /// category "kg").
-  /// Categories are the way:
-  /// - strong typing GP is enforced;
-  /// - ranges of GA variables are managed.
+  // ---- Member types ----
+
+  /// Type used to represent symbol categories.
+  ///
+  /// Categories are used to:
+  /// - enforce strong typing in genetic programming;
+  /// - define admissible value ranges in genetic algorithms and differential
+  ///   evolution.
+  ///
+  /// A category represents a sub-domain of values. The same numerical value
+  /// may belong to different categories (e.g. "kg" vs "km/h").
   using category_t = unsigned;
+
+  /// Default category assigned when typing is not used.
   static constexpr category_t default_category = 0;
+
+  /// Sentinel value indicating that the category has not yet been assigned.
   static constexpr category_t undefined_category =
     std::numeric_limits<category_t>::max();
 
-  /// This is the type used as key for symbol identification.
+  /// Type used as a fast, session-local identifier for symbols.
+  ///
+  /// Opcodes are unique within a single execution and are primarily used for
+  /// hashing and fast comparisons. They are *not* stable across executions and
+  /// must not be serialised.
   using opcode_t = unsigned;
 
-  /// Symbol rendering format.
+  /// Supported rendering formats for symbol stringification.
   enum format {c_format, cpp_format, python_format, sup_format};
 
+  // ---- Constructors ----
   explicit symbol(const std::string &, category_t = default_category);
+
+  /// Virtual destructor to allow safe polymorphic deletion.
   virtual ~symbol() = default;
 
-  void category(category_t) noexcept;
-
+  // ---- Observers ----
   [[nodiscard]] category_t category() const noexcept;
   [[nodiscard]] opcode_t opcode() const noexcept;
   [[nodiscard]] const std::string &name() const noexcept;
 
+  // ---- Modifiers ----
+  void category(category_t) noexcept;
+
+  // ---- Misc ----
   [[nodiscard]] virtual bool is_valid() const;
 
 private:
@@ -72,8 +97,18 @@ private:
 template<class S> concept Symbol = std::derived_from<S, symbol>;
 
 ///
-/// \return a pointer to the `const S *` value stored in the symbol pointed to
-///         by `s`. Otherwise, returns a null pointer value.
+/// Attempts to retrieve a pointer to a specific derived symbol type.
+///
+/// \tparam S expected dynamic type, which must derive from `symbol`
+///
+/// \param[in] s pointer to the symbol to inspect
+/// \return      pointer to `const S` if `s` refers to an object of type `S`,
+///              otherwise a null pointer
+///
+/// \remark
+/// This function performs a runtime-checked downcast. It is intended for
+/// situations where heterogeneous symbol containers must be inspected
+/// safely without relying on external type tags.
 ///
 template<Symbol S>
 [[nodiscard]] auto get_if(const symbol *s)
@@ -82,8 +117,16 @@ template<Symbol S>
 }
 
 ///
-/// \return a pointer to the `const S *` value stored in the symbol referenced
-///         by `s`. Otherwise, returns a null pointer value.
+/// Attempts to retrieve a pointer to a specific derived symbol type.
+///
+/// \tparam S expected dynamic type, which must derive from `symbol`
+///
+/// \param[in] s reference to the symbol to inspect
+/// \return      pointer to `const S` if `s` refers to an object of type `S`,
+///              otherwise a null pointer
+///
+/// \remark
+/// This overload is equivalent to calling `get_if<S>(&s)`.
 ///
 template<Symbol S>
 [[nodiscard]] auto get_if(const symbol &s)
@@ -92,8 +135,17 @@ template<Symbol S>
 }
 
 ///
-/// \return a pointer to the `const S *` value stored in the symbol pointed to
-///         by `s`. Otherwise, returns a null pointer value.
+/// Checks whether a symbol is of a given derived type.
+///
+/// \tparam S expected dynamic type, which must derive from `symbol`
+///
+/// \param[in] s pointer to the symbol to inspect
+/// \return      `true` if `s` refers to an object of type `S`, `false`
+///              otherwise
+///
+/// \remark
+/// This is a convenience wrapper around `get_if<S>()` intended for
+/// readability when only a boolean test is required.
 ///
 template<Symbol S>
 [[nodiscard]] bool is(const symbol *s)
@@ -102,8 +154,16 @@ template<Symbol S>
 }
 
 ///
-/// \return a pointer to the `const S *` value stored in the symbol pointed to
-///         by `s`. Otherwise, returns a null pointer value.
+/// Checks whether a symbol is of a given derived type.
+///
+/// \tparam S expected dynamic type, which must derive from `symbol`
+///
+/// \param[in] s reference to the symbol to inspect
+/// \return      `true` if `s` refers to an object of type `S`, `false
+///              otherwise.
+///
+/// \remark
+/// This overload is equivalent to calling `is<S>(&s)`.
 ///
 template<Symbol S>
 [[nodiscard]] bool is(const symbol &s)
