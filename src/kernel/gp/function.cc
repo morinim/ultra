@@ -44,7 +44,7 @@ function::function(const std::string &name, std::size_t n_pars)
 ///
 /// \return the number arguments of a funtion
 ///
-std::size_t function::arity() const
+std::size_t function::arity() const noexcept
 {
   Expects(params_.size());
   return params_.size();
@@ -54,7 +54,7 @@ std::size_t function::arity() const
 /// \param[in] i index of a input parameter
 /// \return      category of the `i`-th input parameter
 ///
-symbol::category_t function::param_category(std::size_t i) const
+symbol::category_t function::param_category(std::size_t i) const noexcept
 {
   Expects(i < arity());
   return categories()[i];
@@ -63,7 +63,7 @@ symbol::category_t function::param_category(std::size_t i) const
 ///
 /// \return list of the categories of the input parameters
 ///
-const function::param_data_types &function::categories() const
+const function::param_data_types &function::categories() const noexcept
 {
   return params_;
 }

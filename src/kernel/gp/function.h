@@ -13,9 +13,9 @@
 #if !defined(ULTRA_FUNCTION_H)
 #define      ULTRA_FUNCTION_H
 
-#include <vector>
-
 #include "kernel/symbol.h"
+
+#include <vector>
 
 namespace ultra
 {
@@ -42,10 +42,10 @@ public:
   function(const std::string &, return_type, param_data_types);
   function(const std::string &, std::size_t);
 
-  [[nodiscard]] category_t param_category(std::size_t) const;
-  [[nodiscard]] const param_data_types &categories() const;
+  [[nodiscard]] category_t param_category(std::size_t) const noexcept;
+  [[nodiscard]] const param_data_types &categories() const noexcept;
 
-  [[nodiscard]] std::size_t arity() const;
+  [[nodiscard]] std::size_t arity() const noexcept;
 
   virtual value_t eval(const params &) const = 0;
 
