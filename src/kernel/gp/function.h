@@ -14,27 +14,41 @@
 #define      ULTRA_FUNCTION_H
 
 #include "kernel/symbol.h"
+#include "kernel/value.h"
 
 #include <vector>
 
 namespace ultra
 {
 ///
-/// A symbol with `arity() > 0`.
+/// A callable GP symbol with one or more input parameters.
 ///
-/// A function labels the internal (non-leaf) points of the parse trees that
-/// represent the programs in the population. An example function set might be
-/// {+, -, *}.
+/// In ULTRA, a `function` represents a non-terminal symbol in a genetic
+/// programming "tree". Functions label internal nodes and are evaluated by
+/// recursively evaluating their arguments and combining the results.
 ///
-/// \warning
-/// Each function should be able to handle gracefully all values it might
-/// receive as input (this is called *closure property*). If there is a way to
-/// crash the system, the GP system will certainly hit upon hit.
+/// Each function has:
+/// - a return category (inherited from `symbol`);
+/// - a fixed arity;
+/// - a category for each input parameter.
+///
+/// Categories are used to enforce strong typing constraints during program
+/// construction, mutation, and crossover.
+///
+/// \note
+/// Functions must satisfy the *closure property*: they must be able to
+/// handle any input values that conform to their parameter categories
+/// without causing undefined behaviour or runtime errors.
 ///
 class function : public symbol
 {
 public:
+  /// Type used to describe the categories of input parameters.
+  ///
+  /// The size of this container defines the arity of the function.
   using param_data_types = std::vector<category_t>;
+
+  /// Type used to describe the return category of the function.
   using return_type = category_t;
 
   class params;
@@ -47,8 +61,26 @@ public:
 
   [[nodiscard]] std::size_t arity() const noexcept;
 
+  /// Evaluates the function for the given parameters.
+  ///
+  /// \return result of the function evaluation
+  ///
+  /// \remark
+  /// Parameters are accessed via the `params` interface, which supports
+  /// lazy evaluation and optional referential transparency. Implementations
+  /// should avoid fetching arguments multiple times unless necessary.
+  ///
+  /// \warning
+  /// Implementations must not assume any particular evaluation order of
+  /// parameters.
   virtual value_t eval(const params &) const = 0;
 
+  /// Returns a string representation of the function.
+  ///
+  /// \remark
+  /// The base implementation produces a generic functional notation
+  /// (e.g. `ADD({0},{1})`). Derived classes may override this method to
+  /// support alternative syntaxes or formatting conventions.
   [[nodiscard]] virtual std::string to_string(format = c_format) const;
 
   [[nodiscard]] bool is_valid() const override;
@@ -58,30 +90,38 @@ private:
 };
 
 ///
-/// An interface for parameter passing to functions.
+/// Interface for accessing function arguments during evaluation.
 ///
-/// Parameters are lazy evaluated so:
-/// - store the value of `fetch_arg(i)` (i.e. `operator[](i)`) in a local
-///   variable for multiple uses;
-/// - call `fetch_arg(i)` only if you need the `i`-th argument.
+/// The `params` interface abstracts argument retrieval and allows function
+/// implementations to evaluate inputs lazily. This enables optimisations
+/// such as short-circuiting, memoisation or selective evaluation.
+///
+/// Implementations may distinguish between referentially transparent
+/// evaluation and opaque evaluation with side effects.
 ///
 class function::params
 {
 public:
-  /// Fetches a specific input parameter assuming referential transparency.
-  /// Referential transparency allows cache based optimization for argument
-  /// retrieval. If this kind of optimization isn't required the implementation
-  /// can be a simple call to `fetch_opaque_arg`.
+  /// Retrieves the value of an input parameter assuming referential
+  /// transparency.
+  ///
+  /// \remark
+  /// Referential transparency allows caching and other optimisations.
+  /// Repeated calls with the same index must return the same value.
   [[nodiscard]] virtual value_t fetch_arg(std::size_t) const = 0;
 
-  /// Fetches a specific input parameter without assuming referential
+  /// Retrieves the value of an input parameter without assuming referential
   /// transparency.
+  ///
   /// \remark
-  /// Sometimes return value is ignored: typically for agent simulation (the
-  /// caller is only interested in the side effects of the call).
+  /// This method must be used when argument evaluation may produce side
+  /// effects or when caching is not safe.
   virtual value_t fetch_opaque_arg(std::size_t) const = 0;
 
-  /// Equivalent to fetch_arg().
+  /// Accesses a parameter using referentially transparent evaluation.
+  ///
+  /// \remark
+  /// This operator is equivalent to calling `fetch_arg(i)`.
   [[nodiscard]] value_t operator[](std::size_t i) const { return fetch_arg(i); }
 };
 

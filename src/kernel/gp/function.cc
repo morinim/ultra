@@ -15,11 +15,14 @@
 namespace ultra
 {
 ///
-/// \param[in] name string representation of the function (e.g. for the plus
-///                 function it could by "ADD" or "+")
-/// \param[in] r    return type of the function (i.e. the category of the
-///                 output value)
-/// \param[in] par  input parameters (type and number) of the function
+/// Constructs a typed function.
+///
+/// \param[in] name string representation of the function (e.g. "ADD", "+")
+/// \param[in] r    return category of the function
+/// \param[in] par  categories of the input parameters
+///
+/// This constructor is typically used in strongly typed GP, where both
+/// argument and return categories are explicitly specified.
 ///
 function::function(const std::string &name, category_t r, param_data_types par)
   : symbol(name, r), params_(std::move(par))
@@ -28,12 +31,15 @@ function::function(const std::string &name, category_t r, param_data_types par)
 }
 
 ///
-/// \param[in] name   string representation of the function (e.g. for the plus
-///                   function it could by "ADD" or "+")
-/// \param[in] n_pars number of parameters of the function
+/// Constructs an untyped function with the given arity.
 ///
-/// Assumes category `symbol::default_category` for the function and its
-/// arguments. This constructor is usually called when types are not used.
+/// \param[in] name   string representation of the function
+/// \param[in] n_pars number of input parameters
+///
+/// \remark
+/// The function and all its parameters are assigned
+/// `symbol::default_category`. This constructor is intended for GP
+/// configurations where strong typing is not used.
 ///
 function::function(const std::string &name, std::size_t n_pars)
   : function(name, symbol::default_category,
@@ -42,7 +48,9 @@ function::function(const std::string &name, std::size_t n_pars)
 }
 
 ///
-/// \return the number arguments of a funtion
+/// Returns the number of input parameters of the function.
+///
+/// \return function arity
 ///
 std::size_t function::arity() const noexcept
 {
@@ -51,8 +59,12 @@ std::size_t function::arity() const noexcept
 }
 
 ///
-/// \param[in] i index of a input parameter
-/// \return      category of the `i`-th input parameter
+/// Returns the category of a specific input parameter.
+///
+/// \param[in] i index of the input parameter
+/// \return      category of the `i`-th parameter
+///
+/// \pre `i < arity()`
 ///
 symbol::category_t function::param_category(std::size_t i) const noexcept
 {
@@ -61,7 +73,12 @@ symbol::category_t function::param_category(std::size_t i) const noexcept
 }
 
 ///
-/// \return list of the categories of the input parameters
+/// Returns the list of input parameter categories.
+///
+/// \return constant reference to the parameter category list
+///
+/// \remark
+/// The size of the returned container is equal to the function arity.
 ///
 const function::param_data_types &function::categories() const noexcept
 {
@@ -85,7 +102,9 @@ std::string function::to_string(format) const
 }
 
 ///
-/// \return `true` if the object passes the internal consistency check
+/// Performs an internal consistency check.
+///
+/// \return `true` if the function satisfies basic validity constraints
 ///
 bool function::is_valid() const
 {
