@@ -514,7 +514,7 @@ unsigned individual::mutation(const problem &prb)
       }
       else  // input parameter
       {
-        const auto c(i->func->categories(pos));
+        const auto c(i->func->param_category(pos));
         i->args[pos] = prb.sset.roulette_terminal(idx, c);
       }
 
@@ -767,7 +767,7 @@ std::ostream &graphviz(std::ostream &s, const individual &prg)
       {
       case d_address:
         s << 'g' << std::get<D_ADDRESS>(i->args[j]) << '_'
-          << i->func->categories(j) << arg_ord_attr;
+          << i->func->param_category(j) << arg_ord_attr;
         break;
       default:
       {

@@ -523,9 +523,9 @@ std::ostream &operator<<(std::ostream &o, const symbol_set &ss)
 
     if (const auto *f = get_if<function>(s.get()))
     {
-      o << '(' << f->categories(0);
+      o << '(' << f->param_category(0);
       for (std::size_t j(1); j < f->arity(); ++j)
-        o << ", " << f->categories(j);
+        o << ", " << f->param_category(j);
       o << ')';
     }
 

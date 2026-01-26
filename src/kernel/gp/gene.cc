@@ -60,7 +60,7 @@ locus gene::locus_of_argument(std::size_t i) const
   Expects(std::holds_alternative<D_ADDRESS>(args[i]));
 
   return {static_cast<locus::index_t>(std::get<D_ADDRESS>(args[i])),
-          func->categories(i)};
+          func->param_category(i)};
 }
 
 ///
@@ -82,7 +82,7 @@ locus gene::locus_of_argument(const arg_pack::value_type &a) const
 
   return {
            static_cast<locus::index_t>(std::get<D_ADDRESS>(a)),
-           func->categories(get_index(a, args))
+           func->param_category(get_index(a, args))
          };
 }
 

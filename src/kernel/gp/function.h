@@ -42,7 +42,7 @@ public:
   function(const std::string &, return_type, param_data_types);
   function(const std::string &, std::size_t);
 
-  [[nodiscard]] category_t categories(std::size_t) const;
+  [[nodiscard]] category_t param_category(std::size_t) const;
   [[nodiscard]] const param_data_types &categories() const;
 
   [[nodiscard]] std::size_t arity() const;
