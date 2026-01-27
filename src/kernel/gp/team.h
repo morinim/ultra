@@ -123,7 +123,7 @@ template<class T> concept Team = requires(T t)
   // This C++20 template lambda only binds to `team<I>` specialisations,
   // including classes derived from them.
   //
-  []<Individual I>(team<I> &){}(t);
+  []<Individual I>(const team<I> &){}(t);
 };
 
 #include "kernel/gp/team.tcc"
