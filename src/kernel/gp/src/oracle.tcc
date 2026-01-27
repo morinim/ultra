@@ -83,7 +83,7 @@ value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 }
 
 ///
-/// \return a *failed* status
+/// \return the functions doesn't return
 ///
 /// \warning
 /// This function is useful only for classification tasks.
@@ -92,7 +92,7 @@ template<Individual P, bool S>
 classification_result basic_reg_oracle<P, S>::tag(
   const std::vector<value_t> &) const
 {
-  return {0, 0};
+  throw std::logic_error("tag() called on regression oracle");
 }
 
 ///

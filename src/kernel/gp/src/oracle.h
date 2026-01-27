@@ -13,18 +13,15 @@
 #if !defined(ULTRA_ORACLE_H)
 #define      ULTRA_ORACLE_H
 
-#include <numbers>
-
 #include "kernel/exceptions.h"
 #include "kernel/gp/src/calculate_metrics.h"
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/interpreter.h"
 #include "kernel/gp/team.h"
 
-namespace ultra
-{
+#include <numbers>
 
-namespace src
+namespace ultra::src
 {
 
 #include "kernel/gp/src/oracle_internal.tcc"
@@ -149,7 +146,7 @@ public:
 
 private:
   // Not useful for regression tasks and moved to private section.
-  [[nodiscard]] classification_result tag(
+  [[noreturn]] classification_result tag(
     const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
@@ -385,8 +382,7 @@ template<class P> binary_oracle(const P &, const dataframe &)
   -> binary_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"
-}  // namespace src
 
-}  // namespace ultra
+}  // namespace ultra::src
 
 #endif  // include guard
