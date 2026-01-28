@@ -108,33 +108,34 @@ int main()
 
   t.restart();
 
-  src::interpreter intr(individuals.front());
-
   for (const auto &example : d)
-    for (const auto &ind : individuals)
+    for (std::size_t i(0); auto &intr : interpreters)
     {
-      intr.rebind(ind);
+      intr.rebind(individuals[i++]);
       if (const auto v(intr.run(example.input)); has_value(v))
         out2 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
     }
 
   std::cout << "Rebind interpreter - Elapsed: " << t.elapsed().count()
             << "ms\n";
+
   // -------------------------------------------------------------------------
+
+  std::vector<std::optional<src::interpreter>> ointerpreters(INDIVIDUALS);
 
   volatile double out3(0);
 
   t.restart();
 
-  std::optional<src::interpreter> ointr(individuals.front());
-
   for (const auto &example : d)
-    for (const auto &ind : individuals)
+    for (std::size_t i(0); auto &ointr : ointerpreters)
     {
       if (ointr) [[likely]]
-        ointr->rebind(ind);
+        ointr->rebind(individuals[i]);
       else
-        ointr.emplace(ind);
+        ointr.emplace(individuals[i]);
+
+      ++i;
 
       if (const auto v(ointr->run(example.input)); has_value(v))
         out3 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
