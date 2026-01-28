@@ -35,6 +35,42 @@ interpreter::interpreter(const gp::individual &ind)
 }
 
 ///
+/// Rebinds the interpreter to a different individual.
+///
+/// \param[in] ind individual to which the interpreter is rebound
+///
+/// This function updates the internal program pointer so that the interpreter
+/// evaluates the specified individual without reallocating or rebuilding its
+/// internal state.
+///
+/// \pre
+/// The supplied individual must be *compatible* with the current interpreter
+/// state. In particular:
+/// - `ind.size()` must match the number of rows of the internal cache
+/// - `ind.categories()` must match the number of columns of the internal cache
+///
+/// These conditions are enforced by contracts and represent a logic error if
+/// violated.
+///
+/// \note
+/// This operation is lightweight and does not reset the instruction pointer or
+/// invalidate the cached values. It is intended to be called in hot paths
+/// where reconstructing the interpreter would be unnecessarily expensive.
+///
+/// \warning
+/// Rebinding is only safe when the interpreter cache layout depends solely on
+/// the program shape. It does not perform any structural validation beyond the
+/// stated preconditions.
+///
+void interpreter::rebind(const gp::individual &ind) noexcept
+{
+  Ensures(cache_.rows() == ind.size());
+  Ensures(cache_.cols() == ind.categories());
+
+  prg_ = &ind;
+}
+
+///
 /// Executes the associated individual starting from a given locus.
 ///
 /// \param[in] l locus identifying the gene from which execution starts

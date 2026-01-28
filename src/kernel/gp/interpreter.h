@@ -60,12 +60,15 @@ class interpreter : public function::params
 {
 public:
   explicit interpreter(const gp::individual &);
+  virtual ~interpreter() = default;
 
   value_t run(const locus &);
   value_t run();
 
   [[nodiscard]] value_t fetch_arg(std::size_t) const final;
   [[nodiscard]] value_t fetch_opaque_arg(std::size_t) const final;
+
+  void rebind(const gp::individual &) noexcept;
 
   [[nodiscard]] bool is_valid() const;
 
