@@ -28,71 +28,106 @@ namespace internal
 template<class P, bool S> class reg_oracle_storage;
 
 // ********* First specialization (individual stored inside) *********
+///
+/// Specialised oracle storage for GP individuals with lazy interpretation.
+///
+/// This specialisation stores a `gp::individual` and provides execution
+/// support via a lazily constructed interpreter. The interpreter is treated as
+/// an internal cache and is not part of the observable state of the object.
+///
+/// The interpreter is created on first use and rebound to the stored
+/// individual on every invocation of `run()`. This guarantees correctness even
+/// after copy or move operations, without requiring special handling in
+/// constructors or assignment operators.
+///
+/// \note
+/// The interpreter is only ever accessed inside `run()`. All other member
+/// functions must not rely on, or modify, the interpreter state.
+///
 template<>
 class reg_oracle_storage<gp::individual, true>
 {
 public:
-  explicit reg_oracle_storage(const gp::individual &ind) : ind_(ind),
-                                                           int_(ind_)
-  { Ensures(is_valid()); }
-
-  explicit reg_oracle_storage(const reg_oracle_storage &ros) : ind_(ros.ind_),
-                                                               int_(ind_)
+  /// Constructs the storage from an existing individual.
+  ///
+  /// \param[in] ind a valid GP individual
+  ///
+  /// The interpreter is not created during construction and will be
+  /// instantiated lazily on the first call to `run()`.
+  explicit reg_oracle_storage(const gp::individual &ind) : ind_(ind)
   {
     Ensures(is_valid());
   }
 
-  reg_oracle_storage(std::istream &in, const symbol_set &ss) : int_(ind_)
+  /// Deserialises the storage from a stream.
+  ///
+  /// \param[in] in input stream
+  /// \param[in] ss symbol set used to resolve symbols during loading
+  ///
+  /// The individual is loaded from the input stream using the provided symbol
+  /// set. Any existing interpreter state is discarded.
+  ///
+  /// \throws `exception::data_format` if the individual cannot be loaded
+  reg_oracle_storage(std::istream &in, const symbol_set &ss)
   {
     if (!ind_.load(in, ss))
       throw exception::data_format("Cannot load individual");
 
-    int_ = src::interpreter(ind_);
+    int_.reset();
 
     Ensures(is_valid());
   }
 
-  reg_oracle_storage &operator=(const reg_oracle_storage &rhs)
-  {
-    if (this != &rhs)
-    {
-      ind_ = rhs.ind_;
-      int_ = src::interpreter(ind_);
-    }
-
-    Ensures(is_valid());
-    return *this;
-  }
-
+  /// Executes the stored individual.
+  ///
+  /// \tparam Args argument types forwarded to the interpreter
+  ///
+  /// \param[in] args arguments passed to the interpreter
+  /// \return         the computed value
+  ///
+  /// The interpreter is lazily constructed on first use. On every invocation,
+  /// the interpreter is rebound to the stored individual to restore the
+  /// required execution invariant.
+  ///
+  /// This design ensures that the class remains safely copyable and movable,
+  /// while keeping interpreter management strictly local to this method.
   template<class ...Args> [[nodiscard]] value_t run(Args && ...args) const
   {
-    // There are situations in which `&int_.program() != &ind_` and this
-    // function will blow up.
-    // It shouldn't happen: `is_valid` checks for this problematic condition,
-    // `operator=` resets the pointer to the reference individual... but it's
-    // not enough.
-    // Consider a scenario in which a vector of `reg_oracle_storage` objects
-    // needs reallocation after a `push_back`. All the `int_` objects are
-    // invalidated...
-    //
-    // `src::interpreter` is a lightweight object so we could recreate it here
-    // every time or we could add a check:
-    // `if (&int_.program() != &ind_)  int_ = src::interpreter<T>(&ind_);`
-    // Both solutions should be checked for possible performance hits.
-    return int_.run(std::forward<Args>(args)...);
+    if (int_) [[likely]]
+      int_->rebind(ind_);
+    else
+      int_.emplace(ind_);
+
+    return int_->run(std::forward<Args>(args)...);
   }
 
+  /// Checks whether the stored individual is valid.
+  ///
+  /// \return `true` if the individual is valid, `false` otherwise
   [[nodiscard]] bool is_valid() const
   {
-    return &int_.program() == &ind_;
+    return ind_.is_valid();
   }
 
-  // Serialization.
+  /// Serialises the stored individual.
+  ///
+  /// \param[out] out output stream
+  /// \return         `true` on success, false otherwise
+  ///
+  /// The interpreter state is not serialised.
   bool save(std::ostream &out) const { return ind_.save(out); }
 
 private:
   gp::individual ind_;
-  mutable src::interpreter int_;
+
+  // Lazily initialised interpreter cache.
+  //
+  // This member is mutable to allow lazy construction and rebinding in
+  // `run()`, even though execution does not conceptually modify the logical
+  // state of the object.
+  //
+  // The interpreter is never accessed outside `run()`.
+  mutable std::optional<src::interpreter> int_ {};
 };
 
 // ********* Second specialization (individual not stored) *********
