@@ -83,7 +83,7 @@ value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 }
 
 ///
-/// \return the functions doesn't return
+/// \return the function doesn't return
 ///
 /// \warning
 /// This function is useful only for classification tasks.
@@ -357,7 +357,7 @@ bool basic_gaussian_oracle<I, S, N>::save(std::ostream &out) const
 template<class I, bool S, bool N>
 bool basic_gaussian_oracle<I, S, N>::is_valid() const
 {
-  return oracle_.is_valid();
+  return oracle_.is_valid() && !gauss_dist_.empty();
 }
 
 // ***********************************************************************
@@ -524,6 +524,8 @@ template<Individual I, bool S, bool N, template<class, bool, bool> class L,
 classification_result team_class_oracle<I, S, N, L, C>::tag(
   const std::vector<value_t> &instance) const
 {
+  Expects(team_.size());
+
   if constexpr (C == team_composition::wta)
   {
     const auto size(team_.size());
