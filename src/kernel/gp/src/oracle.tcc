@@ -249,82 +249,246 @@ basic_gaussian_oracle<I, S, N>::basic_gaussian_oracle(std::istream &in,
 }
 
 ///
-/// Sets up the data structures needed by the gaussian algorithm.
+/// Sets up the per-class Gaussian distributions used for classification.
 ///
 /// \param[in] d the training set
+///
+/// Each class is modelled by a Gaussian distribution whose parameters are
+/// estimated from the outputs produced by the individual on the training
+/// examples of that class.
+///
+/// ### Handling of missing outputs
+///
+/// The individual may fail to produce a valid numerical output for some
+/// training examples (e.g. due to domain errors or undefined operations).
+/// Such cases are treated explicitly as *missing information* rather than
+/// as numerical values.
+///
+/// Construction proceeds in two phases:
+///
+/// 1. **Observation phase**
+///    - Valid outputs are collected normally;
+///    - missing outputs are counted per class but do not immediately affect
+///      the distribution.
+///
+/// 2. **Uncertainty injection phase**
+///    - Each missing output contributes one unit of uncertainty;
+///    - uncertainty is represented by injecting a symmetric pair of synthetic
+///      samples at $\pm 2\sigma$ around the class mean, preserving the mean
+///      exactly while inflating the variance;
+///    - two missing outputs correspond to one symmetric pair, ensuring that
+///      the effective sample count remains consistent with the number of
+///      training examples.
+///
+/// If a class has no valid outputs at all, it is initialised with a symmetric
+/// extreme pair, yielding a maximally uninformative distribution.
+///
+/// This approach avoids arbitrary value substitution, prevents spurious
+/// confidence and yields stable confidence estimates during classification.
 ///
 template<class I, bool S, bool N>
 void basic_gaussian_oracle<I, S, N>::fill_vector(const dataframe &d)
 {
   Expects(d.classes() > 1);
 
-  // For a set of training data, we assume that the behaviour of a program
-  // classifier is modelled using multiple Gaussian distributions, each of
-  // which corresponds to a particular class. The distribution of a class is
-  // determined by evaluating the program on the examples of the class in
-  // the training set. This is done by taking the mean and standard deviation
-  // of the program outputs for those training examples for that class.
+  std::vector<unsigned> unknown_in_class(d.classes(), 0);
+
+  constexpr double cut(100000000.0);
+
   for (const auto &ex : d)
   {
-    const auto res(oracle_(ex.input));
+    const auto cl(label(ex));
 
-    double val(has_value(res) ? std::get<D_DOUBLE>(res) : 0.0);
+    if (const auto res(oracle_(ex.input)); has_value(res))
+    {
+      auto val(std::get<D_DOUBLE>(res));
+      val = std::clamp(val, -cut, cut);
 
-    constexpr double cut(10000000.0);
-    val = std::clamp(val, -cut, cut);
+      gauss_dist_[cl].add(val);
+    }
+    else
+      ++unknown_in_class[cl];
+  }
 
-    gauss_dist_[label(ex)].add(val);
+  constexpr double min_variance(1e-6);
+  constexpr unsigned missing_per_inflation(2);
+
+  for (std::size_t cl(0); cl < d.classes(); ++cl)
+  {
+    const unsigned k(unknown_in_class[cl] / missing_per_inflation);
+
+    if (auto &g(gauss_dist_[cl]); g.size() > 0)
+    {
+      const double mean(g.mean());
+      const double var(std::max(g.variance(), min_variance));
+      const double delta(2.0 * std::sqrt(var));
+
+      for (std::size_t i(0); i < k; ++i)
+      {
+        g.add(mean + delta);
+        g.add(mean - delta);
+      }
+    }
+    else  // no valid outputs: maximally uninformative distribution
+    {
+      for (std::size_t i(0); i < std::max(1u, k); ++i)
+      {
+        g.add(+cut);
+        g.add(-cut);
+      }
+    }
+
+    Ensures(g.size() > 0);
+    Ensures(std::isfinite(g.mean()));
+    Ensures(g.variance() >= 0.0);
+    Ensures(std::isfinite(g.variance()));
   }
 }
 
 ///
-/// \param[in] ex input value whose class we are interested in
-/// \return       the class of `ex` (numerical id) and the confidence level
-///               (how sure you can be that `ex` is properly classified. The
-///               value is in the `[0,1]` interval and the sum of all the
-///               confidence levels of each class equals `1`)
+/// Classifies an example using Gaussian class models and returns a
+/// confidence-weighted prediction.
+///
+/// \param[in] ex input example to classify
+/// \return       a `classification_result` containing the predicted class
+///               label and an associated confidence value (the value is in the
+///               `[0,1]` interval and the sum of all the confidence levels of
+///               each class equals `1`)
+///
+/// This method assigns a class label to an input example by evaluating the
+/// program oracle and comparing the result against a set of per-class Gaussian
+/// distributions previously constructed by `fill_vector()`.
+///
+/// ### Inference modes
+///
+/// The behaviour depends on the availability of a valid oracle output:
+///
+/// - **Normal inference (oracle output available)**
+///   The inferred value is compared to each class distribution using a
+///   Gaussian-like likelihood score:
+///
+///   $$
+///   p_i = \exp\left(-\frac{(x - \mu_i)^2}{\sigma_i^2}\right)
+///   $$
+///
+///   where $\mu_i$ and $\sigma_i^2$ are the mean and variance of the
+///   distribution associated with class $i$.
+///   Degenerate or nearly-degenerate distributions (very small variance) are
+///   treated as point masses centred at the mean.
+///
+/// - **Missing inference (oracle output unavailable)**
+///   If the oracle cannot produce a value for the input, the classifier falls
+///   back to **class priors**, selecting the most frequent class based on the
+///   effective sample counts stored in the Gaussian models.
+///
+///   These counts include both real observations and synthetic samples added
+///   during variance inflation in `fill_vector()` and therefore represent
+///   *effective* class support rather than raw dataset frequencies.
+///
+/// ### Confidence semantics
+///
+/// The returned confidence is a normalised measure in the range $[0, 1]$:
+///
+/// - in normal inference, it is defined as:
+///
+///   $$
+///   \text{confidence} = \frac{p_{\text{best}}}{\sum_i p_i}
+///   $$
+///
+///   and represents how dominant the selected class likelihood is relative to
+///   the others;
+///
+/// - in missing inference, it is defined as:
+///
+///   $$
+///   \text{confidence} = \frac{n_{\text{best}}}{\sum_i n_i}
+///   $$
+///
+///   where $n_i$ is the effective sample count of class $i$.
+///
+/// A confidence close to `1` indicates a clear decision, while lower values
+/// signal ambiguity or weak evidence.
+///
+/// ### Special cases
+///
+/// - If only one class is present, that class is returned with confidence `1`;
+/// - the method assumes that `fill_vector()` has been called beforehand and
+///   that each class model contains at least one sample.
+///
+/// \see fill_vector
 ///
 template<class I, bool S, bool N>
 classification_result basic_gaussian_oracle<I, S, N>::tag(
   const std::vector<value_t> &ex) const
 {
-  const auto res(oracle_(ex));
-  const double x(has_value(res) ? std::get<D_DOUBLE>(res) : 0.0);
+  const std::size_t classes(gauss_dist_.size());
 
-  double val_(0.0), sum_(0.0);
+  if (classes == 1)
+    return {0, 1.0};
+
+  const auto res(oracle_(ex));
+
+  // Missing inference: fall back to class priors.
+  if (!has_value(res))
+  {
+    std::size_t best(0);
+    double best_count(0.0), total(0.0);
+
+    for (std::size_t i(0); i < classes; ++i)
+    {
+      // Effective sample count, including variance inflation.
+      const auto n(static_cast<double>(gauss_dist_[i].size()));
+      total += n;
+
+      if (n > best_count)
+      {
+        best_count = n;
+        best = i;
+      }
+    }
+
+    const double confidence(total > 0.0 ? best_count / total : 0.0);
+    return {best, confidence};
+  }
+
+  // Normal likelihood-based inference.
+  const auto x(std::get<D_DOUBLE>(res));
+
+  double best_p(0.0), sum_p(0.0);
   src::class_t probable_class(0);
 
-  const std::size_t classes(gauss_dist_.size());
   for (std::size_t i(0); i < classes; ++i)
   {
-    const double distance(std::fabs(x - gauss_dist_[i].mean()));
-    const double variance(gauss_dist_[i].variance());
+    const auto mean(gauss_dist_[i].mean());
+    const auto variance(gauss_dist_[i].variance());
+    const auto distance(std::fabs(x - mean));
 
     double p(0.0);
-    if (issmall(variance))     // these are borderline cases
-      if (issmall(distance))   // these are borderline cases
-        p = 1.0;
-      else
-        p = 0.0;
-    else                       // this is the standard case
+    if (issmall(variance))                // degenerate or nearly-degenerate
+    {                                     // distribution: treat as a point
+      p = issmall(distance) ? 1.0 : 0.0;  // mass at the mean
+    }
+    else                                  // standard case
       p = std::exp(-distance * distance / variance);
+          // std::exp(-0.5 * distance * distance / variance)
+          // / std::sqrt(2.0 * std::numbers::pi_v<double> * variance);
 
-    if (p > val_)
+    if (p > best_p)
     {
-      val_ = p;
+      best_p = p;
       probable_class = i;
     }
 
-    sum_ += p;
+    sum_p += p;
   }
 
   // Normalized confidence value.
-  // Do not change `sum_ > 0.0` with
-  // - `issmall(sum_)` => when `sum_` is small, `val_` is smaller and the
+  // Do not change `sum_p > 0.0` with
+  // - `issmall(sum_p)` => when `sum_p` is small, `best_p` is smaller and the
   //   division works well.
-  // - `sum_` => it's the same thing but will produce a warning with
-  //             `-Wfloat-equal`
-  const double confidence(sum_ > 0.0 ? val_ / sum_ : 0.0);
+  // - `sum_p` => it's the same thing but will produce a warning with
+  //   `-Wfloat-equal`
+  const double confidence(sum_p > 0.0 ? best_p / sum_p : 0.0);
 
   return {probable_class, confidence};
 }
