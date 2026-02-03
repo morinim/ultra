@@ -48,7 +48,7 @@ std::size_t distribution<T>::size() const noexcept
 /// \return the maximum value of the distribution
 ///
 template<ArithmeticFloatingType T>
-T distribution<T>::max() const
+T distribution<T>::max() const noexcept
 {
   Expects(size());
   return max_;
@@ -58,7 +58,7 @@ T distribution<T>::max() const
 /// \return the minimum value of the distribution
 ///
 template<ArithmeticFloatingType T>
-T distribution<T>::min() const
+T distribution<T>::min() const noexcept
 {
   Expects(size());
   return min_;
@@ -68,7 +68,7 @@ T distribution<T>::min() const
 /// \return the mean value of the distribution
 ///
 template<ArithmeticFloatingType T>
-T distribution<T>::mean() const
+T distribution<T>::mean() const noexcept
 {
   Expects(size());
   return mean_;
@@ -314,11 +314,11 @@ bool distribution<T>::is_valid() const
 /// - https://stats.stackexchange.com/q/43159
 ///
 template<ArithmeticFloatingType T>
-void distribution<T>::merge(distribution<T> d2)
+void distribution<T>::merge(const distribution<T> &d2)
 {
   if (empty())
   {
-    *this = std::move(d2);
+    *this = d2;
     return;
   }
 
@@ -357,7 +357,8 @@ void distribution<T>::merge(distribution<T> d2)
 
   size_ = new_size;
 
-  seen_.merge(d2.seen_);
+  for (auto &[k, v] : d2.seen_)
+    seen_[k] += v;
 }
 
 #endif  // include guard

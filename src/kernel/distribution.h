@@ -41,25 +41,26 @@ public:
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] double entropy() const;
-  [[nodiscard]] T max() const;
-  [[nodiscard]] T mean() const;
-  [[nodiscard]] T min() const;
+  [[nodiscard]] T max() const noexcept;
+  [[nodiscard]] T mean() const noexcept;
+  [[nodiscard]] T min() const noexcept;
   [[nodiscard]] const std::map<T, std::uintmax_t> &seen() const;
   [[nodiscard]] T standard_deviation() const;
   [[nodiscard]] T variance() const;
 
-  void merge(distribution<T>);
+  void merge(const distribution<T> &);
 
   [[nodiscard]] bool is_valid() const;
 
-public:   // Serialization
+  // ---- Serialization ----
   bool load(std::istream &);
   bool save(std::ostream &) const;
 
 private:
-  // Private methods.
+  // ---- Private member functions ----
   void update_variance(T);
 
+  // ---- Private data members ----
   std::map<T, std::uintmax_t> seen_ {};
 
   T m2_ {};
