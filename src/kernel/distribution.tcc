@@ -18,7 +18,7 @@
 #define      ULTRA_DISTRIBUTION_TCC
 
 ///
-/// Resets gathered statics.
+/// Resets gathered statistics.
 ///
 template<ArithmeticFloatingType T>
 void distribution<T>::clear()
@@ -296,7 +296,7 @@ bool distribution<T>::load(std::istream &in)
 template<ArithmeticFloatingType T>
 bool distribution<T>::is_valid() const
 {
-  // This way, for "regular" types we'll use std::infinite / std::isnan
+  // This way, for "regular" types we'll use `std::infinite` / `std::isnan`
   // ("taken in" by the using statement), while for our types the overload
   // will prevail due to Koenig lookup (http://www.gotw.ca/gotw/030.htm).
   using std::isfinite;
@@ -319,6 +319,22 @@ bool distribution<T>::is_valid() const
     ultraERROR << "Distribution: negative variance";
     return false;
   }
+
+#ifndef NDEBUG
+  if (size() > 0)
+  {
+    std::size_t total(0);
+    for (const auto &[_, v] : seen_)
+      total += v;
+
+    if (total != size())
+    {
+      ultraERROR << "Seen histogram total " << total
+                 << " does not match distribution size " << size_;
+      return false;
+    }
+  }
+#endif
 
   return true;
 }
