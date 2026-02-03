@@ -130,6 +130,9 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 template<ArithmeticFloatingType T>
 double distribution<T>::entropy() const
 {
+  if (empty())
+    return 0.0;
+
   const double c(1.0 / std::log(2.0));
 
   double h(0.0);
