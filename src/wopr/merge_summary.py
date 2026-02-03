@@ -128,8 +128,8 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
 
     success = (A["success"] * A["runs"] + B["success"] * B["runs"]) / runs
 
-    mean = combine_mean(A["mean"], A["std"], A["runs"],
-                        B["mean"], B["std"], B["runs"])
+    mean = combine_mean(A["mean"], A["runs"],
+                        B["mean"], B["runs"])
 
     std = combine_std(A["mean"], A["std"], A["runs"],
                       B["mean"], B["std"], B["runs"])
