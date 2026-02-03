@@ -108,7 +108,19 @@ void distribution<T>::add(T val)
 
   ++size_;
 
+  // Values are rounded before being recorded in `seen_`.
+  // The histogram (and derived quantities such as entropy) is therefore
+  // computed over _rounded bins_, not raw sample values.
+  //
+  // Rationale:
+  // - avoids pathological growth of histogram keys for continuous domains;
+  // - treats numerically close values as belonging to the same bin.
+  //
+  // Consequences:
+  // - entropy reflects the distribution of rounded values;
+  // - distinct raw values may collapse into the same bin.
   ++seen_[round_to(val)];
+
   update_variance(val);
 }
 
@@ -119,13 +131,20 @@ const std::map<T, std::uintmax_t> &distribution<T>::seen() const
 }
 
 ///
-/// \return the entropy of the distribution
+/// \return the entropy of the distribution (in bits)
 ///
-/// \f$H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))\f$
+/// $$
+/// H(X)=-\sum_{i=1}^n p(x_i) \dot log_b(p(x_i))
+/// $$
 ///
 /// \note
 /// We use an offline algorithm
 /// (https://en.wikipedia.org/wiki/Online_algorithm).
+///
+/// \remark
+/// Entropy is computed over rounded-value histograms, not over the raw input
+/// values. This means that values which differ only slightly may contribute to
+/// the same bin.
 ///
 template<ArithmeticFloatingType T>
 double distribution<T>::entropy() const
