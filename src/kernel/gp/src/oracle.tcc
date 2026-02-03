@@ -315,9 +315,10 @@ void basic_gaussian_oracle<I, S, N>::fill_vector(const dataframe &d)
 
   for (std::size_t cl(0); cl < d.classes(); ++cl)
   {
-    const unsigned k(unknown_in_class[cl] / missing_per_inflation);
+    auto &g(gauss_dist_[cl]);
 
-    if (auto &g(gauss_dist_[cl]); g.size() > 0)
+    if (const unsigned k(unknown_in_class[cl] / missing_per_inflation);
+        g.size() > 0)
     {
       const double mean(g.mean());
       const double var(std::max(g.variance(), min_variance));
