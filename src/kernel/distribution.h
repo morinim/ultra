@@ -64,8 +64,10 @@ private:
   std::map<T, std::uintmax_t> seen_ {};
 
   T m2_ {};
-  T max_ {};
+  T m2_comp_ {};    // Kahan compensation
   T mean_ {};
+  T mean_comp_ {};  // Kahan compensation
+  T max_ {};
   T min_ {};
 
   std::size_t size_ {0};

@@ -166,6 +166,10 @@ double distribution<T>::entropy() const
 }
 
 ///
+/// Updates the running mean and variance using Kahan (compensated) summation
+/// to reduce numerical error when processing large sequences or low-precision
+/// types.
+///
 /// \param[in] val new value upon which statistics are recalculated
 ///
 /// Calculate running variance and cumulative average of a set. The
@@ -181,11 +185,27 @@ void distribution<T>::update_variance(T val)
 {
   Expects(size());
 
-  const auto c1(static_cast<double>(size()));
+  // Common Kahan summation helper.
+  static const auto kahan_add([](T &acc, T &comp, T x)
+  {
+    // `comp` is zero the first time around.
+    const T y(x - comp);
+
+    // Alas, `acc` is big, `y` small, so low-order digits of `y` are lost.
+    const T t(acc + y);
+
+    // `(t - acc)` cancels the high-order part of y;
+    // subtracting `y` recovers negative (low part of `y`)
+    comp = (t - acc) - y;
+    // Algebraically, `comp` should always be zero.
+
+    acc = t;
+  });
 
   const T delta(val - mean_);
-  mean_ += delta / c1;
-  m2_ += delta * (val - mean_);
+
+  kahan_add(mean_, mean_comp_, delta / static_cast<double>(size_));
+  kahan_add(m2_, m2_comp_, delta * (val - mean_));
 }
 
 ///
