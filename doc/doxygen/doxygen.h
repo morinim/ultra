@@ -44,11 +44,17 @@
  *  \namespace alps
  *  Contains support functions for the ALPS algorithm.
  *
+ *  \namespace ga
+ *  Contains classes used for Genetic Algorithms.
+ *
  *  \namespace de
  *  Contains classes used for Differential Evolution.
  *
  *  \namespace gp
  *  Contains classes used for Genetic Programming.
+ *
+ *  \namespace hga
+ *  Contains classes used for Heterogeneous Genetic Algorithms.
  *
  *  \namespace src
  *  Contains classes used for symbolic regression and classification tasks.
@@ -56,7 +62,7 @@
  *  \namespace out
  *  Contains flags and manipulators to control the output format of individuals.
  *
- *  \namespace implementation
+ *  \namespace internal
  *  The contents of this namespace isn't intended for general consumption: it
  *  contains implementation details, not the interface.
  *  It's recommended giving details their own file and tucking it away in a
