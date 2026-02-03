@@ -161,14 +161,9 @@ void distribution<T>::update_variance(T val)
 
   const auto c1(static_cast<double>(size()));
 
-  const T delta(val - mean());
+  const T delta(val - mean_);
   mean_ += delta / c1;
-
-  // This expression uses the new value of mean.
-  if (size() > 1)
-    m2_ += delta * (val - mean());
-  else
-    m2_ =  delta * (val - mean());
+  m2_ += delta * (val - mean_);
 }
 
 ///

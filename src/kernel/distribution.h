@@ -13,13 +13,13 @@
 #if !defined(ULTRA_DISTRIBUTION_H)
 #define      ULTRA_DISTRIBUTION_H
 
-#include <cmath>
-#include <iomanip>
-#include <map>
-
 #include "utility/assert.h"
 #include "utility/log.h"
 #include "utility/misc.h"
+
+#include <cmath>
+#include <iomanip>
+#include <map>
 
 namespace ultra
 {
