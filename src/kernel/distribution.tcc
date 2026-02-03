@@ -214,7 +214,7 @@ bool distribution<T>::save(std::ostream &out) const
   SAVE_FLAGS(out);
 
   out << size() << '\n'
-      << std::fixed << std::scientific
+      << std::scientific
       << std::setprecision(std::numeric_limits<T>::digits10 + 1)
       << mean() << '\n'
       << min() << '\n'
@@ -246,7 +246,7 @@ bool distribution<T>::load(std::istream &in)
   if (!(in >> c))
     return false;
 
-  in >> std::fixed >> std::scientific
+  in >> std::scientific
      >> std::setprecision(std::numeric_limits<T>::digits10 + 1);
 
   decltype(mean_) m;
