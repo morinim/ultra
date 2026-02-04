@@ -150,10 +150,10 @@ bool collection::is_valid() const
     return false;
   }
 
-  if (std::ranges::any_of(functions, internal::is_function))
+  if (!std::ranges::all_of(functions, internal::is_function))
     return false;
 
-  if (std::ranges::any_of(terminals, internal::is_terminal))
+  if (!std::ranges::all_of(terminals, internal::is_terminal))
     return false;
 
   for (const auto &s : all)
