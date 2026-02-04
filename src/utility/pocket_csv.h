@@ -414,7 +414,7 @@ struct char_stat
           column_types[field] = skip_tag;  // type is inconsistent, remove
       }                                    // column from consideration
 
-      if (checked++ > lines)
+      if (checked++ >= lines)
         break;
     }
 
