@@ -89,9 +89,11 @@ public:
     cond_.wait(lock, [this] { return !queue_.empty(); });
 
     // Retrieve item.
-    const T item(std::move(queue_.front()));
+    T item(std::move(queue_.front()));
     queue_.pop();
 
+    // Keeping item non-const, the return statement can use move semantics (or
+    // elide copies) to return the value efficiently.
     return item;
   }
 
@@ -109,8 +111,11 @@ public:
       return {};
 
     // Retrieve item.
-    const T item(std::move(queue_.front()));
+    T item(std::move(queue_.front()));
     queue_.pop();
+
+    // Keeping item non-const, the return statement can use move semantics (or
+    // elide copies) to return the value efficiently.
     return item;
   }
 
