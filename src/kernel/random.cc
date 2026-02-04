@@ -76,7 +76,7 @@ std::size_t ring(std::size_t base, std::size_t radius, std::size_t n)
 
   const auto min_val(base + n - radius);
 
-  return (min_val + random::sup(2 * radius)) % n;
+  return (min_val + random::sup(2 * radius + 1)) % n;
 }
 
 ///
