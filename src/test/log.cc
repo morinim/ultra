@@ -10,9 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <filesystem>
-
 #include "utility/log.h"
+
+#include <filesystem>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -37,7 +37,8 @@ TEST_CASE("Reporting level")
 {
   using namespace ultra;
 
-  const auto logpath(log::setup_stream("debug"));
+  const auto logpath(log::setup_stream(std::filesystem::temp_directory_path()
+                                       / "debug"));
   std::string line, msg;
 
   log::reporting_level = log::lOFF;
@@ -204,6 +205,7 @@ TEST_CASE("Reporting level")
   }
 #endif
 
+  std::filesystem::remove(logpath);
 }
 
 }  // TEST_SUITE("LOG")
