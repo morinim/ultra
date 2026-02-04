@@ -45,8 +45,7 @@ public:
   /// * `lOFF`     - Disable output
   ///
   /// \remarks
-  /// The `lDEBUG` log level can be switched on only when the `NDEBUG` macro is
-  /// defined.
+  /// The `lDEBUG` log level is available only in non-`NDEBUG` builds.
   enum level {lDEBUG, lINFO, lSTDOUT, lPAROUT, lWARNING, lERROR, lFATAL, lOFF};
 
   /// Current reporting level: messages with a lower level aren't logged /
