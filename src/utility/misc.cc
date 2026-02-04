@@ -81,22 +81,38 @@ bool is_number(std::string s)
 }
 
 ///
-/// \param[in] s the input string
-/// \return      a copy of `s` with spaces removed on both sides of the string
+/// Removes leading and trailing whitespace from a string view.
 ///
-/// \see http://stackoverflow.com/a/24425221/3235496
+/// \param[in] sv the input string view to trim
+/// \return       a trimmed view of `sv` with leading and trailing whitespace
+///               removed
 ///
-std::string trim(const std::string &s)
+/// Returns a view of the input string with all leading and trailing whitespace
+/// characters removed. Whitespace is defined according to `std::isspace` in
+/// the current C locale.
+/// This function does not allocate and does not modify the underlying
+/// character sequence. The returned view refers to the same storage as the
+/// input.
+///
+/// \note
+/// The behaviour of this function depends on the global C locale used by
+/// `std::isspace`.
+///
+/// \warning
+/// The returned `std::string_view` is only valid as long as the underlying
+/// character sequence referenced by `sv` remains alive.
+///
+std::string_view trim(std::string_view sv)
 {
-  auto front = std::ranges::find_if_not(
-    s, [](auto c) { return std::isspace(c); });
+  const auto is_space([](unsigned char c) { return std::isspace(c); });
 
-  // The search is limited in the reverse direction to the last non-space value
-  // found in the search in the forward direction.
-  auto back = std::find_if_not(s.rbegin(), std::make_reverse_iterator(front),
-                               [](auto c) { return std::isspace(c); }).base();
+  while (!sv.empty() && is_space(sv.front()))
+    sv.remove_prefix(1);
 
-  return {front, back};
+  while (!sv.empty() && is_space(sv.back()))
+    sv.remove_suffix(1);
+
+  return sv;
 }
 
 ///

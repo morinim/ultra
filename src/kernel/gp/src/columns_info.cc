@@ -26,7 +26,7 @@ namespace ultra::src
 /// \param[in] states possible restriction to a set of values
 ///
 columns_info::column_info::column_info(const columns_info &csi,
-                                       const std::string &name,
+                                       std::string_view name,
                                        domain_t domain,
                                        const std::set<value_t> &states)
   : owner_(&csi), name_(name), domain_(domain), states_(states)

@@ -236,7 +236,7 @@ private:
                                   const std::string &);
 [[nodiscard]] std::string replace_all(std::string, const std::string &,
                                       const std::string &);
-[[nodiscard]] std::string trim(const std::string &);
+[[nodiscard]] std::string_view trim(std::string_view);
 
 template<typename T> concept IsEnum = std::is_enum_v<T>;
 

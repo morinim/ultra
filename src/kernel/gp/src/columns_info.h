@@ -112,7 +112,7 @@ public:
   {
   public:
     explicit column_info(const columns_info &,
-                         const std::string & = "",
+                         std::string_view = "",
                          domain_t = d_void,
                          const std::set<value_t> & = {});
 
