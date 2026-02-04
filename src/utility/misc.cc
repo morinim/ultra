@@ -76,18 +76,50 @@ bool is_integer(std::string_view sv)
 }
 
 ///
-/// \param[in] s the string to be tested
-/// \return      `true` if `s` contains a number
+/// Checks whether a character sequence represents a valid finite number.
 ///
-bool is_number(std::string s)
+/// \param[in] sv the input string view to test
+/// \return       `true` if `sv` represents a valid finite number, `false`
+///               otherwise
+///
+/// Determines whether the given string represents a valid floating-point
+/// number in base 10. Leading and trailing whitespace is ignored.
+///
+/// Parsing is performed using `std::from_chars`, making the check fast and
+/// locale-independent. The entire trimmed input must be consumed by the
+/// conversion for the function to return `true`.
+///
+/// By design, `std::from_chars` does not recognise a leading '+' sign outside
+/// of the exponent. This function explicitly extends the accepted grammar to
+/// allow an optional leading '+' for consistency with other numeric helpers.
+///
+/// \note
+/// Leading and trailing whitespace is ignored, but embedded whitespace
+/// (e.g. "1 2.3") is not permitted.
+///
+bool is_number(std::string_view sv)
 {
-  s = trim(s);
+  sv = trim(sv);
+  if (sv.empty())
+    return false;
 
-  char *end;
-  const double val(std::strtod(s.c_str(), &end));  // if no conversion can be
-                                                   // performed, `end` is set
-                                                   // to `s.c_str()`
-  return end != s.c_str() && *end == '\0' && std::isfinite(val);
+  // Extend the accepted grammar: allow an optional leading '+':
+  // "the plus sign is not recognized outside of the exponent" (see
+  // https://en.cppreference.com/w/cpp/utility/from_chars.html)
+  if (sv.front() == '+')
+  {
+    sv.remove_prefix(1);
+    if (sv.empty())
+      return false;
+  }
+
+  [[maybe_unused]] double value;
+  const auto *first(sv.data());
+  const auto *last(sv.data() + sv.size());
+
+  const auto [ptr, ec] = std::from_chars(first, last, value);
+
+  return ec == std::errc{} && ptr == last && std::isfinite(value);
 }
 
 ///
