@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -743,13 +743,21 @@ void render_success_rate()
   std::vector<double> sr;
   sr.reserve(size * group_count);
 
+  double best_success_rate(0.0);
   for (std::shared_lock guard(rs::current_mutex);
        const auto &[_, data] : rs::collection)
+  {
+    best_success_rate = std::max(data.current.success_rate, best_success_rate);
     sr.push_back(data.current.success_rate * 100.0);
+  }
 
   if (show_reference_values)
     for (const auto &[_, data] : rs::collection)
+    {
+      best_success_rate = std::max(data.reference.success_rate,
+                                   best_success_rate);
       sr.push_back(data.reference.success_rate * 100.0);
+    }
 
   static const auto labels(make_labels(rs::collection));
   static const auto positions(make_positions(size));
@@ -767,7 +775,14 @@ void render_success_rate()
   ImPlot::SetupAxes("Dataset", "Success rate", ImPlotAxisFlags_AutoFit);
   ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
                          labels.cstrs.data());
-  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0);
+
+  if (best_success_rate > 0.0)
+    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0,
+                            std::min(100.0, 100.0 * best_success_rate + 5.0),
+                            ImGuiCond_Always);
+  else
+    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
+
   ImPlot::PlotBarGroups(ilabels.data(), sr.data(), group_count, size, 0.5);
   ImPlot::EndPlot();
 }
@@ -852,8 +867,16 @@ void render_fitness_across_datasets()
         && std::isfinite(current.best[i]) && std::isfinite(reference.best[i])
         && current.best[i] < reference.best[i])
     {
-      ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.2));
-      style_pushed = true;
+      if (current.mean[i] < reference.mean[i])
+      {
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.4));
+        style_pushed = true;
+      }
+      else
+      {
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.2));
+        style_pushed = true;
+      }
     }
 
     int flags(0);
@@ -869,8 +892,9 @@ void render_fitness_across_datasets()
                          : 0.0);
       const double max_x(reference.runs[i] > 0.0 && show_reference_values
                          ? 1.05 * std::max(current.runs[i], reference.runs[i])
-                         : 2.0 * current.runs[i]);
-      ImPlot::SetupAxesLimits(min_x, max_x, 0.0, 0.0);
+                         : 2.0 * std::max(current.runs[i], 1.0));
+      //ImPlot::SetupAxesLimits(min_x, max_x, 0.0, 0.0);
+      ImPlot::SetupAxisLimits(ImAxis_X1, min_x, max_x, ImGuiCond_Always);
 
       // Current data.
       {
