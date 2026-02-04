@@ -40,29 +40,39 @@ bool iequals(const std::string &lhs, const std::string &rhs)
 }
 
 ///
-/// \param[in] s the string to be tested
-/// \return      `true` if `s` contains a number
+/// Checks whether a character sequence represents a valid integer.
 ///
-bool is_integer(std::string s)
+/// \param[in] sv the input string view to test
+/// \return       `true` if `sv` represents a valid integer, `false` otherwise
+///
+/// Determines whether the given string represents a valid base-10 integer,
+/// allowing for an optional leading '+' or '-' sign. Leading and trailing
+/// whitespace is ignored.
+///
+/// \note
+/// Leading and trailing whitespace is ignored, but embedded whitespace
+/// (e.g. "12 3") is not permitted.
+///
+bool is_integer(std::string_view sv)
 {
-  s = trim(s);
+  sv = trim(sv);
 
-  if (s.empty())
+  if (sv.empty())
     return false;
 
   // Allow an optional leading sign.
-  const std::size_t idx((s[0] == '+' || s[0] == '-') ? 1 : 0);
-  if (idx == s.size())  // string was only '+' or '-'
+  const std::size_t idx((sv[0] == '+' || sv[0] == '-') ? 1 : 0);
+  if (idx == sv.size())  // string was only '+' or '-'
     return false;
 
   [[maybe_unused]] int _;
-  const auto [ptr, ec] = std::from_chars(s.data() + idx,
-                                         s.data() + s.size(),
-                                         _);
+  const auto *first(sv.data() + idx);
+  const auto *last(sv.data() + sv.size());
+  const auto [ptr, ec] = std::from_chars(first, last, _);
 
   // `ec == errc()` means conversion succeeded.
   // `ptr == end()` ensures we consumed the entire string.
-  return ec == std::errc() && ptr == s.data() + s.size();
+  return ec == std::errc() && ptr == last;
 }
 
 ///
@@ -104,6 +114,8 @@ bool is_number(std::string s)
 ///
 std::string_view trim(std::string_view sv)
 {
+  // KEEP `unsigned char`. Changing to `auto` or `char` could trigger UB in
+  // case of negative values.
   const auto is_space([](unsigned char c) { return std::isspace(c); });
 
   while (!sv.empty() && is_space(sv.front()))

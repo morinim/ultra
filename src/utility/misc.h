@@ -229,7 +229,7 @@ private:
 // Functions
 // *******************************************************************
 
-[[nodiscard]] bool is_integer(std::string);
+[[nodiscard]] bool is_integer(std::string_view);
 [[nodiscard]] bool is_number(std::string);
 [[nodiscard]] bool iequals(const std::string &, const std::string &);
 [[nodiscard]] std::string replace(std::string, const std::string &,
