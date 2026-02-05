@@ -27,9 +27,8 @@ using namespace ultra::random;
 /// \return    a unique seed value suitable for seeding a PRNG
 ///
 /// This function returns a monotonically increasing seed value shared across
-/// across the entire process. It's used to initialise thread-local random
-/// engines so that each thread receives a distinct and independent random
-/// sequence.
+/// the entire process. It's used to initialise thread-local random engines so
+/// that each thread receives a distinct and independent random sequence.
 ///
 /// By default, the initial seed value is deterministic, ensuring reproducible
 /// runs. When `unpredictable` is set to true, the initial seed is derived from
