@@ -34,37 +34,35 @@ scored_individual<I, F>::scored_individual(const I &i, const F &f)
 /// \return `true` if the `ind` component is empty
 ///
 template<Individual I, Fitness F>
-bool scored_individual<I, F>::empty() const
+bool scored_individual<I, F>::empty() const noexcept
 {
   return ind.empty();
 }
 
+///
+/// Orders two scored individuals by fitness.
+///
+/// \param lhs first scored individual
+/// \param rhs second scored individual
+/// \return    the ordering of `lhs.fit` and `rhs.fit`
+///
+/// The comparison is based **only on the fitness value** and is intended for
+/// ranking and selection purposes (e.g. best/worst individual).
+///
+/// \note
+/// This operator deliberately provides *ordering only*. Equality
+/// (`operator==`) is not defined, because fitness values are typically
+/// floating-point and exact equality would be semantically misleading.
+///
+/// As a consequence, `scored_individual` does not model a totally ordered type
+/// and cannot be used with default `std::ranges::less`. Algorithms requiring
+/// ordering should supply an explicit comparator or projection.
+///
 template<Individual I, Fitness F>
-bool operator<(const scored_individual<I, F> &lhs,
-               const scored_individual<I, F> &rhs)
+auto operator<=>(const scored_individual<I, F> &lhs,
+                 const scored_individual<I, F> &rhs) noexcept
 {
-  return lhs.fit < rhs.fit;
-}
-
-template<Individual I, Fitness F>
-bool operator<=(const scored_individual<I, F> &lhs,
-                const scored_individual<I, F> &rhs)
-{
-  return lhs.fit <= rhs.fit;
-}
-
-template<Individual I, Fitness F>
-bool operator>(const scored_individual<I, F> &lhs,
-               const scored_individual<I, F> &rhs)
-{
-  return lhs.fit > rhs.fit;
-}
-
-template<Individual I, Fitness F>
-bool operator>=(const scored_individual<I, F> &lhs,
-                const scored_individual<I, F> &rhs)
-{
-  return lhs.fit >= rhs.fit;
+  return lhs.fit <=> rhs.fit;
 }
 
 ///
