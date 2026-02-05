@@ -78,9 +78,9 @@ matrix<T>::matrix(std::initializer_list<std::initializer_list<T>> ll)
 ///              the matrix
 ///
 template<class T>
-std::size_t matrix<T>::index(std::size_t r, std::size_t c) const
+std::size_t matrix<T>::index(std::size_t r, std::size_t c) const noexcept
 {
-  assert(c < cols());
+  Expects(c < cols());
 
   return r * cols() + c;
 }
@@ -91,7 +91,8 @@ std::size_t matrix<T>::index(std::size_t r, std::size_t c) const
 ///
 template<class T>
 template<class S>
-typename matrix<T>::const_reference matrix<T>::operator()(const S &s) const
+typename matrix<T>::const_reference matrix<T>::operator()(
+  const S &s) const noexcept
 {
   const auto & [r, c] = s;
 
@@ -104,7 +105,7 @@ typename matrix<T>::const_reference matrix<T>::operator()(const S &s) const
 ///
 template<class T>
 template<class S>
-typename matrix<T>::reference matrix<T>::operator()(const S &s)
+typename matrix<T>::reference matrix<T>::operator()(const S &s) noexcept
 {
   const auto & [r, c] = s;
 
@@ -121,8 +122,8 @@ typename matrix<T>::reference matrix<T>::operator()(const S &s)
 /// \see https://isocpp.org/wiki/faq/operator-overloading#matrix-array-of-array
 ///
 template<class T>
-typename matrix<T>::const_reference matrix<T>::operator()(std::size_t r,
-                                                          std::size_t c) const
+typename matrix<T>::const_reference matrix<T>::operator()(
+  std::size_t r, std::size_t c) const noexcept
 {
   return data_[index(r, c)];
 }
@@ -133,8 +134,8 @@ typename matrix<T>::const_reference matrix<T>::operator()(std::size_t r,
 /// \return      an element of the matrix
 ///
 template<class T>
-typename matrix<T>::reference matrix<T>::operator()(std::size_t r,
-                                                    std::size_t c)
+typename matrix<T>::reference matrix<T>::operator()(
+  std::size_t r, std::size_t c) noexcept
 {
   // DO NOT CHANGE THE RETURN TYPE WITH T (won't work for `T == bool`)
   return data_[index(r, c)];
@@ -177,16 +178,6 @@ std::size_t matrix<T>::cols() const noexcept
 }
 
 ///
-/// \param[in] m second term of comparison
-/// \return      `true` if `m` is equal to `*this`
-///
-template<class T>
-bool matrix<T>::operator==(const matrix &m) const noexcept
-{
-  return cols() == m.cols() && data_ == m.data_;
-}
-
-///
 /// Sets all the elements of the matrix to a specific value.
 ///
 /// \param[in] v a value
@@ -194,7 +185,7 @@ bool matrix<T>::operator==(const matrix &m) const noexcept
 template<class T>
 void matrix<T>::fill(const T &v)
 {
-  std::fill(begin(), end(), v);
+  std::ranges::fill(*this, v);
 }
 
 ///
@@ -259,7 +250,7 @@ typename matrix<T>::const_iterator matrix<T>::cend() const noexcept
 /// \return      the sum of `this` and `m`
 ///
 template<class T>
-matrix<T> &matrix<T>::operator+=(const matrix<T> &m)
+matrix<T> &matrix<T>::operator+=(const matrix<T> &m) noexcept
 {
   Expects(m.cols() == cols());
   Expects(m.rows() == rows());
@@ -450,6 +441,19 @@ template<class T> matrix<T> transpose(const matrix<T> &m)
 }
 
 ///
+/// \param[in] lhs first matrix
+/// \param[in] rhs second matrix
+/// \return        `true` if `lhs` is equal to `rhs`
+///
+/// \relates matrix
+///
+template<class T>
+bool operator==(const matrix<T> &lhs, const matrix<T> &rhs) noexcept
+{
+  return lhs.cols() == rhs.cols() && std::ranges::equal(lhs, rhs);
+}
+
+///
 /// Lexicographically compares two matrices.
 ///
 /// \param[in] lhs first matrix
@@ -463,10 +467,10 @@ template<class T> matrix<T> transpose(const matrix<T> &m)
 ///
 /// \relates matrix
 ///
-template<class T> bool operator<(const matrix<T> &lhs, const matrix<T> &rhs)
+template<class T> bool operator<(const matrix<T> &lhs,
+                                 const matrix<T> &rhs) noexcept
 {
-  return std::lexicographical_compare(lhs.begin(), lhs.end(),
-                                      rhs.begin(), rhs.end());
+  return std::ranges::lexicographical_compare(lhs, rhs);
 }
 
 ///

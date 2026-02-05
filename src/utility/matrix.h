@@ -16,6 +16,8 @@
 #include "kernel/gp/locus.h"
 #include "utility/assert.h"
 
+#include <algorithm>
+
 namespace ultra
 {
 ///
@@ -39,33 +41,37 @@ template<class T>
 class matrix
 {
 public:
-  // *** Type alias ***
+  // ---- Type alias ----
   using values_t = std::vector<T>;
   using value_type = typename values_t::value_type;
   using reference = typename values_t::reference;
   using const_reference = typename values_t::const_reference;
 
+  // ---- Constructors ----
   explicit matrix() = default;
   matrix(std::size_t, std::size_t);
   matrix(std::size_t, std::size_t, T);
   matrix(std::initializer_list<std::initializer_list<T>>);
 
-  template<class S> [[nodiscard]] const_reference operator()(const S &) const;
-  template<class S> [[nodiscard]] reference operator()(const S &);
-  [[nodiscard]] const_reference operator()(std::size_t, std::size_t) const;
-  [[nodiscard]] reference operator()(std::size_t, std::size_t);
+  // ---- Element access ----
+  template<class S> [[nodiscard]] const_reference operator()(
+    const S &) const noexcept;
+  template<class S> [[nodiscard]] reference operator()(const S &) noexcept;
+  [[nodiscard]] const_reference operator()(std::size_t,
+                                           std::size_t) const noexcept;
+  [[nodiscard]] reference operator()(std::size_t, std::size_t) noexcept;
 
-  void fill(const T &);
-
-  [[nodiscard]] bool operator==(const matrix &) const noexcept;
-
+  // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t rows() const noexcept;
   [[nodiscard]] std::size_t cols() const noexcept;
 
-  matrix &operator+=(const matrix &);
+  // ---- Modifiers ----
+  void fill(const T &);
 
-  // *** Iterators ***
+  matrix &operator+=(const matrix &) noexcept;
+
+  // ---- Iterators ----
   using iterator = typename values_t::iterator;
   using const_iterator = typename values_t::const_iterator;
 
@@ -76,30 +82,35 @@ public:
   [[nodiscard]] const_iterator cbegin() const noexcept;
   [[nodiscard]] const_iterator cend() const noexcept;
 
-  // *** Serialization ***
+  // ---- Serialization ----
   bool load(std::istream &);
   bool save(std::ostream &) const;
 
 private:
-  // *** Private support functions ***
+  // ---- Private member functions ----
   [[nodiscard]] std::size_t size() const noexcept;
-  [[nodiscard]] std::size_t index(std::size_t, std::size_t) const;
+  [[nodiscard]] std::size_t index(std::size_t, std::size_t) const noexcept;
 
-  // *** Private data members ***
+  // ---- Private data members ----
   // Elements stored in row-major order (element are stored row by row).
   values_t data_ {};
 
   std::size_t cols_ {0};
 };
 
+// ---- Non-member functions ----
 template<class T> [[nodiscard]] matrix<T> flip(matrix<T>, unsigned);
 template<class T> [[nodiscard]] matrix<T> fliplr(matrix<T>);
 template<class T> [[nodiscard]] matrix<T> flipud(matrix<T>);
 template<class T> [[nodiscard]] matrix<T> rot90(const matrix<T> &,
                                                 unsigned = 1);
 template<class T> [[nodiscard]] matrix<T> transpose(const matrix<T> &);
+
 template<class T> [[nodiscard]] bool operator<(const matrix<T> &,
-                                               const matrix<T> &);
+                                               const matrix<T> &) noexcept;
+template<class T> [[nodiscard]] bool operator==(const matrix<T> &,
+                                                const matrix<T> &) noexcept;
+
 
 #include "utility/matrix.tcc"
 }  // namespace ultra
