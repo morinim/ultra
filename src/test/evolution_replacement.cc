@@ -10,8 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <ranges>
-
 #include "kernel/evolution_replacement.h"
 #include "kernel/layered_population.h"
 #include "kernel/de/individual.h"
@@ -19,6 +17,9 @@
 
 #include "test/fixture1.h"
 #include "test/fixture4.h"
+
+#include <algorithm>
+#include <ranges>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -36,15 +37,14 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   layered_population<gp::individual> pop(prob);
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  const auto [worst_it, best_it] =
-    std::ranges::minmax_element(pop,
-                                [&eva](const auto &i1, const auto &i2)
-                                {
-                                  return eva(i1) < eva(i2);
-                                });
+  const auto scored([&eva](const auto &prg)
+  {
+    return scored_individual(prg, eva(prg));
+  });
 
-  const scored_individual worst(*worst_it, eva(*worst_it));
-  const scored_individual best(*best_it, eva(*best_it));
+  const auto [worst, best] = std::ranges::minmax(
+    pop | std::views::transform(scored),
+    [](auto const &a, auto const &b) { return a < b; });
 
   evolution_status<gp::individual, double> status;
   replacement::tournament replace(eva, prob.params);
@@ -102,15 +102,14 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  const auto [worst_it, best_it] =
-    std::ranges::minmax_element(pop,
-                                [&eva](const auto &i1, const auto &i2)
-                                {
-                                  return eva(i1) < eva(i2);
-                                });
+  const auto scored([&eva](const auto &prg)
+  {
+    return scored_individual(prg, eva(prg));
+  });
 
-  const scored_individual worst(*worst_it, eva(*worst_it));
-  const scored_individual best(*best_it, eva(*best_it));
+  const auto [worst, best] = std::ranges::minmax(
+    pop | std::views::transform(scored),
+    [](auto const &a, auto const &b) { return a < b; });
 
   // We want a new "champion". Since generating a new one isn't simple, we
   // remove every individual with fitness greater or equal to `best.fit`.
