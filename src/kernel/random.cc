@@ -65,15 +65,17 @@ namespace ultra::random
 std::size_t ring(std::size_t base, std::size_t radius, std::size_t n)
 {
   Expects(base < n);
-  Expects(radius);
   Expects(n > 1);
+
+  if (radius == 0) [[unlikely]]
+    return base;
 
   if (radius >= n / 2)
     return random::sup(n);
 
-  const auto min_val(base + n - radius);
+  const auto start(base + n - radius);
 
-  return (min_val + random::sup(2 * radius + 1)) % n;
+  return (start + random::sup(2 * radius + 1)) % n;
 }
 
 ///
