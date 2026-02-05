@@ -19,6 +19,7 @@
 #include "utility/xoshiro256ss.h"
 
 #include <random>
+#include <type_traits>
 
 namespace ultra::random
 {
@@ -109,7 +110,7 @@ requires std::is_arithmetic_v<T> || std::is_enum_v<T>
 /// \return      a random element of container `c`
 ///
 template<std::ranges::sized_range C>
-[[nodiscard]] const typename C::value_type &element(const C &c)
+[[nodiscard]] std::ranges::range_reference_t<const C> element(const C &c)
 {
   Expects(c.size());
 
