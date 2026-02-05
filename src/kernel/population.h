@@ -13,10 +13,12 @@
 #if !defined(ULTRA_POPULATION_H)
 #define      ULTRA_POPULATION_H
 
-#include <shared_mutex>
-
 #include "kernel/individual.h"
 #include "kernel/random.h"
+
+#include <concepts>
+#include <ranges>
+#include <shared_mutex>
 
 namespace ultra
 {
@@ -34,23 +36,22 @@ concept RandomAccessIndividuals =
 template<class P>
 concept Population =
   std::ranges::range<P>
-  && Individual<std::ranges::range_value_t<P>>
-  && requires { typename P::value_type; }
-  && std::same_as<typename P::value_type, std::ranges::range_value_t<P>>;
+  && Individual<std::ranges::range_value_t<P>>;
 
 template<class P>
 concept LayeredPopulation = Population<P> && requires(const P &p)
 {
-  p.layers();
-  p.range_of_layers();
-  requires std::ranges::range<decltype(p.range_of_layers())>;
+  { p.layers() } -> std::integral;
+  { p.range_of_layers() } -> std::ranges::range;
 };
 
 template<class P>
-concept SizedRandomAccessPopulation = Population<P> && requires(const P &p)
+concept SizedRandomAccessPopulation =
+  Population<P>
+  && std::ranges::sized_range<P>
+  && std::ranges::random_access_range<P>
+  && requires(const P &p)
 {
-  requires std::ranges::sized_range<P>;
-  requires std::ranges::random_access_range<P>;
   typename P::coord;
   p[typename P::coord()];
 };
@@ -66,17 +67,35 @@ namespace random
 {
 
 template<SizedRandomAccessPopulation P>
-[[nodiscard]] std::size_t coord(const P &l)
+[[nodiscard]] typename P::coord coord(const P &p)
 {
-  return sup(l.size());
+  Expects(p.size() > 0);
+  return static_cast<typename P::coord>(sup(p.size()));
 }
 
+///
+/// Returns a coordinate sampled from a position's neighbourhood.
+///
+/// \param[in] p         a population
+/// \param[in] i         base coordinate
+/// \param[in] mate_zone neighbourhood radius (must be non-zero)
+/// \return              the sampled coordinate
+///
+/// \pre i < p.size()
+/// \pre mate_zone > 0
+///
+/// The neighbourhood is interpreted on a circular (ring) topology. For large
+/// neighbourhoods (`mate_zone >= p.size() / 2`) the sampling degenerates to a
+/// uniform choice over the whole population.
+///
 template<SizedRandomAccessPopulation P>
-[[nodiscard]] std::size_t
-coord(const P &l, std::size_t i, std::size_t mate_zone)
+[[nodiscard]] typename P::coord
+coord(const P &p, std::size_t i, std::size_t mate_zone)
 {
-  Expects(i < l.size());
-  return random::ring(i, mate_zone, l.size());
+  Expects(i < p.size());
+  Expects(mate_zone);  // non-zero after auto-tune
+
+  return static_cast<typename P::coord>(random::ring(i, mate_zone, p.size()));
 }
 
 ///
@@ -84,7 +103,7 @@ coord(const P &l, std::size_t i, std::size_t mate_zone)
 /// \return      a random individual of the population
 ///
 template<PopulationWithMutex P>
-[[nodiscard]] typename P::value_type individual(const P &p)
+[[nodiscard]] std::ranges::range_value_t<P> individual(const P &p)
 {
   std::shared_lock lock(p.mutex());
   return p[random::coord(p)];
