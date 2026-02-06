@@ -14,6 +14,7 @@
 #define      ULTRA_LOG_H
 
 #include <filesystem>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <ostream>
@@ -29,6 +30,24 @@ namespace ultra
 /// \note
 /// This is derived from the code presented in "Logging in C++" by Petru
 /// Marginean (DDJ Sep 2007)
+///
+/// \warning
+/// **Re-entrancy and nested logging (thread-local buffer)**
+///
+/// Message construction uses a single thread-local `std::ostringstream`
+/// (`log::tls_buffer_`) that is reused for every log emission on the same
+/// thread. This minimises allocations and keeps the "logging disabled" fast
+/// path cheap.
+///
+/// As a consequence, logging is **not re-entrant within the same thread**
+/// during message construction. In particular, avoid code like:
+///
+///     ultraINFO << "x = " << f();
+///
+/// if `f()` (or anything it calls) may itself log using `ultraPRINT` /
+/// `ultraINFO`... the nested log call will reuse and overwrite the same
+/// thread-local buffer, potentially corrupting the outer message (truncation,
+/// interleaving or unexpected contents).
 ///
 class log final
 {
@@ -116,5 +135,11 @@ private:
 #define ultraWARNING ultraPRINT(log::lWARNING)
 
 }  // namespace ultra
+
+template<>
+struct std::formatter<ultra::log::level> : std::formatter<std::string_view>
+{
+  auto format(ultra::log::level, format_context &) const;
+};
 
 #endif  // include guard
