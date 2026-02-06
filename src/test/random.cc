@@ -15,7 +15,7 @@
 #include "kernel/random.h"
 #include "kernel/distribution.h"
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "third_party/doctest/doctest.h"
 
 TEST_SUITE("RANDOM")
@@ -195,3 +195,14 @@ TEST_CASE("Ring")
 }
 
 }  // TEST_SUITE("RANDOM")
+
+
+int main(int argc, char** argv)
+{
+  // One-time deterministic initialisation for this thread RNG.
+  ultra::random::engine().seed(1973u);
+
+  doctest::Context ctx;
+  ctx.applyCommandLine(argc, argv);
+  return ctx.run();
+}
