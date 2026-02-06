@@ -91,18 +91,13 @@ private:
 ///     ultraPRINT(log::lINFO) << "A number of " << NotifyClients()
 ///                            << " were notified.";
 ///
-/// the clients will be notified only if the logging level will will be
-/// `log::lINFO` and greater. Probably not what was intended! The correct code
-/// should be:
-///
-///     const int notifiedClients = NotifyClients();
-///     ultraPRINT(log::lINFO) << "A number of " << notifiedClients
-///                            << " were notified.";
-///
+/// the clients will be notified only if the logging level will be `log::lINFO`
+/// and greater.
 ///
 /// \note
 /// When the `NDEBUG` is defined all the debug-level logging is eliminated at
 /// compile time.
+///
 #if defined(NDEBUG)
 #define ultraPRINT(level) if ((level) == log::lDEBUG);               \
                           else if ((level) < log::reporting_level);  \
