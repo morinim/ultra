@@ -91,12 +91,22 @@ engine_t &engine()
 ///
 /// Switches the random subsystem to an unpredictable state.
 ///
-/// This function initialises the shared seed generator using entropy from
-/// `std::random_device`, so that subsequently created random engines are
-/// usually seeded unpredictably.
+/// This function "re-bases" the process-wide seed counter so that random
+/// engines created _after_ this call are typically seeded unpredictably.
+///
+/// Implementation notes / assumptions:
+/// - `engine_t::result_type` is assumed to be an _unsigned_ integer type
+///   at least 32 bits wide. This guarantees that `cur + 1` is well-defined
+///   (wrap-around semantics) and provides a large seed space;
+/// - the entropy used to re-base the counter is drawn from a small bounded
+///   interval, because `randomize()` is expected to be called only a few
+///   times and we do not need a huge entropy pool here;
+/// - seed generation is thread-safe and lock-free: a CAS loop updates the
+///   atomic counter using relaxed memory ordering (no inter-thread ordering
+///   constraints are required).
 ///
 /// Each thread owns its own thread-local random engine; therefore, only
-/// engines created *after* this call are affected. Existing engines are
+/// engines created _after_ this call are affected. Existing engines are
 /// left unchanged.
 ///
 /// This design allows deterministic and non-deterministic random behaviour
@@ -107,35 +117,44 @@ void randomize()
 {
   using seed_t = engine_t::result_type;
 
-  // std::random_device returns some value with external entropy
-  // (platform-dependent). This entropy will become the new "starting point"
-  // for future seeds.
-  const auto entropy = static_cast<seed_t>(std::random_device{}());
+  // Contract: we rely on wrap-around behaviour (unsigned) and on a reasonably
+  // large seed space (>= 32 bits).
+  static_assert(std::is_integral_v<engine_t::result_type>,
+                "engine_t::result_type must be an integral type");
+  static_assert(std::numeric_limits<engine_t::result_type>::digits >= 32,
+                "engine_t::result_type must be at least 32 bits wide");
+  static_assert(std::is_unsigned_v<seed_t>,
+                "engine_t::result_type must be unsigned");
 
-  seed_t cur = process_seed.load(std::memory_order_relaxed);
+  // std::random_device provides platform-dependent external entropy.
+  std::random_device rd;
 
-  const auto inc = [](seed_t x) noexcept -> seed_t
-  {
-    using U = std::make_unsigned_t<seed_t>;
+  // LCG (Park–Miller). Very small engine state and fast.
+  std::minstd_rand gen(rd());
 
-    // Increment performed in uintmax_t to avoid signed overflow UB.
-    const auto x1 = static_cast<std::uintmax_t>(static_cast<U>(x)) + 1;
-    return static_cast<seed_t>(static_cast<U>(x1));  // wraps by construction
-  };
+  // Bounded entropy interval used to re-base the process seed counter.
+  // Large enough to avoid trivial values, small enough to avoid edge cases.
+  constexpr seed_t lo(1000), hi(10000000);
+  std::uniform_int_distribution<seed_t> dist(lo, hi);
+
+  const seed_t entropy(static_cast<seed_t>(dist(gen)));
+
+  // Snapshot of the current counter. Note: in the CAS loop, `cur` may be
+  // updated to the latest observed value on failure.
+  seed_t cur(process_seed.load(std::memory_order_relaxed));
 
   // This is a standard "CAS loop" (compare-and-swap loop). We'll try to
   // change `process_seed` to a new value. If another thread changes it first,
   // we retry.
   for (;;)
   {
-    // We want the next seed handed out to be based on entropy, so desired
-    // starts as entropy.
+    // Prefer rebasing to entropy, but never move the counter backwards if we
+    // can avoid it (helps preserve uniqueness for subsequently created
+    // engines).
     seed_t desired = entropy;
 
-    // Best-effort: avoid rewinding if possible. If the type space has wrapped
-    // (or we are near exhaustion), reuse is acceptable by design.
     if (desired <= cur)
-      desired = inc(cur);
+      desired = cur + 1;  // well-defined due to unsigned contract
 
     // If the `process_seed` currently equals `cur`, replace it with `desired`
     // and return `true`.
@@ -146,7 +165,7 @@ void randomize()
                                            std::memory_order_relaxed))
       break;
 
-    // On failure, `cur` is updated; retry with the new `cur`.
+    // On failure, `cur` now holds the latest value; retry.
   }
 }
 
