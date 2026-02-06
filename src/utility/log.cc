@@ -10,13 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "utility/log.h"
+
 #include <chrono>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-
-#include "utility/log.h"
 
 namespace ultra
 {
@@ -115,7 +115,11 @@ std::filesystem::path log::setup_stream(const std::string &base)
   fn << base << std::put_time(std::localtime(&t_c), "_%j_%H_%M_%S") << ".log";
   const std::filesystem::path fp(fn.str());
 
-  stream_ = std::make_unique<std::ofstream>(fp);
+  {
+    std::lock_guard lock(emit_mutex_);
+    stream_ = std::make_unique<std::ofstream>(fp);
+  }
+
   return fp;
 }
 
