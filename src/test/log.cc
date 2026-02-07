@@ -64,7 +64,7 @@ TEST_CASE("Reporting level")
                                         / "debug").string()));
   REQUIRE(!logpath.empty());
 
-  //scoped_file_cleanup cleanup(logpath);
+  scoped_file_cleanup cleanup(logpath);
 
   std::string line, msg;
 
