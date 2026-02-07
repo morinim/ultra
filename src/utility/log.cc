@@ -136,8 +136,9 @@ std::filesystem::path log::setup_stream(const std::string &base)
 {
   using namespace std::chrono;
 
+  const auto now(floor<seconds>(system_clock::now()));
   const std::filesystem::path fp(
-    std::format("{}_{:%j_%H_%M_%S}.log", base, system_clock::now()));
+    std::format("{}_{:%j_%H_%M_%S}.log", base, now));
 
   if (auto new_stream(std::make_unique<std::ofstream>(fp)); *new_stream)
   {
