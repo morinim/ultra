@@ -62,7 +62,3 @@ if (SDL3_FOUND)
   add_subdirectory(third_party/implot)
   add_subdirectory(wopr)
 endif()
-
-if (MINGW)
-  target_link_libraries(ultra PUBLIC stdc++exp)
-endif()

@@ -9,6 +9,11 @@ add_library(ultra ${FRAMEWORK_SRC})
 
 target_link_libraries(ultra tinyxml2)
 
+# Required by libstdc++ on MinGW for C++23 <print>.
+if (MINGW)
+  target_link_libraries(ultra stdc++exp)
+endif()
+
 add_custom_command(TARGET ultra POST_BUILD
                    COMMAND ../tools/single_include.py --src-include-dir ./ --src-include kernel/ultra.h --dst-include ${CMAKE_CURRENT_BINARY_DIR}/auto_ultra.h
                    WORKING_DIRECTORY ${ULTRA_SOURCE_DIR}
