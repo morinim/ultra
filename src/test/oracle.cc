@@ -10,16 +10,18 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-
 #include "test/debug_datasets.h"
 
 #include "kernel/gp/individual.h"
 #include "kernel/gp/team.h"
+#include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/oracle.h"
 #include "kernel/gp/src/problem.h"
 #include "kernel/gp/src/variable.h"
+
+#include <cstdlib>
+#include <future>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -429,6 +431,109 @@ TEST_CASE_FIXTURE(fixture, "Perfect binary_oracle")
   const src::binary_oracle oracle(delphi, pr.data.selected());
   for (const auto &e : pr.data.selected())
     CHECK(oracle.tag(e.input).label == label(e));
+}
+
+TEST_CASE("Parallel oracles")
+{
+  using namespace ultra;
+
+  src::dataframe d;
+
+  d.set_schema({{"Y", d_int},
+                {"X1", d_int}, {"X2", d_int}, {"X3", d_int}, {"X4", d_int}});
+
+  for (std::size_t i(0); i < 1000; ++i)
+  {
+    src::example ex;
+
+    ex.input = {random::sup<D_INT>(1000), random::sup<D_INT>(1000),
+                random::sup<D_INT>(1000), random::sup<D_INT>(1000)};
+    ex.output = random::sup<D_INT>(1000);
+
+    d.push_back(ex);
+  }
+
+  src::problem prob(d);
+  prob.params.init();
+
+  prob.insert<integer::add>();
+  prob.insert<integer::sub>();
+  prob.insert<integer::div>();
+  prob.insert<integer::mul>();
+
+  std::vector<gp::individual> individuals;
+  for (std::size_t i(0); i < 200; ++i)
+    individuals.emplace_back(prob);
+
+  const auto standard_sum([](const ultra::src::dataframe &d,
+                             const ultra::gp::individual &ind)
+  {
+    src::reg_oracle oracle(ind);
+
+    int sum(0.0);
+    for (const auto &in : d)
+      if (const auto v(oracle(in.input)); has_value(v))
+        sum += std::get<D_INT>(v);
+
+    return sum;
+  });
+
+  const auto par_reduce_sum([](const ultra::src::dataframe &d,
+                               const ultra::gp::individual &ind)
+  {
+    const auto stride(
+      std::max<std::size_t>(1, std::thread::hardware_concurrency()));
+
+    std::vector<std::future<int>> futures;
+    futures.reserve(stride);
+
+    for (std::size_t i(0); i < stride; ++i)
+      futures.emplace_back(
+        std::async(
+          std::launch::async,
+          [&ind, &d, stride](std::size_t start)
+          {
+            // Thread-local oracle.
+            src::reg_oracle oracle(ind);
+
+            const auto end(d.end());
+            auto it(std::ranges::next(d.begin(), start, end));
+
+            int ps(0);
+
+            if (it == end)
+              return ps;
+
+            if (const auto v(oracle(it->input)); has_value(v))
+              ps = std::get<D_INT>(v);
+
+            std::ranges::advance(it, stride, end);
+
+            while (it != end)
+            {
+              if (const auto v(oracle(it->input)); has_value(v))
+                ps += std::get<D_INT>(v);
+
+              std::ranges::advance(it, stride, end);
+            }
+
+            return ps;
+          }, i));
+
+    // Reduction.
+    int sum(0);
+
+    for (auto &f : futures)
+    {
+      const auto ps(f.get());
+      sum += ps;
+    }
+
+    return sum;
+  });
+
+  for (const auto &ind : individuals)
+    CHECK(standard_sum(d, ind) == par_reduce_sum(d, ind));
 }
 
 }  // TEST_SUITE("ORACLE")
