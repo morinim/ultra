@@ -8,7 +8,7 @@ There are several ways you can help the development:
 
 #### Improve the documentation
 
-Did you spot a typo? Do you think something could be clarified? Please suggest a documentation patch! *Your help in this area is greatly appreciated since English is not our mother tongue*.
+Did you spot a typo? Do you think something could be clarified? Please suggest a documentation patch! Your help is greatly appreciated since English is not our mother tongue (_while LLMs are widely available today, we still value careful human review and collaboration_).
 
 #### Blog about Ultra
 
