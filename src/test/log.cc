@@ -17,6 +17,27 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+namespace
+{
+
+class scoped_file_cleanup
+{
+public:
+  explicit scoped_file_cleanup(const std::filesystem::path &p) : p_(p) {}
+
+  ~scoped_file_cleanup()
+  {
+    [[maybe_unused]] std::error_code ec;
+    std::filesystem::remove(p_, ec);  // best-effort cleanup
+  }
+
+private:
+  std::filesystem::path p_;
+};
+
+}  // namespace
+
+
 TEST_SUITE("LOG")
 {
 
@@ -37,7 +58,13 @@ TEST_CASE("Reporting level")
 {
   using namespace ultra;
 
-  const auto logpath(log::setup_stream("debug"));
+  // `setup_stream` creates a temporary file.
+  const auto logpath(log::setup_stream((std::filesystem::temp_directory_path()
+                                        / "debug").string()));
+  REQUIRE(!logpath.empty());
+
+  //scoped_file_cleanup cleanup(logpath);
+
   std::string line, msg;
 
   log::reporting_level = log::lOFF;
@@ -55,7 +82,6 @@ TEST_CASE("Reporting level")
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
-    std::cout << '"' << line << '"' << std::endl;
     CHECK(line.find(msg) != std::string::npos);
   }
 
