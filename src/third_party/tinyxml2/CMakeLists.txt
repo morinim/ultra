@@ -2,6 +2,8 @@
 
 set(TINYXML2_SRC tinyxml2.cpp)
 
-add_compile_options(${NO_WARN_FLAGS})
-
 add_library(tinyxml2 ${TINYXML2_SRC})
+
+target_compile_options(tinyxml2 PRIVATE ${NO_WARN_FLAGS})
+
+

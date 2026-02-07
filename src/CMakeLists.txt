@@ -1,16 +1,17 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
-project(ULTRA)
+project(ULTRA LANGUAGES CXX)
 
-# See https://stackoverflow.com/q/31355692/3235496
-# include(CheckIPOSupported)
-
+# Instructs CMake to generate a `compile_commands.json` file in the build
+# directory during project configuration.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# See https://stackoverflow.com/q/31355692/3235496
+# include(CheckIPOSupported)
 #if (CMAKE_BUILD_TYPE MATCHES "Release")
 #check_ipo_supported(RESULT supported_ipo OUTPUT error_ipo)
 #if (supported_ipo)
@@ -44,9 +45,6 @@ add_compile_options(${OTHER_FLAGS} ${WARN_FLAGS})
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-include_directories(${ULTRA_SOURCE_DIR})
-include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party)
 
 # Recurse into the following subdirectories (this does not actually cause
 # another cmake executable to run. The same process will walk through the

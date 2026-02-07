@@ -1,11 +1,13 @@
 # Creates the WOPR executable.
 
-find_package(Threads)
-
-include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party/imgui)
-include_directories(SYSTEM ${ULTRA_SOURCE_DIR}/third_party/implot)
+find_package(Threads REQUIRED)
 
 file(GLOB WOPR_SRC CONFIGURE_DEPENDS "*.cc")
-
 add_executable(wopr ${WOPR_SRC})
-target_link_libraries(wopr ultra imgui implot ${CMAKE_THREAD_LIBS_INIT})
+
+target_include_directories(wopr SYSTEM PRIVATE
+  ${PROJECT_SOURCE_DIR}/third_party/imgui
+  ${PROJECT_SOURCE_DIR}/third_party/implot
+)
+
+target_link_libraries(wopr PRIVATE ultra implot Threads::Threads)
