@@ -55,10 +55,11 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
 #if !defined(NDEBUG)
     const auto effective_fit(eva_(prg));
 
-    if (!almost_equal(*cached_fit, effective_fit))
+    if (!almost_equal(*cached_fit, effective_fit))  [[unlikely]]
     {
       ultraERROR << "COLLISION [" << *cached_fit << " != " << effective_fit
                  << ']';
+      return effective_fit;
     }
 
     // The above comparison may produce false positives.
