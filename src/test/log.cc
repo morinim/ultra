@@ -10,10 +10,10 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "utility/log.h"
+
 #include <filesystem>
 #include <fstream>
-
-#include "utility/log.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -107,6 +107,7 @@ TEST_CASE("Reporting level")
 
   msg = "Warning message";
   ultraWARNING << msg;
+  log::flush();
   {
     std::ifstream logstream(logpath);
     CHECK(std::getline(logstream, line));
