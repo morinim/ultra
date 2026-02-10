@@ -437,10 +437,10 @@ TEST_CASE("Parallel oracles")
 {
   using namespace ultra;
 
-  src::dataframe d;
+  src::dataframe df;
 
-  d.set_schema({{"Y", d_int},
-                {"X1", d_int}, {"X2", d_int}, {"X3", d_int}, {"X4", d_int}});
+  df.set_schema({{"Y", d_int},
+                 {"X1", d_int}, {"X2", d_int}, {"X3", d_int}, {"X4", d_int}});
 
   for (std::size_t i(0); i < 1000; ++i)
   {
@@ -450,10 +450,10 @@ TEST_CASE("Parallel oracles")
                 random::sup<D_INT>(1000), random::sup<D_INT>(1000)};
     ex.output = random::sup<D_INT>(1000);
 
-    d.push_back(ex);
+    df.push_back(ex);
   }
 
-  src::problem prob(d);
+  src::problem prob(df);
   prob.params.init();
 
   prob.insert<integer::add>();
@@ -533,7 +533,7 @@ TEST_CASE("Parallel oracles")
   });
 
   for (const auto &ind : individuals)
-    CHECK(standard_sum(d, ind) == par_reduce_sum(d, ind));
+    CHECK(standard_sum(df, ind) == par_reduce_sum(df, ind));
 }
 
 }  // TEST_SUITE("ORACLE")
