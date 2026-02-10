@@ -141,7 +141,7 @@ namespace ultra::src
 /// validation and test set according to parameters contained in `par`.
 ///
 /// \note
-/// Behaviour summary (nothing should "jumps" unexpectedly):
+/// Behaviour summary (nothing should "jump" unexpectedly):
 ///
 /// User input      Result (train / val / test)
 ///   0 / -1          70 / 30 /  0
