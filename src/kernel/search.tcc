@@ -33,7 +33,7 @@ basic_search<ES, E>::basic_search(problem &prob, E eva)
 ///
 /// Performs basic initialization before the search.
 ///
-/// The default behaviour involve:
+/// The default behaviour involves:
 /// - tuning of the search parameters;
 /// - possibly loading cached value for the evaluator.
 ///
