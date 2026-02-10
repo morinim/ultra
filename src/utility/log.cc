@@ -54,11 +54,12 @@ thread_local std::ostringstream log::tls_buffer_;
 ///
 ///     log().get(level) << "Hello " << username;
 ///
-/// creates a `log` object with the `level` logging level (everything with a
-/// level lower than `level` is ignored), fetches its `std::ostringstream`
-/// object, formats and accumulates the user-supplied data and, finally:
-/// - prints the resulting string on `stdout`;
-/// - persists the resulting string into the log file (if specified).
+/// creates a `log` object with the `level` logging level, fetches its
+/// `std::ostringstream` object, formats and accumulates the user-supplied
+/// data and, finally:
+/// - prints the resulting string on `stdout` f `level >= reporting_level`;
+/// - persists the resulting string into the log file (if specified),
+///   regardless of `reporting_level`.
 ///
 std::ostringstream &log::get(level l)
 {
