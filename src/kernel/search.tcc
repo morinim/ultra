@@ -38,15 +38,18 @@ basic_search<ES, E>::basic_search(problem &prob, E eva)
 /// - possibly loading cached value for the evaluator.
 ///
 /// \remark
-/// Called at the beginning of the first run (i.e. only one time even for a
-/// multiple-run search).
+/// This function is called once at the beginning of each invocation of
+/// `run()`, before the first evolutionary generation of that run.
 ///
 template<template<class> class ES, Evaluator E>
 void basic_search<ES, E>::init()
 {
   tune_parameters();
 
-  load();
+  if (!load())
+  {
+    ultraWARNING << "Init continues without cache";
+  }
 }
 
 ///
@@ -318,22 +321,31 @@ basic_search<ES, E> &basic_search<ES, E>::validation_strategy(
 template<template<class> class ES, Evaluator E>
 bool basic_search<ES, E>::load()
 {
-  if (prob_.params.cache.serialization_file.empty())
+  const auto &file(prob_.params.cache.serialization_file);
+
+  if (file.empty())
     return true;
 
-  std::ifstream in(prob_.params.cache.serialization_file);
-  if (!in)
-    return false;
-
-  if (prob_.params.cache.size)
+  if (!prob_.params.cache.size)
   {
-    if (!eva_.load_cache(in))
-      return false;
-
-    ultraINFO << "Loading cache from "
-              << prob_.params.cache.serialization_file;
+    ultraINFO << "Cache size is 0; skipping cache load from " << file;
+    return false;
   }
 
+  std::ifstream in(file);
+  if (!in)
+  {
+    ultraWARNING << "Cannot open cache file " << file;
+    return false;
+  }
+
+  if (!eva_.load_cache(in))
+  {
+    ultraWARNING << "Cannot load cache from " << file;
+    return false;
+  }
+
+  ultraINFO << "Loaded cache from " << file;
   return true;
 }
 

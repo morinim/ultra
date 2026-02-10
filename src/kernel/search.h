@@ -74,8 +74,7 @@ protected:
   after_generation_callback_t after_generation_callback_ {};
 
 private:
-  // Template method of the `basic_search::run` member function called exactly
-  // one time just before the first run.
+  // Template method of the `basic_search::run` member function.
   virtual void init();
 
   bool load();
