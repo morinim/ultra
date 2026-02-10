@@ -149,8 +149,9 @@ bool load(std::istream &in, const symbol_set &ss, value_t &v)
       D_IVECTOR iv(size);
       for (auto &e : iv)
         if (!(in >> e))
-          break;
-      v = iv;
+          return false;
+
+      v = std::move(iv);
       return true;
     }
     break;
