@@ -11,9 +11,8 @@
  */
 
 #include "kernel/value.h"
-#include "kernel/nullary.h"
 #include "kernel/symbol_set.h"
-#include "kernel/gp/src/variable.h"
+#include "kernel/value_format.h"
 #include "utility/misc.h"
 
 #include <iostream>
@@ -100,27 +99,7 @@ const D_NULLARY *get_if_nullary(const value_t &v) noexcept
 ///
 std::ostream &operator<<(std::ostream &o, const value_t &v)
 {
-  switch (v.index())
-  {
-  case d_address: o << '[' << as_integer(std::get<D_ADDRESS>(v)) << ']'; break;
-  case d_double:  o << std::get<D_DOUBLE>(v);                            break;
-  case d_int:     o << std::get<D_INT>(v);                               break;
-  case d_nullary: o << std::get<const D_NULLARY *>(v)->to_string();      break;
-  case d_string:  o << std::quoted(std::get<D_STRING>(v));               break;
-  case d_variable:o << std::get<const D_VARIABLE *>(v)->name();          break;
-  case d_void:    o << "{}";                                             break;
-  case d_ivector:
-    o << '{';
-    if (const auto &iv(std::get<D_IVECTOR>(v)); !iv.empty())
-    {
-      o << iv[0];
-      for (std::size_t i(1); i < iv.size(); ++i)
-        o << ' ' << iv[i];
-    }
-    o << '}';
-  }
-
-  return o;
+  return o << std::format("{}", v);
 }
 
 ///
