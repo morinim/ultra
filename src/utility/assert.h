@@ -37,7 +37,7 @@ namespace ultra
 /// statements and `assert()`. This can make them hard to distinguish from
 /// ordinary code, hard to update, hard to manipulate by tools and may have
 /// the wrong semantics (do you always want to abort in debug mode and check
-/// nothing in productions runs?).
+/// nothing in production runs?).
 /// \see C++ Core Guidelines I.6 <https://github.com/isocpp/CppCoreGuidelines/>
 #define Expects(expression)  assert(ULTRA_LIKELY((expression)))
 
