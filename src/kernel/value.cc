@@ -238,7 +238,7 @@ bool save(std::ostream &out, const value_t &v)
     break;
   }
 
-  return true;
+  return static_cast<bool>(out);
 }
 
 }  // namespace ultra
