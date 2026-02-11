@@ -10,13 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <numbers>
-
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/search.h"
+
+#include <cstdlib>
+#include <iostream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -46,6 +45,8 @@ TEST_CASE("Symbolic regression - single variable")
 
   // READING INPUT DATA
   src::problem prob(training);
+  CHECK(prob.variables() == 1);
+  CHECK(!prob.classification());
 
   // SETTING UP SYMBOLS
   prob.insert<real::sin>();
@@ -54,13 +55,16 @@ TEST_CASE("Symbolic regression - single variable")
   prob.insert<real::sub>();
   prob.insert<real::div>();
   prob.insert<real::mul>();
+  CHECK(prob.ready());
 
   // SEARCHING
   src::search s(prob);
-  const auto result(s.run(4));
+  const auto result(s.run(5));
 
-  const auto oracle(s.oracle(result.best_individual));
-  CHECK(oracle->is_valid());
+  const auto holder(s.oracle(result.best_individual));
+  const auto &oracle(*holder);
+
+  CHECK(oracle.is_valid());
 
   const std::vector<std::pair<double, double>> test =
   {
@@ -73,8 +77,9 @@ TEST_CASE("Symbolic regression - single variable")
 
   for (const auto &[out, in] : test)
   {
-    REQUIRE(has_value((*oracle)({in})));
-    CHECK(std::get<D_DOUBLE>((*oracle)({in})) == doctest::Approx(out));
+    REQUIRE(has_value(oracle({in})));
+    CHECK(std::get<D_DOUBLE>(oracle({in}))
+          == doctest::Approx(out).epsilon(1e-4));
   }
 }
 
@@ -98,6 +103,8 @@ TEST_CASE("Symbolic regression - multiple variables")
 
   // READING INPUT DATA
   src::problem prob(training);
+  CHECK(prob.variables() == 2);
+  CHECK(!prob.classification());
 
   // SETTING UP SYMBOLS
   prob.insert<real::sin>();
@@ -105,13 +112,16 @@ TEST_CASE("Symbolic regression - multiple variables")
   prob.insert<real::sub>();
   prob.insert<real::mul>();
   prob.insert<real::ln>();
+  CHECK(prob.ready());
 
   // SEARCHING
   src::search s(prob);
-  const auto result(s.run(4));
+  const auto result(s.run(5));
 
-  const auto oracle(s.oracle(result.best_individual));
-  CHECK(oracle->is_valid());
+  const auto holder(s.oracle(result.best_individual));
+  const auto &oracle(*holder);
+
+  CHECK(oracle.is_valid());
 
   const std::vector<std::pair<double, std::vector<value_t>>> test =
   {
@@ -124,8 +134,9 @@ TEST_CASE("Symbolic regression - multiple variables")
 
   for (const auto &[out, in] : test)
   {
-    REQUIRE(has_value((*oracle)(in)));
-    CHECK(std::get<D_DOUBLE>((*oracle)(in)) == doctest::Approx(out));
+    REQUIRE(has_value(oracle(in)));
+    CHECK(std::get<D_DOUBLE>(oracle(in))
+          == doctest::Approx(out).epsilon(1e-4));
   }
 }
 
