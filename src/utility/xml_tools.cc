@@ -22,8 +22,6 @@ namespace ultra
 namespace crc32
 {
 
-const std::size_t checksum_length {8};
-
 ///
 /// Calculates the CRC-32 checksum of a string as defined by ISO 3309.
 ///
@@ -92,9 +90,8 @@ std::pair<std::size_t, std::string> checksum_value_find(const std::string &xml)
   return {pos, val};
 }
 
-std::string replace_checksum_value(
-  const std::string &xml,
-  const std::string &value = std::string(checksum_length, '0'))
+std::string replace_checksum_value(const std::string &xml,
+                                   const std::string &value)
 {
   const auto [extracted_crc_pos, extracted_crc] = checksum_value_find(xml);
 

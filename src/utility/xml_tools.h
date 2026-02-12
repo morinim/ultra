@@ -28,8 +28,12 @@ namespace ultra
 namespace crc32
 {
 
+constexpr std::size_t checksum_length {8};
+
 [[nodiscard]] std::uint32_t calculate(const std::string &) noexcept;
 [[nodiscard]] std::string embed_xml_signature(const std::string &);
+[[nodiscard]] std::string replace_checksum_value(
+  const std::string &, const std::string & = std::string(checksum_length, '0'));
 [[nodiscard]] bool verify_xml_signature(const std::string &);
 
 }  // namespace crc32

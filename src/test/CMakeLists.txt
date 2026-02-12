@@ -23,3 +23,6 @@ endforeach()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   message("libc++ and TSAN, enabling ${PROJECT_SOURCE_DIR}/utility/tsan.supp")
 endif()
+
+# Resources needed by examples
+file(COPY ${PROJECT_SOURCE_DIR}/wopr/merge_summary.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

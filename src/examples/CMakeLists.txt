@@ -14,4 +14,3 @@ endforeach()
 
 # Resources needed by examples
 file(COPY ${PROJECT_SOURCE_DIR}/../data/sonar.csv ${PROJECT_SOURCE_DIR}/../data/petalrose.csv DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
