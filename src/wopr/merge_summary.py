@@ -22,6 +22,10 @@ CHECKSUM_LENGTH = 8
 CHECKSUM_TAG = "checksum"
 
 
+class UltraParseError(RuntimeError):
+    """Raised when an ULTRA summary XML is missing required content."""
+
+
 # ---------------------------------------------------------------------
 #  CRC32 identical to the C++ code (ISO 3309 polynomial)
 # ---------------------------------------------------------------------
@@ -32,11 +36,15 @@ def compute_crc32(data: str) -> str:
 
 
 def embed_xml_signature(xml: str) -> str:
-    root = ET.fromstring(xml)
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as e:
+        raise UltraParseError(f"Generated XML is not well-formed: {e}") from e
+
     node = root.find(CHECKSUM_TAG)
 
     if node is None:
-        raise ValueError("No <" + CHECKSUM_TAG + "> tag found")
+        raise UltraParseError(f"No <{CHECKSUM_TAG}> tag found in generated XML")
 
     node.text = "0" * CHECKSUM_LENGTH
 
@@ -45,9 +53,7 @@ def embed_xml_signature(xml: str) -> str:
     # The output matches our C++ code exactly: Python's zlib.crc32 implements
     # the same ISO 3309 / IEEE 802.3 polynomial (0xEDB88320), with identical
     # initial/final XORs when masked with `0xFFFFFFFF`.
-    crc = compute_crc32(temp)
-
-    node.text = crc
+    node.text = compute_crc32(temp)
 
     return ET.tostring(root, encoding="unicode")
 
@@ -56,47 +62,134 @@ def embed_xml_signature(xml: str) -> str:
 #  Helpers for combining mean and standard deviation
 # ---------------------------------------------------------------------
 
-def combine_mean(m1, n1, m2, n2):
+def combine_mean(m1: float, n1: int, m2: float, n2: int) -> float:
     """Pooled mean."""
-    return (n1 * m1 + n2 * m2) / (n1 + n2)
+    N = n1 + n2
+    if N <= 0:
+        raise ValueError("Cannot combine means with total count 0")
+    return (n1 * m1 + n2 * m2) / N
 
 
-def combine_std(m1, s1, n1, m2, s2, n2):
-    """Unbiased pooled standard deviation."""
+def combine_std(m1: float, s1: float, n1: int,
+                m2: float, s2: float, n2: int) -> float:
+    """
+    Unbiased pooled standard deviation.
+
+    Defined only when total N >= 2 (denominator N-1).
+    For N == 1, std is not identifiable; we return 0.0 by convention.
+    """
+    N = n1 + n2
+    if N <= 0:
+        raise ValueError("Cannot combine std dev with total count 0")
+    if N == 1:
+        return 0.0
+
     M = combine_mean(m1, n1, m2, n2)
+    # If a batch has n=0, its (n-1)*s^2 term is 0 by definition here.
     num = (
-        (n1 - 1) * s1 * s1 +
-        (n2 - 1) * s2 * s2 +
-        n1 * (m1 - M)**2 +
-        n2 * (m2 - M)**2
+        (max(n1 - 1, 0)) * (s1 * s1) +
+        (max(n2 - 1, 0)) * (s2 * s2) +
+        n1 * (m1 - M) ** 2 +
+        n2 * (m2 - M) ** 2
     )
-    return (num / (n1 + n2 - 1)) ** 0.5
+    return (num / (N - 1)) ** 0.5
 
 
 # ---------------------------------------------------------------------
 #  Parsing utilities
 # ---------------------------------------------------------------------
 
+def _require_node(parent: ET.Element, path: str, *, file: Path) -> ET.Element:
+    node = parent.find(path)
+    if node is None:
+        raise UltraParseError(f"{file}: missing required node '{path}'")
+    return node
+
+
+def _require_text(parent: ET.Element, path: str, *, file: Path) -> str:
+    node = _require_node(parent, path, file=file)
+    if node.text is None:
+        raise UltraParseError(f"{file}: node '{path}' has no text")
+    text = node.text.strip()
+    if not text:
+        raise UltraParseError(f"{file}: node '{path}' is empty")
+    return text
+
+
+def _require_int(parent: ET.Element, path: str, *, file: Path) -> int:
+    text = _require_text(parent, path, file=file)
+    try:
+        return int(text)
+    except ValueError as e:
+        raise UltraParseError(f"{file}: node '{path}' is not an int: {text!r}") from e
+
+
+def _require_float(parent: ET.Element, path: str, *, file: Path) -> float:
+    text = _require_text(parent, path, file=file)
+    try:
+        return float(text)
+    except ValueError as e:
+        raise UltraParseError(f"{file}: node '{path}' is not a float: {text!r}") from e
+
+
 def parse_ultra_file(path: Path):
-    tree = ET.parse(path)
+    try:
+        tree = ET.parse(path)
+    except FileNotFoundError as e:
+        raise UltraParseError(f"{path}: file not found") from e
+    except OSError as e:
+        raise UltraParseError(f"{path}: cannot read file: {e}") from e
+    except ET.ParseError as e:
+        raise UltraParseError(f"{path}: XML parse error: {e}") from e
+
     root = tree.getroot()
     summary = root.find("summary")
+    if summary is None:
+        raise UltraParseError(f"{path}: missing required node 'summary'")
 
-    runs = int(summary.find("runs").text)
-    elapsed = int(summary.find("elapsed_time").text)
-    success = float(summary.find("success_rate").text)
+    runs = _require_int(summary, "runs", file=path)
+    if runs <= 0:
+        raise UltraParseError(f"{path}: runs must be positive")
 
-    fitness_node = summary.find("distributions/fitness")
-    mean = float(fitness_node.find("mean").text)
-    std = float(fitness_node.find("standard_deviation").text)
+    elapsed = _require_int(summary, "elapsed_time", file=path)
+    if elapsed < 0:
+        raise UltraParseError(f"{path}: elapsed_time must be non-negative")
 
-    best = summary.find("best")
-    best_fitness = float(best.find("fitness").text)
-    best_accuracy = float(best.find("accuracy").text)
-    best_run = int(best.find("run").text)
-    best_code = best.find("code").text.strip()
+    success = _require_float(summary, "success_rate", file=path)
+    if not (0.0 <= success <= 1.0):
+        raise UltraParseError(f"{path}: success_rate out of range: {success}")
 
-    solutions = [int(node.text) for node in summary.find("solutions")]
+    mean = _require_float(summary, "distributions/fitness/mean", file=path)
+    std  = _require_float(summary, "distributions/fitness/standard_deviation",
+                          file=path)
+
+    best_fitness = _require_float(summary, "best/fitness", file=path)
+    best_accuracy = _require_float(summary, "best/accuracy", file=path)
+
+    best_run = _require_int(summary, "best/run", file=path)
+    if best_run < 0 or best_run >= runs:
+        raise UltraParseError(f"{path}: best/run out of range: {best_run} (runs={runs})")
+
+    best_code = _require_text(summary, "best/code", file=path)
+
+    sol_parent = summary.find("solutions")
+    if sol_parent is None:
+        raise UltraParseError(f"{path}: missing required node 'solutions'")
+
+    solutions = []
+    for node in sol_parent.findall("run"):
+        if node.text is None or not node.text.strip():
+            raise UltraParseError(f"{path}: empty <solutions><run> entry")
+        try:
+            solutions.append(int(node.text.strip()))
+        except ValueError as e:
+            raise UltraParseError(f"{path}: non-integer solution run: {node.text!r}") from e
+    if any(s < 0 for s in solutions):
+        raise UltraParseError(f"{path}: solutions contains negative run index")
+    if any(s >= runs for s in solutions):
+        raise UltraParseError(f"{path}: solutions contains run index >= runs")
+    if len(set(solutions)) != len(solutions):
+        raise UltraParseError(f"{path}: duplicate run indices in solutions")
 
     return {
         "runs": runs,
@@ -124,6 +217,10 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
 
     # Merged summary.
     runs = A["runs"] + B["runs"]
+
+    if runs == 0:
+        raise UltraParseError("Merged runs is 0; cannot compute merged statistics")
+
     elapsed = A["elapsed"] + B["elapsed"]
 
     success = (A["success"] * A["runs"] + B["success"] * B["runs"]) / runs
@@ -201,5 +298,13 @@ if __name__ == "__main__":
               file=sys.stderr)
         sys.exit(1)
 
-    merge_ultra_files(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
-    print("Merged file written.")
+    try:
+        merge_ultra_files(Path(sys.argv[1]), Path(sys.argv[2]),
+                          Path(sys.argv[3]))
+        print("Merged file written.")
+    except UltraParseError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:
+        print(f"Error: unexpected failure: {e}", file=sys.stderr)
+        sys.exit(3)
