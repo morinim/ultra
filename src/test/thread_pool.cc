@@ -127,7 +127,9 @@ TEST_CASE("Capacity")
 TEST_CASE("Empty queue")
 {
   ultra::thread_pool pool(4);
-  std::this_thread::sleep_for(1s);
+
+  CHECK(pool.queue_size() == 0);
+  CHECK(!pool.has_pending_tasks());
 }
 
 auto sum(int a, int b) { return a + b; }
