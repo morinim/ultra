@@ -377,4 +377,53 @@ TEST_CASE("Fails cleanly on missing required nodes (exit code 2)")
   fs::remove_all(tmp, ec);
 }
 
+TEST_CASE("Fails cleanly on negative standard_deviation (exit code 2)")
+{
+  REQUIRE_MESSAGE(fs::exists(script),
+                  "Script not found at: " << script.string());
+
+  const auto tmp(make_temp_dir());
+  const auto a(tmp / "a.xml");
+  const auto b(tmp / "b.xml");
+  const auto out(tmp / "out.xml");
+  const auto err(tmp / "err.txt");
+
+  // A: negative standard deviation -> should be rejected by parse_ultra_file().
+  const std::string bad(
+      "<ultra><summary>"
+      "<runs>2</runs>"
+      "<elapsed_time>1</elapsed_time>"
+      "<success_rate>1</success_rate>"
+      "<distributions><fitness>"
+      "<mean>0</mean>"
+      "<standard_deviation>-0.1</standard_deviation>"
+      "</fitness></distributions>"
+      "<best><fitness>0</fitness><accuracy>1</accuracy><run>0</run><code>x</code></best>"
+      "<solutions><run>0</run></solutions>"
+      "</summary></ultra>");
+
+  write_all(a, bad);
+
+  // B: valid file.
+  write_all(b, make_input_xml(
+    /*runs*/2, /*elapsed*/1,
+    /*success*/1.0,
+    /*mean*/0.0, /*stddev*/0.0,
+    /*best_fitness*/0.0, /*best_accuracy*/1.0,
+    /*best_run*/0, /*best_code*/"OK",
+    /*solutions*/{0}));
+
+  const int rc(run_cli(a, b, out, err));
+  CHECK(rc == 2);
+
+  const auto stderr_txt(read_all(err));
+  CHECK_MESSAGE(
+    stderr_txt.find("standard_deviation must be finite and non-negative")
+    != std::string::npos,
+    "Unexpected stderr:\n" << stderr_txt);
+
+  [[maybe_unused]] std::error_code ec;
+  fs::remove_all(tmp, ec);
+}
+
 }  // TEST_SUITE
