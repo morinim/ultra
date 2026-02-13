@@ -17,6 +17,7 @@
 #
 
 import xml.etree.ElementTree as ET
+import math
 from pathlib import Path
 import sys
 import zlib
@@ -164,8 +165,14 @@ def parse_ultra_file(path: Path):
         raise UltraParseError(f"{path}: success_rate out of range: {success}")
 
     mean = _require_float(summary, "distributions/fitness/mean", file=path)
+    if not math.isfinite(mean):
+        raise UltraParseError(f"{path}: mean must be finite, got {mean}")
+
     std  = _require_float(summary, "distributions/fitness/standard_deviation",
                           file=path)
+    if not math.isfinite(std) or std < 0.0:
+        raise UltraParseError(
+            f"{path}: standard_deviation must be finite and non-negative, got {std}")
 
     best_fitness = _require_float(summary, "best/fitness", file=path)
     best_accuracy = _require_float(summary, "best/accuracy", file=path)
