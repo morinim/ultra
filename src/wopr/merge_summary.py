@@ -32,7 +32,7 @@ class UltraParseError(RuntimeError):
 
 
 # ---------------------------------------------------------------------
-#  CRC32 identical to the C++ code (ISO 3309 polynomial)
+#  CRC32 identical to the C++ code (ISO 3309 polynomial).
 # ---------------------------------------------------------------------
 
 def compute_crc32(data: str) -> str:
@@ -64,7 +64,7 @@ def embed_xml_signature(xml: str) -> str:
 
 
 # ---------------------------------------------------------------------
-#  Helpers for combining mean and standard deviation
+#  Helpers for combining mean and standard deviation.
 # ---------------------------------------------------------------------
 
 def combine_mean(m1: float, n1: int, m2: float, n2: int) -> float:
@@ -101,7 +101,7 @@ def combine_std(m1: float, s1: float, n1: int,
 
 
 # ---------------------------------------------------------------------
-#  Parsing utilities
+#  Parsing utilities.
 # ---------------------------------------------------------------------
 
 def _require_node(parent: ET.Element, path: str, *, file: Path) -> ET.Element:
@@ -219,7 +219,30 @@ def parse_ultra_file(path: Path):
 
 
 # ---------------------------------------------------------------------
-#  Main merge function
+#  Directory-related helpers
+# ---------------------------------------------------------------------
+def iter_summary_files(d: Path):
+    if not d.exists():
+        raise UltraParseError(f"{d}: directory does not exist")
+    if not d.is_dir():
+        raise UltraParseError(f"{d}: not a directory")
+
+    yield from sorted(p for p in d.iterdir()
+                      if p.is_file() and p.name.endswith(".summary.xml"))
+
+
+def index_by_name(d: Path) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    for p in iter_summary_files(d):
+        name = p.name
+        if name in out:
+            raise UltraParseError(f"{d}: duplicate filename {name!r}")
+        out[name] = p
+    return out
+
+
+# ---------------------------------------------------------------------
+#  Main merge functions.
 # ---------------------------------------------------------------------
 
 def merge_ultra_files(path1: Path, path2: Path, output: Path):
@@ -254,12 +277,10 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
         best_run = B["best_run"] + A["runs"]  # important offset
         best_code = B["best_code"]
 
-    # Solutions: merge + offset for B
+    # Solutions: merge + offset for B.
     solutions = A["solutions"] + [s + A["runs"] for s in B["solutions"]]
 
-    # -----------------------------------------------------------------
-    # Build XML
-    # -----------------------------------------------------------------
+    # Build XML.
     ultra = ET.Element("ultra")
     summary = ET.SubElement(ultra, "summary")
 
@@ -282,20 +303,50 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
     for s in solutions:
         ET.SubElement(sol, "run").text = str(s)
 
-    # Placeholder checksum
+    # Placeholder checksum.
     ET.SubElement(ultra, "checksum").text = "0" * CHECKSUM_LENGTH
 
-    # Convert to string
+    # Convert to string.
     ET.indent(ultra, space="  ")
     xml = ET.tostring(ultra, encoding="unicode")
 
-    # Embed real checksum
+    # Embed real checksum.
     xml_signed = embed_xml_signature(xml)
 
-    # Save
+    # Save.
     output.write_text(xml_signed, encoding="utf-8")
 
     return xml_signed
+
+
+def merge_ultra_dirs(dir1: Path, dir2: Path, out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if not out_dir.is_dir():
+        raise UltraParseError(f"{out_dir}: cannot create output directory")
+
+    a = index_by_name(dir1)
+    b = index_by_name(dir2)
+
+    all_names = sorted(set(a.keys()) | set(b.keys()))
+    if not all_names:
+        raise UltraParseError("No *.summary.xml files found in either input directory")
+
+    merged = 0
+    copied = 0
+
+    for name in all_names:
+        out_path = out_dir / name
+
+        if name in a and name in b:
+            merge_ultra_files(a[name], b[name], out_path)
+            merged += 1
+        else:
+            src = a.get(name) or b.get(name)
+            assert src is not None
+            out_path.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            copied += 1
+
+    print(f"Merged: {merged}, copied: {copied}, total: {len(all_names)}")
 
 
 # ---------------------------------------------------------------------
@@ -304,18 +355,30 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Usage: python merge_summary.py summary1.xml summary2.xml "
-              "output.xml",
+        print("Usage:\n"
+              "  merge_summary.py summary1.xml summary2.xml output.xml\n"
+              "  merge_summary.py dir1/ dir2/ out_dir/\n",
               file=sys.stderr)
         sys.exit(1)
 
+    p1 = Path(sys.argv[1])
+    p2 = Path(sys.argv[2])
+    p3 = Path(sys.argv[3])
+
     try:
-        merge_ultra_files(Path(sys.argv[1]), Path(sys.argv[2]),
-                          Path(sys.argv[3]))
-        print("Merged file written.")
+        if p1.is_dir() or p2.is_dir() or p3.is_dir():
+            # Directory mode requires all three to be directories (out may not
+            # exist yet).
+            if not p1.is_dir() or not p2.is_dir():
+                raise UltraParseError("In directory mode, both inputs must be directories")
+            merge_ultra_dirs(p1, p2, p3)
+        else:
+            merge_ultra_files(p1, p2, p3)
+            print("Merged file written.")
     except UltraParseError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(2)
     except Exception as e:
         print(f"Error: unexpected failure: {e}", file=sys.stderr)
         sys.exit(3)
+
