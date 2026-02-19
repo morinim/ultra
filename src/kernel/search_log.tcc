@@ -227,8 +227,9 @@ template<Individual I, Fitness F> void search_log::save_summary(
   const std::string base_xml(doc.CStr());
   const std::string signed_xml(ultra::crc32::embed_xml_signature(base_xml));
 
-  if (std::ofstream out(build_path(summary_file_path)); out)
-    out << signed_xml << std::flush;
+  if (std::ofstream out(build_path(summary_file_path), std::ios::binary); out)
+    out.write(signed_xml.data(),
+              static_cast<std::streamsize>(signed_xml.size()));
 }
 
 #endif  // include guard

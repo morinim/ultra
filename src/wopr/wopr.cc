@@ -1888,18 +1888,17 @@ void rs::summary::get_summaries(std::stop_token stoken)
       const std::filesystem::path base_dir(dataset.parent_path());
       const auto xml_fn(base_dir / ultra::summary_from_basename(dataset));
       tinyxml2::XMLDocument summary;
-      if (const auto result(summary.LoadFile(xml_fn.c_str()));
-          result != tinyxml2::XML_SUCCESS)
+      if (summary.LoadFile(xml_fn.c_str()) != tinyxml2::XML_SUCCESS
+          || !summary.FirstChild())
         continue;
 
-      if (summary.FirstChild())
-      {
-        tinyxml2::XMLPrinter printer;
-        summary.Print(&printer);
-        if (const char *cstr(printer.CStr());
-            !cstr || !ultra::crc32::verify_xml_signature(cstr))
-          continue;
-      }
+      std::ifstream in(xml_fn, std::ios::binary);
+      std::ostringstream ss;
+      ss << in.rdbuf();
+      const std::string xml(ss.str());
+
+      if (!ultra::crc32::verify_xml_signature(xml))
+        continue;
 
       std::lock_guard guard(current_mutex);
       test.second.current = summary_data(summary);
