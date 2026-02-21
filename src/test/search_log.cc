@@ -69,6 +69,10 @@ TEST_CASE("Filenames")
     CHECK(sum.string().find(search_log::default_summary_file)
           != std::string::npos);
     CHECK(sum.extension() == ".xml");
+
+    CHECK(basename_from_summary(sum) == basename);
+    CHECK(basename_from_summary("/path/to/file.summary.xml")
+          == "/path/to/file.csv");
   }
 }
 

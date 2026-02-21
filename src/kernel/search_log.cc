@@ -39,10 +39,26 @@ std::filesystem::path population_from_basename(const std::string &basename)
          .replace_extension(search_log::default_population_file);
 }
 
-std::filesystem::path summary_from_basename(const std::string &basename)
+std::filesystem::path summary_from_basename(
+  const std::filesystem::path &basename)
 {
-  return std::filesystem::path(basename).filename()
+  return basename.filename()
          .replace_extension(search_log::default_summary_file);
+}
+
+std::filesystem::path basename_from_summary(std::filesystem::path summary)
+{
+  using namespace std::string_literals;
+
+  constexpr std::string suffix("."s + search_log::default_summary_file);
+  const auto filename(summary.filename().string());
+
+  Expects(filename.ends_with(suffix));
+
+  auto base(filename.substr(0, filename.size() - suffix.size()));
+  summary.replace_filename(base + ".csv");
+
+  return summary;
 }
 
 ///

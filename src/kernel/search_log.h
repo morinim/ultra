@@ -84,11 +84,14 @@ private:
   std::ofstream population_file;
 };  // search_log
 
+[[nodiscard]] std::filesystem::path basename_from_summary(
+  std::filesystem::path);
 [[nodiscard]] std::filesystem::path dynamic_from_basename(const std::string &);
 [[nodiscard]] std::filesystem::path layers_from_basename(const std::string &);
 [[nodiscard]] std::filesystem::path population_from_basename(
   const std::string &);
-[[nodiscard]] std::filesystem::path summary_from_basename(const std::string &);
+[[nodiscard]] std::filesystem::path summary_from_basename(
+  const std::filesystem::path &);
 
 #include "kernel/search_log.tcc"
 
