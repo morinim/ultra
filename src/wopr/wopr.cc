@@ -116,6 +116,7 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
         || !(ss >> len_std_dev)
         || !(ss >> len_max)
         || !parse_python_dict(ss, crossover_types)
+        || !(ss >> std::ws)
         || !std::getline(ss, best_prg))
       throw ultra::exception::data_format("Cannot parse dynamic file line");
   }
