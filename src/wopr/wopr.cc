@@ -538,20 +538,36 @@ enum class exec_mode {run, summary};
 
 struct settings
 {
+  static unsigned default_generations;
+  static unsigned default_runs;
+  static ultra::model_measurements<double> default_threshold;
+
   ultra::src::dataframe::params params {};
 
-  unsigned generations {100};
-  unsigned runs {1};
-  ultra::model_measurements<double> threshold {};
+  unsigned generations {default_generations};
+  unsigned runs {default_runs};
+  ultra::model_measurements<double> threshold {default_threshold};
 };
+
+unsigned settings::default_generations {100};
+unsigned settings::default_runs {1};
+ultra::model_measurements<double> settings::default_threshold {};
 
 struct data
 {
-  data(const settings &s = {}) : conf(s) {}
+  data(const std::filesystem::path &ds,
+       const std::filesystem::path &xs,
+       const settings &c, const summary_data &r)
+    : dataset(ds), xml_summary(xs), conf(c), reference(r)
+  {
+  }
 
-  settings conf {};
+  const std::filesystem::path dataset;
+  const std::filesystem::path xml_summary;
+
+  const settings conf;
   summary_data current {};
-  summary_data reference {};
+  const summary_data reference;
 };
 
 // Protects `data.current`. `std::shared_mutex` is used to allow multiple
@@ -560,10 +576,11 @@ struct data
 // startup.
 std::shared_mutex current_mutex;
 
-using collection_t = std::map<const std::filesystem::path, data>;
+using collection_t = std::vector<std::pair<const std::string, data>>;
 
 // After initialisation, `collection` has a stable size, stable ordering,
-// stable paths (keys), stable `conf` and `reference`; only `current` mutates.
+// stable keys, `dataset`, `xml_summary`, `conf` and `reference`; only
+// `current` mutates.
 collection_t collection;
 
 bool references_available {false};
@@ -595,11 +612,7 @@ const char *reference_str = "Reference";
 
 bool imgui_demo_panel {false};
 
-struct labels_data
-{
-  std::vector<std::string> strings;
-  std::vector<const char*> cstrs;
-};
+using labels_data = std::vector<const char *>;
 
 [[nodiscard]] labels_data make_labels(const rs::collection_t &);
 [[nodiscard]] std::vector<double> make_positions(std::size_t);
@@ -677,7 +690,7 @@ void render_number_of_runs()
   }
 
   if (show_reference_values)
-    for (const auto &[path, data] : rs::collection)
+    for (const auto &[_, data] : rs::collection)
     {
       bar_values.push_back(data.reference.runs);
       max_runs = std::max(max_runs, data.reference.runs);
@@ -697,8 +710,7 @@ void render_number_of_runs()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
   ImPlot::SetupAxes("Dataset", "Runs", ImPlotAxisFlags_AutoFit);
-  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
-                         labels.cstrs.data());
+  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
 
   // Bars.
@@ -773,8 +785,7 @@ void render_success_rate()
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
   ImPlot::SetupAxes("Dataset", "Success rate", ImPlotAxisFlags_AutoFit);
-  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size,
-                         labels.cstrs.data());
+  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
 
   if (best_success_rate > 0.0)
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0,
@@ -883,7 +894,7 @@ void render_fitness_across_datasets()
     if (!rs::references_available || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
-    if (ImPlot::BeginPlot(labels.cstrs[i], ImVec2(-1, -1), flags))
+    if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
     {
       ImPlot::SetupAxes("Runs", "Fitness", 0, ImPlotAxisFlags_AutoFit);
 
@@ -1733,14 +1744,10 @@ labels_data make_labels(const rs::collection_t &c)
 {
   labels_data out;
 
-  out.strings.reserve(c.size());
-  out.cstrs.reserve(c.size());
+  out.reserve(c.size());
 
-  for (const auto &[path, _] : c)
-  {
-    out.strings.push_back(path.stem().string());
-    out.cstrs.push_back(out.strings.back().c_str());
-  }
+  for (const auto &[name, _] : c)
+    out.push_back(name.c_str());
 
   return out;
 }
@@ -1884,9 +1891,7 @@ void rs::summary::get_summaries(std::stop_token stoken)
   {
     for (auto &test : collection)
     {
-      const auto &dataset(test.first);
-      const std::filesystem::path base_dir(dataset.parent_path());
-      const auto xml_fn(base_dir / ultra::summary_from_basename(dataset));
+      const auto xml_fn(test.second.xml_summary);
       tinyxml2::XMLDocument summary;
       if (summary.LoadFile(xml_fn.c_str()) != tinyxml2::XML_SUCCESS
           || !summary.FirstChild())
@@ -1895,9 +1900,9 @@ void rs::summary::get_summaries(std::stop_token stoken)
       std::ifstream in(xml_fn, std::ios::binary);
       std::ostringstream ss;
       ss << in.rdbuf();
-      const std::string xml(ss.str());
+      const std::string xml_content(ss.str());
 
-      if (!ultra::crc32::verify_xml_signature(xml))
+      if (!ultra::crc32::verify_xml_signature(xml_content))
         continue;
 
       std::lock_guard guard(current_mutex);
@@ -1950,12 +1955,20 @@ rs::settings rs::read_settings(const std::filesystem::path &test_fn)
   const auto h_search(h_ultra.FirstChildElement("search"));
   if (const auto *e = h_search.FirstChildElement("generations").ToElement())
     ret.generations = e->UnsignedText(ret.generations);
+  else
+    ret.generations = settings::default_generations;
+
   if (const auto *e = h_search.FirstChildElement("runs").ToElement())
     ret.runs = e->UnsignedText(ret.runs);
+  else
+    ret.runs = settings::default_runs;
+
   if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
   {
     if (const char *text = e->GetText())
       ret.threshold = extract_threshold(std::string(text));
+    else
+      ret.threshold = settings::default_threshold;
   }
 
   const auto h_dataset(h_ultra.FirstChildElement("dataset"));
@@ -2081,59 +2094,98 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
     return {};
   }
 
-  const auto show_settings([](const std::filesystem::path &p)
+  if (!in2.empty() && !fs::is_directory(in2))
   {
-    settings ts;
-
-    if (const auto i(collection.find(p)); i != collection.end())
-      ts = i->second.conf;
-
-    std::cout << "Settings for " << p.filename()
-              << "\n  Runs: " << ts.runs
-              << "\n  Generations: " << ts.generations
-              << "\n  Threshold:";
-
-    if (ts.threshold.accuracy || ts.threshold.fitness)
-    {
-      if (ts.threshold.accuracy)
-        std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
-      if (ts.threshold.fitness)
-        std::cout << ' ' << *ts.threshold.fitness;
-    }
-    else
-      std::cout << " none";
-    std::cout << '\n';
-  });
+    std::cerr << in2 << " isn't a directory.\n";
+    return {};
+  }
 
   collection_t ret;
 
+  const auto check_and_insert([&m, &in2, &ret](const auto &path)
+  {
+    const auto get_reference([&in2](const std::filesystem::path &base)
+    {
+      summary_data ret;
+
+      if (const auto ref(in2 / base.filename()); std::filesystem::exists(ref))
+        return summary_data(ref);
+
+      return summary_data();
+    });
+
+    const auto show_settings([](std::string_view name, const settings &ts)
+    {
+      std::cout << "Settings for " << name
+                << "\n  Runs: " << ts.runs
+                << "\n  Generations: " << ts.generations
+                << "\n  Threshold:";
+
+      if (ts.threshold.accuracy || ts.threshold.fitness)
+      {
+        if (ts.threshold.accuracy)
+          std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+        if (ts.threshold.fitness)
+          std::cout << ' ' << *ts.threshold.fitness;
+      }
+      else
+        std::cout << " none";
+      std::cout << '\n';
+    });
+
+    const auto ext(path.extension());
+
+    if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
+    {
+      const auto sum(summary_from_basename(path));
+      const auto ref(get_reference(path));
+
+      const rs::data d(path, sum, read_settings(path), ref);
+
+      ret.emplace_back(path.stem(), d);
+
+      show_settings(ret.back().first, ret.back().second.conf);
+      return true;
+    }
+
+    if (m == exec_mode::summary && ultra::iequals(ext, ".xml")
+        && path.stem().string().ends_with(".summary"))
+    {
+      const auto basename(basename_from_summary(path));
+      const auto ref(get_reference(basename));
+
+      const rs::data d(basename, path, {}, ref);
+
+      ret.emplace_back(basename.stem(), d);
+      return true;
+    }
+
+    return false;
+  });
+
   if (fs::is_directory(in1))
   {
-    const auto base_folder(in1);
+    std::vector<fs::path> sf;
 
-    for (const auto &entry : fs::directory_iterator(base_folder))
-      if (const auto path(entry.path());
-          ultra::iequals(path.extension(), ".csv"))
-      {
-        if (m == exec_mode::run)
-        {
-          ret.insert({path, read_settings(path)});
-          show_settings(path);
-        }
-        else
-          ret.insert({path, {}});
-      }
+    for (const auto &entry : fs::directory_iterator(in1))
+    {
+      if (!entry.is_regular_file())
+        continue;
+
+      const auto &p(entry.path());
+
+      if (const auto ext(p.extension());
+          ultra::iequals(ext, ".csv") || ultra::iequals(ext, ".xml"))
+        sf.push_back(p);
+    }
+
+    std::ranges::sort(sf, {}, &fs::path::filename);
+
+    for (const auto &entry : sf)
+      check_and_insert(entry);
   }
   else if (fs::exists(in1))
-  {
-    if (m == exec_mode::run)
-    {
-      ret.insert({in1, read_settings(in1)});
-      show_settings(in1);
-    }
-    else
-      ret.insert({in1, {}});
-  }
+    check_and_insert(in1);
   else
   {
     std::cerr << in1 << " isn't a valid input.\n";
@@ -2150,25 +2202,6 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
   for (const auto &ds : ret)
     std::cout << ' ' << ds.first;
   std::cout << '\n';
-
-  if (fs::is_directory(in2))
-  {
-    for (auto &t : ret)
-    {
-      const auto path(in2 / ultra::summary_from_basename(t.first));
-
-      if (fs::exists(path))
-      {
-        t.second.reference = summary_data(path);
-        references_available = true;
-      }
-    }
-  }
-  else if (!in2.empty())
-  {
-    std::cerr << in2 << " isn't a directory.\n";
-    return {};
-  }
 
   return ret;
 }
@@ -2348,39 +2381,25 @@ bool rs::run::setup_cmd(argh::parser &cmdl)
                                                               : pos_args[2]);
   const std::filesystem::path ref_folder(cmdl("reference", "").str());
 
+  if (const auto v(cmdl("generations").str()); !v.empty())
+  {
+    settings::default_generations = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Generations: " << settings::default_generations << '\n';
+  }
+
+  if (const auto v(cmdl("runs").str()); !v.empty())
+  {
+    settings::default_runs = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Runs: " << settings::default_runs << '\n';
+  }
+
+  if (const auto v(cmdl("threshold").str()); !v.empty())
+    settings::default_threshold = extract_threshold(v);
+
   collection = setup_collection(test_input, ref_folder, exec_mode::run);
 
   if (collection.empty())
     return false;
-
-  std::optional<unsigned> generations;
-  if (const auto v(cmdl("generations").str()); !v.empty())
-  {
-    generations = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Generations: " << *generations << '\n';
-  }
-
-  std::optional<unsigned> runs;
-  if (const auto v(cmdl("runs").str()); !v.empty())
-  {
-    runs = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Runs: " << *runs << '\n';
-  }
-
-  std::optional<ultra::model_measurements<double>> threshold;
-  if (const auto v(cmdl("threshold").str()); !v.empty())
-    threshold = extract_threshold(v);
-
-  if (generations || runs || threshold)
-    for (auto &test : collection)
-    {
-      if (generations)
-        test.second.conf.generations = *generations;
-      if (runs)
-        test.second.conf.runs = *runs;
-      if (threshold)
-        test.second.conf.threshold = *threshold;
-    }
 
   run::nogui = cmdl["nogui"];
 
@@ -2462,7 +2481,7 @@ void rs::run::start(const imgui_app::program::settings &settings)
   const auto test_driver(
     [source](auto test)
     {
-      const auto &dataset(test.first);
+      const auto &dataset(test.second.dataset);
       ultra::src::problem prob(
         ultra::src::dataframe(dataset, test.second.conf.params),
         ultra::symbol_init::all);
@@ -2479,8 +2498,7 @@ void rs::run::start(const imgui_app::program::settings &settings)
         base_dir, ultra::layers_from_basename(dataset));
       sl.population_file_path = build_path(
         base_dir, ultra::population_from_basename(dataset));
-      sl.summary_file_path = build_path(
-        base_dir, ultra::summary_from_basename(dataset));
+      sl.summary_file_path = test.second.xml_summary;
 
       s.logger(sl).stop_source(source);
 
