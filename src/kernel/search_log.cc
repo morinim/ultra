@@ -50,7 +50,7 @@ std::filesystem::path basename_from_summary(std::filesystem::path summary)
 {
   using namespace std::string_literals;
 
-  constexpr std::string suffix("."s + search_log::default_summary_file);
+  const std::string suffix("."s + search_log::default_summary_file);
   const auto filename(summary.filename().string());
 
   Expects(filename.ends_with(suffix));
