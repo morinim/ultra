@@ -22,9 +22,16 @@
 
 #include "argh/argh.h"
 
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <map>
-#include <cassert>
+#include <numeric>
+#include <set>
+#include <string>
+#include <string_view>
 
 using namespace std::chrono_literals;
 
@@ -174,6 +181,9 @@ struct dynamic_sequence
            std::vector<double>> crossover_types {};
 
   std::vector<std::string> best_prg {};
+
+  // This keeps track of the index of selected program inside the GUI.
+  int best_idx {};
 
   [[nodiscard]] bool empty() const noexcept { return xs.empty(); }
   [[nodiscard]] std::size_t size() const noexcept { return xs.size(); }
@@ -624,17 +634,17 @@ using labels_data = std::vector<const char *>;
 /*********************************************************************
  * Rendering
  ********************************************************************/
-// Generates a unique identifier for the string `title` within the current
-// ImGui scope. `ctx`, if provided, further contributes to uniqueness (e.g.
-// for the rendering/monitoring functions it is the run number).
-[[nodiscard]] const char *gui_uid(std::string title, unsigned ctx = 0)
+struct id_scope
 {
-  static std::string buffer;
+  explicit id_scope(int id) { ImGui::PushID(id); }
+  explicit id_scope(const void *p) { ImGui::PushID(p); }
+  explicit id_scope(const char *p) { ImGui::PushID(p); }
 
-  buffer = title + "##" + std::to_string(ctx)
-           + std::to_string(ImGui::GetID(title.c_str()));
-  return buffer.c_str();
-}
+  ~id_scope() { ImGui::PopID(); }
+
+  id_scope(const id_scope &) = delete;
+  id_scope &operator=(const id_scope &) = delete;
+};
 
 // Invariants:
 // - `rs::collection` size and ordering are immutable after initialisation;
@@ -983,12 +993,13 @@ void render_dynamic(bool update)
 
   for (std::size_t run(dynamic_runs.size()); run--;)
   {
-    const auto &dr(dynamic_runs[run]);
+    auto &dr(dynamic_runs[run]);
 
     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (ImGui::CollapsingHeader(gui_uid("Run " + std::to_string(run))))
+    if (id_scope scope(run);
+        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
     {
-      if (ImGui::BeginTabBar(gui_uid("DynamicTabBar", run)))
+      if (ImGui::BeginTabBar("DynamicTabBar"))
       {
         const auto &xs(dr.xs);
 
@@ -1002,23 +1013,26 @@ void render_dynamic(bool update)
           return vect.data() + vect.size() - window;
         });
 
-        if (ImGui::BeginTabItem(gui_uid("Fitness dynamic", run)))
+        if (ImGui::BeginTabItem("Fitness dynamic"))
         {
-          static int current_best_prg_index(0);
-          if (!dr.best_prg.empty())
+          if (dr.best_prg.empty())
+            dr.best_idx = 0;
+          else
           {
             std::string best_prg;
             for (std::size_t i(dr.best_prg.size()); i; --i)
               best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
 
-            ImGui::Combo(gui_uid("Best programs", run),
-                         &current_best_prg_index, best_prg.data());
+            dr.best_idx = std::clamp(
+              dr.best_idx, 0, static_cast<int>(dr.best_prg.size() - 1));
+            ImGui::Combo("Best programs", &dr.best_idx, best_prg.data());
           }
-          ImGui::SameLine();
-          ImGui::Checkbox("Best", &show_best);
 
-          if (ImPlot::BeginPlot(gui_uid("##Fitness by generation", run),
-                                ImVec2(-1, -1), ImPlotFlags_NoTitle))
+          ImGui::SameLine();
+          ImGui::Checkbox("Best##show", &show_best);
+
+          if (ImPlot::BeginPlot("##Fitness by generation", ImVec2(-1, -1),
+                                ImPlotFlags_NoTitle))
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
 
@@ -1027,24 +1041,18 @@ void render_dynamic(bool update)
                               ImPlotAxisFlags_AutoFit);
 
             ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-            const auto avg_stddev(gui_uid("Avg & StdDev", run));
-            ImPlot::PlotErrorBars(avg_stddev,
-                                  get_window(xs),
+            constexpr const char *avg_stddev("Avg & StdDev");
+            ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
                                   get_window(dr.fit_mean),
-                                  get_window(dr.fit_std_dev),
-                                  window);
+                                  get_window(dr.fit_std_dev), window);
             ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-            ImPlot::PlotLine(avg_stddev,
-                             get_window(xs),
-                             get_window(dr.fit_mean),
-                             window);
+            ImPlot::PlotLine(avg_stddev, get_window(xs),
+                             get_window(dr.fit_mean), window);
 
             if (show_best)
             {
               ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-              ImPlot::PlotLine("Best",
-                               get_window(xs),
-                               get_window(dr.fit_best),
+              ImPlot::PlotLine("Best", get_window(xs), get_window(dr.fit_best),
                                window);
             }
 
@@ -1054,12 +1062,12 @@ void render_dynamic(bool update)
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem(gui_uid("Length dynamic", run)))
+        if (ImGui::BeginTabItem("Length dynamic"))
         {
-          ImGui::Checkbox(gui_uid("Longest", run), &show_longest);
+          ImGui::Checkbox("Longest##show", &show_longest);
 
-          if (ImPlot::BeginPlot(gui_uid("##Length by generation", run),
-                                ImVec2(-1, -1), ImPlotFlags_NoTitle))
+          if (ImPlot::BeginPlot("##Length by generation", ImVec2(-1, -1),
+                                ImPlotFlags_NoTitle))
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
 
@@ -1068,7 +1076,7 @@ void render_dynamic(bool update)
               ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
               ImPlotAxisFlags_AutoFit);
 
-            const auto avg_stddev(gui_uid("Len Avg & StdDev", run));
+            constexpr const char *avg_stddev("Len Avg & StdDev");
             ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
             ImPlot::PlotErrorBars(avg_stddev,
                                   get_window(xs),
@@ -1084,10 +1092,8 @@ void render_dynamic(bool update)
             if (show_longest)
             {
               ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-              ImPlot::PlotLine(gui_uid("Longest", run),
-                               get_window(xs),
-                               get_window(dr.len_max),
-                               window);
+              ImPlot::PlotLine("Longest", get_window(xs),
+                               get_window(dr.len_max), window);
             }
 
             ImPlot::EndPlot();
@@ -1096,9 +1102,9 @@ void render_dynamic(bool update)
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem(gui_uid("Crossover dynamics", run)))
+        if (ImGui::BeginTabItem("Crossover dynamics"))
         {
-          if (ImPlot::BeginPlot(gui_uid("##Crossover types by generation", run),
+          if (ImPlot::BeginPlot("##Crossover types by generation",
                                 ImVec2(-1, -1), ImPlotFlags_NoTitle))
           {
             ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
@@ -1111,9 +1117,7 @@ void render_dynamic(bool update)
             for (const auto &[ct, nums] : dr.crossover_types)
             {
               const std::string type("CT" + std::to_string(ct));
-              ImPlot::PlotLine(gui_uid(type.c_str(), run),
-                               get_window(xs),
-                               get_window(nums),
+              ImPlot::PlotLine(type.c_str(), get_window(xs), get_window(nums),
                                window);
             }
 
@@ -1164,25 +1168,26 @@ void render_population(bool update)
   {
     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-    if (ImGui::CollapsingHeader(gui_uid("Run " + std::to_string(run), run)))
+    if (id_scope scope(run);
+        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
     {
       const auto &pr(population_runs[run]);
 
-      if (ImGui::BeginTabBar(gui_uid("PopulationTabBar", run)))
+      if (ImGui::BeginTabBar("PopulationTabBar"))
       {
-        if (ImGui::BeginTabItem(gui_uid("Fitness histogram", run)))
+        if (ImGui::BeginTabItem("Fitness histogram"))
         {
           const std::string title("Generation "
                                   + std::to_string(pr.generation)
                                   + "##Population");
 
-          if (ImPlot::BeginPlot(gui_uid(title, run), ImVec2(-1, -1),
+          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
             ImPlot::SetupAxes("Fitness", "Individuals",
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
-            ImPlot::PlotHistogram(gui_uid("##PopulationFitnessHistogram", run),
+            ImPlot::PlotHistogram("##PopulationFitnessHistogram",
                                   pr.fit.data(), pr.fit.size(),
                                   std::min<std::size_t>(50, pr.fit.size()/10));
             ImPlot::EndPlot();
@@ -1191,12 +1196,12 @@ void render_population(bool update)
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem(gui_uid("Fitness entropy", run)))
+        if (ImGui::BeginTabItem("Fitness entropy"))
         {
           const std::string title("Generation "
                                   + std::to_string(pr.generation)
                                   + "##Entropy");
-          if (ImPlot::BeginPlot(gui_uid(title, run), ImVec2(-1, -1),
+          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                                 ImPlotFlags_NoLegend))
           {
             std::vector<double> xs(pr.fit_entropy.size());
@@ -1206,11 +1211,11 @@ void render_population(bool update)
                               ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
             ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-            ImPlot::PlotShaded(gui_uid("Entropy", run), xs.data(),
-                               pr.fit_entropy.data(), xs.size(),
+            ImPlot::PlotShaded("Entropy", xs.data(), pr.fit_entropy.data(),
+                               xs.size(),
                                -std::numeric_limits<double>::infinity());
-            ImPlot::PlotLine(gui_uid("Entropy", run), xs.data(),
-                             pr.fit_entropy.data(), xs.size());
+            ImPlot::PlotLine("Entropy", xs.data(), pr.fit_entropy.data(),
+                             xs.size());
             ImPlot::PopStyleVar();
 
             ImPlot::EndPlot();
@@ -1233,7 +1238,8 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
   {
     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-    if (ImGui::CollapsingHeader(gui_uid("Run " + std::to_string(run), run)))
+    if (id_scope scope(run);
+        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
     {
       const auto &lr(layers_runs[run]);
 
@@ -1307,10 +1313,9 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
       const std::string title("Fitness by layer - Generation "
                               + std::to_string(lr.generation));
 
-      ImPlot::ColormapScale(gui_uid("Fit Scale", run), fit_min, fit_max,
-                            ImVec2(80, -1));
+      ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(80, -1));
       ImGui::SameLine();
-      if (ImPlot::BeginPlot(gui_uid(title, run), ImVec2(-1, -1),
+      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                             ImPlotFlags_NoLegend|ImPlotFlags_NoMouseText))
       {
         ImPlot::SetupAxes(
@@ -1323,8 +1328,8 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
                                max_layers, y_labels_chr.data());
         ImPlot::SetupAxisTicks(ImAxis_X1, 1 - 0.5/parts, 0.5/parts,
                                parts, x_labels_chr.data());
-        ImPlot::PlotHeatmap(gui_uid("Fitness by layer", run), fit.data(),
-                            max_layers, parts, fit_min, fit_max, nullptr);
+        ImPlot::PlotHeatmap("Fitness by layer", fit.data(), max_layers, parts,
+                            fit_min, fit_max, nullptr);
         ImPlot::EndPlot();
       }
 
@@ -1341,7 +1346,8 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
   {
     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-    if (ImGui::CollapsingHeader(gui_uid("Run " + std::to_string(run), run)))
+    if (id_scope scope(run);
+        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
     {
       const auto &lr(layers_runs[run]);
 
@@ -1362,7 +1368,7 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
 
       const std::string title("Age by layer - Generation "
                               + std::to_string(lr.generation));
-      if (ImPlot::BeginPlot(gui_uid(title, run), ImVec2(-1, -1),
+      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
                             ImPlotFlags_NoLegend))
       {
         ImPlot::SetupAxes("Age", "Layer",
@@ -1371,13 +1377,13 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
         ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
         ImPlot::GetStyle().ErrorBarWeight = 6;
         ImPlot::GetStyle().ErrorBarSize = 12;
-        ImPlot::PlotErrorBars(gui_uid("Age range by layer", run), mean.data(),
-                              ys.data(), bottom.data(), top.data(), ys.size(),
+        ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
+                              bottom.data(), top.data(), ys.size(),
                               ImPlotErrorBarsFlags_Horizontal);
-        ImPlot::PlotScatter(gui_uid("Age range by layer", run), mean.data(),
-                            ys.data(), ys.size());
-        ImPlot::PlotInfLines(gui_uid("Age limit by layer", run),
-                             lr.age_sup.data(), ys.size());
+        ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
+                            ys.size());
+        ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(),
+                             ys.size());
 
         for (std::size_t layer(0); layer < lr.age_sup.size(); ++layer)
           if (lr.age_sup[layer])
@@ -1510,8 +1516,8 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("DYNAMICS");
       ImGui::SameLine();
-      const std::string bs(mxz_dynamic ? "Minimize##Dyn" : "Maximize##Dyn");
-      if (ImGui::Button(bs.c_str()))
+      const char *bs(mxz_dynamic ? "Minimise##Dyn" : "Maximise##Dyn");
+      if (ImGui::Button(bs))
         mxz_dynamic = !mxz_dynamic;
 
       render_dynamic(update);
@@ -1531,8 +1537,8 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("POPULATION");
       ImGui::SameLine();
-      const std::string bs(mxz_population ? "Minimize##Pop" : "Maximize##Pop");
-      if (ImGui::Button(bs.c_str()))
+      const char *bs(mxz_population ? "Minimise##Pop" : "Maximise##Pop");
+      if (ImGui::Button(bs))
         mxz_population = !mxz_population;
 
       render_population(update);
@@ -1554,8 +1560,8 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("FITNESS BY LAYER");
       ImGui::SameLine();
-      const std::string bs(mxz_layers_fit ? "Minimize##LFt" : "Maximize##LFt");
-      if (ImGui::Button(bs.c_str()))
+      const char *bs(mxz_layers_fit ? "Minimise##LFt" : "Maximise##LFt");
+      if (ImGui::Button(bs))
         mxz_layers_fit = !mxz_layers_fit;
 
       render_layers(layer_info::fitness, update);
@@ -1575,8 +1581,8 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("AGE BY LAYER");
       ImGui::SameLine();
-      const std::string bs(mxz_layers_fit ? "Minimize##LAg" : "Maximize##LAg");
-      if (ImGui::Button(bs.c_str()))
+      const char *bs(mxz_layers_age ? "Minimise##LAg" : "Maximise##LAg");
+      if (ImGui::Button(bs))
         mxz_layers_age = !mxz_layers_age;
 
       render_layers(layer_info::age, update);
@@ -1661,8 +1667,8 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("RUNS");
       ImGui::SameLine();
-      if (const std::string bs(mxz_runs ? "Minimize##Runs" : "Maximize##Runs");
-          ImGui::Button(bs.c_str()))
+      if (const char *bs(mxz_runs ? "Minimise##Runs" : "Maximise##Runs");
+          ImGui::Button(bs))
         mxz_runs = !mxz_runs;
 
       render_number_of_runs();
@@ -1682,9 +1688,8 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("SUCCESS RATE");
       ImGui::SameLine();
-      if (const std::string bs(mxz_success_rate ? "Minimize##SR"
-                                                : "Maximize##SR");
-          ImGui::Button(bs.c_str()))
+      if (const char *bs(mxz_success_rate ? "Minimise##SR" : "Maximise##SR");
+          ImGui::Button(bs))
         mxz_success_rate = !mxz_success_rate;
 
       render_success_rate();
@@ -1701,10 +1706,10 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       ImGui::AlignTextToFramePadding();
       ImGui::Text("FITNESS ACROSS DATASETS");
       ImGui::SameLine();
-      if (const std::string bs(mxz_fitness_across_datasets
-                               ? "Minimize##FitnessAcrossDatasets"
-                               : "Maximize##FitnessAcrossDatasets");
-          ImGui::Button(bs.c_str()))
+      if (const char *bs(mxz_fitness_across_datasets
+                         ? "Minimise##FitnessAcrossDatasets"
+                         : "Maximise##FitnessAcrossDatasets");
+          ImGui::Button(bs))
         mxz_fitness_across_datasets = !mxz_fitness_across_datasets;
 
       render_fitness_across_datasets();
@@ -1756,7 +1761,7 @@ std::string random_string()
 {
   constexpr std::size_t length(10);
 
-  static const std::string charset =
+  static std::string_view charset =
     "0123456789"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
