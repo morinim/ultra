@@ -91,7 +91,7 @@ private:
 [[nodiscard]] std::filesystem::path population_from_basename(
   const std::string &);
 [[nodiscard]] std::filesystem::path summary_from_basename(
-  const std::filesystem::path &);
+  std::filesystem::path);
 
 #include "kernel/search_log.tcc"
 

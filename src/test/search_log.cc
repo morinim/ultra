@@ -70,6 +70,9 @@ TEST_CASE("Filenames")
           != std::string::npos);
     CHECK(sum.extension() == ".xml");
 
+    CHECK(summary_from_basename("/path/to/file.csv")
+          == "/path/to/file.summary.xml");
+
     CHECK(basename_from_summary(sum) == basename);
     CHECK(basename_from_summary("/path/to/file.summary.xml")
           == "/path/to/file.csv");

@@ -39,11 +39,9 @@ std::filesystem::path population_from_basename(const std::string &basename)
          .replace_extension(search_log::default_population_file);
 }
 
-std::filesystem::path summary_from_basename(
-  const std::filesystem::path &basename)
+std::filesystem::path summary_from_basename(std::filesystem::path basename)
 {
-  return basename.filename()
-         .replace_extension(search_log::default_summary_file);
+  return basename.replace_extension(search_log::default_summary_file);
 }
 
 std::filesystem::path basename_from_summary(std::filesystem::path summary)
