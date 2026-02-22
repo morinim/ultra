@@ -286,13 +286,17 @@ struct population_sequence
 
     const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
 
+    if (!pop_size)
+      return 0;
+
     double h(0.0);
     for (auto x : obs)
-    {
-      const auto p(x / pop_size);
+      if (x > 0.0)
+      {
+        const auto p(x / pop_size);
 
-      h -= p * std::log(p) * c;
-    }
+        h -= p * std::log(p) * c;
+      }
 
     return h;
   }
@@ -522,8 +526,8 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
   const auto h_solutions(handle.FirstChildElement("ultra")
                          .FirstChildElement("solutions"));
 
-  for(const auto *e(h_solutions.FirstChildElement().ToElement()); e;
-      e = e->NextSibling()->ToElement())
+  for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
+       e = e->NextSiblingElement())
     if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
       good_runs.insert(run);
 }
@@ -1883,7 +1887,7 @@ void get_logs(std::stop_token stoken)
 
     const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
                          last_read.elapsed()));
-    std::this_thread::sleep_for(std::min(3000ms, elapsed));
+    std::this_thread::sleep_for(std::clamp(elapsed, 10ms, 3000ms));
   }
 }
 
@@ -1920,17 +1924,20 @@ void rs::summary::get_summaries(std::stop_token stoken)
 }
 
 [[nodiscard]] ultra::model_measurements<double> extract_threshold(
-  const std::string txt)
+  const std::string &txt)
 {
   ultra::model_measurements<double> threshold;
 
-  if (txt.back() == '%')
+  if (!txt.empty())
   {
-    const auto v(txt.substr(0, txt.size()-1));
-    threshold.accuracy = std::clamp<double>(std::stod(v)/100.0, 0.0, 1.0);
+    if (txt.back() == '%')
+    {
+      const auto v(txt.substr(0, txt.size()-1));
+      threshold.accuracy = std::clamp<double>(std::stod(v)/100.0, 0.0, 1.0);
+    }
+    else
+      threshold.fitness = std::stod(txt);
   }
-  else
-    threshold.fitness = std::stod(txt);
 
   return threshold;
 }
@@ -2441,7 +2448,7 @@ cmdl_result parse_args(int argc, char *argv[])
 
   std::string cmd;
   std::ranges::transform(pos_args[1], std::back_inserter(cmd),
-                         [](auto c){ return std::tolower(c); });
+                         [](unsigned char c){ return std::tolower(c); });
 
   if (!cmds.contains(cmd))
   {
