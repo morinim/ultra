@@ -72,6 +72,7 @@ auto sum_of_errors_evaluator<P, F, D>::sum_of_errors_impl(
   const auto &dat(*this->data());
 
   Expects(std::ranges::distance(dat) >= step);
+  Expects(step > 0);
 
   const F err_fctr(prg);
 
@@ -81,11 +82,12 @@ auto sum_of_errors_evaluator<P, F, D>::sum_of_errors_impl(
 
   double n(1.0);
 
-  while (std::distance(it, std::end(dat)) >= step)
+  const auto end(std::end(dat));
+  while (it != end)
   {
     average_error += (err_fctr(*it) - average_error) / ++n;
 
-    std::advance(it, step);
+    std::ranges::advance(it, step, end);
   }
 
   // Note that we take the average error: this way fast() and operator()
