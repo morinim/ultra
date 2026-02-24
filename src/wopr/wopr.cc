@@ -245,8 +245,7 @@ population_line::population_line(const std::string &line)
       throw ultra::exception::data_format(
         "Cannot parse population file line (missing observations)");
 
-    for (std::size_t i(0); i < obs_val; ++i)
-      fit.push_back(fit_val[0]);
+    fit.push_back(fit_val[0]);
     obs.push_back(obs_val);
   }
 }
@@ -282,7 +281,7 @@ struct population_sequence
   // Offline algorithm: https://en.wikipedia.org/wiki/Online_algorithm.
   [[nodiscard]] double calculate_entropy() const
   {
-    const double c(1.0 / std::log(2.0));
+    constexpr double c(1.0 / std::numbers::ln2_v<double>);
 
     const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
 
@@ -1192,9 +1191,9 @@ void render_population(bool update)
             ImPlot::SetupAxes("Fitness", "Individuals",
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
-            ImPlot::PlotHistogram("##PopulationFitnessHistogram",
-                                  pr.fit.data(), pr.fit.size(),
-                                  std::min<std::size_t>(50, pr.fit.size()/10));
+            ImPlot::PlotBars("##PopulationFitnessHistogram",
+                             pr.fit.data(), pr.obs.data(),
+                             pr.fit.size(), 0.8);
             ImPlot::EndPlot();
           }
 
