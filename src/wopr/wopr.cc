@@ -257,6 +257,7 @@ struct population_sequence
   std::vector<double> fit {};
   std::vector<double> obs {};
 
+  std::vector<double> xs {};
   std::vector<double> fit_entropy {};
 
   unsigned generation {0};
@@ -271,6 +272,7 @@ struct population_sequence
     fit = std::move(pl.fit);
     obs = std::move(pl.obs);
 
+    xs.push_back(fit_entropy.size());
     fit_entropy.push_back(calculate_entropy());
   }
 
@@ -539,7 +541,6 @@ namespace monitor  // monitoring related variables
 {
 ultra::search_log slog {};
 int window {0};
-std::chrono::duration<double> refresh_rate {2s};
 
 void start(const imgui_app::program::settings &);
 [[nodiscard]] bool setup_cmd(argh::parser &);
@@ -961,275 +962,254 @@ void render_fitness_across_datasets()
   ImPlot::EndSubplots();
 }
 
-void render_dynamic(bool update)
+void render_dynamic()
 {
   static std::vector<dynamic_sequence> dynamic_runs;
-  static dynamic_sequence buffer;
 
-  if (update && !buffer.empty())
-  {
-    if (dynamic_runs.empty())
-      dynamic_runs.push_back(buffer);
-    else
-      dynamic_runs.back() = buffer;
-  }
-
-  if (const auto data = dynamic_queue.try_pop())
+  while (const auto data = dynamic_queue.try_pop())
   {
     if (data->new_run)
     {
-      // Check for unplotted data.
-      if (!dynamic_runs.empty() && !buffer.empty())
-        dynamic_runs.back() = buffer;
-
       // Skip multiple empty lines.
       if (dynamic_runs.empty() || !dynamic_runs.back().empty())
         dynamic_runs.push_back({});
-
-      buffer = {};
     }
     else
-      buffer.push_back(*data);
+    {
+      if (dynamic_runs.empty())  // just to land on one's feet
+        dynamic_runs.push_back({});
+
+      dynamic_runs.back().push_back(*data);
+    }
   }
 
   static bool show_best(true);
   static bool show_longest(true);
 
+  const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
+
   for (std::size_t run(dynamic_runs.size()); run--;)
   {
     auto &dr(dynamic_runs[run]);
+    if (dr.empty())
+      continue;
 
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (id_scope scope(run);
-        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+    id_scope scope(run);
+
+    ImGui::SetNextItemOpen(run + 1 == dynamic_runs.size(), ImGuiCond_Once);
+
+    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+      continue;
+
+    if (ImGui::BeginTabBar("DynamicTabBar"))
     {
-      if (ImGui::BeginTabBar("DynamicTabBar"))
+      const auto &xs(dr.xs);
+
+      std::size_t window(monitor::window
+                         ? static_cast<std::size_t>(monitor::window)
+                         : std::numeric_limits<std::size_t>::max());
+      window = std::min<std::size_t>(xs.size(), window);
+
+      const auto get_window([&window](const auto &vect)
       {
-        const auto &xs(dr.xs);
+        return vect.data() + vect.size() - window;
+      });
 
-        std::size_t window(monitor::window
-                           ? static_cast<std::size_t>(monitor::window)
-                           : std::numeric_limits<std::size_t>::max());
-        window = std::min<std::size_t>(xs.size(), window);
-
-        const auto get_window([&window](const auto &vect)
+      if (ImGui::BeginTabItem("Fitness dynamic"))
+      {
+        if (dr.best_prg.empty())
+          dr.best_idx = 0;
+        else
         {
-          return vect.data() + vect.size() - window;
-        });
+          std::string best_prg;
+          for (std::size_t i(dr.best_prg.size()); i; --i)
+            best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
 
-        if (ImGui::BeginTabItem("Fitness dynamic"))
-        {
-          if (dr.best_prg.empty())
-            dr.best_idx = 0;
-          else
-          {
-            std::string best_prg;
-            for (std::size_t i(dr.best_prg.size()); i; --i)
-              best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
-
-            dr.best_idx = std::clamp(
-              dr.best_idx, 0, static_cast<int>(dr.best_prg.size() - 1));
-            ImGui::Combo("Best programs", &dr.best_idx, best_prg.data());
-          }
-
-          ImGui::SameLine();
-          ImGui::Checkbox("Best##show", &show_best);
-
-          if (ImPlot::BeginPlot("##Fitness by generation", ImVec2(-1, -1),
-                                ImPlotFlags_NoTitle))
-          {
-            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-            ImPlot::SetupAxes("Generation", "Fit",
-                              ImPlotAxisFlags_AutoFit,
-                              ImPlotAxisFlags_AutoFit);
-
-            ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-            constexpr const char *avg_stddev("Avg & StdDev");
-            ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
-                                  get_window(dr.fit_mean),
-                                  get_window(dr.fit_std_dev), window);
-            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-            ImPlot::PlotLine(avg_stddev, get_window(xs),
-                             get_window(dr.fit_mean), window);
-
-            if (show_best)
-            {
-              ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-              ImPlot::PlotLine("Best", get_window(xs), get_window(dr.fit_best),
-                               window);
-            }
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
+          dr.best_idx = std::clamp(
+            dr.best_idx, 0, static_cast<int>(dr.best_prg.size() - 1));
+          ImGui::Combo("Best programs", &dr.best_idx, best_prg.data());
         }
 
-        if (ImGui::BeginTabItem("Length dynamic"))
+        ImGui::SameLine();
+        ImGui::Checkbox("Best##show", &show_best);
+
+        if (ImPlot::BeginPlot("##Fitness by generation", ImVec2(-1, avail),
+                              ImPlotFlags_NoTitle))
         {
-          ImGui::Checkbox("Longest##show", &show_longest);
+          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
 
-          if (ImPlot::BeginPlot("##Length by generation", ImVec2(-1, -1),
-                                ImPlotFlags_NoTitle))
+          ImPlot::SetupAxes("Generation", "Fit",
+                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+          ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
+          constexpr const char *avg_stddev("Avg & StdDev");
+          ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
+                                get_window(dr.fit_mean),
+                                get_window(dr.fit_std_dev), window);
+          ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+          ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.fit_mean),
+                           window);
+
+          if (show_best)
           {
-            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-            ImPlot::SetupAxes(
-              "Generation", "Length",
-              ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
-              ImPlotAxisFlags_AutoFit);
-
-            constexpr const char *avg_stddev("Len Avg & StdDev");
-            ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
-            ImPlot::PlotErrorBars(avg_stddev,
-                                  get_window(xs),
-                                  get_window(dr.len_mean),
-                                  get_window(dr.len_std_dev),
-                                  window);
-            ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
-            ImPlot::PlotLine(avg_stddev,
-                             get_window(xs),
-                             get_window(dr.len_mean),
+            ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+            ImPlot::PlotLine("Best", get_window(xs), get_window(dr.fit_best),
                              window);
-
-            if (show_longest)
-            {
-              ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-              ImPlot::PlotLine("Longest", get_window(xs),
-                               get_window(dr.len_max), window);
-            }
-
-            ImPlot::EndPlot();
           }
 
-          ImGui::EndTabItem();
+          ImPlot::EndPlot();
         }
 
-        if (ImGui::BeginTabItem("Crossover dynamics"))
-        {
-          if (ImPlot::BeginPlot("##Crossover types by generation",
-                                ImVec2(-1, -1), ImPlotFlags_NoTitle))
-          {
-            ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-            ImPlot::SetupAxes(
-              "Generation", "Crossover spreading",
-              ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-            // ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
-            for (const auto &[ct, nums] : dr.crossover_types)
-            {
-              const std::string type("CT" + std::to_string(ct));
-              ImPlot::PlotLine(type.c_str(), get_window(xs), get_window(nums),
-                               window);
-            }
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+        ImGui::EndTabItem();
       }
+
+      if (ImGui::BeginTabItem("Length dynamic"))
+      {
+        ImGui::Checkbox("Longest##show", &show_longest);
+
+        if (ImPlot::BeginPlot("##Length by generation", ImVec2(-1, avail),
+                              ImPlotFlags_NoTitle))
+        {
+          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+          ImPlot::SetupAxes(
+            "Generation", "Length",
+            ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
+            ImPlotAxisFlags_AutoFit);
+
+          constexpr const char *avg_stddev("Len Avg & StdDev");
+          ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
+          ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
+                                get_window(dr.len_mean),
+                                get_window(dr.len_std_dev), window);
+          ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+          ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.len_mean),
+                           window);
+
+          if (show_longest)
+          {
+            ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+            ImPlot::PlotLine("Longest", get_window(xs), get_window(dr.len_max),
+                             window);
+          }
+
+          ImPlot::EndPlot();
+        }
+
+        ImGui::EndTabItem();
+      }
+
+      if (ImGui::BeginTabItem("Crossover dynamics"))
+      {
+        if (ImPlot::BeginPlot("##Crossover types by generation",
+                              ImVec2(-1, avail), ImPlotFlags_NoTitle))
+        {
+          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
+
+          ImPlot::SetupAxes(
+            "Generation", "Crossover spreading",
+            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+          // ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
+          for (const auto &[ct, nums] : dr.crossover_types)
+          {
+            const std::string type("CT" + std::to_string(ct));
+            ImPlot::PlotLine(type.c_str(), get_window(xs), get_window(nums),
+                             window);
+          }
+
+          ImPlot::EndPlot();
+        }
+
+        ImGui::EndTabItem();
+      }
+
+      ImGui::EndTabBar();
     }
   }
 }
 
-void render_population(bool update)
+void render_population()
 {
   static std::vector<population_sequence> population_runs;
-  static population_sequence buffer;
 
-  if (update && !buffer.empty())
-  {
-    if (population_runs.empty())
-      population_runs.push_back(buffer);
-    else
-      population_runs.back() = buffer;
-  }
-
-  if (auto data = population_queue.try_pop())
+  while (auto data = population_queue.try_pop())
   {
     if (data->new_run)
     {
-      // Check for unplotted data.
-      if (!population_runs.empty() && !buffer.empty())
-        population_runs.back() = buffer;
-
       // Skip multiple empty lines.
       if (population_runs.empty() || !population_runs.back().empty())
         population_runs.push_back({});
-
-      buffer = {};
     }
     else
-      buffer.update(*data);
+    {
+      if (population_runs.empty())  // just to land on one's feet
+        population_runs.push_back({});
+
+      population_runs.back().update(*data);
+    }
   }
+
+  const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
 
   for (std::size_t run(population_runs.size()); run--;)
   {
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    const auto &pr(population_runs[run]);
+    if (pr.empty())
+      continue;
 
-    if (id_scope scope(run);
-        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+    id_scope scope(run);
+
+    ImGui::SetNextItemOpen(run + 1 == population_runs.size(), ImGuiCond_Once);
+
+    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+      continue;
+
+    if (ImGui::BeginTabBar("PopulationTabBar"))
     {
-      const auto &pr(population_runs[run]);
-
-      if (ImGui::BeginTabBar("PopulationTabBar"))
+      if (ImGui::BeginTabItem("Fitness histogram"))
       {
-        if (ImGui::BeginTabItem("Fitness histogram"))
+        const std::string title("Generation " + std::to_string(pr.generation)
+                                + "##Population");
+
+        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
+                              ImPlotFlags_NoLegend))
         {
-          const std::string title("Generation "
-                                  + std::to_string(pr.generation)
-                                  + "##Population");
-
-          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
-                                ImPlotFlags_NoLegend))
-          {
-            ImPlot::SetupAxes("Fitness", "Individuals",
-                              ImPlotAxisFlags_AutoFit,
-                              ImPlotAxisFlags_AutoFit);
-            ImPlot::PlotBars("##PopulationFitnessHistogram",
-                             pr.fit.data(), pr.obs.data(),
-                             pr.fit.size(), 0.8);
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
+          ImPlot::SetupAxes("Fitness", "Individuals",
+                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+          ImPlot::PlotBars("##PopulationFitnessHistogram",
+                           pr.fit.data(), pr.obs.data(), pr.fit.size(), 0.8);
+          ImPlot::EndPlot();
         }
 
-        if (ImGui::BeginTabItem("Fitness entropy"))
-        {
-          const std::string title("Generation "
-                                  + std::to_string(pr.generation)
-                                  + "##Entropy");
-          if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
-                                ImPlotFlags_NoLegend))
-          {
-            std::vector<double> xs(pr.fit_entropy.size());
-            std::iota(xs.begin(), xs.end(), 0.0);
-
-            ImPlot::SetupAxes("Generation", "Entropy",
-                              ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-            ImPlot::PlotShaded("Entropy", xs.data(), pr.fit_entropy.data(),
-                               xs.size(),
-                               -std::numeric_limits<double>::infinity());
-            ImPlot::PlotLine("Entropy", xs.data(), pr.fit_entropy.data(),
-                             xs.size());
-            ImPlot::PopStyleVar();
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+        ImGui::EndTabItem();
       }
+
+      if (ImGui::BeginTabItem("Fitness entropy"))
+      {
+        const std::string title("Generation " + std::to_string(pr.generation)
+                                + "##Entropy");
+        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
+                              ImPlotFlags_NoLegend))
+        {
+          ImPlot::SetupAxes("Generation", "Entropy",
+                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+          ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+          ImPlot::PlotShaded("Entropy", pr.xs.data(), pr.fit_entropy.data(),
+                             pr.xs.size(),
+                             -std::numeric_limits<double>::infinity());
+          ImPlot::PlotLine("Entropy", pr.xs.data(), pr.fit_entropy.data(),
+                           pr.xs.size());
+          ImPlot::PopStyleVar();
+
+          ImPlot::EndPlot();
+        }
+
+        ImGui::EndTabItem();
+      }
+
+      ImGui::EndTabBar();
     }
   }
 }
@@ -1238,107 +1218,106 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
 {
   static std::minstd_rand g;
 
+  const float avail(ImGui::GetContentRegionAvail().y * 0.90f);
+
   for (std::size_t run(layers_runs.size()); run--;)
   {
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    const auto &lr(layers_runs[run]);
 
-    if (id_scope scope(run);
-        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+    if (lr.empty())
+      continue;
+
+    id_scope scope(run);
+
+    ImGui::SetNextItemOpen(run + 1 == layers_runs.size(), ImGuiCond_Once);
+
+    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+      continue;
+
+    const auto max_layers(lr.size());
+
+    const std::size_t ind_max(std::ranges::max(lr.individuals));
+    const std::size_t parts(std::min<std::size_t>(ind_max, 100));
+
+    std::vector<double> fit;
+    fit.resize(max_layers * parts);
+
+    g.seed(lr.generation);
+
+    const double fit_max(std::ranges::max(lr.fit_max));
+    const double fit_min(std::ranges::min(lr.fit_min));
+
+    std::vector<std::string> x_labels(parts);
+    x_labels.front() = std::to_string(ind_max);
+    x_labels.back() = "1";
+
+    std::vector<const char *> x_labels_chr(parts);
+    std::ranges::transform(x_labels, x_labels_chr.begin(),
+                           [](const auto &str) { return str.data(); });
+
+    std::vector<std::string> y_labels(max_layers);
+    std::ranges::generate(y_labels,
+                          [layer = 0u]() mutable
+                          { return "L" + std::to_string(layer++); });
+
+    std::vector<const char *> y_labels_chr(max_layers);
+    std::ranges::transform(y_labels, y_labels_chr.begin(),
+                           [](const auto &str) { return str.data(); });
+
+    for (std::size_t layer(0); layer < max_layers; ++layer)
     {
-      const auto &lr(layers_runs[run]);
-
-      if (lr.empty())
-        continue;
-
-      static unsigned max_layers(0);
-      if (lr.generation == 0)
-        max_layers = lr.size();
-      else if (max_layers < lr.size())
-        max_layers = lr.size();
-
-      const std::size_t ind_max(std::ranges::max(lr.individuals));
-      const std::size_t parts(std::min<std::size_t>(ind_max, 100));
-
-      std::vector<double> fit;
-      fit.resize(max_layers * parts);
-
-      g.seed(lr.generation);
-
-      const double fit_max(std::ranges::max(lr.fit_max));
-      const double fit_min(std::ranges::min(lr.fit_min));
-
-      std::vector<std::string> x_labels(parts);
-      x_labels.front() = std::to_string(ind_max);
-      x_labels.back() = "1";
-
-      std::vector<const char *> x_labels_chr(parts);
-      std::ranges::transform(x_labels, x_labels_chr.begin(),
-                             [](const auto &str) { return str.data(); });
-
-      std::vector<std::string> y_labels(max_layers);
-      std::ranges::generate(y_labels,
-                            [layer = 0u]() mutable
-                            { return "L" + std::to_string(layer++); });
-
-      std::vector<const char *> y_labels_chr(max_layers);
-      std::ranges::transform(y_labels, y_labels_chr.begin(),
-                             [](const auto &str) { return str.data(); });
-
-      for (std::size_t layer(0); layer < max_layers; ++layer)
+      if (layer < lr.size())
       {
-        if (layer < lr.size())
+        degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
+                                              lr.fit_std_dev[layer]);
+
+        const std::size_t full(parts * lr.individuals[layer] / ind_max);
+
+        for (std::size_t p(0); p < full; ++p)
         {
-          degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
-                                                lr.fit_std_dev[layer]);
+          const auto rv(fit_nd(g));
+          const auto pos(layer * parts + p);
 
-          const std::size_t full(parts * lr.individuals[layer] / ind_max);
-
-          for (std::size_t p(0); p < full; ++p)
-          {
-            const auto rv(fit_nd(g));
-            const auto pos(layer * parts + p);
-
-            fit[pos] = std::clamp(rv, lr.fit_min[layer], lr.fit_max[layer]);
-          }
-
-          for (std::size_t p(full); p < parts; ++p)
-            fit[layer * parts + p] = fit_min;
+          fit[pos] = std::clamp(rv, lr.fit_min[layer], lr.fit_max[layer]);
         }
-        else
-        {
-          for (std::size_t p(0); p < parts; ++p)
-            fit[layer * parts + p] = fit_min;
-        }
+
+        for (std::size_t p(full); p < parts; ++p)
+          fit[layer * parts + p] = fit_min;
       }
-
-      static ImPlotColormap map(ImPlotColormap_Hot);
-      ImPlot::PushColormap(map);
-
-      const std::string title("Fitness by layer - Generation "
-                              + std::to_string(lr.generation));
-
-      ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(80, -1));
-      ImGui::SameLine();
-      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
-                            ImPlotFlags_NoLegend|ImPlotFlags_NoMouseText))
+      else
       {
-        ImPlot::SetupAxes(
-          nullptr, nullptr,
-          ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks,
-          ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks
-          |ImPlotAxisFlags_NoGridLines);
-
-        ImPlot::SetupAxisTicks(ImAxis_Y1, 1 - 0.5/max_layers, 0.5/max_layers,
-                               max_layers, y_labels_chr.data());
-        ImPlot::SetupAxisTicks(ImAxis_X1, 1 - 0.5/parts, 0.5/parts,
-                               parts, x_labels_chr.data());
-        ImPlot::PlotHeatmap("Fitness by layer", fit.data(), max_layers, parts,
-                            fit_min, fit_max, nullptr);
-        ImPlot::EndPlot();
+        for (std::size_t p(0); p < parts; ++p)
+          fit[layer * parts + p] = fit_min;
       }
-
-      ImPlot::PopColormap();
     }
+
+    static ImPlotColormap map(ImPlotColormap_Hot);
+    ImPlot::PushColormap(map);
+
+    const std::string title("Fitness by layer - Generation "
+                            + std::to_string(lr.generation));
+
+    ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(80, avail));
+    ImGui::SameLine();
+    if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
+                          ImPlotFlags_NoLegend|ImPlotFlags_NoMouseText))
+    {
+      ImPlot::SetupAxes(
+        nullptr, nullptr,
+        ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks,
+        ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks
+        |ImPlotAxisFlags_NoGridLines);
+
+      ImPlot::SetupAxisTicks(ImAxis_Y1, 1 - 0.5/max_layers, 0.5/max_layers,
+                             max_layers, y_labels_chr.data());
+      ImPlot::SetupAxisTicks(ImAxis_X1, 1 - 0.5/parts, 0.5/parts,
+                             parts, x_labels_chr.data());
+      ImPlot::PlotHeatmap("Fitness by layer", fit.data(), max_layers, parts,
+                          fit_min, fit_max, nullptr);
+      ImPlot::EndPlot();
+    }
+
+    ImPlot::PopColormap();
   }
 }
 
@@ -1346,94 +1325,86 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
 {
   static std::minstd_rand g;
 
+  const float avail(ImGui::GetContentRegionAvail().y * 0.90f);
+
   for (std::size_t run(layers_runs.size()); run--;)
   {
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    const auto &lr(layers_runs[run]);
 
-    if (id_scope scope(run);
-        ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+    if (lr.empty())
+      continue;
+
+    id_scope scope(run);
+
+    ImGui::SetNextItemOpen(run + 1 == layers_runs.size(), ImGuiCond_Once);
+
+    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
+      continue;
+
+    std::vector<unsigned> ys(lr.size());
+    std::vector<ultra::individual::age_t> bottom(lr.size()), mean(lr.size()),
+                                          top(lr.size());
+
+    for (std::size_t layer(0); layer < lr.size(); ++layer)
     {
-      const auto &lr(layers_runs[run]);
+      ys[layer] = layer;
+      mean[layer] = static_cast<ultra::individual::age_t>(lr.age_mean[layer]);
+      bottom[layer] = mean[layer] - lr.age_min[layer];
+      top[layer] = lr.age_max[layer] - mean[layer];
+    }
 
-      if (lr.empty())
-        continue;
+    const std::string title("Age by layer - Generation "
+                            + std::to_string(lr.generation));
+    if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
+                          ImPlotFlags_NoLegend))
+    {
+      ImPlot::SetupAxes("Age", "Layer",
+                        ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
-      std::vector<unsigned> ys(lr.size());
-      std::vector<ultra::individual::age_t> bottom(lr.size()), mean(lr.size()),
-                                            top(lr.size());
+      ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
+      ImPlot::GetStyle().ErrorBarWeight = 6;
+      ImPlot::GetStyle().ErrorBarSize = 12;
+      ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
+                            bottom.data(), top.data(), ys.size(),
+                            ImPlotErrorBarsFlags_Horizontal);
+      ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
+                          ys.size());
+      ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(), ys.size());
 
-      for (std::size_t layer(0); layer < lr.size(); ++layer)
-      {
-        ys[layer] = layer;
-        mean[layer] = static_cast<ultra::individual::age_t>(lr.age_mean[layer]);
-        bottom[layer] = mean[layer] - lr.age_min[layer];
-        top[layer] = lr.age_max[layer] - mean[layer];
-      }
+      for (std::size_t layer(0); layer < lr.age_sup.size(); ++layer)
+        if (lr.age_sup[layer])
+        {
+          const std::string ln("L" + std::to_string(layer));
+          const std::string lt("<" + std::to_string(lr.age_sup[layer]));
+          ImPlot::TagX(lr.age_sup[layer], ImVec4(1,1,0,0.1),
+                       "\n%s\n%s", ln.c_str(), lt.c_str());
+        }
 
-      const std::string title("Age by layer - Generation "
-                              + std::to_string(lr.generation));
-      if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, -1),
-                            ImPlotFlags_NoLegend))
-      {
-        ImPlot::SetupAxes("Age", "Layer",
-                          ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-        ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
-        ImPlot::GetStyle().ErrorBarWeight = 6;
-        ImPlot::GetStyle().ErrorBarSize = 12;
-        ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
-                              bottom.data(), top.data(), ys.size(),
-                              ImPlotErrorBarsFlags_Horizontal);
-        ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
-                            ys.size());
-        ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(),
-                             ys.size());
-
-        for (std::size_t layer(0); layer < lr.age_sup.size(); ++layer)
-          if (lr.age_sup[layer])
-          {
-            const std::string ln("L" + std::to_string(layer));
-            const std::string lt("<" + std::to_string(lr.age_sup[layer]));
-            ImPlot::TagX(lr.age_sup[layer], ImVec4(1,1,0,0.1),
-                         "\n%s\n%s", ln.c_str(), lt.c_str());
-          }
-
-        ImPlot::EndPlot();
-      }
+      ImPlot::EndPlot();
     }
   }
 }
 
 enum class layer_info {age, fitness};
-void render_layers(layer_info li, bool update)
+void render_layers(layer_info li)
 {
   static std::vector<layers_sequence> layers_runs;
-  static layers_sequence buffer;
 
-  if (update && !buffer.empty())
-  {
-    if (layers_runs.empty())
-      layers_runs.push_back(buffer);
-    else
-      layers_runs.back() = buffer;
-  }
-
-  if (auto data = layers_queue.try_pop())
+  while (auto data = layers_queue.try_pop())
   {
     if (data->new_run)
     {
-      // Check for unplotted data.
-      if (!layers_runs.empty() && !buffer.empty())
-        layers_runs.back() = buffer;
-
       // Skip multiple empty lines.
       if (layers_runs.empty() || !layers_runs.back().empty())
         layers_runs.push_back({});
-
-      buffer = {};
     }
     else
-      buffer.update(*data);
+    {
+      if (layers_runs.empty())  // just to land on one's feet
+        layers_runs.push_back({});
+
+      layers_runs.back().update(*data);
+    }
   }
 
   if (li == layer_info::age)
@@ -1457,9 +1428,6 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
   static bool mxz_population(false);
   static bool mxz_layers_fit(false);
   static bool mxz_layers_age(false);
-
-  static ultra::timer last_update;
-  const bool update(last_update.elapsed() > monitor::refresh_rate);
 
   if (ImGui::Begin("Monitor##Window", p_open))
   {
@@ -1524,7 +1492,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs))
         mxz_dynamic = !mxz_dynamic;
 
-      render_dynamic(update);
+      render_dynamic();
       ImGui::EndChild();
     }
 
@@ -1545,7 +1513,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs))
         mxz_population = !mxz_population;
 
-      render_population(update);
+      render_population();
       ImGui::EndChild();
     }
 
@@ -1568,7 +1536,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs))
         mxz_layers_fit = !mxz_layers_fit;
 
-      render_layers(layer_info::fitness, update);
+      render_layers(layer_info::fitness);
       ImGui::EndChild();
     }
 
@@ -1589,16 +1557,13 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       if (ImGui::Button(bs))
         mxz_layers_age = !mxz_layers_age;
 
-      render_layers(layer_info::age, update);
+      render_layers(layer_info::age);
       ImGui::EndChild();
     }
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
   ImGui::End();
-
-  if (update)
-    last_update.restart();
 }
 
 // Main window for `run` and `summary` (both single/double dir) commands.
@@ -1866,27 +1831,48 @@ void get_logs(std::stop_token stoken)
 
   while (!stoken.stop_requested())
   {
-    if (const auto line(dynamic_log.get_line()); line)
+    if (auto line(dynamic_log.get_line()); line)
     {
-      dynamic_queue.push(dynamic_data(*line));
+      do
+      {
+        if (stoken.stop_requested()) break;
+
+        dynamic_queue.push(dynamic_data(*line));
+        line = dynamic_log.get_line();
+      } while (line);
+
       last_read.restart();
     }
 
-    if (const auto line(population_log.get_line()); line)
+    if (auto line(population_log.get_line()); line)
     {
-      population_queue.push(population_line(*line));
+      do
+      {
+        if (stoken.stop_requested()) break;
+
+        population_queue.push(population_line(*line));
+        line = population_log.get_line();
+      } while (line);
+
       last_read.restart();
     }
 
-    if (const auto line(layers_log.get_line()); line)
+    if (auto line(layers_log.get_line()); line)
     {
-      layers_queue.push(layers_line(*line));
+      do
+      {
+        if (stoken.stop_requested()) break;
+
+        layers_queue.push(layers_line(*line));
+        line = layers_log.get_line();
+      } while (line);
+
       last_read.restart();
     }
 
     const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
                          last_read.elapsed()));
-    std::this_thread::sleep_for(std::clamp(elapsed, 10ms, 3000ms));
+    std::this_thread::sleep_for(std::clamp(elapsed, 100ms, 3000ms));
   }
 }
 
@@ -2028,8 +2014,6 @@ void cmdl_usage()
   "  --layers     <filepath>\n"
   "  --population <filepath>\n"
   "      Monitor files with non-default names.\n"
-  "  --refresh <seconds>\n"
-  "      Set the refresh rate for updating plots.\n"
   "  --window <nr>\n"
   "      Restrict the monitoring window to the last `nr` generations.\n"
   "\n"
@@ -2342,20 +2326,6 @@ bool monitor::setup_cmd(argh::parser &cmdl)
     }
   }
 
-  if (const auto v(cmdl("refresh").str()); !v.empty())
-  {
-    try
-    {
-      monitor::refresh_rate = std::chrono::duration<double>(std::stof(v));
-      std::cout << "Refresh rate: " << monitor::refresh_rate.count() << "s\n";
-    }
-    catch (...)
-    {
-      std::cerr << "Wrong value for refresh rate.\n";
-      return false;
-    }
-  }
-
   return true;
 }
 
@@ -2428,7 +2398,6 @@ cmdl_result parse_args(int argc, char *argv[])
   cmdl.add_param("layers");
   cmdl.add_param("population");
   cmdl.add_param("reference");
-  cmdl.add_param("refresh");
   cmdl.add_param("runs");
   cmdl.add_param("threshold");
   cmdl.add_param("window");
