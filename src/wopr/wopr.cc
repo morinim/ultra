@@ -2104,7 +2104,8 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
     {
       summary_data ret;
 
-      if (const auto ref(in2 / base.filename()); std::filesystem::exists(ref))
+      if (const auto ref(in2 / summary_from_basename(base.filename()));
+          std::filesystem::exists(ref))
         return summary_data(ref);
 
       return summary_data();
