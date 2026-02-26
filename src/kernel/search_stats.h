@@ -22,6 +22,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <span>
 #include <vector>
 
 namespace ultra
@@ -41,6 +42,14 @@ template<Individual I, Fitness F>
 class search_stats
 {
 public:
+  /// Summary information for a single run.
+  struct run_summary
+  {
+    std::size_t run {};  // run identifier
+    I best_individual {};  // best individual produced by the run
+    model_measurements<F> best_measurements {};  // measurements associated
+  };                                             //  with the best individual
+
   void update(const I &, const model_measurements<F> &,
               std::chrono::milliseconds);
 
@@ -52,6 +61,8 @@ public:
   [[nodiscard]] std::size_t runs() const noexcept;
   [[nodiscard]] double success_rate(
     const model_measurements<F> &) const noexcept;
+  [[nodiscard]] std::span<const run_summary> elite_runs(
+    double = 0.05) const noexcept;
 
   /// Distribution of finite fitness values observed across runs.
   ///
@@ -68,14 +79,6 @@ public:
   std::chrono::milliseconds elapsed {0};
 
 private:
-  /// Summary information for a single run.
-  struct run_summary
-  {
-    std::size_t run {};  // run identifier
-    I best_individual {};  // best individual produced by the run
-    model_measurements<F> best_measurements {};  // measurements associated
-  };                                             //  with the best individual
-
   std::vector<run_summary> stats_ {};
 };
 

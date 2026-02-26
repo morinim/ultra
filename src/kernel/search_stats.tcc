@@ -147,4 +147,39 @@ double search_stats<I, F>::success_rate(
   return runs() ? solutions / static_cast<double>(runs()) : 0;
 }
 
+///
+/// Returns a view of the top-performing runs.
+///
+/// \param[in] perc fraction of runs to include in the elite set
+///                 (`0.0 <= perc <= 1.0`)
+/// \return         span referencing the elite run summaries
+///
+/// The returned span contains the best runs according to
+/// `model_measurements<F>` ordering. Runs are sorted from best to worst,
+/// therefore the elite set corresponds to a prefix of the internal run
+/// summaries.
+///
+/// The number of runs returned is `floor(runs() * perc)`, clamped to the
+/// interval `[1, runs()]` when `perc > 0`.
+/// If no runs have been recorded or `perc` is zero, an empty span is
+/// returned.
+///
+/// \note
+/// The returned span remains valid only as long as the object is not modified.
+///
+template<Individual I, Fitness F>
+std::span<const typename search_stats<I, F>::run_summary>
+search_stats<I, F>::elite_runs(double perc) const noexcept
+{
+  Expects(0.0 <= perc && perc <= 1.0);
+
+  const std::size_t total(stats_.size());
+  if (total == 0 || issmall(perc))
+    return {};
+
+  const auto n(static_cast<std::size_t>(static_cast<double>(total) * perc));
+
+  return {stats_.data(), std::clamp(n, 1uz, total)};
+}
+
 #endif  // include guard

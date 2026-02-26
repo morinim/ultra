@@ -135,4 +135,70 @@ TEST_CASE_FIXTURE(fixture1,
   CHECK(*s.best_measurements().fitness == doctest::Approx(99.0));
 }
 
+TEST_CASE_FIXTURE(fixture1, "elite_runs returns a best-first prefix")
+{
+  using namespace std::chrono_literals;
+
+  ultra::search_stats<individual_t, fitness_t> s;
+
+  // Record 10 runs with strictly increasing fitness so the best is the last.
+  for (double i(0.0); i < 10; ++i)
+    s.update(ultra::gp::individual(prob), mm(i), 1ms);
+
+  REQUIRE(s.runs() == 10);
+
+  SUBCASE("perc == 0 -> empty span")
+  {
+    const auto elite(s.elite_runs(0.0));
+    CHECK(elite.empty());
+  }
+
+  SUBCASE("small perc -> at least one element")
+  {
+    const auto elite(s.elite_runs(0.01));
+    REQUIRE(elite.size() == 1);
+    CHECK(elite.front().run == s.best_run());
+    CHECK(*elite.front().best_measurements.fitness
+          == doctest::Approx(*s.best_measurements().fitness));
+  }
+
+  SUBCASE("perc == 1 -> full span")
+  {
+    const auto elite(s.elite_runs(1.0));
+    REQUIRE(elite.size() == s.runs());
+
+    // Prefix property: elite is exactly the whole and best-first ordering
+    // holds.
+    CHECK(elite.front().run == s.best_run());
+    CHECK(*elite.front().best_measurements.fitness
+          == doctest::Approx(*s.best_measurements().fitness));
+
+    // Runs are sorted best-to-worst, so fitness must be non-increasing.
+    for (std::size_t i(1); i < elite.size(); ++i)
+    {
+      REQUIRE(elite[i - 1].best_measurements.fitness);
+      REQUIRE(elite[i].best_measurements.fitness);
+      CHECK(*elite[i - 1].best_measurements.fitness
+            >= *elite[i].best_measurements.fitness);
+    }
+  }
+
+  SUBCASE("perc rounds down but clamps to [1, runs()]")
+  {
+    // total=10 -> floor(10*0.5)=5
+    const auto elite(s.elite_runs(0.5));
+    REQUIRE(elite.size() == 5);
+
+    // It must be a prefix: first element is best run, last is the 5th best.
+    CHECK(elite.front().run == s.best_run());
+
+    // With fitness values 0...9, the 5 best have fitness 9,8,7,6,5 in that
+    // order.
+    REQUIRE(elite.front().best_measurements.fitness);
+    REQUIRE(elite.back().best_measurements.fitness);
+    CHECK(*elite.front().best_measurements.fitness == doctest::Approx(9.0));
+    CHECK(*elite.back().best_measurements.fitness == doctest::Approx(5.0));
+  }
+}
+
 }  // TEST_SUITE
