@@ -250,11 +250,11 @@ basic_search<ES, E>::run(unsigned n,
       after_evolution(r, metrics);
 
       // Update the search statistics (possibly using the validation setup).
-      stats.update(prg, metrics.back(), run_summary.elapsed, threshold);
+      stats.update(prg, metrics.back(), run_summary.elapsed);
     }
 
     if (search_log_)
-      search_log_->save_summary(stats);
+      search_log_->save_summary(stats, threshold);
   }
 
   return stats;

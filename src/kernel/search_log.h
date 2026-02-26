@@ -35,7 +35,7 @@ public:
     const P &, const summary<std::ranges::range_value_t<P>, F> &);
 
   template<Individual I, Fitness F> void save_summary(
-    const search_stats<I, F> &) const;
+    const search_stats<I, F> &, const model_measurements<F> &) const;
 
   [[nodiscard]] bool is_valid() const;
 

@@ -51,8 +51,8 @@ TEST_CASE("empty stats: success_rate is zero")
 {
   ultra::search_stats<individual_t, fitness_t> s;
   CHECK(s.runs() == 0);
-  CHECK(s.success_rate() == doctest::Approx(0.0));
-  CHECK(s.good_runs.empty());
+  CHECK(s.success_rate({}) == doctest::Approx(0.0));
+  CHECK(s.good_runs({}).empty());
   CHECK(s.elapsed == 0ms);
 }
 
@@ -64,8 +64,8 @@ TEST_CASE_FIXTURE(fixture1,
   const auto ind1 = ultra::gp::individual(prob);
   const auto ind2 = ultra::gp::individual(prob);
 
-  s.update(ind1, mm(10.0), 120ms, {});
-  s.update(ind2, mm(9.0), 30ms,  {});
+  s.update(ind1, mm(10.0), 120ms);
+  s.update(ind2, mm(9.0), 30ms);
 
   CHECK(s.runs() == 2);
   CHECK(s.elapsed == 150ms);
@@ -76,9 +76,9 @@ TEST_CASE_FIXTURE(fixture1,
 {
   ultra::search_stats<individual_t, fitness_t> s;
 
-  s.update(ultra::gp::individual(prob), mm(1.0), 1ms, {});
-  s.update(ultra::gp::individual(prob), mm(3.0), 1ms, {});
-  s.update(ultra::gp::individual(prob), mm(2.0), 1ms, {});
+  s.update(ultra::gp::individual(prob), mm(1.0), 1ms);
+  s.update(ultra::gp::individual(prob), mm(3.0), 1ms);
+  s.update(ultra::gp::individual(prob), mm(2.0), 1ms);
 
   CHECK(s.runs() == 3);
   CHECK(s.best_measurements().fitness.has_value());
@@ -90,28 +90,30 @@ TEST_CASE_FIXTURE(
   fixture1,
   "good runs are recorded only when threshold specifies a criterion")
 {
-  ultra::search_stats<individual_t, fitness_t> s{};
+  ultra::search_stats<individual_t, fitness_t> s;
 
   // Threshold with no criteria: should not tag any run as good.
-  s.update(ultra::gp::individual(prob), mm(100.0), 1ms, {});
-  s.update(ultra::gp::individual(prob), mm(0.0),   1ms, {});
+  s.update(ultra::gp::individual(prob), mm(100.0), 1ms);
+  s.update(ultra::gp::individual(prob), mm(0.0),   1ms);
 
   CHECK(s.runs() == 2);
-  CHECK(s.good_runs.empty());
-  CHECK(s.success_rate() == doctest::Approx(0.0));
+  CHECK(s.good_runs({}).empty());
+  CHECK(s.success_rate({}) == doctest::Approx(0.0));
+
+  s.update(ultra::gp::individual(prob), mm(49.0), 1ms);  // not good
+  s.update(ultra::gp::individual(prob), mm(50.0), 1ms);  // good
+  s.update(ultra::gp::individual(prob), mm(60.0), 1ms);  // good
+
+  CHECK(s.runs() == 5);
 
   // Now a real threshold: should start tagging good runs.
   const auto thr(mm(50.0, std::nullopt));
-
-  s.update(ultra::gp::individual(prob), mm(49.0), 1ms, thr);  // not good
-  s.update(ultra::gp::individual(prob), mm(50.0), 1ms, thr);  // good
-  s.update(ultra::gp::individual(prob), mm(60.0), 1ms, thr);  // good
-
-  CHECK(s.runs() == 5);
-  CHECK(s.good_runs.size() == 2);
-  CHECK(s.good_runs.contains(3));
-  CHECK(s.good_runs.contains(4));
-  CHECK(s.success_rate() == doctest::Approx(2.0 / 5.0));
+  const auto good_runs(s.good_runs(thr));
+  CHECK(good_runs.size() == 3);
+  CHECK(good_runs.contains(0));
+  CHECK(good_runs.contains(3));
+  CHECK(good_runs.contains(4));
+  CHECK(s.success_rate(thr) == doctest::Approx(3.0 / 5.0));
 }
 
 }  // TEST_SUITE

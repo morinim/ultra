@@ -23,17 +23,11 @@
 /// \param[in] lr_best_prg     best individual produced by the completed run
 /// \param[in] lr_measurements measurements associated with the best individual
 /// \param[in] lr_elapsed      duration of the completed run
-/// \param[in] threshold       measurements threshold used to identify
-///                            successful runs
-///
-/// If `threshold` defines at least one criterion (fitness or accuracy),
-/// the run is marked as successful when `lr_measurements >= threshold`.
 ///
 template<Individual I, Fitness F>
 void search_stats<I, F>::update(const I &lr_best_prg,
                                 const model_measurements<F> &lr_measurements,
-                                std::chrono::milliseconds lr_elapsed,
-                                const model_measurements<F> &threshold)
+                                std::chrono::milliseconds lr_elapsed)
 {
   const std::size_t initial_run_id(runs());
 
@@ -48,16 +42,40 @@ void search_stats<I, F>::update(const I &lr_best_prg,
   run_summary new_run{initial_run_id, lr_best_prg, lr_measurements};
   stats_.insert(it, std::move(new_run));
 
-  if (!threshold.empty() && lr_measurements >= threshold)
-    good_runs.insert(initial_run_id);
-
   using std::isfinite;
   if (const auto fit(lr_measurements.fitness); fit && isfinite(*fit))
     fitness_distribution.add(*fit);
 
   elapsed += lr_elapsed;
+}
 
-  //Ensures(good_runs.empty() || good_runs.contains(best_run()));
+///
+/// Returns the identifiers of runs that satisfy the given threshold.
+///
+/// \param[in] threshold measurements threshold used to identify successful
+///                      runs
+/// \return              set of run identifiers
+///
+/// A run is considered successful when its best measurements compare
+/// greater-or-equal to `threshold` (i.e. `best_measurements >= threshold`).
+///
+/// If `threshold` is empty (no criteria set), the returned set is empty.
+///
+template<Individual I, Fitness F>
+std::set<std::size_t> search_stats<I, F>::good_runs(
+  const model_measurements<F> &threshold) const
+{
+  std::set<std::size_t> ret;
+
+  if (threshold.empty())
+    return ret;
+
+  for (const auto &s : stats_)
+    if (s.best_measurements >= threshold)
+      ret.insert(s.run);
+
+  Ensures(ret.empty() || ret.contains(best_run()));
+  return ret;
 }
 
 ///
@@ -110,17 +128,21 @@ std::size_t search_stats<I, F>::runs() const noexcept
 }
 
 ///
-/// Returns the fraction of successful runs.
+/// Returns the fraction of runs that satisfy the given threshold.
 ///
-/// A run is considered successful if it satisfies the threshold specified
-/// during `update()`.
+/// \param[in] threshold measurements threshold used to identify successful
+///                      runs
+/// \return              `0` when no runs have been recorded; otherwise the
+///                      fraction of runs whose best measurements satisfy
+///                      `threshold`
 ///
-/// Returns `0` when no runs have been recorded.
+/// If `threshold` is empty (no criteria set), the success rate is `0`.
 ///
 template<Individual I, Fitness F>
-double search_stats<I, F>::success_rate() const noexcept
+double search_stats<I, F>::success_rate(
+  const model_measurements<F> &threshold) const noexcept
 {
-  const auto solutions(static_cast<double>(good_runs.size()));
+  const auto solutions(static_cast<double>(good_runs(threshold).size()));
 
   return runs() ? solutions / static_cast<double>(runs()) : 0;
 }

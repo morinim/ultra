@@ -42,13 +42,16 @@ class search_stats
 {
 public:
   void update(const I &, const model_measurements<F> &,
-              std::chrono::milliseconds, const model_measurements<F> &);
+              std::chrono::milliseconds);
 
   [[nodiscard]] std::size_t best_run() const noexcept;
   [[nodiscard]] const I &best_individual() const noexcept;
+  [[nodiscard]] std::set<std::size_t> good_runs(
+    const model_measurements<F> &) const;
   [[nodiscard]] const model_measurements<F> &best_measurements() const noexcept;
   [[nodiscard]] std::size_t runs() const noexcept;
-  [[nodiscard]] double success_rate() const noexcept;
+  [[nodiscard]] double success_rate(
+    const model_measurements<F> &) const noexcept;
 
   /// Distribution of finite fitness values observed across runs.
   ///
@@ -58,7 +61,6 @@ public:
   /// Identifiers of runs that satisfied the success threshold.
   ///
   /// Run identifiers correspond to the order in which runs were recorded.
-  std::set<unsigned> good_runs {};
 
   /// Total elapsed time across all runs.
   ///

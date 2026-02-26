@@ -167,7 +167,8 @@ void search_log::save_snapshot(
 }
 
 template<Individual I, Fitness F> void search_log::save_summary(
-  const search_stats<I, F> &stats) const
+  const search_stats<I, F> &stats,
+  const model_measurements<F> &threshold) const
 {
   if (!is_valid())
     return;
@@ -182,7 +183,7 @@ template<Individual I, Fitness F> void search_log::save_summary(
 
       set_text(doc, "runs", stats.runs());
       set_text(doc, "elapsed_time", stats.elapsed.count());
-      set_text(doc, "success_rate", stats.success_rate());
+      set_text(doc, "success_rate", stats.success_rate(threshold));
 
       {
         xml_closer distributions_e(doc, "distributions");
@@ -210,7 +211,8 @@ template<Individual I, Fitness F> void search_log::save_summary(
 
       {
         xml_closer solutions_e(doc, "solutions");
-        for (const auto &gr : stats.good_runs)
+        for (const auto good_runs(stats.good_runs(threshold));
+             const auto &gr : good_runs)
           set_text(doc, "run", gr);
       }  // solutions
     }  // summary

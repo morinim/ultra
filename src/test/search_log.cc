@@ -144,9 +144,8 @@ TEST_CASE_FIXTURE(fixture1, "Saving summary")
   mm.fitness = eva(best_ind);
 
   search_stats<gp::individual, double> stats;
-  stats.update(gp::individual(prob), mm, 1000ms, {});
-  stats.good_runs.insert(0);
-  logger.save_summary(stats);
+  stats.update(gp::individual(prob), mm, 1000ms);
+  logger.save_summary(stats, {});
 
   CHECK(fs::exists(fn));
   cleanup();
