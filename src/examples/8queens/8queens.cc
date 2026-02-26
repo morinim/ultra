@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
@@ -11,9 +12,11 @@
  *  \see https://github.com/morinim/ultra/wiki/8queens_tutorial
  */
 
-#include <iostream>
+/* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
 #include "kernel/ultra.h"
+
+#include <iostream>
 
 const int NQUEENS(8);
 
@@ -56,8 +59,9 @@ int main()
 
   // Prints result.
   std::cout << "\nBest result: [";
-  for (auto gene : result.best_individual)
+  for (auto gene : result.best_individual())
     std::cout << " " << gene;
 
-  std::cout << " ]   (fitness " << *result.best_measurements.fitness << ")\n";
+  std::cout << " ]   (fitness " << *result.best_measurements().fitness
+            << ")\n";
 }

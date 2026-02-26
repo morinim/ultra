@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/hga/individual.h"
+#include "kernel/hga/search.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <numbers>
-
-#include "kernel/hga/individual.h"
-#include "kernel/hga/search.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -52,7 +52,7 @@ TEST_CASE("String guess")
 
   const auto res(search.run(10));
 
-  CHECK(res.best_measurements.fitness == doctest::Approx(target.length()));
+  CHECK(res.best_measurements().fitness == doctest::Approx(target.length()));
 }
 
 TEST_CASE("8 Queens")
@@ -91,7 +91,7 @@ TEST_CASE("8 Queens")
   hga::search search(prob, f);
   const auto res(search.run(5));
 
-  CHECK(res.best_measurements.fitness == doctest::Approx(0.0));
+  CHECK(res.best_measurements().fitness == doctest::Approx(0.0));
 }
 
-}  // TEST_SUITE("HGA::SEARCH")
+}  // TEST_SUITE

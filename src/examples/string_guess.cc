@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -11,10 +12,12 @@
  *  \see https://github.com/morinim/ultra/wiki/string_guessing_tutorial
  */
 
-#include <iostream>
-#include <string>
+/* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
 #include "kernel/ultra.h"
+
+#include <iostream>
+#include <string>
 
 const std::string target = "Hello World";
 const std::string CHARSET =
@@ -43,7 +46,7 @@ int main()
   prob.params.population.individuals = 300;
 
   ga::search search(prob, fitness);
-  auto result(search.run().best_individual);
+  auto result(search.run().best_individual());
 
   std::cout << "\nBest result: ";
   for (auto gene : result)

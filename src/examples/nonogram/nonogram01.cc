@@ -11,10 +11,10 @@
  *  \see https://github.com/morinim/ultra/wiki/nonogram_tutorial
  */
 
+#include "kernel/ultra.h"
+
 #include <iostream>
 #include <string>
-
-#include "kernel/ultra.h"
 
 struct nonogram_problem
 {
@@ -170,6 +170,6 @@ int main()
   auto result(search.run(10));
 
   std::cout << "\nBest result\n";
-  print_solution(result.best_individual);
-  std::cout << *result.best_measurements.fitness << '\n';
+  print_solution(result.best_individual());
+  std::cout << *result.best_measurements().fitness << '\n';
 }

@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
  *  \see
- *  https://github.com/morinim/ultra/wiki/sonar
+ *  https://github.com/morinim/ultra/wiki/sonar_tutorial
  */
 
 /* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
@@ -42,8 +42,8 @@ int main()
   const auto result(s.run(5));                   // <-- 4
 
   std::cout << "\nCANDIDATE SOLUTION\n"
-            << out::c_language << result.best_individual
-            << "\n\nACCURACY\n" << *result.best_measurements.accuracy * 100.0
+            << out::c_language << result.best_individual()
+            << "\n\nACCURACY\n" << *result.best_measurements().accuracy * 100.0
             << '%'
-            << "\n\nFITNESS\n" << *result.best_measurements.fitness << '\n';
+            << "\n\nFITNESS\n" << *result.best_measurements().fitness << '\n';
 }

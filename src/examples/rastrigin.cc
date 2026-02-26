@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -8,14 +9,13 @@
  *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
- *  \see
- *  https://github.com/morinim/ultra/wiki/rastrigin_tutorial
+ *  \see https://github.com/morinim/ultra/wiki/rastrigin_tutorial
  */
 
 /* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
-#include <numbers>
 #include "kernel/ultra.h"
+#include <numbers>
 
 double neg_rastrigin(const ultra::de::individual &x)
 {
@@ -50,8 +50,8 @@ int main()
 
   const auto res(search.run());
 
-  const auto solution(res.best_individual);
-  const auto value(res.best_measurements.fitness);
+  const auto solution(res.best_individual());
+  const auto value(res.best_measurements().fitness);
 
   std::cout << "Minimum found: " <<  *value << '\n';
 

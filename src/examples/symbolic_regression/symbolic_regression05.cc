@@ -145,6 +145,6 @@ int main()
   const auto result(s.run());
 
   std::cout << "\nCANDIDATE SOLUTION\n"
-            << out::c_language << result.best_individual
-            << "\n\nFITNESS\n" << *result.best_measurements.fitness << '\n';
+            << out::c_language << result.best_individual()
+            << "\n\nFITNESS\n" << *result.best_measurements().fitness << '\n';
 }

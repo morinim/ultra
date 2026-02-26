@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -14,10 +15,10 @@
 
 /* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
+#include "kernel/ultra.h"
+
 #include <chrono>
 #include <vector>
-
-#include "kernel/ultra.h"
 
 // Examples taken from "Differential Evolution in Discrete Optimization" by
 // Daniel Lichtblau.
@@ -90,7 +91,7 @@ int main()
 
   de::search search(prob, f);
 
-  const auto res(search.run().best_individual);
+  const auto res(search.run().best_individual());
 
   for (unsigned i(0); i < n_jobs; ++i)
     std::cout << i << ' ' << std::round(res[i]) << ' '

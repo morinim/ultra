@@ -172,12 +172,6 @@ template<Individual I, Fitness F> void search_log::save_summary(
   if (!is_valid())
     return;
 
-  const auto solutions(stats.good_runs.size());
-  const auto success_rate(
-    stats.runs ? static_cast<double>(solutions)
-                 / static_cast<double>(stats.runs)
-               : 0);
-
   tinyxml2::XMLPrinter doc;
 
   {
@@ -186,9 +180,9 @@ template<Individual I, Fitness F> void search_log::save_summary(
     {
       xml_closer summary_e(doc, "summary");
 
-      set_text(doc, "runs", stats.runs);
+      set_text(doc, "runs", stats.runs());
       set_text(doc, "elapsed_time", stats.elapsed.count());
-      set_text(doc, "success_rate", success_rate);
+      set_text(doc, "success_rate", stats.success_rate());
 
       {
         xml_closer distributions_e(doc, "distributions");
@@ -203,14 +197,14 @@ template<Individual I, Fitness F> void search_log::save_summary(
 
       {
         xml_closer best_e(doc, "best");
-        if (stats.best_measurements.fitness)
-          set_text(doc, "fitness", *stats.best_measurements.fitness);
-        if (stats.best_measurements.accuracy)
-          set_text(doc, "accuracy", *stats.best_measurements.accuracy);
-        set_text(doc, "run", stats.best_run);
+        if (stats.best_measurements().fitness)
+          set_text(doc, "fitness", *stats.best_measurements().fitness);
+        if (stats.best_measurements().accuracy)
+          set_text(doc, "accuracy", *stats.best_measurements().accuracy);
+        set_text(doc, "run", stats.best_run());
 
         std::ostringstream ss;
-        ss << out::in_line << stats.best_individual;
+        ss << out::in_line << stats.best_individual();
         set_text(doc, "code", ss.str());
       }  // best
 

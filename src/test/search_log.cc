@@ -18,6 +18,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+namespace fs = std::filesystem;
+
 TEST_SUITE("SEARCH LOG")
 {
 
@@ -27,14 +29,10 @@ TEST_CASE("Filenames")
 
   SUBCASE("Default filenames")
   {
-    CHECK(std::filesystem::path(search_log::default_dynamic_file).extension()
-          == ".txt");
-    CHECK(std::filesystem::path(search_log::default_layers_file).extension()
-          == ".txt");
-    CHECK(std::filesystem::path(search_log::default_population_file).extension()
-          == ".txt");
-    CHECK(std::filesystem::path(search_log::default_summary_file).extension()
-          == ".xml");
+    CHECK(fs::path(search_log::default_dynamic_file).extension() == ".txt");
+    CHECK(fs::path(search_log::default_layers_file).extension() == ".txt");
+    CHECK(fs::path(search_log::default_population_file).extension() == ".txt");
+    CHECK(fs::path(search_log::default_summary_file).extension() == ".xml");
   }
 
   SUBCASE("Basename")
@@ -97,9 +95,9 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(!sum.best().empty());
     CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
-    CHECK(!std::filesystem::exists(search_log::default_dynamic_file));
-    CHECK(!std::filesystem::exists(search_log::default_layers_file));
-    CHECK(!std::filesystem::exists(search_log::default_population_file));
+    CHECK(!fs::exists(search_log::default_dynamic_file));
+    CHECK(!fs::exists(search_log::default_layers_file));
+    CHECK(!fs::exists(search_log::default_population_file));
   }
 
   SUBCASE("Default - User specified logs")
@@ -114,37 +112,44 @@ TEST_CASE_FIXTURE(fixture1, "Saving snapshots")
     CHECK(!sum.best().empty());
     CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 
-    CHECK(std::filesystem::exists(search_log::default_dynamic_file));
-    CHECK(std::filesystem::exists(search_log::default_layers_file));
-    CHECK(std::filesystem::exists(search_log::default_population_file));
+    CHECK(fs::exists(search_log::default_dynamic_file));
+    CHECK(fs::exists(search_log::default_layers_file));
+    CHECK(fs::exists(search_log::default_population_file));
   }
 
-  std::filesystem::remove(search_log::default_dynamic_file);
-  std::filesystem::remove(search_log::default_layers_file);
-  std::filesystem::remove(search_log::default_population_file);
+  fs::remove(search_log::default_dynamic_file);
+  fs::remove(search_log::default_layers_file);
+  fs::remove(search_log::default_population_file);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Saving summary")
 {
   using namespace ultra;
 
-  std::filesystem::remove(search_log::default_summary_file);
+  const auto fn(search_log::default_summary_file);
+
+  const auto cleanup([&fn]
+  {
+    if (fs::exists(fn))
+      fs::remove(fn);
+  });
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   search_log logger;
   logger.summary_file_path = search_log::default_summary_file;
 
+  const auto best_ind = gp::individual(prob);
+  model_measurements<double> mm;
+  mm.fitness = eva(best_ind);
+
   search_stats<gp::individual, double> stats;
-  stats.best_individual = gp::individual(prob);
-  stats.best_measurements.fitness = eva(stats.best_individual);
-  stats.fitness_distribution.add(*stats.best_measurements.fitness);
+  stats.update(gp::individual(prob), mm, 1000ms, {});
   stats.good_runs.insert(0);
-  stats.best_run = 0;
-  stats.runs = 1;
   logger.save_summary(stats);
 
-  CHECK(std::filesystem::exists(search_log::default_summary_file));
+  CHECK(fs::exists(fn));
+  cleanup();
 }
 
-}  // TEST_SUITE("SEARCH LOG")
+}  // TEST_SUITE

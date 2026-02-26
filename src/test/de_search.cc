@@ -56,7 +56,7 @@ TEST_CASE("Rastrigin")
 
   const auto res(search.run(10));
 
-  CHECK(res.best_measurements.fitness == doctest::Approx(0.0));
+  CHECK(res.best_measurements().fitness == doctest::Approx(0.0));
 }
 
 }  // TEST_SUITE("DE::SEARCH")

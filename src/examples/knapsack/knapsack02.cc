@@ -11,10 +11,10 @@
  *  \see https://github.com/morinim/ultra/wiki/knapsack_tutorial
  */
 
+#include "kernel/ultra.h"
+
 #include <iostream>
 #include <string>
-
-#include "kernel/ultra.h"
 
 const std::vector file_sizes =
 {
@@ -54,7 +54,7 @@ int main()
   de::problem prob(file_sizes.size(), {-1.0, 1.0});
 
   de::search search(prob, fitness);
-  auto result(search.run(5).best_individual);
+  auto result(search.run(5).best_individual());
 
   std::cout << "\nBest result";
   for (std::size_t i(0); i < result.parameters(); ++i)

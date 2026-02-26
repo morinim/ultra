@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -11,10 +12,10 @@
  *  \see https://github.com/morinim/ultra/wiki/pathfinding_tutorial
  */
 
+#include "kernel/ultra.h"
+
 #include <iostream>
 #include <vector>
-
-#include "kernel/ultra.h"
 
 using maze = std::vector<std::string>;
 
@@ -185,7 +186,7 @@ int main()
 
   ga::search search(prob, f);
 
-  const auto best_path(extract_path(search.run().best_individual, m, start,
+  const auto best_path(extract_path(search.run().best_individual(), m, start,
                                     goal));
 
   print_maze(path_on_maze(best_path, m, goal));

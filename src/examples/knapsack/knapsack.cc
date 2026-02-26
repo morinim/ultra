@@ -54,7 +54,7 @@ int main()
   ga::problem prob(file_sizes.size(), {0, 2});
 
   ga::search search(prob, fitness);
-  auto result(search.run(5).best_individual);
+  auto result(search.run(5).best_individual());
 
   std::cout << "\nBest result";
   for (std::size_t i(0); i < result.parameters(); ++i)

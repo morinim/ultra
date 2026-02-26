@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -11,10 +12,12 @@
  *  \see https://github.com/morinim/ultra/wiki/nonogram_tutorial
  */
 
-#include <iostream>
-#include <string>
+/* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
 #include "kernel/ultra.h"
+
+#include <iostream>
+#include <string>
 
 struct nonogram_problem
 {
@@ -169,6 +172,6 @@ int main()
   auto result(search.run(10));
 
   std::cout << "\nBest result\n";
-  print_solution(result.best_individual);
-  std::cout << *result.best_measurements.fitness << '\n';
+  print_solution(result.best_individual());
+  std::cout << *result.best_measurements().fitness << '\n';
 }

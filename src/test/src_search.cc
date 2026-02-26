@@ -61,7 +61,7 @@ TEST_CASE("Symbolic regression - single variable")
   src::search s(prob);
   const auto result(s.run(5));
 
-  const auto holder(s.oracle(result.best_individual));
+  const auto holder(s.oracle(result.best_individual()));
   const auto &oracle(*holder);
 
   CHECK(oracle.is_valid());
@@ -118,7 +118,7 @@ TEST_CASE("Symbolic regression - multiple variables")
   src::search s(prob);
   const auto result(s.run(5));
 
-  const auto holder(s.oracle(result.best_individual));
+  const auto holder(s.oracle(result.best_individual()));
   const auto &oracle(*holder);
 
   CHECK(oracle.is_valid());
@@ -140,4 +140,4 @@ TEST_CASE("Symbolic regression - multiple variables")
   }
 }
 
-}  // TEST_SUITE("SRC::SEARCH")
+}  // TEST_SUITE

@@ -37,9 +37,9 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
 
   const auto stats(s.run(1));
 
-  CHECK(!stats.best_individual.empty());
-  CHECK(eva(stats.best_individual)
-        == doctest::Approx(*stats.best_measurements.fitness));
+  CHECK(!stats.best_individual().empty());
+  CHECK(eva(stats.best_individual())
+        == doctest::Approx(*stats.best_measurements().fitness));
 }
 
 }  // TEST_SUITE("SEARCH")

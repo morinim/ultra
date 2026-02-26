@@ -1,5 +1,6 @@
 /*
- *  \remark This file is part of VITA.
+ *  \file
+ *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
@@ -8,8 +9,7 @@
  *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
- *  \see
- *  https://github.com/morinim/ultra/wiki/symbolic_regression
+ *  \see https://github.com/morinim/ultra/wiki/symbolic_regression
  */
 
 /* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
@@ -62,6 +62,6 @@ int main()
   const auto result(s.run());
 
   std::cout << "\nCANDIDATE SOLUTION\n"
-            << out::c_language << result.best_individual
-            << "\n\nFITNESS\n" << *result.best_measurements.fitness << '\n';
+            << out::c_language << result.best_individual()
+            << "\n\nFITNESS\n" << *result.best_measurements().fitness << '\n';
 }

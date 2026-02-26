@@ -9,8 +9,7 @@
  *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  *
- *  \see
- *  https://github.com/morinim/ultra/wiki/sonar
+ *  \see https://github.com/morinim/ultra/wiki/sonar_tutorial
  */
 
 /* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
@@ -39,7 +38,7 @@ int main()
   const auto result(s.run());
 
   // PREDICTION
-  const auto oracle(s.oracle(result.best_individual));
+  const auto oracle(s.oracle(result.best_individual()));
   const auto example(random::element(prob.data.selected()));
   const auto prediction(oracle->tag(example.input));
 

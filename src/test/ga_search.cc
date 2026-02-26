@@ -10,12 +10,12 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/ga/individual.h"
+#include "kernel/ga/search.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <numbers>
-
-#include "kernel/ga/individual.h"
-#include "kernel/ga/search.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -49,7 +49,7 @@ TEST_CASE("Rastrigin")
 
   const auto res(search.run(8));
 
-  CHECK(res.best_measurements.fitness == doctest::Approx(target.length()));
+  CHECK(res.best_measurements().fitness == doctest::Approx(target.length()));
 }
 
 TEST_CASE("8 Queens")
@@ -86,7 +86,7 @@ TEST_CASE("8 Queens")
   ga::search search(prob, f);
   auto result = search.run(4);
 
-  CHECK(result.best_measurements.fitness == doctest::Approx(0.0));
+  CHECK(result.best_measurements().fitness == doctest::Approx(0.0));
 }
 
 }  // TEST_SUITE("GA::SEARCH")

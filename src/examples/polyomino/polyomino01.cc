@@ -1,4 +1,5 @@
 /*
+ *  \file
  *  \remark This file is part of ULTRA.
  *
  *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
@@ -11,10 +12,12 @@
  *  \see https://github.com/morinim/ultra/wiki/polyomino_tutorial
  */
 
-#include <iostream>
-#include <string>
+/* CHANGES IN THIS FILE MUST BE APPLIED TO THE LINKED WIKI PAGE */
 
 #include "kernel/ultra.h"
+
+#include <iostream>
+#include <string>
 
 const std::size_t board_height = 8;
 const std::size_t board_width  = 8;
@@ -190,12 +193,13 @@ int main()
   ga::search search(prob, f);
   auto result = search.run(10);
 
+  const auto best_ind(result.best_individual());
   std::cout << "\nBest result:\n";
-  std::cout << result.best_individual;
-  std::cout << "\n  fitness " << *result.best_measurements.fitness << "\n";
+  std::cout << best_ind;
+  std::cout << "\n  fitness " << *result.best_measurements().fitness << "\n";
 
   shape board(board_height, board_width);
-  for (std::size_t i(0); i < result.best_individual.parameters(); ++i)
-    board += piece_masks[i][result.best_individual[i]];
+  for (std::size_t i(0); i < best_ind.parameters(); ++i)
+    board += piece_masks[i][best_ind[i]];
   print_board(board);
 }

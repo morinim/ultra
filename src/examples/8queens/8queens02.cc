@@ -11,9 +11,9 @@
  *  \see https://github.com/morinim/ultra/wiki/8queens_tutorial
  */
 
-#include <iostream>
-
 #include "kernel/ultra.h"
+
+#include <iostream>
 
 const int NQUEENS(64);
 
@@ -60,8 +60,9 @@ int main()
 
   // Prints result.
   std::cout << "\nBest result: [";
-  for (auto gene : result.best_individual)
+  for (auto gene : result.best_individual())
     std::cout << " " << gene;
 
-  std::cout << " ]   (fitness " << *result.best_measurements.fitness << ")\n";
+  std::cout << " ]   (fitness " << *result.best_measurements().fitness
+            << ")\n";
 }

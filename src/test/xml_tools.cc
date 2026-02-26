@@ -88,7 +88,7 @@ TEST_CASE("CRC32 with parallel processes")
 
   const fs::path data_file("data.xml");
 
-  const auto cleanup([&]()
+  const auto cleanup([&]
   {
     if (fs::exists(data_file))
       fs::remove(data_file);
