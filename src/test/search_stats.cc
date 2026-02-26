@@ -116,4 +116,23 @@ TEST_CASE_FIXTURE(
   CHECK(s.success_rate(thr) == doctest::Approx(3.0 / 5.0));
 }
 
+TEST_CASE_FIXTURE(fixture1,
+                  "invariant: if there is a good run, best_run is good")
+{
+  ultra::search_stats<individual_t, fitness_t> s;
+
+  const auto thr(mm(10.0, std::nullopt));
+
+  s.update(ultra::gp::individual(prob), mm(9.0), 1ms);  // not good
+  CHECK(s.good_runs(thr).empty());
+
+  s.update(ultra::gp::individual(prob), mm(10.0), 1ms);  // good
+  CHECK(!s.good_runs(thr).empty());
+  CHECK(s.good_runs(thr).contains(s.best_run()));
+
+  s.update(ultra::gp::individual(prob), mm(99.0), 1ms);  // good and best
+  CHECK(s.good_runs(thr).contains(s.best_run()));
+  CHECK(*s.best_measurements().fitness == doctest::Approx(99.0));
+}
+
 }  // TEST_SUITE
