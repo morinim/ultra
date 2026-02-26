@@ -202,6 +202,8 @@ def parse_ultra_file(path: Path):
     if len(set(solutions)) != len(solutions):
         raise UltraParseError(f"{path}: duplicate run indices in solutions")
 
+    elite = parse_elite(summary, runs, file=path)
+
     return {
         "runs": runs,
         "elapsed": elapsed,
@@ -213,9 +215,104 @@ def parse_ultra_file(path: Path):
         "best_run": best_run,
         "best_code": best_code,
         "solutions": solutions,
+        "elite": elite,
         "tree": tree,
         "root": root,
     }
+
+
+def _parse_percentile_attr(elite_node: ET.Element, *, file: Path) -> float:
+    """
+    Returns elite fraction in [0, 1]. Accepts either:
+      - "0.05" (fraction)
+      - "5" or "5.0" (percent)
+    """
+    raw = elite_node.get("percentile")
+    if raw is None:
+        raise UltraParseError(f"{file}: <elite> missing required attribute 'percentile'")
+    try:
+        v = float(raw)
+    except ValueError as e:
+        raise UltraParseError(f"{file}: <elite percentile> is not numeric: {raw!r}") from e
+
+    # If it looks like a percentage (e.g. 5), convert to fraction.
+    frac = v / 100.0 if v > 1.0 else v
+    if not (0.0 <= frac <= 1.0):
+        raise UltraParseError(f"{file}: elite percentile out of range: {raw!r}")
+    return frac
+
+
+
+def _format_percentile_attr(frac: float) -> str:
+    """
+    Writes as a human-friendly percentage number (e.g. 5 for 5%),
+    matching your example XML.
+    """
+    pct = frac * 100.0
+    # Avoid trailing .0 where possible.
+    return f"{pct:.12g}"
+
+
+def parse_elite(summary: ET.Element, runs: int, *, file: Path):
+    """
+    Parses:
+      <elite percentile="5">
+        <run>
+          <id>...</id>
+          <fitness>...</fitness>
+          <accuracy>...</accuracy>
+        </run>
+      </elite>
+
+    Returns None if <elite> is absent.
+    """
+    elite_node = summary.find("elite")
+    if elite_node is None:
+        return None
+
+    frac = _parse_percentile_attr(elite_node, file=file)
+
+    items = []
+    for run_node in elite_node.findall("run"):
+        rid = _require_int(run_node, "id", file=file)
+        if rid < 0 or rid >= runs:
+            raise UltraParseError(f"{file}: elite run id out of range: {rid} (runs={runs})")
+
+        # fitness/accuracy may be absent depending on logger choices.
+        fitness = None
+        acc = None
+
+        f_node = run_node.find("fitness")
+        if f_node is not None and f_node.text and f_node.text.strip():
+            try:
+                fitness = float(f_node.text.strip())
+            except ValueError as e:
+                raise UltraParseError(f"{file}: elite/fitness is not a float: {f_node.text!r}") from e
+
+        a_node = run_node.find("accuracy")
+        if a_node is not None and a_node.text and a_node.text.strip():
+            try:
+                acc = float(a_node.text.strip())
+            except ValueError as e:
+                raise UltraParseError(f"{file}: elite/accuracy is not a float: {a_node.text!r}") from e
+
+        items.append({"id": rid, "fitness": fitness, "accuracy": acc})
+
+    # Deduplicate ids (defensive)
+    ids = [x["id"] for x in items]
+    if len(set(ids)) != len(ids):
+        raise UltraParseError(f"{file}: duplicate ids in <elite>")
+
+    return {"frac": frac, "items": items}
+
+
+def elite_key(item: dict):
+    # Missing values are treated as -inf so they sort last.
+    f = item["fitness"]
+    a = item["accuracy"]
+    f_key = f if (f is not None and math.isfinite(f)) else float("-inf")
+    a_key = a if (a is not None and math.isfinite(a)) else float("-inf")
+    return (f_key, a_key)
 
 
 # ---------------------------------------------------------------------
@@ -280,6 +377,56 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
     # Solutions: merge + offset for B.
     solutions = A["solutions"] + [s + A["runs"] for s in B["solutions"]]
 
+    # Elite.
+    # If neither input has elite, omit it in output.
+    # This merge can only choose elite runs from the union of the two
+    # precomputed elite lists. If the "true" top percentile of the combined
+    # dataset includes runs that were not in either file's elite list, you
+    # can't recover them without having per-run measurements for all runs.
+    merged_elite = None
+    eA = A["elite"]
+    eB = B["elite"]
+
+    if eA is not None or eB is not None:
+        # Choose a percentile fraction.
+        # If both exist and differ, prefer A.
+        frac = (eA["frac"] if eA is not None else eB["frac"])
+        if eA is not None and eB is not None and abs(eA["frac"] - eB["frac"]) > 1e-12:
+            raise UltraParseError(
+                f"Elite percentile mismatch: {eA['frac']} vs {eB['frac']}")
+
+        items = []
+        if eA is not None:
+            items.extend(eA["items"])
+        if eB is not None:
+            # Offset B ids by A['runs'] to match merged run indexing.
+            items.extend(
+                {"id": it["id"] + A["runs"], "fitness": it["fitness"], "accuracy": it["accuracy"]}
+                for it in eB["items"]
+            )
+
+        # How many elite runs should the merged file report?
+        # At least 1 when frac>0 and runs>0.
+        if frac == 0.0:
+            merged_elite = {"frac": frac, "items": []}
+        else:
+            n = int(runs * frac)  # floor
+            n = max(1, min(n, runs))
+
+            # Sort best-first, take prefix, and ensure unique ids.
+            items_sorted = sorted(items, key=elite_key, reverse=True)
+            seen = set()
+            picked = []
+            for it in items_sorted:
+                if it["id"] in seen:
+                    continue
+                seen.add(it["id"])
+                picked.append(it)
+                if len(picked) >= n:
+                    break
+
+            merged_elite = {"frac": frac, "items": picked}
+
     # Build XML.
     ultra = ET.Element("ultra")
     summary = ET.SubElement(ultra, "summary")
@@ -302,6 +449,18 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
     sol = ET.SubElement(summary, "solutions")
     for s in solutions:
         ET.SubElement(sol, "run").text = str(s)
+
+    if merged_elite is not None:
+        elite = ET.SubElement(summary, "elite")
+        elite.set("percentile", _format_percentile_attr(merged_elite["frac"]))
+
+        for it in merged_elite["items"]:
+            run_el = ET.SubElement(elite, "run")
+            ET.SubElement(run_el, "id").text = str(it["id"])
+            if it["fitness"] is not None:
+                ET.SubElement(run_el, "fitness").text = f"{it['fitness']:.12g}"
+            if it["accuracy"] is not None:
+                ET.SubElement(run_el, "accuracy").text = f"{it['accuracy']:.12g}"
 
     # Placeholder checksum.
     ET.SubElement(ultra, "checksum").text = "0" * CHECKSUM_LENGTH
@@ -381,4 +540,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error: unexpected failure: {e}", file=sys.stderr)
         sys.exit(3)
-
