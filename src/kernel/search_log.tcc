@@ -215,6 +215,22 @@ template<Individual I, Fitness F> void search_log::save_summary(
              const auto &gr : good_runs)
           set_text(doc, "run", gr);
       }  // solutions
+
+      {
+        constexpr double perc(0.05);
+
+        xml_closer elite_e(doc, "elite");
+        doc.PushAttribute("percentile", perc * 100.0);
+        for (const auto &e : stats.elite_runs(perc))
+        {
+          xml_closer run_summary_e(doc, "run");
+          set_text(doc, "id", e.run);
+          if (e.best_measurements.fitness)
+            set_text(doc, "fitness", *e.best_measurements.fitness);
+          if (e.best_measurements.accuracy)
+            set_text(doc, "accuracy", *e.best_measurements.accuracy);
+        }
+      }  // elite
     }  // summary
 
     set_text(doc, "checksum", "00000000");
