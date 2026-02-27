@@ -257,8 +257,7 @@ def parse_elite(summary: ET.Element, runs: int, *, file: Path):
     """
     Parses:
       <elite percentile="5">
-        <run>
-          <id>...</id>
+        <run id="...">
           <fitness>...</fitness>
           <accuracy>...</accuracy>
         </run>
@@ -274,7 +273,14 @@ def parse_elite(summary: ET.Element, runs: int, *, file: Path):
 
     items = []
     for run_node in elite_node.findall("run"):
-        rid = _require_int(run_node, "id", file=file)
+        raw_id = run_node.get("id")
+        if raw_id is None:
+            raise UltraParseError(f"{file}: <elite><run> missing required attribute 'id'")
+        try:
+            rid = int(raw_id)
+        except ValueError as e:
+            raise UltraParseError(f"{file}: elite run id is not an int: {raw_id!r}") from e
+
         if rid < 0 or rid >= runs:
             raise UltraParseError(f"{file}: elite run id out of range: {rid} (runs={runs})")
 
@@ -456,7 +462,7 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
 
         for it in merged_elite["items"]:
             run_el = ET.SubElement(elite, "run")
-            ET.SubElement(run_el, "id").text = str(it["id"])
+            run_el.set("id", str(it["id"]))
             if it["fitness"] is not None:
                 ET.SubElement(run_el, "fitness").text = f"{it['fitness']:.12g}"
             if it["accuracy"] is not None:
