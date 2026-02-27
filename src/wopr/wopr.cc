@@ -456,6 +456,8 @@ struct summary_data
   explicit summary_data(const tinyxml2::XMLDocument &);
   explicit summary_data(const std::filesystem::path &);
 
+  [[nodiscard]] bool empty() const noexcept { return !runs; }
+
   unsigned runs {0};
   std::chrono::milliseconds elapsed_time {0};
   double success_rate {0.0};
@@ -598,9 +600,8 @@ using collection_t = std::vector<std::pair<const std::string, data>>;
 // `current` mutates.
 collection_t collection;
 
-bool references_available {false};
-
 [[nodiscard]] settings read_settings(const std::filesystem::path &);
+[[nodiscard]] bool references_available() noexcept;
 [[nodiscard]] collection_t setup_collection(std::filesystem::path,
                                             std::filesystem::path, exec_mode);
 
@@ -665,8 +666,8 @@ void render_number_of_runs()
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available};
-  if (rs::references_available)
+  static bool show_reference_values {rs::references_available()};
+  if (rs::references_available())
     ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
 
   const std::size_t group_count(1 + show_reference_values);
@@ -715,7 +716,7 @@ void render_number_of_runs()
   static const auto positions(make_positions(size));
 
   int flags(ImPlotFlags_NoTitle);
-  if (!rs::references_available || !show_reference_values)
+  if (!rs::references_available() || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
@@ -761,8 +762,8 @@ void render_success_rate()
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available};
-  if (rs::references_available)
+  static bool show_reference_values {rs::references_available()};
+  if (rs::references_available())
     ImGui::Checkbox("Reference values##Run##Success rate",
                     &show_reference_values);
   const std::size_t group_count(1 + show_reference_values);
@@ -790,7 +791,7 @@ void render_success_rate()
   static const auto positions(make_positions(size));
 
   int flags(ImPlotFlags_NoTitle);
-  if (!rs::references_available || !show_reference_values)
+  if (!rs::references_available() || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
@@ -819,8 +820,8 @@ void render_fitness_across_datasets()
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available};
-  if (rs::references_available)
+  static bool show_reference_values {rs::references_available()};
+  if (rs::references_available())
     ImGui::Checkbox("Reference values##FAD", &show_reference_values);
 
   struct fit_data
@@ -906,7 +907,7 @@ void render_fitness_across_datasets()
     }
 
     int flags(0);
-    if (!rs::references_available || !show_reference_values)
+    if (!rs::references_available() || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
@@ -2075,6 +2076,26 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return {};
 }
 
+[[nodiscard]] bool rs::references_available() noexcept
+{
+  static bool init {false};
+  static bool available;
+
+  if (!init)
+  {
+    for (const auto &[_, d] : collection)
+      if (!d.reference.empty())
+      {
+        available = true;
+        break;
+      }
+
+    init = true;
+  }
+
+  return available;
+}
+
 rs::collection_t rs::setup_collection(std::filesystem::path in1,
                                       std::filesystem::path in2, exec_mode m)
 {
@@ -2106,8 +2127,12 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
 
       if (const auto ref(in2 / summary_from_basename(base.filename()));
           std::filesystem::exists(ref))
+      {
+        std::cout << "\n  reference: " << ref << '\n';
         return summary_data(ref);
+      }
 
+      std::cout << "\n  no reference\n";
       return summary_data();
     });
 
@@ -2135,6 +2160,10 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
     if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
     {
       const auto sum(summary_from_basename(path));
+
+      std::cout << "Basename: " << path
+                << "\n  first summary: " << sum;
+
       const auto ref(get_reference(path));
 
       const rs::data d(path, sum, read_settings(path), ref);
@@ -2149,6 +2178,10 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
         && path.stem().string().ends_with(".summary"))
     {
       const auto basename(basename_from_summary(path));
+
+      std::cout << "Basename: " << basename
+                << "\n  first summary: " << path;
+
       const auto ref(get_reference(basename));
 
       const rs::data d(basename, path, {}, ref);
