@@ -468,10 +468,12 @@ struct summary_data
   ultra::fitnd best_fit {-std::numeric_limits<double>::infinity()};
   double best_accuracy {-std::numeric_limits<double>::infinity()};
 
-  unsigned     best_run {};
-  std::string  best_prg {};
+  unsigned    best_run {};
+  std::string best_prg {};
 
   std::set<unsigned> good_runs {};
+  std::vector<
+    std::pair<unsigned, ultra::model_measurements<ultra::fitnd>>> elite {};
 };
 
 summary_data::summary_data(const std::filesystem::path &path)
@@ -498,41 +500,89 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
   if (const auto *e = h_summary.FirstChildElement("success_rate").ToElement())
     success_rate = e->DoubleText(-1.0);
 
-  const auto h_distributions(h_summary
-                             .FirstChildElement("distributions"));
-  if (const auto *e = h_distributions.FirstChildElement("fitness")
-                      .FirstChildElement("mean").ToElement())
   {
-    std::istringstream ss(e->GetText());
-    ss >> fit_mean;
-  }
-  if (const auto *e = h_distributions.FirstChildElement("fitness")
-                      .FirstChildElement("standard_deviation").ToElement())
-  {
-    std::istringstream ss(e->GetText());
-    ss >> fit_std_dev;
+    const auto h_distributions(h_summary
+                               .FirstChildElement("distributions"));
+    if (const auto *e = h_distributions.FirstChildElement("fitness")
+                        .FirstChildElement("mean").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> fit_mean;
+    }
+    if (const auto *e = h_distributions.FirstChildElement("fitness")
+                        .FirstChildElement("standard_deviation").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> fit_std_dev;
+    }
   }
 
-  const auto h_best(h_summary.FirstChildElement("best"));
-  if (const auto *e = h_best.FirstChildElement("fitness").ToElement())
   {
-    std::istringstream ss(e->GetText());
-    ss >> best_fit;
+    const auto h_best(h_summary.FirstChildElement("best"));
+    if (const auto *e = h_best.FirstChildElement("fitness").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> best_fit;
+    }
+    if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
+      best_accuracy = e->DoubleText(0.0);
+    if (const auto *e = h_best.FirstChildElement("run").ToElement())
+      best_run = e->UnsignedText(0);
+    if (const auto *e = h_best.FirstChildElement("code").ToElement())
+      best_prg = e->GetText();
   }
-  if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
-    best_accuracy = e->DoubleText(0.0);
-  if (const auto *e = h_best.FirstChildElement("run").ToElement())
-    best_run = e->UnsignedText(0);
-  if (const auto *e = h_best.FirstChildElement("code").ToElement())
-    best_prg = e->GetText();
 
-  const auto h_solutions(handle.FirstChildElement("ultra")
-                         .FirstChildElement("solutions"));
+  {
+    const auto h_solutions(h_summary.FirstChildElement("solutions"));
 
-  for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
-       e = e->NextSiblingElement())
-    if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
-      good_runs.insert(run);
+    for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
+         e = e->NextSiblingElement())
+      if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
+        good_runs.insert(run);
+  }
+
+  {
+    const auto h_elite(h_summary.FirstChildElement("elite"));
+
+    auto auto_id(std::numeric_limits<decltype(runs)>::max() / 2);
+
+    if (const auto *elite_el = h_elite.ToElement())
+    {
+      // unsigned percentile = elite_el->UnsignedAttribute("percentile", 0);
+
+      for (const auto *run_el(elite_el->FirstChildElement("run"));
+           run_el;
+           run_el = run_el->NextSiblingElement("run"))
+      {
+        unsigned id;
+        if (const auto id_rc(run_el->QueryUnsignedAttribute("id", &id));
+            id_rc != tinyxml2::XML_SUCCESS)
+          id = auto_id--;  // fallback
+
+        std::cout << id << std::endl;
+
+        ultra::model_measurements<ultra::fitnd> mm;
+
+        if (const auto *e = run_el->FirstChildElement("fitness"))
+          if (const char *txt = e->GetText())
+          {
+            std::istringstream ss(txt);
+            if (ultra::fitnd f; ss >> f)
+              mm.fitness = std::move(f);
+          }
+
+        if (const auto *e = run_el->FirstChildElement("accuracy"))
+          mm.accuracy = e->DoubleText(0.0);
+
+        elite.emplace_back(id, std::move(mm));
+      }
+    }
+/*
+    for (const auto &e : elite)
+    {
+      std::cout << "ID: " << e.first << "   FIT: " << *e.second.fitness << std::endl;
+      }*/
+  }
 }
 
 
@@ -879,7 +929,7 @@ void render_fitness_across_datasets()
   }();
 
   static const auto labels(make_labels(rs::collection));
-  static const char title[] = "Fitness across datasets##FAD";
+  static const char title[] = "##FAD";
   static const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
 
   if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
@@ -958,6 +1008,118 @@ void render_fitness_across_datasets()
 
     if (style_pushed)
       ImPlot::PopStyleColor();
+  }
+
+  ImPlot::EndSubplots();
+}
+
+void render_elite()
+{
+  static const std::size_t size(rs::collection.size());
+  if (!size)
+    return;
+
+  static bool show_reference_values {rs::references_available()};
+  if (rs::references_available())
+    ImGui::Checkbox("Reference values##ELITE", &show_reference_values);
+
+  struct elite_data
+  {
+    elite_data() { elite.reserve(size); }
+
+    struct run
+    {
+      std::vector<unsigned> id;
+      std::vector<double> fit;
+      std::vector<double> accuracy;
+    };
+
+    std::vector<run> elite;
+  };
+
+  const auto add_data([](elite_data &e, const summary_data &sumd)
+  {
+    constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+
+    elite_data::run d;
+
+    for (std::size_t i(0); i < sumd.elite.size(); ++i)
+    {
+      d.id.push_back(sumd.elite[i].first);
+
+      if (sumd.elite[i].second.fitness)
+        d.fit.push_back((*sumd.elite[i].second.fitness)[0]);
+      else
+        d.fit.push_back(qnan);
+
+      if (sumd.elite[i].second.accuracy)
+        d.accuracy.push_back(*sumd.elite[i].second.accuracy);
+      else
+        d.accuracy.push_back(qnan);
+    }
+
+    e.elite.push_back(d);
+  });
+
+  elite_data current;
+
+  for (std::shared_lock guard(rs::current_mutex);
+       const auto &[_, data] : rs::collection)
+    add_data(current, data.current);
+
+  static const elite_data reference = [&add_data]
+  {
+    elite_data out;
+
+    for (const auto &[_, data] : rs::collection)
+      add_data(out, data.reference);
+
+    return out;
+  }();
+
+  static const auto labels(make_labels(rs::collection));
+  static const char title[] = "##ELITE";
+  static const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
+
+  if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
+                             ImPlotSubplotFlags_NoLegend))
+    return;
+
+  for (std::size_t i(0); i < size; ++i)
+  {
+    int flags(0);
+    if (!rs::references_available() || !show_reference_values)
+      flags |= ImPlotFlags_NoLegend;
+
+    if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
+    {
+      ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
+
+      const double max_x(std::max(current.elite.size(),
+                                  reference.elite.size()));
+      ImPlot::SetupAxisLimits(ImAxis_X1, -0.5, max_x + 0.5, ImGuiCond_Always);
+
+      // Current data.
+      {
+        const auto ys(current.elite[i].fit);
+
+        ImPlot::PlotStems((std::string(current_str) + "##ELITE"
+                           + labels[i]).c_str(),
+                          ys.data(), ys.size());
+      }
+
+      // Reference data.
+      if (show_reference_values)
+      {
+        const auto ys(reference.elite[i].fit);
+
+        ImPlot::PlotStems((std::string(reference_str) + "##ELITE"
+                           + labels[i]).c_str(),
+                          ys.data(), ys.size(), 0, 1, 0.1);
+      }
+
+      ImPlot::EndPlot();
+    }
   }
 
   ImPlot::EndSubplots();
@@ -1577,12 +1739,12 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
   static bool show_runs_check(true);
   static bool show_success_rate_check(true);
   static bool show_fitness_across_datasets_check(true);
-  static bool show_4_check(true);
+  static bool show_elite_check(true);
 
   static bool mxz_runs(false);
   static bool mxz_success_rate(false);
   static bool mxz_fitness_across_datasets(false);
-  static bool mxz_4(false);
+  static bool mxz_elite(false);
 
   if (ImGui::Begin("Run##Window", p_open))
   {
@@ -1593,7 +1755,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
     ImGui::Checkbox("fitness across datasets",
                     &show_fitness_across_datasets_check);
     ImGui::SameLine();
-    ImGui::Checkbox("4", &show_4_check);
+    ImGui::Checkbox("elite", &show_elite_check);
     ImGui::SameLine(ImGui::GetWindowWidth() - 128);
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
                        "%s", random_string().c_str());
@@ -1603,19 +1765,19 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       show_runs_check
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
-      && !(mxz_4 && show_4_check));
+      && !(mxz_elite && show_elite_check));
     const bool show_success_rate(
       show_success_rate_check
       && !(mxz_runs && show_runs_check)
       && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
-      && !(mxz_4 && show_4_check));
+      && !(mxz_elite && show_elite_check));
     const bool show_fitness_across_datasets(
       show_fitness_across_datasets_check
       && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_4 && show_4_check));
-    const bool show_4(
-      show_4_check
+      && !(mxz_elite && show_elite_check));
+    const bool show_elite(
+      show_elite_check
       && !(mxz_runs && show_runs_check)
       && !(mxz_success_rate && show_success_rate_check)
       && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check));
@@ -1625,8 +1787,8 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
 
     const int w1(show_runs && show_success_rate ? available_width/2
                                                 : available_width);
-    const int h1(show_fitness_across_datasets || show_4 ? available_height/2
-                                                        : available_height);
+    const int h1(show_fitness_across_datasets || show_elite
+                 ? available_height/2 : available_height);
     if (show_runs)
     {
       const auto w(mxz_runs ? available_width : w1);
@@ -1683,6 +1845,27 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
         mxz_fitness_across_datasets = !mxz_fitness_across_datasets;
 
       render_fitness_across_datasets();
+      ImGui::EndChild();
+    }
+
+    if (show_elite)
+    {
+      if (show_fitness_across_datasets)
+        ImGui::SameLine();
+
+      const auto w(mxz_fitness_across_datasets ? available_width : w1);
+      const auto h(mxz_fitness_across_datasets ? available_height : h1);
+
+      ImGui::BeginChild("ELITEs##ChildWindow", ImVec2(w, h),
+                        ImGuiChildFlags_Borders);
+      ImGui::AlignTextToFramePadding();
+      ImGui::Text("ELITE RUNS");
+      ImGui::SameLine();
+      if (const char *bs(mxz_elite ? "Minimise##ELITE" : "Maximise##ELITE");
+          ImGui::Button(bs))
+        mxz_elite = !mxz_elite;
+
+      render_elite();
       ImGui::EndChild();
     }
   }
@@ -1992,15 +2175,14 @@ enum class cmdl_result {error, help, monitor, run, summary};
 void cmdl_usage()
 {
   std::cout
-    << R"( _       ___   ___   ___)" << '\n'
-    << R"(\ \    // / \ | |_) | |_))" << '\n'
-    << R"( \_\/\/ \_\_/ |_|   |_| \)"
-    << "\n\n"
-    << "GREETINGS PROFESSOR FALKEN.\n"
-    << "\n"
-    << "Please enter your selection:\n"
-    << "\n"
-    <<
+    << R"( _       ___   ___   ___)" "\n"
+       R"(\ \    // / \ | |_) | |_))" "\n"
+       R"( \_\/\/ \_\_/ |_|   |_| \)"
+       "\n\n"
+       "GREETINGS PROFESSOR FALKEN.\n"
+       "\n"
+       "Please enter your selection:\n"
+       "\n"
   "> wopr monitor [path]\n"
   "\n"
   "  OBSERVE A RUNNING TEST IN REAL-TIME\n"
@@ -2052,7 +2234,7 @@ void cmdl_usage()
   "--imguidemo\n"
   "    Enable ImGUI demo panel.\n"
   "\n"
-    << "SHALL WE PLAY A GAME?\n\n";
+  "SHALL WE PLAY A GAME?\n\n";
 }
 
 std::filesystem::path build_path(std::filesystem::path base_dir,
@@ -2123,13 +2305,14 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
   {
     const auto get_reference([&in2](const std::filesystem::path &base)
     {
-      summary_data ret;
-
-      if (const auto ref(in2 / summary_from_basename(base.filename()));
-          std::filesystem::exists(ref))
+      if (!in2.empty())
       {
-        std::cout << "\n  reference: " << ref << '\n';
-        return summary_data(ref);
+        if (const auto ref(in2 / summary_from_basename(base.filename()));
+            std::filesystem::exists(ref))
+        {
+          std::cout << "\n  reference: " << ref << '\n';
+          return summary_data(ref);
+        }
       }
 
       std::cout << "\n  no reference\n";
