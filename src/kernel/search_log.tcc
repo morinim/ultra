@@ -224,7 +224,7 @@ template<Individual I, Fitness F> void search_log::save_summary(
         for (const auto &e : stats.elite_runs(perc))
         {
           xml_closer run_summary_e(doc, "run");
-          doc.PushAttribute("id", e.run);
+          doc.PushAttribute("id", static_cast<uint64_t>(e.run));
 
           if (e.best_measurements.fitness)
             set_text(doc, "fitness", *e.best_measurements.fitness);
