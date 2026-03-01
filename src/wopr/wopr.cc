@@ -557,9 +557,7 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
         unsigned id;
         if (const auto id_rc(run_el->QueryUnsignedAttribute("id", &id));
             id_rc != tinyxml2::XML_SUCCESS)
-          id = auto_id--;  // fallback
-
-        std::cout << id << std::endl;
+          id = ++auto_id;  // fallback
 
         ultra::model_measurements<ultra::fitnd> mm;
 
@@ -577,11 +575,6 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
         elite.emplace_back(id, std::move(mm));
       }
     }
-/*
-    for (const auto &e : elite)
-    {
-      std::cout << "ID: " << e.first << "   FIT: " << *e.second.fitness << std::endl;
-      }*/
   }
 }
 
@@ -1095,8 +1088,9 @@ void render_elite()
     {
       ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
 
-      const double max_x(std::max(current.elite.size(),
-                                  reference.elite.size()));
+      const double max_x(std::max(current.elite[i].id.size(),
+                                  reference.elite[i].id.size()));
+
       ImPlot::SetupAxisLimits(ImAxis_X1, -0.5, max_x + 0.5, ImGuiCond_Always);
 
       // Current data.
