@@ -768,8 +768,12 @@ void render_number_of_runs()
   if (show_reference_values)
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
-  ImPlot::SetupAxes("Dataset", "Runs", ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxes("Dataset", "Runs");
+
+  constexpr auto padding(0.75);
+  ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
   ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
+
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
 
   // Bars.
@@ -843,7 +847,10 @@ void render_success_rate()
   if (show_reference_values)
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
-  ImPlot::SetupAxes("Dataset", "Success rate", ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxes("Dataset", "Success rate");
+
+  constexpr auto padding(0.75);
+  ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
   ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
 
   if (best_success_rate > 0.0)
