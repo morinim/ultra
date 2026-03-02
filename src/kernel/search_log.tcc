@@ -220,11 +220,11 @@ template<Individual I, Fitness F> void search_log::save_summary(
         constexpr double perc(0.05);
 
         xml_closer elite_e(doc, "elite");
-        doc.PushAttribute("percentile", perc * 100.0);
+        set_attr(doc, "percentile", perc * 100.0);
         for (const auto &e : stats.elite_runs(perc))
         {
           xml_closer run_summary_e(doc, "run");
-          doc.PushAttribute("id", static_cast<std::uint64_t>(e.run));
+          set_attr(doc, "id", e.run);
 
           if (e.best_measurements.fitness)
             set_text(doc, "fitness", *e.best_measurements.fitness);
