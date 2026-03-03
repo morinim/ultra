@@ -666,8 +666,8 @@ void start(const imgui_app::program::settings &);
 }  // namespace rs
 
 // Other variables and functions.
-const char *current_str = "Current";
-const char *reference_str = "Reference";
+const std::string current_str {"Current"};
+const std::string reference_str {"Reference"};
 
 bool imgui_demo_panel {false};
 
@@ -701,7 +701,7 @@ struct id_scope
 // - only `current` is synchronised by `current_mutex`.
 void render_number_of_runs()
 {
-  static const std::vector ilabels {current_str, reference_str};
+  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
   constexpr double bar_width(0.5), half_width(bar_width / 2.0);
 
@@ -803,7 +803,7 @@ void render_number_of_runs()
 
 void render_success_rate()
 {
-  static const std::vector ilabels {current_str, reference_str};
+  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
   static const std::size_t size(rs::collection.size());
   if (!size)
@@ -980,10 +980,13 @@ void render_fitness_across_datasets()
         const auto ys_dev(current.std_dev[i]);
         const auto ys_best(current.best[i]);
 
-        ImPlot::PlotErrorBars(current_str, &xs, &ys, &ys_dev, 1);
-        ImPlot::PlotScatter(current_str, &xs, &ys, 1);
+        ImPlot::PlotErrorBars((current_str + "##FAD" + labels[i]).c_str(),
+                              &xs, &ys, &ys_dev, 1);
+        ImPlot::PlotScatter((current_str + "##FAD" + labels[i]).c_str(),
+                            &xs, &ys, 1);
         ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
-        ImPlot::PlotScatter(current_str, &xs, &ys_best, 1);
+        ImPlot::PlotScatter((current_str + "##FAD" + labels[i]).c_str(),
+                            &xs, &ys_best, 1);
       }
 
       // Reference data.
@@ -997,10 +1000,13 @@ void render_fitness_across_datasets()
         const auto ys_dev(reference.std_dev[i]);
         const auto ys_best(reference.best[i]);
 
-        ImPlot::PlotErrorBars(reference_str, &xs, &ys, &ys_dev, 1);
-        ImPlot::PlotScatter(reference_str, &xs, &ys, 1);
+        ImPlot::PlotErrorBars((reference_str + "##FAD" + labels[i]).c_str(),
+                              &xs, &ys, &ys_dev, 1);
+        ImPlot::PlotScatter((reference_str + "##FAD" + labels[i]).c_str(),
+                            &xs, &ys, 1);
         ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
-        ImPlot::PlotScatter(reference_str, &xs, &ys_best, 1);
+        ImPlot::PlotScatter((reference_str + "##FAD" + labels[i]).c_str(),
+                            &xs, &ys_best, 1);
       }
 
       ImPlot::EndPlot();
@@ -1104,8 +1110,7 @@ void render_elite()
       {
         const auto ys(current.elite[i].fit);
 
-        ImPlot::PlotStems((std::string(current_str) + "##ELITE"
-                           + labels[i]).c_str(),
+        ImPlot::PlotStems((current_str + "##ELITE" + labels[i]).c_str(),
                           ys.data(), ys.size());
       }
 
@@ -1114,8 +1119,7 @@ void render_elite()
       {
         const auto ys(reference.elite[i].fit);
 
-        ImPlot::PlotStems((std::string(reference_str) + "##ELITE"
-                           + labels[i]).c_str(),
+        ImPlot::PlotStems((reference_str + "##ELITE" + labels[i]).c_str(),
                           ys.data(), ys.size(), 0, 1, 0.1);
       }
 
