@@ -1049,9 +1049,9 @@ void render_elite()
 
     struct run
     {
-      std::vector<unsigned> id;
-      std::vector<double> fit;
-      std::vector<double> accuracy;
+      std::vector<unsigned> id {};
+      std::vector<double> fit {};
+      std::vector<double> acc {};
     };
 
     std::vector<run> elite;
@@ -1073,9 +1073,9 @@ void render_elite()
         d.fit.push_back(qnan);
 
       if (sumd.elite[i].second.accuracy)
-        d.accuracy.push_back(*sumd.elite[i].second.accuracy);
+        d.acc.push_back(*sumd.elite[i].second.accuracy);
       else
-        d.accuracy.push_back(qnan);
+        d.acc.push_back(qnan);
     }
 
     e.elite.push_back(d);
@@ -1115,26 +1115,80 @@ void render_elite()
     {
       ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
 
+      // `ImPlotAxisFlags_Opposite` is the magic flag that moves the axis to
+      // the top.
+      ImPlot::SetupAxis(ImAxis_X2, "Run", ImPlotAxisFlags_Opposite);
+
       const double max_x(std::max(current.elite[i].id.size(),
                                   reference.elite[i].id.size()));
 
-      ImPlot::SetupAxisLimits(ImAxis_X1, -0.5, max_x + 0.5, ImGuiCond_Always);
+      double x_from(-0.5), x_to(max_x + 0.5);
+      ImPlot::SetupAxisLimits(ImAxis_X1, x_from, x_to, ImGuiCond_Always);
+      ImPlot::SetupAxisLinks(ImAxis_X1, &x_from, &x_to);
+      ImPlot::SetupAxisLinks(ImAxis_X2, &x_from, &x_to);
+
+      if (const auto &ids(current.elite[i].id); !ids.empty())
+      {
+        static thread_local std::vector<double> tick_pos;
+        static thread_local std::vector<std::string> tick_text;
+        static thread_local std::vector<const char *> tick_cstr;
+
+        tick_pos.resize(ids.size());
+        tick_text.resize(ids.size());
+        tick_cstr.resize(ids.size());
+
+        for (std::size_t k(0); k < ids.size(); ++k)
+        {
+          tick_pos[k] = static_cast<double>(k);
+          tick_text[k] = std::to_string(ids[k]);
+          tick_cstr[k] = tick_text[k].c_str();
+        }
+
+        ImPlot::SetupAxisTicks(ImAxis_X2,
+                               tick_pos.data(),
+                               static_cast<int>(tick_pos.size()),
+                               tick_cstr.data());
+      }
+
+      const ImVec2 offset_upward(0, -10);
 
       // Current data.
       {
-        const auto ys(current.elite[i].fit);
+        const auto &fit(current.elite[i].fit);
+        const auto &acc(current.elite[i].acc);
 
-        ImPlot::PlotStems((current_str + "##ELITE" + labels[i]).c_str(),
-                          ys.data(), ys.size());
+        ImPlot::PlotBars((current_str + "##ELITE" + labels[i]).c_str(),
+                         fit.data(), fit.size(), 0.4);
+
+        // Accuracy labels.
+        for (std::size_t k(0); k < fit.size(); ++k)
+          if (std::isfinite(acc[k]))
+          {
+            const std::string text(std::format("{:.2f}%", acc[k]*100.0));
+            ImPlot::PlotText(text.c_str(), static_cast<double>(k),
+                             fit[k], offset_upward);
+          }
       }
 
       // Reference data.
       if (show_reference_values)
       {
-        const auto ys(reference.elite[i].fit);
+        const auto &fit(reference.elite[i].fit);
+        const auto &acc(reference.elite[i].acc);
+        const double bar_shift(0.1);
 
-        ImPlot::PlotStems((reference_str + "##ELITE" + labels[i]).c_str(),
-                          ys.data(), ys.size(), 0, 1, 0.1);
+        ImPlot::PlotBars((reference_str + "##ELITE" + labels[i]).c_str(),
+                          fit.data(), fit.size(), 0.4, bar_shift);
+
+        for (std::size_t k(0); k < fit.size(); ++k)
+          if (std::isfinite(acc[k]))
+          {
+            const std::string text(std::format("{:.2f}%", acc[k]*100.0));
+            ImPlot::PlotText(text.c_str(),
+                             static_cast<double>(k) + bar_shift,
+                             fit[k],
+                             offset_upward);
+          }
       }
 
       ImPlot::EndPlot();
