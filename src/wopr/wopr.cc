@@ -33,8 +33,9 @@
 #include <string>
 #include <string_view>
 
-using namespace std::chrono_literals;
 
+namespace fs = std::filesystem;
+using namespace std::chrono_literals;
 using crossover_types_map = std::map<int, unsigned>;
 
 
@@ -454,9 +455,11 @@ struct summary_data
 {
   summary_data() = default;
   explicit summary_data(const tinyxml2::XMLDocument &);
-  explicit summary_data(const std::filesystem::path &);
+  explicit summary_data(const fs::path &);
 
   [[nodiscard]] bool empty() const noexcept { return !runs; }
+
+  [[nodiscard]] static bool check(const fs::path &, tinyxml2::XMLDocument &);
 
   unsigned runs {0};
   std::chrono::milliseconds elapsed_time {0};
@@ -476,14 +479,27 @@ struct summary_data
     std::pair<unsigned, ultra::model_measurements<ultra::fitnd>>> elite {};
 };
 
-summary_data::summary_data(const std::filesystem::path &path)
+bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
 {
-  tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(path.c_str()) != tinyxml2::XML_SUCCESS)
-    throw std::invalid_argument("Cannot parse summary file "
-                                + path.generic_string());
+  if (doc.LoadFile(xml_fn.c_str()) != tinyxml2::XML_SUCCESS
+      || !doc.FirstChild())
+    return false;
 
-  *this = summary_data(doc);
+  std::ifstream in(xml_fn, std::ios::binary);
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  const std::string xml_content(ss.str());
+
+  return ultra::crc32::verify_xml_signature(xml_content);
+}
+
+summary_data::summary_data(const fs::path &path)
+{
+  if (tinyxml2::XMLDocument doc; check(path, doc))
+    *this = summary_data(doc);
+
+  throw std::invalid_argument("Cannot parse summary file \""
+                              + path.generic_string() + "\"");
 }
 
 summary_data::summary_data(const tinyxml2::XMLDocument &doc)
@@ -615,15 +631,14 @@ ultra::model_measurements<double> settings::default_threshold {};
 
 struct data
 {
-  data(const std::filesystem::path &ds,
-       const std::filesystem::path &xs,
-       const settings &c, const summary_data &r)
+  data(const fs::path &ds, const fs::path &xs, const settings &c,
+       const summary_data &r)
     : dataset(ds), xml_summary(xs), conf(c), reference(r)
   {
   }
 
-  const std::filesystem::path dataset;
-  const std::filesystem::path xml_summary;
+  const fs::path dataset;
+  const fs::path xml_summary;
 
   const settings conf;
   summary_data current {};
@@ -643,10 +658,9 @@ using collection_t = std::vector<std::pair<const std::string, data>>;
 // `current` mutates.
 collection_t collection;
 
-[[nodiscard]] settings read_settings(const std::filesystem::path &);
+[[nodiscard]] settings read_settings(const fs::path &);
 [[nodiscard]] bool references_available() noexcept;
-[[nodiscard]] collection_t setup_collection(std::filesystem::path,
-                                            std::filesystem::path, exec_mode);
+[[nodiscard]] collection_t setup_collection(fs::path, fs::path, exec_mode);
 
 namespace run
 {
@@ -1957,7 +1971,7 @@ std::string random_string()
 class read_log_file
 {
 public:
-  explicit read_log_file(const std::filesystem::path &);
+  explicit read_log_file(const fs::path &);
 
   std::optional<std::string> get_line();
 
@@ -1966,7 +1980,7 @@ private:
   std::streampos position_ {0};
 };
 
-read_log_file::read_log_file(const std::filesystem::path &filename)
+read_log_file::read_log_file(const fs::path &filename)
   : file_(filename)
 {
   if (!filename.empty() && !file_)
@@ -2076,21 +2090,12 @@ void rs::summary::get_summaries(std::stop_token stoken)
     for (auto &test : collection)
     {
       const auto xml_fn(test.second.xml_summary);
-      tinyxml2::XMLDocument summary;
-      if (summary.LoadFile(xml_fn.c_str()) != tinyxml2::XML_SUCCESS
-          || !summary.FirstChild())
-        continue;
 
-      std::ifstream in(xml_fn, std::ios::binary);
-      std::ostringstream ss;
-      ss << in.rdbuf();
-      const std::string xml_content(ss.str());
-
-      if (!ultra::crc32::verify_xml_signature(xml_content))
-        continue;
-
-      std::lock_guard guard(current_mutex);
-      test.second.current = summary_data(summary);
+      if (tinyxml2::XMLDocument summary; summary_data::check(xml_fn, summary))
+      {
+        std::lock_guard guard(current_mutex);
+        test.second.current = summary_data(summary);
+      }
     }
 
     std::this_thread::sleep_for(3000ms);
@@ -2116,14 +2121,12 @@ void rs::summary::get_summaries(std::stop_token stoken)
   return threshold;
 }
 
-rs::settings rs::read_settings(const std::filesystem::path &test_fn)
+rs::settings rs::read_settings(const fs::path &test_fn)
 {
   assert(test_fn.extension() == ".csv");
 
-  const auto settings_fn(
-    std::filesystem::path(test_fn).replace_extension(".xml"));
-
-  if (!std::filesystem::exists(settings_fn))
+  const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
+  if (!fs::exists(settings_fn))
     return {};
 
   tinyxml2::XMLDocument doc;
@@ -2242,9 +2245,8 @@ void cmdl_usage()
   "SHALL WE PLAY A GAME?\n\n";
 }
 
-std::filesystem::path build_path(std::filesystem::path base_dir,
-                                 std::filesystem::path f,
-                                 const std::string &default_filename = {})
+fs::path build_path(fs::path base_dir, fs::path f,
+                    const std::string &default_filename = {})
 {
   f = f.lexically_normal();
 
@@ -2283,11 +2285,9 @@ std::filesystem::path build_path(std::filesystem::path base_dir,
   return available;
 }
 
-rs::collection_t rs::setup_collection(std::filesystem::path in1,
-                                      std::filesystem::path in2, exec_mode m)
+rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
 {
   using namespace ultra;
-  namespace fs = std::filesystem;
 
   if (in1.empty())
     in1 = "./";
@@ -2308,19 +2308,28 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
 
   const auto check_and_insert([&m, &in2, &ret](const auto &path)
   {
-    const auto get_reference([&in2](const std::filesystem::path &base)
+    const auto get_reference([&in2](const fs::path &base)
     {
       if (!in2.empty())
       {
         if (const auto ref(in2 / summary_from_basename(base.filename()));
-            std::filesystem::exists(ref))
+            fs::exists(ref))
         {
           std::cout << "\n  reference: " << ref << '\n';
-          return summary_data(ref);
+
+          try
+          {
+            return summary_data(ref);
+          }
+          catch (const std::invalid_argument &e)
+          {
+            std::cerr << e.what() << '\n';
+          }
         }
       }
+      else
+        std::cout << "\n  no reference\n";
 
-      std::cout << "\n  no reference\n";
       return summary_data();
     });
 
@@ -2427,7 +2436,6 @@ rs::collection_t rs::setup_collection(std::filesystem::path in1,
 bool monitor::setup_cmd(argh::parser &cmdl)
 {
   using namespace ultra;
-  namespace fs = std::filesystem;
 
   const auto &pos_args(cmdl.pos_args());
 
@@ -2561,10 +2569,8 @@ bool rs::summary::setup_cmd(argh::parser &cmdl)
     return false;
   }
 
-  const std::filesystem::path dir1(pos_args.size() <= 2 ? "./"
-                                                        : pos_args[2]);
-  const std::filesystem::path dir2(pos_args.size() <= 3 ? ""
-                                                        : pos_args[3]);
+  const fs::path dir1(pos_args.size() <= 2 ? "./" : pos_args[2]);
+  const fs::path dir2(pos_args.size() <= 3 ? "" : pos_args[3]);
 
   collection = setup_collection(dir1, dir2, exec_mode::summary);
 
@@ -2581,9 +2587,8 @@ bool rs::run::setup_cmd(argh::parser &cmdl)
   for (const auto &a : pos_args)
     std::cout << a << std::endl;
 
-  const std::filesystem::path test_input(pos_args.size() <= 2 ? "./"
-                                                              : pos_args[2]);
-  const std::filesystem::path ref_folder(cmdl("reference", "").str());
+  const fs::path test_input(pos_args.size() <= 2 ? "./" : pos_args[2]);
+  const fs::path ref_folder(cmdl("reference", "").str());
 
   if (const auto v(cmdl("generations").str()); !v.empty())
   {
@@ -2693,7 +2698,7 @@ void rs::run::start(const imgui_app::program::settings &settings)
       ultra::src::search s(prob);
 
       ultra::search_log sl;
-      const std::filesystem::path base_dir(dataset.parent_path());
+      const fs::path base_dir(dataset.parent_path());
 
       sl.dynamic_file_path = build_path(
         base_dir, ultra::dynamic_from_basename(dataset));
