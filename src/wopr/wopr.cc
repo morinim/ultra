@@ -1926,8 +1926,8 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       if (show_fitness_across_datasets)
         ImGui::SameLine();
 
-      const auto w(mxz_fitness_across_datasets ? available_width : w1);
-      const auto h(mxz_fitness_across_datasets ? available_height : h1);
+      const auto w(mxz_elite ? available_width : w1);
+      const auto h(mxz_elite ? available_height : h1);
 
       ImGui::BeginChild("ELITEs##ChildWindow", ImVec2(w, h),
                         ImGuiChildFlags_Borders);
