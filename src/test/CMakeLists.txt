@@ -25,4 +25,4 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Resources needed by examples
-file(COPY ${PROJECT_SOURCE_DIR}/wopr/merge_summary.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${PROJECT_SOURCE_DIR}/wopr/checksum_summary.py ${PROJECT_SOURCE_DIR}/wopr/merge_summary.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
