@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 #
 #  Copyright (C) 2025 EOS di Manlio Morini.
 #
@@ -14,53 +13,16 @@
 #  The output is re-signed with a CRC32 checksum.
 #
 #  \see https://ultraevolution.org/blog/combine_test_batches/
-#
 
-import xml.etree.ElementTree as ET
 import math
 from pathlib import Path
 import sys
-import zlib
-
-
-CHECKSUM_LENGTH = 8
-CHECKSUM_TAG = "checksum"
+import xml.etree.ElementTree as ET
+from checksum_summary import CHECKSUM_LENGTH, CHECKSUM_TAG, sign_etree_xml
 
 
 class UltraParseError(RuntimeError):
     """Raised when an ULTRA summary XML is missing required content."""
-
-
-# ---------------------------------------------------------------------
-#  CRC32 identical to the C++ code (ISO 3309 polynomial).
-# ---------------------------------------------------------------------
-
-def compute_crc32(data: str) -> str:
-    crc = zlib.crc32(data.encode("utf-8")) & 0xFFFFFFFF
-    return f"{crc:0{CHECKSUM_LENGTH}X}"
-
-
-def embed_xml_signature(xml: str) -> str:
-    try:
-        root = ET.fromstring(xml)
-    except ET.ParseError as e:
-        raise UltraParseError(f"Generated XML is not well-formed: {e}") from e
-
-    node = root.find(CHECKSUM_TAG)
-
-    if node is None:
-        raise UltraParseError(f"No <{CHECKSUM_TAG}> tag found in generated XML")
-
-    node.text = "0" * CHECKSUM_LENGTH
-
-    temp = ET.tostring(root, encoding="unicode")
-
-    # The output matches our C++ code exactly: Python's zlib.crc32 implements
-    # the same ISO 3309 / IEEE 802.3 polynomial (0xEDB88320), with identical
-    # initial/final XORs when masked with `0xFFFFFFFF`.
-    node.text = compute_crc32(temp)
-
-    return ET.tostring(root, encoding="unicode")
 
 
 # ---------------------------------------------------------------------
@@ -468,15 +430,12 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
             if it["accuracy"] is not None:
                 ET.SubElement(run_el, "accuracy").text = f"{it['accuracy']:.12g}"
 
-    # Placeholder checksum.
-    ET.SubElement(ultra, "checksum").text = "0" * CHECKSUM_LENGTH
-
-    # Convert to string.
+    # Convert to string (canonical formatting for merged output).
     ET.indent(ultra, space="  ")
     xml = ET.tostring(ultra, encoding="unicode")
 
-    # Embed real checksum.
-    xml_signed = embed_xml_signature(xml)
+    # Embed real checksum (canonical ElementTree signing).
+    xml_signed = sign_etree_xml(xml, create=True)
 
     # Save.
     output.write_text(xml_signed, encoding="utf-8")
