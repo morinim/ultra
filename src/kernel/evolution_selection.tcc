@@ -118,7 +118,7 @@ tournament<E>::operator()(const P &pop) const
 ///
 template<Evaluator E>
 template<PopulationWithMutex P>
-std::vector<typename P::value_type>
+std::array<typename P::value_type, 2>
 alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 {
   Expects(this->params_.evolution.tournament_size);

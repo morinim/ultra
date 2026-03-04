@@ -13,11 +13,11 @@
 #if !defined(ULTRA_EVOLUTION_SELECTION_H)
 #define      ULTRA_EVOLUTION_SELECTION_H
 
-#include <set>
-
 #include "kernel/evaluator.h"
 #include "kernel/linear_population.h"
 #include "kernel/parameters.h"
+
+#include <array>
 
 namespace ultra::selection
 {
@@ -79,7 +79,7 @@ public:
   using strategy<E>::strategy;
 
   template<PopulationWithMutex P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(
+  [[nodiscard]] std::array<typename P::value_type, 2> operator()(
     std::vector<std::reference_wrapper<const P>>) const;
 };
 
