@@ -65,7 +65,9 @@ tournament<E>::operator()(const P &pop) const
   Expects(rounds);
 
   const auto target(random::coord(pop));
-  std::vector<typename P::coord> ret(rounds);
+
+  std::vector<std::pair<typename P::coord, evaluator_fitness_t<E>>> ret;
+  ret.reserve(rounds);
 
   // This is the inner loop of an insertion sort algorithm. It's simple, fast
   // (if `rounds` is small) and doesn't perform too much comparisons.
@@ -75,26 +77,28 @@ tournament<E>::operator()(const P &pop) const
     const auto new_coord(random::coord(pop, target, mate_zone));
     const auto new_fitness(this->eva_(pop[new_coord]));
 
-    auto j(i);
+    ret.emplace_back(new_coord, new_fitness);
 
-    for (; j && new_fitness > this->eva_(pop[ret[j - 1]]); --j)
-      ret[j] = ret[j - 1];
-
-    ret[j] = new_coord;
+    auto k(i);
+    while (k && ret[k - 1].second < ret[k].second)
+    {
+      std::swap(ret[k - 1], ret[k]);
+      --k;
+    }
   }
+
+  assert(std::ranges::is_sorted(ret,
+                                [](const auto &i1, const auto &i2)
+                                {
+                                  return i1.second > i2.second;
+                                }));
 
   std::vector<typename P::value_type> ri;
   ri.reserve(ret.size());
   std::ranges::transform(ret, std::back_inserter(ri),
-                         [&pop](const auto &c) { return pop[c]; });
+                         [&pop](const auto &c) { return pop[c.first]; });
 
   Ensures(ri.size() == rounds);
-  Ensures(std::ranges::is_sorted(ri,
-                                 [this](const auto &i1, const auto &i2)
-                                 {
-                                   return this->eva_(i1) > this->eva_(i2);
-                                 }));
-
   return ri;
 }
 

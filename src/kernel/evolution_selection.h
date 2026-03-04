@@ -61,7 +61,7 @@ template<Evaluator E>
 class tournament : public strategy<E>
 {
 public:
-  using tournament::strategy::strategy;
+  using strategy<E>::strategy;
 
   template<SizedRandomAccessPopulation P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
@@ -76,7 +76,7 @@ template<Evaluator E>
 class alps : public strategy<E>
 {
 public:
-  using alps::strategy::strategy;
+  using strategy<E>::strategy;
 
   template<PopulationWithMutex P>
   [[nodiscard]] std::vector<typename P::value_type> operator()(
