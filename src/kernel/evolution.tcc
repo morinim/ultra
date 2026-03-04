@@ -220,6 +220,11 @@ summary<typename evolution<E>::individual_t,
 {
   Expects(sum_.generation == 0);
 
+  if (pop_.problem().params.needs_init())
+    throw std::logic_error("Parameters still contain auto-tune values. "
+                           "Call parameters::init() (or use src::search) "
+                           "before evolution::run().");
+
   using namespace std::chrono_literals;
 
   timer from_start, from_last_msg;
@@ -228,7 +233,8 @@ summary<typename evolution<E>::individual_t,
 
   std::stop_source source;
 
-  // Asynchronous population update: each newly generated offspring can replace   // an individual of the current population (aka steady state population).
+  // Asynchronous population update: each newly generated offspring can replace
+  // an individual of the current population (aka steady state population).
   // Asynchronous update permits new individual to contribute to the evolution
   // immediately and can speed up the convergence.
   const auto evolve_subpop(

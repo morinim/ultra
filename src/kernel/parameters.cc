@@ -13,6 +13,16 @@
 #include "kernel/parameters.h"
 #include "utility/log.h"
 
+namespace
+{
+
+[[nodiscard]] bool in_0_1(double x) noexcept
+{
+  return 0.0 <= x && x <= 1.0;
+}
+
+}  // namespace
+
 namespace ultra
 {
 
@@ -35,22 +45,51 @@ namespace ultra
 ///
 parameters &parameters::init()
 {
-  slp.code_length = 100;
+  if (!slp.code_length)
+    slp.code_length = 100;
 
-  population.individuals = 100;
-  population.init_subgroups = 1;
-  population.min_individuals = 2;
+  if (!population.individuals)
+    population.individuals = 100;
+  if (!population.init_subgroups)
+    population.init_subgroups = 1;
+  if (!population.min_individuals)
+    population.min_individuals = 2;
 
-  evolution.brood_recombination = 1;
-  evolution.elitism = 1.0;
-  evolution.generations = 100;
-  evolution.mate_zone = 20;
-  evolution.max_stuck_gen = std::numeric_limits<unsigned>::max();
-  evolution.p_cross = 0.9;
-  evolution.p_mutation = 0.04;
-  evolution.tournament_size = 5;
+  if (!evolution.brood_recombination)
+    evolution.brood_recombination = 1;
+  if (!in_0_1(evolution.elitism))
+    evolution.elitism = 1.0;
+  if (!evolution.generations)
+    evolution.generations = 100;
+  if (!evolution.mate_zone)
+    evolution.mate_zone = 20;
+  if (!evolution.max_stuck_gen)
+    evolution.max_stuck_gen = std::numeric_limits<unsigned>::max();
+  if (!in_0_1(evolution.p_cross))
+    evolution.p_cross = 0.9;
+  if (!in_0_1(evolution.p_mutation))
+    evolution.p_mutation = 0.04;
+  if (!evolution.tournament_size)
+    evolution.tournament_size = 5;
 
   return *this;
+}
+
+bool parameters::needs_init() const noexcept
+{
+  return
+    slp.code_length == 0
+    || population.individuals == 0
+    || population.init_subgroups == 0
+    || population.min_individuals == 0
+    || evolution.brood_recombination == 0
+    || evolution.generations == 0
+    || evolution.mate_zone == 0
+    || evolution.max_stuck_gen == 0
+    || evolution.tournament_size == 0
+    || !in_0_1(evolution.elitism)
+    || !in_0_1(evolution.p_cross)
+    || !in_0_1(evolution.p_mutation);
 }
 
 ///
@@ -70,7 +109,7 @@ bool parameters::is_valid(bool force_defined) const
       return false;
     }
 
-    if (alps.p_main_layer < 0.0)
+    if (!in_0_1(alps.p_main_layer))
     {
       ultraERROR << "Undefined `p_main_layer` parameter";
       return false;
@@ -82,7 +121,7 @@ bool parameters::is_valid(bool force_defined) const
       return false;
     }
 
-    if (evolution.elitism < 0.0 || evolution.elitism > 1.0)
+    if (!in_0_1(evolution.elitism))
     {
       ultraERROR << "Undefined `evolution.elitism` data member";
       return false;
@@ -106,13 +145,13 @@ bool parameters::is_valid(bool force_defined) const
       return false;
     }
 
-    if (evolution.p_cross < 0.0)
+    if (!in_0_1(evolution.p_cross))
     {
       ultraERROR << "Undefined `evolution.p_cross` data member";
       return false;
     }
 
-    if (evolution.p_mutation < 0.0)
+    if (!in_0_1(evolution.p_mutation))
     {
       ultraERROR << "Undefined `evolution.p_mutation` data member";
       return false;

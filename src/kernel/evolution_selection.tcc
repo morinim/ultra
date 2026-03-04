@@ -132,7 +132,8 @@ template<PopulationWithMutex P>
 std::array<typename P::value_type, 2>
 alps<E>::operator()(alps_layer_pair<const P> pops) const
 {
-  Expects(this->params_.evolution.tournament_size);
+  const auto ts(this->params_.evolution.tournament_size);
+  Expects(ts);
 
   const auto young([](const auto &sub_pop, const auto &prg)
                    { return prg.age() <= sub_pop.max_age(); });
@@ -156,8 +157,7 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
 
   assert(fit0 >= fit1);
 
-  for (auto rounds(this->params_.evolution.tournament_size - 1);
-       rounds; --rounds)
+  for (auto rounds(ts - 1); rounds; --rounds)
   {
     const auto &sub_pop(pops.random(this->params_.alps.p_main_layer));
     const auto tmp(random::individual(sub_pop));

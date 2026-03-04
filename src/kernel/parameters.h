@@ -134,7 +134,7 @@ struct parameters
     /// Crossover probability.
     ///
     /// \note
-    /// A negative value means means auto-tune.
+    /// Values outside the `[0.0;1.0]` range mean auto-tune.
     double p_cross {-1.0};
 
     /// Mutation rate probability.
@@ -149,7 +149,7 @@ struct parameters
     /// operator (which depends depends on the recombination algorithm).
     ///
     /// \note
-    /// A negative value means auto-tune.
+    /// Values outside the `[0.0;1.0]` range mean auto-tune.
     double p_mutation {-1.0};
 
     /// Size of the tournament to choose the parents from.
@@ -199,6 +199,8 @@ struct parameters
   } team;
 
   parameters &init();
+  [[nodiscard]] bool needs_init() const noexcept;
+
   [[nodiscard]] bool is_valid(bool) const;
 };  // parameters
 
