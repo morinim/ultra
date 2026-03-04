@@ -138,7 +138,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       else
         CHECK(new_best.age() > layer.max_age());
 
-    replace(std::vector{std::ref(pop.front()), std::ref(pop.back())},
+    replace(alps_layer_pair(std::ref(pop.front()), std::ref(pop.back())),
             new_best, status);
 
     CHECK(std::ranges::find(pop.front(), new_best) == pop.front().end());
@@ -150,7 +150,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     for (auto &layer : pop.range_of_layers())
     {
       layer.clear();
-      replace(std::vector{std::ref(layer), std::ref(pop.back())},
+      replace(alps_layer_pair(std::ref(layer), std::ref(pop.back())),
               new_best, status);
       CHECK(std::ranges::find(layer, new_best) != layer.end());
     }

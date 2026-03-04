@@ -80,7 +80,7 @@ public:
 
   template<PopulationWithMutex P>
   [[nodiscard]] std::array<typename P::value_type, 2> operator()(
-    std::vector<std::reference_wrapper<const P>>) const;
+    alps_layer_pair<const P>) const;
 };
 
 template<Evaluator E> alps(E &, const parameters &) -> alps<E>;

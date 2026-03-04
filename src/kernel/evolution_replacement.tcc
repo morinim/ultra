@@ -91,19 +91,19 @@ template<SizedRandomAccessPopulation P>
 void alps<E>::try_move_up_layer(const P &from, P &to)
 {
   for (const auto &prg : from)
-    try_add_to_layer(std::vector{std::ref(to)}, prg);
+    try_add_to_layer(to, prg);
 }
 
 ///
 /// \param[in] pops     a collection of references to sub-populations. Can
-///                     contain one or two elements. The first one
-///                     (`pops.front()`) is the main/current layer; the second
+///                     contain one or two elements. The main one
+///                     (`pops.primary()`) is the main/current layer; the second
 ///                     one, if available, is the upper level layer
 /// \param[in] incoming an individual
 ///
-/// We would like to add `incoming` in layer `pops.front()`. The insertion will
-/// take place if:
-/// - `pops.front()` is not full or...
+/// We would like to add `incoming` in layer `pops.primary()`. The insertion
+/// will take place if:
+/// - `pops.primary()` is not full or...
 /// - after a "kill tournament" selection, the worst individual found is
 ///   too old for its layer while the incoming one is within the limits or...
 /// - the worst individual has a lower fitness than the incoming one and
@@ -111,13 +111,12 @@ void alps<E>::try_move_up_layer(const P &from, P &to)
 ///
 template<Evaluator E>
 template<PopulationWithMutex P, Individual I>
-bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
+bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
                                const I &incoming) const
 {
-  Expects(!pops.empty());
   Expects(incoming.is_valid());
 
-  auto &pop(pops.front().get());
+  auto &pop(pops.primary());
 
   I worst;
   assert(worst.empty());
@@ -170,10 +169,17 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
     }
   }
 
-  if (pops.size() > 1 && !worst.empty())
-    try_add_to_layer(std::vector{pops.back()}, worst);
+  if (pops.has_secondary() && !worst.empty())
+    try_add_to_layer(pops.secondary(), worst);
 
   return !worst.empty();
+}
+
+template<Evaluator E>
+template<PopulationWithMutex P, Individual I>
+bool alps<E>::try_add_to_layer(P &layer, const I &incoming) const
+{
+  return try_add_to_layer(alps_layer_pair(std::ref(layer)), incoming);
 }
 
 ///
@@ -190,22 +196,20 @@ bool alps<E>::try_add_to_layer(std::vector<std::reference_wrapper<P>> pops,
 template<Evaluator E>
 template<PopulationWithMutex P, Individual I>
 void alps<E>::operator()(
-  std::vector<std::reference_wrapper<P>> pops, const I &offspring,
+  alps_layer_pair<P> pops, const I &offspring,
   evolution_status<evaluator_individual_t<E>,
                    evaluator_fitness_t<E>> &status) const
 {
   static_assert(std::is_same_v<I, typename P::value_type>);
   static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
 
-  Expects(0 < pops.size() && pops.size() <= 2);
-
   const bool ins(try_add_to_layer(pops, offspring));
 
   if (const auto f_off(this->eva_(offspring));
       status.update_if_better(scored_individual(offspring, f_off)))
   {
-    if (!ins)
-      try_add_to_layer(std::vector{pops.back()}, offspring);
+    if (pops.has_secondary() && !ins)
+      try_add_to_layer(pops.secondary(), offspring);
   }
 }
 

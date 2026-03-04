@@ -80,7 +80,7 @@ public:
 
   template<PopulationWithMutex P, Individual I>
   void operator()(
-    std::vector<std::reference_wrapper<P>>, const I &,
+    alps_layer_pair<P>, const I &,
     evolution_status<evaluator_individual_t<E>,
                      evaluator_fitness_t<E>> &) const;
 
@@ -89,8 +89,9 @@ public:
 
 private:
   template<PopulationWithMutex P, Individual I>
-  bool try_add_to_layer(std::vector<std::reference_wrapper<P>>,
-                        const I &) const;
+  bool try_add_to_layer(alps_layer_pair<P>, const I &) const;
+  template<PopulationWithMutex P, Individual I>
+  bool try_add_to_layer(P &, const I &) const;
 };
 
 template<Evaluator E> alps(E &, const parameters &) -> alps<E>;

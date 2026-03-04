@@ -125,8 +125,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       {
         selection::alps select(eva, prob.params);
 
-        const auto parents(select(std::vector{std::cref(pop.layer(1)),
-                                              std::cref(pop.layer(0))}));
+        const auto parents(select(alps_layer_pair(std::cref(pop.layer(1)),
+                                                  std::cref(pop.layer(0)))));
         CHECK(parents.size() == 2);
 
         const auto get_layer([&](const gp::individual &prg)

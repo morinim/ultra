@@ -103,26 +103,36 @@ tournament<E>::operator()(const P &pop) const
 }
 
 ///
-/// \param[in] pops a collection of references to populations. Can contain one
-///                 or two elements. The first one (`pop[0]`) is the
-///                 main/current layer; the second one, if available, is the
-///                 lower level layer
-/// \return         picked up individuals
+/// Selects two parents using ALPS tournament selection.
+///
+/// \param[in] pops pair of eligible layers. `pops.primary()` is the
+///                 current/main layer; `pops.secondary()` (if present) is the
+///                 immediately younger layer
+/// \return         two selected individuals (best first)
 ///
 /// Used parameters:
-/// - `tournament_size` to control number of selected individuals.
-/// - `p_main_layer`
+/// - `evolution.tournament_size` to control number of selected individuals.
+/// - `alps.p_main_layer` (probability of sampling from the primary layer when
+///   a secondary layer is present)
 ///
 /// \note
-/// This function can work in a multithread environment.
+/// This function can be used in a multithreaded environment. Individuals are
+/// sampled through `random::individual`, which acquires a shared lock on the
+/// population mutex and returns a copy of the selected individual. The
+/// selection logic therefore operates on local copies and does not access
+/// mutable population state after sampling.
+///
+/// Correctness assumes that:
+/// - population mutations acquire the same mutex with exclusive access;
+/// - any additional population queries used here (e.g. `max_age()`) are
+///   either immutable or internally synchronised.
 ///
 template<Evaluator E>
 template<PopulationWithMutex P>
 std::array<typename P::value_type, 2>
-alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
+alps<E>::operator()(alps_layer_pair<const P> pops) const
 {
   Expects(this->params_.evolution.tournament_size);
-  Expects(pops.size() && pops.size() <= 2);
 
   const auto young([](const auto &sub_pop, const auto &prg)
                    { return prg.age() <= sub_pop.max_age(); });
@@ -132,11 +142,11 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
   const auto alps_fit([&](const auto &sp, const auto &prg)
                       { return std::pair(young(sp, prg), this->eva_(prg)); });
 
-  auto p0(random::individual(pops.front().get()));
-  auto fit0{alps_fit(pops.front().get(), p0)};
+  auto p0(random::individual(pops.primary()));
+  auto fit0{alps_fit(pops.primary(), p0)};
 
-  auto p1(random::individual(pops.front().get()));
-  auto fit1{alps_fit(pops.front().get(), p1)};
+  auto p1(random::individual(pops.primary()));
+  auto fit1{alps_fit(pops.primary(), p1)};
 
   if (fit0 < fit1)
   {
@@ -146,12 +156,10 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
 
   assert(fit0 >= fit1);
 
-  const auto p(1.0 - this->params_.alps.p_main_layer);
-
   for (auto rounds(this->params_.evolution.tournament_size - 1);
        rounds; --rounds)
   {
-    const auto &sub_pop(pops[pops.size() > 1 ? random::boolean(p) : 0].get());
+    const auto &sub_pop(pops.random(this->params_.alps.p_main_layer));
     const auto tmp(random::individual(sub_pop));
     const auto tmp_fit{alps_fit(sub_pop, tmp)};
 
@@ -169,8 +177,6 @@ alps<E>::operator()(std::vector<std::reference_wrapper<const P>> pops) const
       fit1 = tmp_fit;
     }
 
-    assert(almost_equal(fit0.second, this->eva_(p0)));
-    assert(almost_equal(fit1.second, this->eva_(p1)));
     assert(fit0 >= fit1);
     assert(fit0.first || !fit1.first);
   }

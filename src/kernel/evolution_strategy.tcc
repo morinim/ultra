@@ -140,11 +140,11 @@ auto alps_es<E>::operations(
     [this,
      sel_pop = alps::selection_layers(pop, iter),
      rep_pop = alps::replacement_layers(pop, iter),
-     status = starting_status]() mutable
+     status = starting_status] mutable
     {
-      Ensures(!sel_pop.empty());
-      Ensures(!rep_pop.empty());
-      Ensures(&sel_pop.front().get() == &rep_pop.front().get());
+      Ensures(sel_pop.size());
+      Ensures(rep_pop.size());
+      Ensures(&sel_pop.primary() == &rep_pop.primary());
 
       const auto parents(this->select_(sel_pop));
       const auto offspring(this->recombine_(parents));
