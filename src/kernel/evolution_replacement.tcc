@@ -38,13 +38,10 @@ strategy<E>::strategy(E &eva, const parameters &params)
 ///
 template<Evaluator E>
 template<Population P>
-bool tournament<E>::operator()(
-  P &pop, const evaluator_individual_t<E> &offspring,
-  evolution_status<evaluator_individual_t<E>,
-                   evaluator_fitness_t<E>> &status) const
+bool tournament<E>::operator()(P &pop, const individual_t &offspring,
+                               status_t &status) const
 {
-  static_assert(std::is_same_v<evaluator_individual_t<E>,
-                               typename P::value_type>);
+  static_assert(std::is_same_v<individual_t, typename P::value_type>);
 
   Expects(0 <= this->params_.evolution.elitism
           && this->params_.evolution.elitism <= 1);
@@ -110,15 +107,16 @@ void alps<E>::try_move_up_layer(const P &from, P &to)
 ///   both are simultaneously within/outside the time frame of the layer.
 ///
 template<Evaluator E>
-template<PopulationWithMutex P, Individual I>
+template<PopulationWithMutex P>
 bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
-                               const I &incoming) const
+                               const individual_t &incoming) const
 {
+  static_assert(std::is_same_v<individual_t, typename P::value_type>);
   Expects(incoming.is_valid());
 
   auto &pop(pops.primary());
 
-  I worst;
+  individual_t worst;
   assert(worst.empty());
 
   {
@@ -176,8 +174,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
 }
 
 template<Evaluator E>
-template<PopulationWithMutex P, Individual I>
-bool alps<E>::try_add_to_layer(P &layer, const I &incoming) const
+template<PopulationWithMutex P>
+bool alps<E>::try_add_to_layer(P &layer, const individual_t &incoming) const
 {
   return try_add_to_layer(alps_layer_pair(std::ref(layer)), incoming);
 }
@@ -194,30 +192,25 @@ bool alps<E>::try_add_to_layer(P &layer, const I &incoming) const
 /// - `evolution.tournament_size`.
 ///
 template<Evaluator E>
-template<PopulationWithMutex P, Individual I>
-void alps<E>::operator()(
-  alps_layer_pair<P> pops, const I &offspring,
-  evolution_status<evaluator_individual_t<E>,
-                   evaluator_fitness_t<E>> &status) const
+template<PopulationWithMutex P>
+void alps<E>::operator()(alps_layer_pair<P> pops,
+                         const individual_t &offspring, status_t &status) const
 {
-  static_assert(std::is_same_v<I, typename P::value_type>);
-  static_assert(std::is_same_v<I, evaluator_individual_t<E>>);
+  static_assert(std::is_same_v<individual_t, typename P::value_type>);
 
   const bool ins(try_add_to_layer(pops, offspring));
 
   if (const auto f_off(this->eva_(offspring));
       status.update_if_better(scored_individual(offspring, f_off)))
   {
-    if (pops.has_secondary() && !ins)
+    if (!ins && pops.has_secondary())
       try_add_to_layer(pops.secondary(), offspring);
   }
 }
 
 template<Evaluator E>
-bool de<E>::operator()(evaluator_individual_t<E> &target,
-                       const evaluator_individual_t<E> &offspring,
-                       evolution_status<evaluator_individual_t<E>,
-                                        evaluator_fitness_t<E>> &status) const
+bool de<E>::operator()(individual_t &target, const individual_t &offspring,
+                       status_t &status) const
 {
   const auto elitism(this->params_.evolution.elitism);
   Expects(0 <= elitism && elitism <= 1);

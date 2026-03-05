@@ -29,6 +29,10 @@ template<Evaluator E>
 class strategy
 {
 public:
+  using individual_t = evaluator_individual_t<E>;
+  using fitness_t    = evaluator_fitness_t<E>;
+  using status_t     = evolution_status<individual_t, fitness_t>;
+
   strategy(E &, const parameters &);
 
 protected:
@@ -49,12 +53,11 @@ class tournament : public strategy<E>
 {
 public:
   using strategy<E>::strategy;
+  using typename strategy<E>::individual_t;
+  using typename strategy<E>::status_t;
 
   template<Population P>
-  bool operator()(
-    P &, const evaluator_individual_t<E> &,
-    evolution_status<evaluator_individual_t<E>,
-                     evaluator_fitness_t<E>> &) const;
+  bool operator()(P &, const individual_t &, status_t &) const;
 };
 
 template<Evaluator E> tournament(E &, const parameters &) -> tournament<E>;
@@ -75,21 +78,20 @@ class alps : public strategy<E>
 {
 public:
   using strategy<E>::strategy;
+  using typename strategy<E>::individual_t;
+  using typename strategy<E>::status_t;
 
-  template<PopulationWithMutex P, Individual I>
-  void operator()(
-    alps_layer_pair<P>, const I &,
-    evolution_status<evaluator_individual_t<E>,
-                     evaluator_fitness_t<E>> &) const;
+  template<PopulationWithMutex P>
+  void operator()(alps_layer_pair<P>, const individual_t &, status_t &) const;
 
   template<SizedRandomAccessPopulation P>
   void try_move_up_layer(const P &, P &);
 
 private:
-  template<PopulationWithMutex P, Individual I>
-  bool try_add_to_layer(alps_layer_pair<P>, const I &) const;
-  template<PopulationWithMutex P, Individual I>
-  bool try_add_to_layer(P &, const I &) const;
+  template<PopulationWithMutex P>
+  bool try_add_to_layer(alps_layer_pair<P>, const individual_t &) const;
+  template<PopulationWithMutex P>
+  bool try_add_to_layer(P &, const individual_t &) const;
 };
 
 template<Evaluator E> alps(E &, const parameters &) -> alps<E>;
@@ -99,11 +101,10 @@ class de : public strategy<E>
 {
 public:
   using strategy<E>::strategy;
+  using typename strategy<E>::individual_t;
+  using typename strategy<E>::status_t;
 
-  bool operator()(evaluator_individual_t<E> &,
-                  const evaluator_individual_t<E> &,
-                  evolution_status<evaluator_individual_t<E>,
-                                   evaluator_fitness_t<E>> &) const;
+  bool operator()(individual_t &, const individual_t &, status_t &) const;
 };
 
 #include "kernel/evolution_replacement.tcc"
