@@ -64,6 +64,8 @@ tournament<E>::operator()(const P &pop) const
   Expects(!this->params_.needs_init());
 
   const auto rounds(this->params_.evolution.tournament_size);
+  assert(0 < rounds);
+  assert(rounds <= parameters::evolution_parameters::max_tournament_size);
   std::vector<std::pair<typename P::coord, evaluator_fitness_t<E>>> ret;
   ret.reserve(rounds);
 
@@ -160,9 +162,14 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
   assert(fit0 >= fit1);
 
   const auto ts(this->params_.evolution.tournament_size);
+  assert(0<ts && ts<=parameters::evolution_parameters::max_tournament_size);
+
+  const auto p_main_layer(this->params_.alps.p_main_layer);
+  assert(in_0_1(p_main_layer));
+
   for (auto rounds(ts - 1); rounds; --rounds)
   {
-    const auto &sub_pop(pops.random(this->params_.alps.p_main_layer));
+    const auto &sub_pop(pops.random(p_main_layer));
     const auto tmp(random::individual(sub_pop));
     const auto tmp_fit{alps_fit(sub_pop, tmp)};
 

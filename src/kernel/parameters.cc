@@ -12,16 +12,7 @@
 
 #include "kernel/parameters.h"
 #include "utility/log.h"
-
-namespace
-{
-
-[[nodiscard]] bool in_0_1(double x) noexcept
-{
-  return 0.0 <= x && x <= 1.0;
-}
-
-}  // namespace
+#include "utility/misc.h"
 
 namespace ultra
 {
@@ -194,15 +185,12 @@ bool parameters::is_valid(bool force_defined) const
     }
   }  // if (force_defined)
 
-  if (evolution.p_cross > 1.0)
-  {
-    ultraERROR << "`evolution.p_cross` out of range";
-    return false;
-  }
+  // When `force_defined == false`, probabilities outside `[0,1]` are allowed
+  // because they represent the auto-tune/undefined sentinel state.
 
-  if (evolution.p_mutation > 1.0)
+  if (evolution.tournament_size > evolution.max_tournament_size)
   {
-    ultraERROR << "`evolution.p_mutation` out of range";
+    ultraERROR << "`evolution.tournament_size` out of range";
     return false;
   }
 
@@ -232,12 +220,6 @@ bool parameters::is_valid(bool force_defined) const
   if (de.weight.min > de.weight.sup)
   {
     ultraERROR << "Wrong DE dither interval";
-    return false;
-  }
-
-  if (alps.p_main_layer > 1.0)
-  {
-    ultraERROR << "`p_main_layer` out of range";
     return false;
   }
 

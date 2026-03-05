@@ -13,11 +13,11 @@
 #if !defined(ULTRA_PARAMETERS_H)
 #define      ULTRA_PARAMETERS_H
 
-#include <filesystem>
-
 #include "kernel/alps.h"
 #include "kernel/interval.h"
 #include "kernel/symbol.h"
+
+#include <filesystem>
 
 namespace ultra
 {
@@ -163,6 +163,8 @@ struct parameters
     ///   at random.
     /// - A length of `0` means auto-tune.
     std::size_t tournament_size {0};
+
+    static constexpr std::size_t max_tournament_size {10000};
   } evolution;
 
   alps::parameters alps;

@@ -46,7 +46,8 @@ bool tournament<E>::operator()(P &pop, const individual_t &offspring,
   Expects(!this->params_.needs_init());
 
   const auto rounds(this->params_.evolution.tournament_size);
-  assert(rounds > 0);
+  assert(0 < rounds);
+  assert(rounds <= parameters::evolution_parameters::max_tournament_size);
 
   auto worst_coord(random::coord(pop));
   auto worst_fitness(this->eva_(pop[worst_coord]));
@@ -68,7 +69,7 @@ bool tournament<E>::operator()(P &pop, const individual_t &offspring,
   status.update_if_better(scored_individual(offspring, off_fit));
 
   const auto elitism(this->params_.evolution.elitism);
-  assert(0.0 <= elitism && elitism <= 1.0);
+  assert(in_0_1(elitism));
 
   const bool replace(off_fit > worst_fitness || !random::boolean(elitism));
   if (replace)
@@ -138,7 +139,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
     auto worst_age(pop[worst_coord].age());
 
     auto rounds(this->params_.evolution.tournament_size);
-    assert(rounds > 0);
+    assert(0 < rounds);
+    assert(rounds <= parameters::evolution_parameters::max_tournament_size);
 
     while (rounds--)
     {
@@ -222,7 +224,7 @@ bool de<E>::operator()(individual_t &target, const individual_t &offspring,
   // of a fitness landscape and to reduce the possibility of population
   // becoming stagnated.
   const auto elitism(this->params_.evolution.elitism);
-  assert(0.0 <= elitism && elitism <= 1.0);
+  assert(in_0_1(elitism));
 
   if (const auto target_fit(this->eva_(target));
       off_fit >= target_fit || !random::boolean(elitism))

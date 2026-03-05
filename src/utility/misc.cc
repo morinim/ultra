@@ -22,6 +22,11 @@
 namespace ultra
 {
 
+bool in_0_1(double x) noexcept
+{
+  return 0.0 <= x && x <= 1.0;
+}
+
 ///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparison

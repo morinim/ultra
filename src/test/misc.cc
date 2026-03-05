@@ -10,13 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <numbers>
-#include <thread>
-
 #include "kernel/gp/function.h"
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
+
+#include <numbers>
+#include <thread>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -241,6 +241,17 @@ TEST_CASE("app_level_uid")
   const app_level_uid id2;
 
   CHECK(id1 + 1 == id2);
+}
+
+TEST_CASE("in_0_1")
+{
+  using ultra::in_0_1;
+
+  CHECK(in_0_1(0.0));
+  CHECK(in_0_1(1.0));
+  CHECK(in_0_1(0.5));
+  CHECK(!in_0_1(-0.1));
+  CHECK(!in_0_1(1.1));
 }
 
 TEST_CASE("Bitmask enum")
