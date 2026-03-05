@@ -34,6 +34,8 @@ strategy<E>::strategy(E &eva, const parameters &params)
 /// \param[in] pop a population
 /// \return        a collection of individuals ordered in descending fitness
 ///
+/// \pre Parameters must have been initialised (no auto-tune values)
+///
 /// Tournament selection works by selecting a number of individuals from the
 /// population at random (a tournament) and then choosing only the best of
 /// those individuals.
@@ -59,20 +61,19 @@ template<SizedRandomAccessPopulation P>
 std::vector<typename P::value_type>
 tournament<E>::operator()(const P &pop) const
 {
-  const auto mate_zone(this->params_.evolution.mate_zone);
-  Expects(mate_zone);
+  Expects(!this->params_.needs_init());
+
   const auto rounds(this->params_.evolution.tournament_size);
-  Expects(rounds);
-
-  const auto target(random::coord(pop));
-
   std::vector<std::pair<typename P::coord, evaluator_fitness_t<E>>> ret;
   ret.reserve(rounds);
 
   // This is the inner loop of an insertion sort algorithm. It's simple, fast
   // (if `rounds` is small) and doesn't perform too much comparisons.
   // DO NOT USE `std::sort` it's way slower.
-  for (unsigned i(0); i < rounds; ++i)
+  const auto mate_zone(this->params_.evolution.mate_zone);
+  const auto target(random::coord(pop));
+
+  for (std::size_t i(0); i < rounds; ++i)
   {
     const auto new_coord(random::coord(pop, target, mate_zone));
     const auto new_fitness(this->eva_(pop[new_coord]));
@@ -110,6 +111,8 @@ tournament<E>::operator()(const P &pop) const
 ///                 immediately younger layer
 /// \return         two selected individuals (best first)
 ///
+/// \pre Parameters must have been initialised (no auto-tune values)
+///
 /// Used parameters:
 /// - `evolution.tournament_size` to control number of selected individuals.
 /// - `alps.p_main_layer` (probability of sampling from the primary layer when
@@ -132,8 +135,7 @@ template<PopulationWithMutex P>
 std::array<typename P::value_type, 2>
 alps<E>::operator()(alps_layer_pair<const P> pops) const
 {
-  const auto ts(this->params_.evolution.tournament_size);
-  Expects(ts);
+  Expects(!this->params_.needs_init());
 
   const auto young([](const auto &sub_pop, const auto &prg)
                    { return prg.age() <= sub_pop.max_age(); });
@@ -157,6 +159,7 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
 
   assert(fit0 >= fit1);
 
+  const auto ts(this->params_.evolution.tournament_size);
   for (auto rounds(ts - 1); rounds; --rounds)
   {
     const auto &sub_pop(pops.random(this->params_.alps.p_main_layer));
