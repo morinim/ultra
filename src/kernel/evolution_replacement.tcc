@@ -43,11 +43,10 @@ bool tournament<E>::operator()(P &pop, const individual_t &offspring,
 {
   static_assert(std::is_same_v<individual_t, typename P::value_type>);
 
-  Expects(0 <= this->params_.evolution.elitism
-          && this->params_.evolution.elitism <= 1);
+  Expects(!this->params_.needs_init());
 
   const auto rounds(this->params_.evolution.tournament_size);
-  assert(rounds);
+  assert(rounds > 0);
 
   auto worst_coord(random::coord(pop));
   auto worst_fitness(this->eva_(pop[worst_coord]));
@@ -68,8 +67,10 @@ bool tournament<E>::operator()(P &pop, const individual_t &offspring,
 
   status.update_if_better(scored_individual(offspring, off_fit));
 
-  const bool replace(off_fit > worst_fitness
-                     || !random::boolean(this->params_.evolution.elitism));
+  const auto elitism(this->params_.evolution.elitism);
+  assert(0.0 <= elitism && elitism <= 1.0);
+
+  const bool replace(off_fit > worst_fitness || !random::boolean(elitism));
   if (replace)
     pop[worst_coord] = offspring;
 
@@ -137,7 +138,7 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
     auto worst_age(pop[worst_coord].age());
 
     auto rounds(this->params_.evolution.tournament_size);
-    assert(rounds);
+    assert(rounds > 0);
 
     while (rounds--)
     {
@@ -212,16 +213,17 @@ template<Evaluator E>
 bool de<E>::operator()(individual_t &target, const individual_t &offspring,
                        status_t &status) const
 {
-  const auto elitism(this->params_.evolution.elitism);
-  Expects(0 <= elitism && elitism <= 1);
+  Expects(!this->params_.needs_init());
 
   const auto off_fit(this->eva_(offspring));
-
   status.update_if_better(scored_individual(offspring, off_fit));
 
   // The equality in `>=` helps the DE population to navigate the flat portion
   // of a fitness landscape and to reduce the possibility of population
   // becoming stagnated.
+  const auto elitism(this->params_.evolution.elitism);
+  assert(0.0 <= elitism && elitism <= 1.0);
+
   if (const auto target_fit(this->eva_(target));
       off_fit >= target_fit || !random::boolean(elitism))
   {
