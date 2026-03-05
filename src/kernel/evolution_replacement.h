@@ -42,15 +42,13 @@ protected:
 /// This strategy select an individual for replacement by kill tournament:
 /// pick a number of individuals at random and replace the worst.
 ///
-/// \see
-/// "Replacement Strategies in Steady State Genetic Algorithms: Static
-/// Environments" - Jim Smith, Frank Vavak.
+/// \see https://github.com/morinim/ultra/wiki/bibliography#24
 ///
 template<Evaluator E>
 class tournament : public strategy<E>
 {
 public:
-  using tournament::strategy::strategy;
+  using strategy<E>::strategy;
 
   template<Population P>
   bool operator()(
@@ -76,7 +74,7 @@ template<Evaluator E>
 class alps : public strategy<E>
 {
 public:
-  using alps::strategy::strategy;
+  using strategy<E>::strategy;
 
   template<PopulationWithMutex P, Individual I>
   void operator()(
@@ -100,7 +98,7 @@ template<Evaluator E>
 class de : public strategy<E>
 {
 public:
-  using de::strategy::strategy;
+  using strategy<E>::strategy;
 
   bool operator()(evaluator_individual_t<E> &,
                   const evaluator_individual_t<E> &,
