@@ -497,9 +497,9 @@ summary_data::summary_data(const fs::path &path)
 {
   if (tinyxml2::XMLDocument doc; check(path, doc))
     *this = summary_data(doc);
-
-  throw std::invalid_argument("Cannot parse summary file \""
-                              + path.generic_string() + "\"");
+  else
+    throw std::invalid_argument("Cannot parse summary file \""
+                                + path.generic_string() + "\"");
 }
 
 summary_data::summary_data(const tinyxml2::XMLDocument &doc)
