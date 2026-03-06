@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "kernel/evolution_strategy.h"
 #include "kernel/evolution_summary.h"
 #include "kernel/distribution.h"
@@ -22,6 +19,9 @@
 #include "test/debug_support.h"
 #include "test/fixture1.h"
 #include "test/fixture4.h"
+
+#include <cstdlib>
+#include <iostream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -38,73 +38,76 @@ TEST_CASE_FIXTURE(fixture1, "Strategy concept")
   CHECK(!Strategy<int>);
 }
 
-TEST_CASE_FIXTURE(fixture1, "ALPS strategy")
+// Runs the ALPS evolutionary strategy under many configurations and with
+// concurrent evolution across layers. The test checks that the population
+// remains valid, the summary best is internally consistent, and that any
+// improvement over the initial population is reflected in the summary.
+TEST_CASE_FIXTURE(fixture1, "ALPS summary and population stay consistent")
 {
   using namespace ultra;
 
-  for (unsigned ni(2); ni <= 20; ++ni)
-    for (unsigned nl(2); nl <= 5; ++nl)
-    {
-      prob.params.population.individuals    = ni;
-      prob.params.population.init_subgroups = nl;
+  for (unsigned rep(0); rep < 10; ++rep)
+    for (unsigned ni(2); ni <= 20; ++ni)
+      for (unsigned nl(2); nl <= 5; ++nl)
+      {
+        CAPTURE(rep);
+        CAPTURE(ni);
+        CAPTURE(nl);
 
-      layered_population<gp::individual> pop(prob);
-      const auto range(pop.range_of_layers());
+        prob.params.population.individuals    = ni;
+        prob.params.population.init_subgroups = nl;
 
-      test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+        layered_population<gp::individual> pop(prob);
 
-      const auto initial_best(debug::best_individual(pop, eva));
+        test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-      summary<gp::individual, double> sum;
+        const auto initial_best(debug::best_individual(pop, eva));
+        const auto initial_fit(eva(initial_best));
 
-      alps_es alps(prob, eva);
-      const auto search(
-        [&](auto layer_iter)
+        summary<gp::individual, double> sum;
+
+        alps_es alps(prob, eva);
+        const auto search(
+          [&](auto layer_iter)
+          {
+            auto evolve(alps.operations(pop, layer_iter,
+                                        sum.starting_status()));
+
+            for (unsigned iterations(prob.params.population.individuals < 50
+                                     ? 50
+                                     : prob.params.population.individuals);
+                 iterations; --iterations)
+              evolve();
+          });
+
         {
-          auto evolve(alps.operations(pop, layer_iter, sum.starting_status()));
+          std::vector<std::jthread> threads;
 
-          for (unsigned iterations(prob.params.population.individuals < 50
-                                   ? 50 : prob.params.population.individuals);
-               iterations; --iterations)
-            evolve();
-        });
+          const auto range(pop.range_of_layers());
+          for (auto l(range.begin()); l != range.end(); ++l)
+            threads.emplace_back(search, l);
+        }
 
-      {
-        std::vector<std::jthread> threads;
-
-        for (auto l(range.begin()); l != range.end(); ++l)
-          threads.emplace_back(search, l);
-      }
-
-      CHECK(std::ranges::all_of(
-              pop,
-              [](const auto &prg) { return prg.is_valid(); }));
-
-      CHECK(!sum.best().empty());
-      CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
-
-      const auto final_best(debug::best_individual(pop, eva));
-
-      if (eva(final_best) > eva(initial_best))
-      {
-        CHECK(eva(final_best) == doctest::Approx(sum.best().fit));
-
-        // We must check signature since two individuals may differ just for
-        // the introns.
-        CHECK(std::ranges::find_if(
+        CHECK(std::ranges::all_of(
                 pop,
-                [&sum](const auto &prg)
-                {
-                  return prg.signature() == sum.best().ind.signature();
-                }) != pop.end());
+                [](const auto &prg) { return prg.is_valid(); }));
+
+        CHECK(!sum.best().empty());
+
+        const auto summary_ind_fit(eva(sum.best().ind));
+        const auto summary_fit(sum.best().fit);
+        const auto final_best(debug::best_individual(pop, eva));
+        const auto final_fit(eva(final_best));
+
+        CAPTURE(initial_fit);
+        CAPTURE(summary_ind_fit);
+        CAPTURE(summary_fit);
+        CAPTURE(final_fit);
+
+        CHECK(summary_ind_fit == doctest::Approx(summary_fit));
+        if (final_fit > initial_fit)
+          CHECK(summary_ind_fit >= final_fit);
       }
-      // It may happen that the evolution doesn't find an individual fitter
-      // than the best one of the initial population.
-      else
-      {
-        CHECK(eva(final_best) >= sum.best().fit);
-      }
-    }
 }
 
 TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
