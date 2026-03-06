@@ -22,6 +22,14 @@
 namespace ultra
 {
 
+///
+/// Checks whether a value lies in the closed interval `[0, 1]`.
+///
+/// \param[in] x value to test
+/// \return      `true` if `0.0 <= x <= 1.0`, `false` otherwise
+///
+/// Utility function commonly used to validate probability parameters.
+///
 bool in_0_1(double x) noexcept
 {
   return 0.0 <= x && x <= 1.0;
