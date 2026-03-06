@@ -14,6 +14,7 @@
 
 #include <array>
 #include <chrono>
+#include <latch>
 #include <numeric>
 #include <random>
 
@@ -248,44 +249,66 @@ TEST_CASE("Ensure work completes upon destruction")
   CHECK(counter == TOTAL_TASKS);
 }
 
-static std::thread::id test_function(unsigned delay)
-{
-  std::this_thread::sleep_for(std::chrono::milliseconds(delay + 1));
-  return std::this_thread::get_id();
-}
-
+// This test verifies that the thread pool reuses its worker threads rather
+// than creating new ones for subsequent tasks.
+//
+// The first batch of tasks blocks until all workers have started, ensuring
+// that every worker participates and its thread id is recorded. Once released,
+// the tasks complete and a second batch is submitted. The test then checks
+// that the second batch runs only on threads belonging to the original worker
+// set.
 TEST_CASE("Threads are reused")
 {
-  const size_t THREAD_COUNT(4);
+  const std::size_t THREAD_COUNT(4);
   ultra::thread_pool pool(THREAD_COUNT);
-  std::vector<std::future<std::thread::id>> futures;
-  std::set<std::thread::id> thread_ids;
 
-  for (std::size_t i(0); i < THREAD_COUNT; ++i)
-    futures.push_back(pool.submit(test_function, i));
+  std::set<std::thread::id> first_batch_ids;
 
-  for (std::size_t i(0); i < THREAD_COUNT; ++i)
   {
-    auto r(futures[i].get());
-    auto iter(thread_ids.insert(r));
+    std::mutex ids_mutex;
 
-    // New thread is used.
-    CHECK(iter.second);
+    std::latch started(static_cast<std::ptrdiff_t>(THREAD_COUNT));
+    std::latch release(1);
+
+    std::vector<std::future<void>> futures;
+
+    // First batch: occupy all workers and record their ids.
+    for (std::size_t i(0); i < THREAD_COUNT; ++i)
+    {
+      futures.push_back(pool.submit([&]
+      {
+        {
+          std::lock_guard lock(ids_mutex);
+          first_batch_ids.insert(std::this_thread::get_id());
+        }
+
+        started.count_down();
+        release.wait();
+      }));
+    }
+
+    started.wait();  // inserts completed; workers are now blocked on release
+
+    REQUIRE(first_batch_ids.size() == THREAD_COUNT);
+    REQUIRE(first_batch_ids.size() == pool.capacity());
+
+    release.count_down();
+
+    for (auto &f : futures)
+      f.get();
   }
 
-  futures.clear();
+  // Second batch: every task must run on one of the same worker threads.
+  std::vector<std::future<std::thread::id>> second_batch;
 
   for (std::size_t i(0); i < THREAD_COUNT; ++i)
-    futures.push_back(pool.submit(test_function, i));
+    second_batch.push_back(pool.submit([]
+    {
+      return std::this_thread::get_id();
+    }));
 
-  for (std::size_t i(0); i < THREAD_COUNT; ++i)
-  {
-    auto r(futures[i].get());
-    auto iter(thread_ids.find(r));
-
-    CHECK(iter != thread_ids.end());
-    thread_ids.erase(iter);
-  }
+  for (auto &f : second_batch)
+    CHECK(first_batch_ids.contains(f.get()));
 }
 
 TEST_CASE("Ensure task exception doesn't kill worker thread")
