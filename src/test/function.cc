@@ -10,12 +10,15 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <numbers>
-
 #include "kernel/gp/function.h"
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
+
+#include <climits>
+#include <cmath>
+#include <limits>
+#include <numbers>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -23,11 +26,11 @@
 class debug_params : public ultra::function::params
 {
 public:
-  debug_params(std::vector<ultra::value_t> v) : params_(std::move(v)) {}
+  debug_params(std::initializer_list<ultra::value_t> v) : params_(v) {}
 
   [[nodiscard]] ultra::value_t fetch_arg(std::size_t i) const override
   {
-    return params_[i];
+    return params_.at(i);
   }
 
   [[nodiscard]] ultra::value_t fetch_opaque_arg(std::size_t i) const override
@@ -42,7 +45,7 @@ private:
 TEST_SUITE("FUNCTION")
 {
 
-  TEST_CASE("REAL")
+TEST_CASE("REAL")
 {
   using namespace ultra;
   using ultra::real::base;
@@ -312,7 +315,33 @@ TEST_CASE("INTEGER")
   using namespace ultra;
   using ultra::integer::base;
 
-  const value_t empty;
+  SUBCASE("Literal")
+  {
+    integer::literal f(42);
+
+    CHECK(base(f.instance()) == 42);
+
+    integer::literal g(-7);
+
+    CHECK(base(g.instance()) == -7);
+  }
+
+  SUBCASE("Number")
+  {
+    integer::number f(-10, 10);
+
+    for (int i(0); i < 1000; ++i)
+    {
+      const auto v(base(f.instance()));
+      CHECK(v >= -10);
+      CHECK(v < 10);
+    }
+
+    integer::number g(5, 6);
+
+    for (int i(0); i < 100; ++i)
+      CHECK(base(g.instance()) == 5);
+  }
 
   SUBCASE("Add")
   {
@@ -325,6 +354,10 @@ TEST_CASE("INTEGER")
           == std::numeric_limits<D_INT>::max());
     CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), -1})))
           == std::numeric_limits<D_INT>::min());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(), 0})))
+          == std::numeric_limits<D_INT>::max());
+    CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max() - 1, 1})))
+          == std::numeric_limits<D_INT>::max());
   }
 
   SUBCASE("Div")
@@ -371,10 +404,10 @@ TEST_CASE("INTEGER")
 
     CHECK(base(f.eval(debug_params({0, 1}))) == 0);
     CHECK(base(f.eval(debug_params({5, 2}))) == 1);
-    CHECK(base(f.eval(debug_params({1, 0}))) == 0);
+    CHECK(base(f.eval(debug_params({1, 0}))) == 1);
     CHECK(base(f.eval(debug_params({-2, 2}))) == 0);
     CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), -1})))
-          == -1);
+          == std::numeric_limits<D_INT>::min());
   }
 
   SUBCASE("Mul")
@@ -399,8 +432,15 @@ TEST_CASE("INTEGER")
     CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::max(),
                                     std::numeric_limits<D_INT>::max()})))
           == std::numeric_limits<D_INT>::max());
+    CHECK(base(f.eval(debug_params({7, std::numeric_limits<D_INT>::max()})))
+          == 7);
     CHECK(base(f.eval(debug_params({std::numeric_limits<D_INT>::min(), 2})))
           == std::numeric_limits<D_INT>::min());
+    CHECK(base(f.eval(debug_params({5, -1}))) == 5);
+    CHECK(base(f.eval(debug_params({-3, 1}))) == -3);
+    CHECK(base(f.eval(debug_params(
+                        {1, static_cast<D_INT>(sizeof(D_INT) * CHAR_BIT)})))
+          == 1);
   }
 
   SUBCASE("Sub")
@@ -417,4 +457,4 @@ TEST_CASE("INTEGER")
   }
 }
 
-}  // TEST_SUITE("FUNCTION")
+}  // TEST_SUITE
