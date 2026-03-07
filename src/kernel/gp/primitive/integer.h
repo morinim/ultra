@@ -13,12 +13,13 @@
 #if !defined(ULTRA_INT_PRIMITIVE_H)
 #define      ULTRA_INT_PRIMITIVE_H
 
-#include <climits>
-
 #include "kernel/nullary.h"
 #include "kernel/random.h"
 #include "kernel/terminal.h"
 #include "kernel/gp/function.h"
+
+#include <climits>
+#include <limits>
 
 /// Integer overflow is undefined behaviour. This means that implementations
 /// have a great deal of latitude in how they deal with signed integer
@@ -72,8 +73,8 @@ public:
     Expects(m < s);
   }
 
-  [[nodiscard]] D_INT min() const { return min_; }
-  [[nodiscard]] D_INT sup() const { return sup_; }
+  [[nodiscard]] D_INT min() const noexcept { return min_; }
+  [[nodiscard]] D_INT sup() const noexcept { return sup_; }
 
   [[nodiscard]] value_t instance() const final
   { return random::between(min_, sup_); }
@@ -90,7 +91,7 @@ public:
   {
   }
 
-  [[nodiscard]] value_t instance() const final { return val_; }
+  [[nodiscard]] value_t instance() const noexcept final { return val_; }
 
 private:
   const D_INT val_;
@@ -176,7 +177,7 @@ public:
     switch (f)
     {
     case python_format:
-      return "({2} if {1}=={1} else {3})";
+      return "({2} if {0}=={1} else {3})";
     default:
       return "({0}=={1} ? {2} : {3})";
     }
@@ -250,7 +251,7 @@ public:
     case python_format:
       return "({1} if {0} == 0 else {2})";
     default:
-      return "({0} == 0 ? {1} : {2}";
+      return "({0} == 0 ? {1} : {2})";
     }
   }
 
@@ -288,7 +289,7 @@ public:
     const auto v1(base(pars[1]));
 
     if (v1 == 0 || (v0 == std::numeric_limits<D_INT>::min() && (v1 == -1)))
-      return v1;
+      return v0;
 
     return v0 % v1;
   }
@@ -380,7 +381,7 @@ public:
 
   [[nodiscard]] std::string to_string(format) const final
   {
-    return "({0} << {1}";
+    return "({0} << {1})";
   }
 
   [[nodiscard]] value_t eval(const params &pars) const final
