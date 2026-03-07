@@ -25,7 +25,7 @@ int main()
 
   // SETTING UP SYMBOLS
   prob.setup_symbols();
-  prob.insert<integer::number>(2, 3, 0);
+  prob.insert<integer::number>(1, 9);
   //prob.params.evolution.brood_recombination = 4;
 
   // SEARCHING

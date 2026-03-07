@@ -254,7 +254,7 @@ void alps_es<E>::after_generation(P &pop,
     else
     {
       ultraDEBUG << "ALPS: try moving up first layer";
-      this->replace_.try_move_up_layer(pop.front(), pop.layer(1));
+      this->replace_.try_promote_individuals(pop.front(), pop.layer(1));
       pop.init(pop.front());
     }
   }

@@ -246,7 +246,7 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   {
     const auto backup(*l);
 
-    replace.try_move_up_layer(*std::prev(l), *l);
+    replace.try_promote_individuals(*std::prev(l), *l);
 
     std::vector<gp::individual> replaced;
     for (const auto &old : backup)

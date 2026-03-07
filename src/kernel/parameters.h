@@ -93,14 +93,15 @@ struct parameters
     //    crossover).
     unsigned brood_recombination {0};
 
-    /// An elitist algorithm is one that ALWAYS retains in the population the
-    /// best individual found so far. With higher elitism the population will
-    /// converge quicker but losing diversity.
+    /// Controls how strongly the search tries to preserve the best
+    /// individuals.
+    /// Higher elitism increases selection pressure and reduces the chance that
+    /// exceptional individuals are lost, at the cost of diversity.
     ///
     /// \note
-    /// - `0.0` disable elitism
-    /// - `1.0` always applies elitism
-    /// - values outside the `[0.0;1.0]` range mean auto-tune
+    /// - `0.0` disables elitist protection;
+    /// - `1.0` applies the maximum configured protection;
+    /// - values outside the `[0.0; 1.0]` range mean auto-tune.
     double elitism {-1.0};
 
     /// Maximun number of generations allowed before terminate a run.
@@ -164,6 +165,10 @@ struct parameters
     /// - A length of `0` means auto-tune.
     std::size_t tournament_size {0};
 
+    /// Maximum allowed value for `evolution.tournament_size`.
+    ///
+    /// This guard prevents pathological configurations that would make
+    /// tournament selection excessively expensive.
     static constexpr std::size_t max_tournament_size {10000};
   } evolution;
 

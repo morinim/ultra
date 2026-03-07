@@ -84,8 +84,8 @@ public:
   template<PopulationWithMutex P>
   void operator()(alps_layer_pair<P>, const individual_t &, status_t &) const;
 
-  template<SizedRandomAccessPopulation P>
-  void try_move_up_layer(const P &, P &);
+  template<PopulationWithMutex P>
+  void try_promote_individuals(const P &, P &) const;
 
 private:
   template<PopulationWithMutex P>
