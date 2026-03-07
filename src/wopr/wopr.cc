@@ -1129,20 +1129,14 @@ void render_elite()
 
       if (const auto &ids(current.elite[i].id); !ids.empty())
       {
-        static thread_local std::vector<double> tick_pos;
-        static thread_local std::vector<std::string> tick_text;
-        static thread_local std::vector<const char *> tick_cstr;
-
-        tick_pos.resize(ids.size());
+        static std::vector<std::string> tick_text;
         tick_text.resize(ids.size());
-        tick_cstr.resize(ids.size());
 
         for (std::size_t k(0); k < ids.size(); ++k)
-        {
-          tick_pos[k] = static_cast<double>(k);
           tick_text[k] = std::to_string(ids[k]);
-          tick_cstr[k] = tick_text[k].c_str();
-        }
+
+        const auto tick_cstr(to_cstr_vector(tick_text));
+        const auto tick_pos(make_positions(current.elite[i].id.size()));
 
         ImPlot::SetupAxisTicks(ImAxis_X2,
                                tick_pos.data(),
@@ -1177,8 +1171,18 @@ void render_elite()
         const auto &acc(reference.elite[i].acc);
         const double bar_shift(0.1);
 
+        auto bar_col(ImPlot::GetColormapColor(1));
+        bar_col.w *= 0.7f;
+        ImPlot::PushStyleColor(ImPlotCol_Fill, bar_col);
+
         ImPlot::PlotBars((reference_str + "##ELITE" + labels[i]).c_str(),
                           fit.data(), fit.size(), 0.4, bar_shift);
+
+        ImPlot::PopStyleColor();
+
+        auto text_col(ImGui::GetStyleColorVec4(ImGuiCol_Text));
+        text_col.w *= 0.55f;
+        ImGui::PushStyleColor(ImGuiCol_Text, text_col);
 
         for (std::size_t k(0); k < fit.size(); ++k)
           if (std::isfinite(acc[k]))
@@ -1190,6 +1194,8 @@ void render_elite()
                              offset_upward);
           }
       }
+
+      ImGui::PopStyleColor();
 
       ImPlot::EndPlot();
     }
