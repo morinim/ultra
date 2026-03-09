@@ -47,15 +47,13 @@ template<class Layer>
 class alps_layer_pair
 {
 public:
-  using layer_ref = std::reference_wrapper<Layer>;
-
   /// Builds a pair with a single eligible layer (primary only).
   ///
   /// \param[in] l primary layer
   ///
   /// After construction `size() == 1` and `has_secondary() == false`.
-  alps_layer_pair(layer_ref l) noexcept
-    : layers_{l, l}, has_secondary_(false) {}
+  alps_layer_pair(Layer &l) noexcept
+    : layers_{std::ref(l), std::ref(l)}, has_secondary_(false) {}
 
   /// Builds a pair with two eligible layers (primary and secondary).
   ///
@@ -63,8 +61,8 @@ public:
   /// \param[in] s secondary layer
   ///
   /// After construction `size() == 2` and `has_secondary() == true`.
-  alps_layer_pair(layer_ref p, layer_ref s) noexcept
-    : layers_{p, s}, has_secondary_(true) {}
+  alps_layer_pair(Layer &p, Layer &s) noexcept
+    : layers_{std::ref(p), std::ref(s)}, has_secondary_(true) {}
 
   /// \return number of exposed layers (1 or 2)
   [[nodiscard]] constexpr std::size_t size() const noexcept
@@ -118,14 +116,26 @@ public:
   /// `primary()`, regardless of `p_pri`.
   [[nodiscard]] Layer &random(double p_pri) const
   {
-    Expects(0.0 < p_pri && p_pri <= 1.0);
+    Expects(in_0_1(p_pri));
     return !has_secondary_ || random::boolean(p_pri) ? primary() : secondary();
   }
 
 private:
-  std::array<layer_ref, 2> layers_;
+  std::array<std::reference_wrapper<Layer>, 2> layers_;
   bool has_secondary_ {false};
 };
+
+template<class Layer>
+alps_layer_pair(Layer &) -> alps_layer_pair<Layer>;
+
+template<class Layer>
+alps_layer_pair(Layer &, Layer &) -> alps_layer_pair<Layer>;
+
+template<class Layer>
+alps_layer_pair(const Layer &) -> alps_layer_pair<const Layer>;
+
+template<class Layer>
+alps_layer_pair(const Layer &, const Layer &) -> alps_layer_pair<const Layer>;
 
 namespace alps
 {

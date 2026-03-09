@@ -91,120 +91,166 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "ALPS")
+// Verify the effect of `alps.p_main_layer` in ALPS tournament selection.
+//
+// The test constructs two clearly distinguishable layers:
+// - the primary layer (layer 1) contains only weak individuals;
+// - the secondary layer (layer 0) contains only strong individuals.
+// All individuals are young, so ALPS comparison reduces to evaluator fitness.
+//
+// Because secondary individuals strictly dominate primary ones, any sampled
+// secondary candidate will replace a primary parent in the tournament result.
+// Given the implementation:
+// - the first two candidates are always sampled from the primary layer;
+// - the remaining `tournament_size - 1` candidates are sampled from primary
+//   with probability `p_main_layer` and secondary otherwise.
+//
+// The probability that at least one selected parent comes from the secondary
+// layer is `1 - p_main_layer^(tournament_size - 1)`, while the probability
+// that both selected parents come from the secondary layer is
+// `(1 - p_main_layer)^(tournament_size - 1)` when enough rounds exist.
+//
+// The test measures these frequencies empirically and checks them against
+// the expected values within a statistical tolerance.
+TEST_CASE_FIXTURE(fixture1, "ALPS p_main_layer")
 {
   using namespace ultra;
 
-  const auto alps_select =
-    [this](unsigned tournament)
+  struct selection_stats
+  {
+    double any_secondary {};
+    double both_secondary {};
+  };
+
+  const auto run =
+    [this](double p_main_layer, unsigned tournament) -> selection_stats
     {
-      prob.params.population.individuals    =         50;
-      prob.params.population.init_subgroups =          2;
+      prob.params.population.individuals    = 50;
+      prob.params.population.init_subgroups = 2;
       prob.params.evolution.tournament_size = tournament;
+      prob.params.alps.p_main_layer         = p_main_layer;
 
       layered_population<gp::individual> pop(prob);
       test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-      unsigned j(0);
-      for (auto &layer : pop.range_of_layers())
-      {
-        layer.max_age(0);
+      REQUIRE(pop.layers() == 2);
+      REQUIRE(!pop.layer(0).empty());
+      REQUIRE(!pop.layer(1).empty());
 
-        for (auto &prg : layer)
+      // Build two prototypes with different signatures / evaluator values.
+      // Layer 1 (primary) will contain the weaker individual.
+      // Layer 0 (secondary) will contain the stronger individual.
+      gp::individual weak(prob);
+      gp::individual strong(prob);
+
+      while (almost_equal(eva(strong), eva(weak)))
+        strong = gp::individual(prob);
+
+      if (eva(strong) < eva(weak))
+        std::swap(strong, weak);
+
+      const auto weak_sig(weak.signature());
+      const auto strong_sig(strong.signature());
+
+      // Make every individual young. Since age defaults to 0, assigning these
+      // prototypes is enough provided they have not been aged elsewhere.
+      REQUIRE(weak.age() == 0);
+      REQUIRE(strong.age() == 0);
+
+      for (auto &prg : pop.layer(1))
+        prg = weak;
+
+      for (auto &prg : pop.layer(0))
+        prg = strong;
+
+      const auto &cpop(pop);
+
+      const auto source_layer(
+        [&](const gp::individual &prg) -> std::size_t
         {
-          prg.inc_age(j++ % 2);
-          [[maybe_unused]] auto fit(eva(prg));
-        }
-      }
+          const auto sig(prg.signature());
 
-      unsigned both_young(0), both_aged(0);
-      std::vector from_layer(pop.layers(), 0u);
+          if (sig == weak_sig)
+            return 1;  // primary layer
+          if (sig == strong_sig)
+            return 0;  // secondary layer
 
-      const unsigned n(2000);
+          FAIL("Selected individual does not match any test prototype");
+          return 0;
+        });
+
+      unsigned any_secondary(0);
+      unsigned both_secondary(0);
+
+      constexpr unsigned n(10000);
+
       for (unsigned i(0); i < n; ++i)
       {
         selection::alps select(eva, prob.params);
 
-        const auto parents(select(alps_layer_pair(std::cref(pop.layer(1)),
-                                                  std::cref(pop.layer(0)))));
+        const auto ln(std::next(cpop.range_of_layers().begin()));
+        const auto parents(select(alps::selection_layers(cpop, ln)));
+
         CHECK(parents.size() == 2);
 
-        const auto get_layer([&](const gp::individual &prg)
-        {
-          return eva(prg) < prob.params.population.individuals ? 0 : 1;
-        });
+        const auto l0(source_layer(parents[0]));
+        const auto l1(source_layer(parents[1]));
 
-        const auto l0(get_layer(parents[0]));
-        const auto l1(get_layer(parents[1]));
+        if (l0 == 0 || l1 == 0)
+          ++any_secondary;
 
-        if (parents[0].age() > pop.layer(l0).max_age())
-          ++both_aged;
-        else if (parents[1].age() <= pop.layer(l1).max_age())
-          ++both_young;
-
-        ++from_layer[l0];
-        ++from_layer[l1];
+        if (l0 == 0 && l1 == 0)
+          ++both_secondary;
       }
 
-      return std::vector{both_aged / double(n), both_young / double(n),
-                         from_layer[1] / double(2 * n)};
+      return {any_secondary / double(n), both_secondary / double(n)};
     };
 
-  const double prob_single_aged(0.5);
-  const double prob_single_young(1.0 - prob_single_aged);
-  const double tolerance(0.05);
+  constexpr double tolerance(0.03);
 
   SUBCASE("Tournament 1")
   {
-    prob.params.alps.p_main_layer = 0.75;
-    const auto res(alps_select(1));
+    for (const double p : {0.0, 0.5, 1.0})
+    {
+      const auto res(run(p, 1));
 
-    const double both_aged(prob_single_aged * prob_single_aged);
-    CHECK(both_aged - tolerance <= res[0]);
-    CHECK(res[0] <= both_aged + tolerance);
-
-    const double both_young(prob_single_young * prob_single_young);
-    CHECK(both_young - tolerance <= res[1]);
-    CHECK(res[1] <= both_young + tolerance);
-
-    CHECK(res[2] == doctest::Approx(1.0));
+      CHECK(res.any_secondary == doctest::Approx(0.0));
+      CHECK(res.both_secondary == doctest::Approx(0.0));
+    }
   }
 
   SUBCASE("Tournament 2")
   {
-    prob.params.alps.p_main_layer = 1.0;
-    const auto res(alps_select(2));
+    for (const double p : {0.0, 0.25, 0.5, 0.75, 1.0})
+    {
+      const auto res(run(p, 2));
 
-    const double both_aged(std::pow(prob_single_aged, 3));
-    CHECK(both_aged - tolerance <= res[0]);
-    CHECK(res[0] <= both_aged + tolerance);
+      const double expected_any(1.0 - p);
 
-    const double both_young(
-      prob_single_young * prob_single_young * prob_single_aged * 3
-      + std::pow(prob_single_young, 3));
-    CHECK(both_young - tolerance <= res[1]);
-    CHECK(res[1] <= both_young + tolerance);
+      CHECK(expected_any - tolerance <= res.any_secondary);
+      CHECK(res.any_secondary <= expected_any + tolerance);
 
-    CHECK(res[2] == doctest::Approx(1.0));
+      // With tournament size 2 there is only one extra sampled candidate,
+      // therefore both selected parents cannot both come from secondary.
+      CHECK(res.both_secondary == doctest::Approx(0.0));
+    }
   }
 
   SUBCASE("Tournament 3")
   {
-    prob.params.alps.p_main_layer = 0.5;
-    const auto res(alps_select(3));
+    for (const double p : {0.0, 0.25, 0.5, 0.75, 1.0})
+    {
+      const auto res(run(p, 3));
 
-    const double both_aged(std::pow(prob_single_aged, 4.0));
-    CHECK(both_aged - tolerance <= res[0]);
-    CHECK(res[0] <= both_aged + tolerance);
+      const double expected_any(1.0 - p * p);
+      const double expected_both((1.0 - p) * (1.0 - p));
 
-    const double both_young(
-      std::pow(prob_single_young, 2) * std::pow(prob_single_aged, 2) * 6
-      + std::pow(prob_single_young, 3) * prob_single_aged * 4
-      + std::pow(prob_single_young, 4));
-    CHECK(both_young - tolerance <= res[1]);
-    CHECK(res[1] <= both_young + tolerance);
+      CHECK(expected_any - tolerance <= res.any_secondary);
+      CHECK(res.any_secondary <= expected_any + tolerance);
 
-    CHECK(res[2] > prob.params.alps.p_main_layer);
+      CHECK(expected_both - tolerance <= res.both_secondary);
+      CHECK(res.both_secondary <= expected_both + tolerance);
+    }
   }
 }
 

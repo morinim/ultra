@@ -140,8 +140,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       else
         CHECK(new_best.age() > layer.max_age());
 
-    replace(alps_layer_pair(std::ref(pop.front()), std::ref(pop.back())),
-            new_best, status);
+    replace(alps_layer_pair(pop.front(), pop.back()), new_best, status);
 
     CHECK(std::ranges::find(pop.front(), new_best) == pop.front().end());
     CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
@@ -152,8 +151,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     for (auto &layer : pop.range_of_layers())
     {
       layer.clear();
-      replace(alps_layer_pair(std::ref(layer), std::ref(pop.back())),
-              new_best, status);
+      replace(alps_layer_pair(layer, pop.back()), new_best, status);
       CHECK(std::ranges::find(layer, new_best) != layer.end());
     }
   }
@@ -255,8 +253,7 @@ TEST_CASE_FIXTURE(fixture1,
     evolution_status<gp::individual, double> status;
 
     const auto backup(pop.front());
-    replace(alps_layer_pair(std::ref(pop.front()), std::ref(pop.back())),
-            incoming, status);
+    replace(alps_layer_pair(pop.front(), pop.back()), incoming, status);
 
     CHECK(std::ranges::equal(pop.front(), backup));
     CHECK(std::ranges::contains(pop.back(), incoming));
@@ -395,7 +392,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS rejects snapshot/commit mismatch")
     eva.released.count_down();
   });
 
-  replace(alps_layer_pair(std::ref(layer), std::ref(upper)), incoming, status);
+  replace(alps_layer_pair(layer, upper), incoming, status);
 
   // The sampled resident changed before commit, so replacement must be skipped.
   CHECK(layer[0] == intruder);

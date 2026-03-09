@@ -251,7 +251,7 @@ template<Evaluator E>
 template<PopulationWithMutex P>
 bool alps<E>::try_add_to_layer(P &layer, const individual_t &incoming) const
 {
-  return try_add_to_layer(alps_layer_pair(std::ref(layer)), incoming);
+  return try_add_to_layer(alps_layer_pair(layer), incoming);
 }
 
 ///
