@@ -227,6 +227,40 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   CHECK(pop.is_valid());
 }
 
+// The test uses an age-based evaluator to make the behaviour deterministic
+// and repeats the scenario multiple times to guard against accidental
+// non-determinism. It verifies that the first layer remains unchanged and
+// that the incoming elite individual appears in the last layer.
+TEST_CASE_FIXTURE(fixture1,
+                  "ALPS redirects too-old elite individual to the last layer")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 10;
+  prob.params.population.init_subgroups = 2;
+
+  for (unsigned repeat(10); repeat; --repeat)
+  {
+    layered_population<gp::individual> pop(prob);
+    alps::set_age(pop);
+
+    // Incoming is too old for the first layer.
+    gp::individual incoming(prob);
+    incoming.inc_age(100000);
+
+    test_evaluator<gp::individual> eva(test_evaluator_type::age);
+    replacement::alps replace(eva, prob.params);
+    evolution_status<gp::individual, double> status;
+
+    const auto backup(pop.front());
+    replace(alps_layer_pair(std::ref(pop.front()), std::ref(pop.back())),
+            incoming, status);
+
+    CHECK(std::ranges::equal(pop.front(), backup));
+    CHECK(std::ranges::contains(pop.back(), incoming));
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Move up layer")
 {
   using namespace ultra;
@@ -266,4 +300,4 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   }
 }
 
-}  // TEST_SUITE("EVOLUTION REPLACEMENT")
+}  // TEST_SUITE
