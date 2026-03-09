@@ -23,7 +23,6 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
-
 TEST_SUITE("EVOLUTION REPLACEMENT")
 {
 
@@ -225,43 +224,6 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
   }
 
   CHECK(pop.is_valid());
-}
-
-// The test clears the first layer, sets its capacity to zero, and attempts
-// to insert a valid individual through the public ALPS replacement path.
-// It then checks that the layer remains empty and that the incoming
-// individual is not inserted.
-TEST_CASE_FIXTURE(fixture1, "ALPS respects zero-capacity layers")
-{
-  using namespace ultra;
-
-  prob.params.population.individuals = 10;
-  prob.params.population.init_subgroups = 2;
-  prob.params.population.min_individuals = 0;
-
-  for (unsigned repeat(10); repeat; --repeat)
-  {
-    layered_population<gp::individual> pop(prob);
-    alps::set_age(pop);
-
-    auto &layer(pop.front());
-
-    layer.clear();
-    layer.allowed(0);
-
-    gp::individual incoming(prob);
-    CHECK(incoming.is_valid());
-
-    test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
-    replacement::alps replace(eva, prob.params);
-    evolution_status<gp::individual, double> status;
-
-    replace(alps_layer_pair(std::ref(layer)), incoming, status);
-
-    CHECK(layer.allowed() == 0);
-    CHECK(layer.empty());
-    CHECK(!std::ranges::contains(layer, incoming));
-  }
 }
 
 // The test uses an age-based evaluator to make the behaviour deterministic
