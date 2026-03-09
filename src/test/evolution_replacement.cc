@@ -19,10 +19,13 @@
 #include "test/fixture4.h"
 
 #include <algorithm>
+#include <atomic>
+#include <latch>
 #include <ranges>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
 TEST_SUITE("EVOLUTION REPLACEMENT")
 {
 
@@ -296,6 +299,108 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
                                   }));
       }
   }
+}
+
+struct blocking_evaluator
+{
+  using individual_t = ultra::gp::individual;
+  using fitness_t = double;
+
+  mutable std::atomic<bool> first_call {true};
+  mutable std::latch entered {1};
+  mutable std::latch released {1};
+
+  [[nodiscard]] fitness_t operator()(const individual_t &) const
+  {
+    if (first_call.exchange(false))
+    {
+      entered.count_down();
+      released.wait();
+    }
+
+    return 0.0;
+  }
+};
+
+// This test verifies the snapshot/commit mismatch protection in ALPS
+// replacement.
+//
+// The replacement algorithm performs the tournament evaluation outside the
+// population lock. Between the snapshot phase (candidate selection) and the
+// commit phase (actual replacement), the resident individual may change due
+// to concurrent activity.
+//
+// To reproduce this situation deterministically:
+// - the population layer is constrained to a single individual and the
+//   tournament size is set to 1, so the sampled victim is known;
+// - the evaluator blocks on its first invocation using a latch, which pauses
+//   the replacement logic after the snapshot but before the commit;
+// - a helper thread replaces the resident individual while the evaluator is
+//   blocked;
+// - the evaluator is then released so the replacement attempt proceeds.
+//
+// When the commit phase runs, the resident no longer matches the snapshot.
+// The algorithm must therefore detect the mismatch and reject the replacement.
+// The test verifies that:
+// - the incoming individual is not inserted into the layer;
+// - the concurrent modification ("intruder") remains in the layer;
+// - the upper layer is not modified.
+TEST_CASE_FIXTURE(fixture1, "ALPS rejects snapshot/commit mismatch")
+{
+  using namespace ultra;
+
+  prob.params.population.min_individuals = 1;
+  prob.params.population.individuals = 1;
+  prob.params.population.init_subgroups = 2;
+  prob.params.evolution.tournament_size = 1;
+
+  layered_population<gp::individual> pop(prob);
+  alps::set_age(pop);
+
+  auto &layer(pop.front());
+  auto &upper(pop.back());
+
+  blocking_evaluator eva;
+  replacement::alps replace(eva, prob.params);
+  evolution_status<gp::individual, double> status;
+
+  // Prevent the public operator() from rescuing the rejected offspring into
+  // the secondary layer when try_add_to_layer() returns false.
+  {
+    gp::individual incumbent(prob);
+    status.update_if_better(scored_individual(incumbent, 1.0));
+  }
+
+  const gp::individual original(layer[0]);
+
+  gp::individual incoming(prob);
+  while (incoming == original)
+    incoming = gp::individual(prob);
+
+  gp::individual intruder(prob);
+  while (intruder == original || intruder == incoming)
+    intruder = gp::individual(prob);
+
+  const auto upper_backup(upper);
+
+  std::jthread mutator([&]
+  {
+    eva.entered.wait();
+
+    {
+      std::lock_guard lock(layer.mutex());
+      layer[0] = intruder;
+    }
+
+    eva.released.count_down();
+  });
+
+  replace(alps_layer_pair(std::ref(layer), std::ref(upper)), incoming, status);
+
+  // The sampled resident changed before commit, so replacement must be skipped.
+  CHECK(layer[0] == intruder);
+  CHECK(layer[0] != incoming);
+  CHECK(std::ranges::equal(upper, upper_backup));
 }
 
 TEST_CASE_FIXTURE(fixture4, "DE replacement")
