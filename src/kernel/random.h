@@ -16,6 +16,7 @@
 #include "kernel/interval.h"
 
 #include "utility/assert.h"
+#include "utility/misc.h"
 #include "utility/xoshiro256ss.h"
 
 #include <random>
@@ -152,8 +153,7 @@ template<std::ranges::sized_range C>
 ///
 [[nodiscard]] inline bool boolean(double p = 0.5)
 {
-  Expects(0.0 <= p);
-  Expects(p <= 1.0);
+  Expects(in_0_1(p));
 
   std::bernoulli_distribution d(p);
   return d(engine());
