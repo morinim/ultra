@@ -284,12 +284,12 @@ struct population_sequence
   // Offline algorithm: https://en.wikipedia.org/wiki/Online_algorithm.
   [[nodiscard]] double calculate_entropy() const
   {
-    constexpr double c(1.0 / std::numbers::ln2_v<double>);
-
-    const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
-
-    if (!pop_size)
+    const auto sum(std::accumulate(obs.begin(), obs.end(), 0uz));
+    if (!sum)
       return 0;
+
+    constexpr double c(1.0 / std::numbers::ln2_v<double>);
+    const auto pop_size(static_cast<double>(sum));
 
     double h(0.0);
     for (auto x : obs)
