@@ -107,6 +107,8 @@ public:
   bool operator()(individual_t &, const individual_t &, status_t &) const;
 };
 
+template<Evaluator E> de(E &, const parameters &) -> de<E>;
+
 #include "kernel/evolution_replacement.tcc"
 
 }  // namespace ultra::replacement
