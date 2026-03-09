@@ -336,4 +336,68 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   }
 }
 
+TEST_CASE_FIXTURE(fixture4, "DE replacement")
+{
+  using namespace ultra;
+
+  prob.params.evolution.elitism = 1.0;
+
+  test_evaluator<de::individual> eva(test_evaluator_type::realistic);
+  replacement::de replace(eva, prob.params);
+  evolution_status<de::individual, double> status;
+
+  de::individual target(prob);
+  de::individual offspring(prob);
+
+  SUBCASE("Better offspring replaces target")
+  {
+    if (eva(offspring) < eva(target))
+      std::swap(target, offspring);
+
+    const bool replaced(replace(target, offspring, status));
+
+    CHECK(replaced);
+    CHECK(target == offspring);
+    CHECK(status.best().ind == offspring);
+  }
+
+  SUBCASE("Equal fitness replaces target")
+  {
+    // Force equal fitness
+    offspring = target;
+
+    const bool replaced(replace(target, offspring, status));
+
+    CHECK(replaced);
+    CHECK(target == offspring);
+  }
+
+  SUBCASE("Worse offspring rejected with elitism")
+  {
+    if (eva(offspring) >= eva(target))
+      std::swap(target, offspring);
+
+    const auto backup(target);
+
+    const bool replaced(replace(target, offspring, status));
+
+    CHECK(!replaced);
+    CHECK(target == backup);
+  }
+
+  SUBCASE("Worse offspring may replace without elitism")
+  {
+    prob.params.evolution.elitism = 0.0;
+
+    if (eva(offspring) >= eva(target))
+      std::swap(target, offspring);
+
+    const bool replaced(replace(target, offspring, status));
+
+    CHECK(replaced);
+    CHECK(target == offspring);
+    CHECK(status.best().ind == offspring);
+  }
+}
+
 }  // TEST_SUITE
