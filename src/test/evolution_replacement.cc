@@ -49,7 +49,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
   evolution_status<gp::individual, double> status;
   replacement::tournament replace(eva, prob.params);
 
-  SUBCASE("No elitism")
+  SUBCASE("No elitism allows takeover by worse offspring")
   {
     prob.params.evolution.elitism = 0.0;
 
@@ -66,7 +66,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     CHECK(status.best().ind == worst.ind);
   }
 
-  SUBCASE("Elitism")
+  SUBCASE("Elitism protects the best")
   {
     prob.params.evolution.elitism = 1.0;
 
@@ -308,8 +308,7 @@ TEST_CASE_FIXTURE(fixture1, "Move up layer")
   layered_population<gp::individual> pop(prob);
   alps::set_age(pop);
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::random);
-  evolution_status<gp::individual, double> status;
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   replacement::alps replace(eva, prob.params);
 
   const auto range(pop.range_of_layers());
