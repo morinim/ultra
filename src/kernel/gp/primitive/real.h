@@ -13,13 +13,13 @@
 #if !defined(ULTRA_REAL_PRIMITIVE_H)
 #define      ULTRA_REAL_PRIMITIVE_H
 
-#include <string>
-
 #include "kernel/nullary.h"
 #include "kernel/random.h"
 #include "kernel/gp/function.h"
 #include "kernel/terminal.h"
 #include "utility/misc.h"
+
+#include <string>
 
 namespace ultra::real
 {
@@ -36,7 +36,7 @@ namespace ultra::real
 }
 
 // We assume that errors during floating-point operations aren't terminal
-// errors. So we dont't try to prevent domain errors (e.g. square root of a
+// errors. So we don't try to prevent domain errors (e.g. square root of a
 // negative number) or range error (e.g. `pow(10.0, 1e6)`) checking arguments
 // beforehand (domain errors could be prevented by carefully bounds checking
 // the arguments before calling functions and taking alternative action if
