@@ -24,6 +24,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <random>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -69,15 +70,23 @@ void write_all(const fs::path &p, const std::string &s)
 {
   const auto base(fs::temp_directory_path());
 
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<unsigned long long> dist;
+
   for (int i(0); i < 2000; ++i)
   {
-    const auto candidate(base
-                         / ("ultra_merge_summary_test_"
-                            + std::to_string(std::rand())
-                            + "_" + std::to_string(i)));
+    std::ostringstream name;
+    name << "ultra_merge_summary_test_" << std::hex << dist(gen) << '_' << i;
+
+    const auto candidate(base / name.str());
+
     std::error_code ec;
-    if (fs::create_directories(candidate, ec) && !ec)
+    if (fs::create_directory(candidate, ec))
       return candidate;
+
+    if (ec && ec != std::errc::file_exists)
+      FAIL("Unable to create a temporary directory: " << ec.message());
   }
 
   FAIL("Unable to create a temporary directory");
