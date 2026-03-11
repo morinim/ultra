@@ -361,8 +361,9 @@ def merge_ultra_files(path1: Path, path2: Path, output: Path):
     eB = B["elite"]
 
     if eA is not None or eB is not None:
-        # Choose a percentile fraction.
-        # If both exist and differ, prefer A.
+        # Choose the elite percentile fraction.
+        # If both inputs contain elite data, they must use the same percentile;
+        # otherwise the merged elite set would be ambiguous.
         frac = (eA["frac"] if eA is not None else eB["frac"])
         if eA is not None and eB is not None and abs(eA["frac"] - eB["frac"]) > 1e-12:
             raise UltraParseError(
