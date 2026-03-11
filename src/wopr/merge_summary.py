@@ -137,7 +137,12 @@ def parse_ultra_file(path: Path):
             f"{path}: standard_deviation must be finite and non-negative, got {std}")
 
     best_fitness = _require_float(summary, "best/fitness", file=path)
+    if not math.isfinite(best_fitness):
+        raise UltraParseError(f"{path}: best/fitness must be finite, got {best_fitness}")
+
     best_accuracy = _require_float(summary, "best/accuracy", file=path)
+    if not math.isfinite(best_accuracy) or not (0.0 <= best_accuracy <= 1.0):
+        raise UltraParseError(f"{path}: best/accuracy out of range: {best_accuracy} (expected 0..1)")
 
     best_run = _require_int(summary, "best/run", file=path)
     if best_run < 0 or best_run >= runs:
