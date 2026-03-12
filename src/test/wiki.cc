@@ -131,3 +131,43 @@ TEST_CASE_FIXTURE(fixture1, "dataframe columns")
 }
 
 }  // TEST_SUITE("WIKI_DATAFRAME")
+
+
+TEST_SUITE("FIRST 60 MINUTES")
+{
+
+TEST_CASE("Rosenbrock")
+{
+  // Rosenbrock minimisation converted to maximisation.
+  auto rosenbrock = [](const ultra::de::individual &x)
+  {
+    double s = 0.0;
+
+    for (std::size_t i = 0; i + 1 < x.size(); ++i)
+    {
+      double a = x[i + 1] - x[i] * x[i];
+      double b = 1.0 - x[i];
+      s += 100.0 * a * a + b * b;
+    }
+
+    return -s;
+  };
+
+  ultra::de::problem prob(3, {-3.0, 3.0});
+
+  prob.params.population.individuals = 40;
+  prob.params.evolution.generations = 300;
+
+  ultra::de::search search(prob, rosenbrock);
+  auto result = search.run();
+
+  CHECK(*result.best_measurements().fitness == doctest::Approx(0.0));
+  CHECK(std::ranges::all_of(result.best_individual(),
+                            [](auto x) { return x == doctest::Approx(1.0); }));
+
+  std::cout << "Best fitness: "
+            << *result.best_measurements().fitness
+            << " at [" << result.best_individual() << "]\n";
+}
+
+}  // TEST_SUITE("FIRST 60 MINUTES")
