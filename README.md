@@ -34,6 +34,7 @@ It is suitable for [classification][classification], [symbolic regression][sr], 
 
 ### Mathematical optimisation
 <img src="https://github.com/morinim/ultra/wiki/img/rastrigin.png" width="300">
+<img src="https://github.com/morinim/ultra/wiki/img/rosenbrock_population_animation.gif" width="300">
 
 The core operations are:
 
@@ -118,7 +119,7 @@ More information in the [specific tutorial][sonar].
 
 ## DOCUMENTATION
 
-Comprehensive documentation is available on the [official site][ultrasite]. We recommend that you start with the [tutorials].
+Comprehensive documentation is available on the [official site][ultrasite]. We recommend that you start with the _[First 60 minutes with ULTRA][first_60_min]_ guide or the [tutorials].
 Note that the GitHub wiki, which is the source for the ultraevolution.org site, may contain information on features that are not yet available in official releases.
 
 
@@ -241,6 +242,7 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 [download]: https://github.com/morinim/ultra/archive/master.zip
 [eos]: https://www.eosdev.it/
 [features]: https://github.com/morinim/ultra/wiki/features
+[first_60_min]: https://ultraevolution.org/wiki/first_60_minutes/
 [homepage]: https://github.com/morinim/ultra
 [issue]: https://github.com/morinim/ultra/issues
 [license]: https://github.com/morinim/ultra/blob/master/LICENSE
