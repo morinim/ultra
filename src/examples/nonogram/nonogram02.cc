@@ -32,7 +32,7 @@ struct nonogram_problem
 
   unsigned blocks() const
   {
-    return std::accumulate(col_clues.begin(), col_clues.end(), 0u,
+    return std::accumulate(col_clues.begin(), col_clues.end(), 0uz,
                            [](auto sum, const auto &v)
                            {
                              return sum + v.size();
@@ -61,7 +61,7 @@ struct nonogram_problem
         // Every remaining block requires one space.
         auto spaces(std::distance(next, end));
         // Minimum number of cells reserved for the remaing blocks.
-        auto reserved(std::accumulate(next, end, 0u) + spaces);
+        auto reserved(std::accumulate(next, end, 0uz) + spaces);
         // Number of allowed positions for the current block.
         auto allowed(col_size - reserved - start - block_size + 1);
         // Starting position of the current block.
@@ -117,7 +117,7 @@ int main()
 
   // A candidate solution is a sequence of `np.blocks()` integers in the
   // `[0, np.rows()[` interval.
-  ga::problem prob(np.blocks(), {0u, np.rows()});
+  ga::problem prob(np.blocks(), {0uz, np.rows()});
 
   prob.params.population.individuals = 30000;
   prob.params.evolution.generations  =   500;
