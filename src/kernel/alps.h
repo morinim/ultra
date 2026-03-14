@@ -223,9 +223,9 @@ replacement_layers(P &pop, typename P::layer_iter l)
   Expects(iterator_of(l, pop.range_of_layers()));
 
   if (l == std::prev(pop.range_of_layers().end()))
-    return {std::ref(*l)};
+    return *l;
 
-  return {std::ref(*l), std::ref(pop.back())};
+  return {*l, pop.back()};
 }
 
 ///
@@ -260,9 +260,9 @@ selection_layers(const P &pop, typename P::layer_const_iter l)
   Expects(iterator_of(l, pop.range_of_layers()));
 
   if (l == pop.range_of_layers().begin())
-    return {std::cref(*l)};
+    return *l;
 
-  return {std::cref(*l), std::cref(*std::prev(l))};
+  return {*l, *std::prev(l)};
 }
 
 }  // namespace alps
