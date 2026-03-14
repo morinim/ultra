@@ -100,9 +100,9 @@ std::vector<cell_coord> extract_path(const ultra::ga::individual &dirs,
   return ret;
 }
 
-std::pair<cell_coord, unsigned> run(const ultra::ga::individual &dirs,
-                                    const maze &m,
-                                    cell_coord start, cell_coord goal)
+std::pair<cell_coord, std::size_t> run(const ultra::ga::individual &dirs,
+                                       const maze &m,
+                                       cell_coord start, cell_coord goal)
 {
   const auto path(extract_path(dirs, m, start, goal));
 
