@@ -40,6 +40,34 @@ inline void rewind(std::istream &is)
   is.seekg(0, std::ios::beg);
 }
 
+[[nodiscard]] inline unsigned count_unquoted(const std::string &line,
+                                             char delim)
+{
+  const char quote('"');
+
+  bool inquotes(false);
+  unsigned count(0);
+
+  for (std::size_t i(0); i < line.size(); ++i)
+  {
+    const char c(line[i]);
+
+    if (!inquotes && c == quote)
+      inquotes = true;
+    else if (inquotes && c == quote)
+    {
+      if (i + 1 < line.size() && line[i + 1] == quote)
+        ++i;  // escaped quote
+      else
+        inquotes = false;
+    }
+    else if (!inquotes && c == delim)
+      ++count;
+  }
+
+  return count;
+}
+
 }  // namespace internal
 
 ///
@@ -76,7 +104,7 @@ class parser
 {
 public:
   using record_t = std::vector<std::string>;
-  using filter_hook_t = std::function<bool (record_t &)>;
+  using filter_hook_t = std::function<bool (const record_t &)>;
 
   explicit parser(std::istream &);
   parser(std::istream &, const dialect &);
@@ -470,7 +498,7 @@ struct char_stat
 /// \return           the inferred delimiter character, or `\0` if no suitable
 ///                   delimiter can be determined. A return value of `\0`
 ///                   indicates that the input is likely a single-column file
-///                   with no field delimiter.
+///                   with no field delimiter
 ///
 /// The function scans up to `lines` non-empty lines from the input stream and
 /// counts occurrences of a small set of preferred delimiter characters
@@ -478,6 +506,10 @@ struct char_stat
 ///
 /// - appears a consistent number of times per line (single, non-zero mode);
 /// - occurs in at least ~2/3 of the scanned non-empty lines.
+///
+/// Candidate delimiters are counted **only when they appear outside quoted
+/// fields**. Characters occurring inside quoted fields are ignored, so that
+/// text such as `"a:b:c"` does not bias the delimiter detection.
 ///
 /// \note
 /// Empty or whitespace-only lines are ignored. If no delimiter satisfies
@@ -487,20 +519,11 @@ struct char_stat
 [[nodiscard]] inline char guess_delimiter(std::istream &is, std::size_t lines)
 {
   static const std::vector preferred = {',', ';', '\t', ':', '|'};
-  static const std::bitset<256> is_candidate([]
-  {
-    std::bitset<256> ret;
-
-    for (unsigned char c : preferred)
-      ret[c] = true;
-
-    return ret;
-  }());
 
   // `count[c]` is a vector with information about character `c`. It grows
   // one element every time a new input line is read.
-  // `count[c][l]` contains the number of times character `c` appears in line
-  // `l`.
+  // `count[c][l]` contains the number of unquoted occurrences of character `c`
+  // in line `l`.
   // `count` only contains entries for preferred delimiter candidates.
   std::map<char, std::vector<unsigned>> count;
 
@@ -511,24 +534,19 @@ struct char_stat
     if (trim(line).empty())
       continue;
 
-    // A new non-empty line. Initially every character has a `0` counter.
     for (unsigned char c : preferred)
-      count[c].push_back(0u);
-
-    for (unsigned char c : line)
-      if (is_candidate[c])
-        ++count[c].back();
+      count[c].push_back(count_unquoted(line, c));
 
     --lines;
     ++scanned;
   }
 
-  if (count.empty())  // empty input file
+  if (!scanned)  // empty input file
     return 0;
 
   // `mode_weight[c]` stores a couple of values specifying:
-  // 1. how many time character `c` usually repeats in a line of the CSV file;
-  // 2. a weight (the effective number of lines condition 1 is verified).
+  // 1. how many times character `c` usually appears in a line of the CSV file;
+  // 2. a weight (the number of lines for which condition 1 holds).
   std::map<char, char_stat> mode_weight;
 
   for (auto &[c, cf] : count)
@@ -616,6 +634,7 @@ struct char_stat
 inline parser::parser(std::istream &is) : parser(is, {})
 {
   dialect_ = sniffer(is);
+  // `sniffer` already rewinds.
 }
 
 ///
@@ -711,20 +730,22 @@ inline parser parser::trim_ws(bool t) && noexcept
 /// \return           a reference to `this` object (fluent interface)
 ///
 /// \note
-/// A filter function returns `true` for records to be keep.
+/// A filter function returns `true` for records that should be kept.
 ///
 /// \warning
 /// Usually, in C++, a fluent interface returns a **reference**.
-/// Here we return a **copy** of `this` object. The design decision is due to
-/// the fact that a `parser' is a sort of Python generator and tends to be used
-/// in for-loops.
+/// Here we return a **copy** of the object instead. This design decision is
+/// due to the fact that `parser` behaves somewhat like a Python generator and
+/// tends to be used in range-based for-loops.
 /// Users often write:
 ///
 ///     for (auto record : parser(f).filter_hook(filter)) { ... }
 ///
-/// but that's broken (it only works if `filter_hook` returns by value).
-/// `parser` is a lighweight object and this shouldn't have an impact on
-/// performance.
+/// but that is broken if `filter_hook` returns a reference (it only works if
+/// it returns by value).
+///
+/// `parser` is lightweight, so returning by value should have negligible
+/// performance impact.
 ///
 /// \see https://stackoverflow.com/q/10593686/3235496
 ///
@@ -942,6 +963,7 @@ inline parser::const_iterator::value_type parser::const_iterator::parse_line(
   }
 
   // If there was no header, resize the placeholder to match data rows.
+  // If `n == 0`, we use the first data row only to determine the width.
   if (!has_header)
   {
     if (ret.size() > 1)
