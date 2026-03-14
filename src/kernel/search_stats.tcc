@@ -36,7 +36,10 @@ void search_stats<I, F>::update(const I &lr_best_prg,
   // Since we use `std::greater`, it finds the first element SMALLER than
   // `new_run`.
   auto it(std::ranges::upper_bound(stats_, lr_measurements,
-                                   std::greater{},
+                                   [](const auto &lhs, const auto &rhs)
+                                   {
+                                     return lhs.fitness > rhs.fitness;
+                                   },
                                    &run_summary::best_measurements));
 
   run_summary new_run{initial_run_id, lr_best_prg, lr_measurements};
@@ -171,7 +174,7 @@ template<Individual I, Fitness F>
 std::span<const typename search_stats<I, F>::run_summary>
 search_stats<I, F>::elite_runs(double perc) const noexcept
 {
-  Expects(0.0 <= perc && perc <= 1.0);
+  Expects(in_0_1(perc));
 
   const std::size_t total(stats_.size());
   if (total == 0 || issmall(perc))

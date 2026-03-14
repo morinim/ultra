@@ -17,6 +17,7 @@
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
 #include "kernel/model_measurements.h"
+#include "utility/misc.h"
 
 #include <algorithm>
 #include <chrono>
