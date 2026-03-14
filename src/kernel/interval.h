@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2026 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -15,7 +15,8 @@
 
 #include "utility/assert.h"
 
-#include <numeric>
+#include <concepts>
+#include <type_traits>
 #include <utility>
 
 namespace ultra
@@ -28,18 +29,19 @@ template<class A> concept ArithmeticScalar =
 ///
 /// Right-open interval.
 ///
-/// `interval{m, u}` represents the half-open (left-closed, right-open)
-/// interval `[m, u[`.
+/// `interval{m, s}` represents the half-open (left-closed, right-open)
+/// interval `[m, s[`.
 ///
 template<ArithmeticScalar T>
 struct interval
 {
-  constexpr interval(T m, T s) : min(m), sup(s)
+  constexpr interval(T m, T s) noexcept : min(m), sup(s)
   {
     Expects(m < s);
   }
 
   template<std::floating_point T1, std::floating_point T2>
+  requires std::floating_point<T>
   constexpr interval(T1 m, T2 s) : interval(static_cast<T>(m),
                                             static_cast<T>(s))
   {
@@ -56,14 +58,15 @@ struct interval
   }
 
   template<std::floating_point T1, std::floating_point T2>
-  constexpr interval(const std::pair<T1, T2> &p)
+  requires std::floating_point<T>
+  explicit constexpr interval(const std::pair<T1, T2> &p)
     : interval(static_cast<T>(p.first), static_cast<T>(p.second))
   {
     Expects(p.first < p.second);
   }
 
   template<std::integral T1, std::integral T2>
-  constexpr interval(const std::pair<T1, T2> &p)
+  explicit constexpr interval(const std::pair<T1, T2> &p)
     : interval(static_cast<T>(p.first), static_cast<T>(p.second))
   {
     Expects(std::cmp_less(p.first, p.second));
