@@ -24,23 +24,44 @@
 /// \param[in] lr_measurements measurements associated with the best individual
 /// \param[in] lr_elapsed      duration of the completed run
 ///
+/// \pre `lr_measurements.fitness.has_value()`
+///
+/// Completed runs are stored in descending lexicographic order of their best
+/// measurements:
+/// - higher fitness ranks first;
+/// - when fitness is equal, higher accuracy ranks first;
+/// - for equal fitness, a present accuracy value ranks before `std::nullopt`.
+///
+/// This ordering is used only to rank completed runs inside `stats_`; it does
+/// not rely on the general ordering semantics of `model_measurements<F>`
+/// (which may, for example, be based on Pareto dominance).
+///
 template<Individual I, Fitness F>
 void search_stats<I, F>::update(const I &lr_best_prg,
                                 const model_measurements<F> &lr_measurements,
                                 std::chrono::milliseconds lr_elapsed)
 {
+  Expects(lr_measurements.fitness.has_value());
+  Expects(!std::isnan(*lr_measurements.fitness));
+
   const std::size_t initial_run_id(runs());
 
-  // upper_bound finds the first element that is "strictly greater" than our
-  // value according to the comparator.
-  // Since we use `std::greater`, it finds the first element SMALLER than
-  // `new_run`.
-  auto it(std::ranges::upper_bound(stats_, lr_measurements,
-                                   [](const auto &lhs, const auto &rhs)
-                                   {
-                                     return lhs.fitness > rhs.fitness;
-                                   },
-                                   &run_summary::best_measurements));
+  // `upper_bound` finds the first run ranked after `lr_measurements` according
+  // to the comparator below, so insertion preserves the descending
+  // lexicographic order of `stats_`.
+  auto it(std::ranges::upper_bound(
+            stats_, lr_measurements,
+            [](const auto &lhs, const auto &rhs)
+            {
+              if (*lhs.fitness > *rhs.fitness)
+                return true;
+
+              if (*rhs.fitness > *lhs.fitness)
+                return false;
+
+              return lhs.accuracy > rhs.accuracy;
+            },
+            &run_summary::best_measurements));
 
   run_summary new_run{initial_run_id, lr_best_prg, lr_measurements};
   stats_.insert(it, std::move(new_run));
