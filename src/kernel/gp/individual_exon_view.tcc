@@ -80,7 +80,7 @@ private:
 };  // class const_exon_view
 
 
-// Just to document documents the contract for future maintainers
+// Just to document the contract for future maintainers.
 static_assert(std::ranges::input_range<const_exon_view>);
 static_assert(!std::ranges::forward_range<const_exon_view>);
 
