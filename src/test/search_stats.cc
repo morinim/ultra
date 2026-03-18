@@ -201,4 +201,50 @@ TEST_CASE_FIXTURE(fixture1, "elite_runs returns a best-first prefix")
   }
 }
 
+TEST_CASE_FIXTURE(
+  fixture1,
+  "elite/best ordering breaks fitness ties using secondary measurements")
+{
+  using namespace std::chrono_literals;
+
+  ultra::search_stats<individual_t, fitness_t> s;
+
+  // Same fitness for every run; accuracy should break ties.
+  s.update(ultra::gp::individual(prob), mm(10.0, 0.70), 1ms);
+  s.update(ultra::gp::individual(prob), mm(10.0, 0.95), 1ms);  // best
+  s.update(ultra::gp::individual(prob), mm(10.0, 0.80), 1ms);
+
+  REQUIRE(s.runs() == 3);
+
+  // Best run must be the one with the highest accuracy among equal-fitness
+  // runs.
+  CHECK(s.best_run() == 1);
+  REQUIRE(s.best_measurements().fitness);
+  REQUIRE(s.best_measurements().accuracy);
+  CHECK(*s.best_measurements().fitness == doctest::Approx(10.0));
+  CHECK(*s.best_measurements().accuracy == doctest::Approx(0.95));
+
+  // elite_runs(1.0) must preserve the full best-to-worst ordering.
+  const auto elite(s.elite_runs(1.0));
+  REQUIRE(elite.size() == 3);
+
+  CHECK(elite[0].run == 1);
+  CHECK(elite[1].run == 2);
+  CHECK(elite[2].run == 0);
+
+  REQUIRE(elite[0].best_measurements.fitness);
+  REQUIRE(elite[1].best_measurements.fitness);
+  REQUIRE(elite[2].best_measurements.fitness);
+  CHECK(*elite[0].best_measurements.fitness == doctest::Approx(10.0));
+  CHECK(*elite[1].best_measurements.fitness == doctest::Approx(10.0));
+  CHECK(*elite[2].best_measurements.fitness == doctest::Approx(10.0));
+
+  REQUIRE(elite[0].best_measurements.accuracy);
+  REQUIRE(elite[1].best_measurements.accuracy);
+  REQUIRE(elite[2].best_measurements.accuracy);
+  CHECK(*elite[0].best_measurements.accuracy == doctest::Approx(0.95));
+  CHECK(*elite[1].best_measurements.accuracy == doctest::Approx(0.80));
+  CHECK(*elite[2].best_measurements.accuracy == doctest::Approx(0.70));
+}
+
 }  // TEST_SUITE
