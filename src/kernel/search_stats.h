@@ -70,10 +70,6 @@ public:
   /// Only runs with finite fitness values contribute to the distribution.
   distribution<F> fitness_distribution {};
 
-  /// Identifiers of runs that satisfied the success threshold.
-  ///
-  /// Run identifiers correspond to the order in which runs were recorded.
-
   /// Total elapsed time across all runs.
   ///
   /// This is the sum of the durations passed to `update()`.
