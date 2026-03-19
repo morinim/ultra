@@ -265,9 +265,12 @@ unsigned dataframe::variables() const
 ///
 /// \param[in] e the value of the element to append
 ///
-void dataframe::push_back(const example &e)
+void dataframe::push_back(example e)
 {
-  dataset_.push_back(e);
+  if (task() == task_t::classification)
+    e.output = static_cast<D_INT>(encode(e.output));
+
+  dataset_.push_back(std::move(e));
 }
 
 ///

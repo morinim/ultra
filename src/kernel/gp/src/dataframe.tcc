@@ -73,7 +73,7 @@ example dataframe::to_example(const R &r, bool add_instance)
       if (i == 0)
       {
         if (task() == task_t::classification)
-          ret.output = static_cast<D_INT>(encode(feature));
+          ret.output = feature;
         else
           ret.output = internal::lexical_cast(feature, domain);
       }

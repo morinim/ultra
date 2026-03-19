@@ -110,7 +110,7 @@ public:
   // ---- Modifiers ----
   void clear();
   iterator erase(iterator, iterator);
-  void push_back(const src::example &);
+  void push_back(src::example);
   template<std::input_iterator InputIt> iterator insert(const_iterator,
                                                         InputIt, InputIt);
   void swap(dataframe &);
