@@ -263,12 +263,19 @@ unsigned dataframe::variables() const
 ///
 /// Appends the given element to the end of the active dataset.
 ///
-/// \param[in] e the value of the element to append
+/// \param[in] e            the value of the element to append
+/// \param[in] add_instance should we automatically add instances for text
+///                         features?
 ///
-void dataframe::push_back(example e)
+void dataframe::push_back(example e, bool add_instance)
 {
   if (task() == task_t::classification)
     e.output = static_cast<D_INT>(encode(e.output));
+
+  if (add_instance)
+    for (std::size_t i(1); i < columns.size(); ++i)
+      if (columns[i].domain() == d_string)
+        columns[i].add_state(lexical_cast<D_STRING>(e.input[i - 1]));
 
   dataset_.push_back(std::move(e));
 }

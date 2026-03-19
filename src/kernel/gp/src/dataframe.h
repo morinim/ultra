@@ -110,7 +110,7 @@ public:
   // ---- Modifiers ----
   void clear();
   iterator erase(iterator, iterator);
-  void push_back(src::example);
+  void push_back(src::example, bool = false);
   template<std::input_iterator InputIt> iterator insert(const_iterator,
                                                         InputIt, InputIt);
   void swap(dataframe &);
@@ -148,7 +148,7 @@ private:
     R, std::optional<std::size_t>, bool);
 
   template<std::ranges::range R>
-  [[nodiscard]] example to_example(const R &, bool);
+  [[nodiscard]] example to_example(const R &) const;
 
   [[nodiscard]] class_t encode(const value_t &);
 

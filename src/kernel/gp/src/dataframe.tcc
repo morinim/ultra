@@ -45,17 +45,11 @@ void inplace_trim(T &v)
 }  // namespace internal
 
 ///
-/// \param[in] r            a range containing the example
-/// \param[in] add_instance should we automatically add instances for text
-///                         features?
-/// \return                 `r` converted to `example` type
-///
-/// \remark
-/// When `add_instance` is `true` the function can have side-effects (changing
-/// the set of admissible instances associated with a text-feature).
+/// \param[in] r a range containing the example
+/// \return      `r` converted to `example` type
 ///
 template<std::ranges::range R>
-example dataframe::to_example(const R &r, bool add_instance)
+example dataframe::to_example(const R &r) const
 {
   Expects(r.size());
   Expects(static_cast<std::size_t>(std::ranges::distance(r)) == columns.size());
@@ -79,9 +73,6 @@ example dataframe::to_example(const R &r, bool add_instance)
       }
       else  // input value
         ret.input.push_back(internal::lexical_cast(feature, domain));
-
-      if (add_instance && domain == d_string)
-        columns[i].add_state(lexical_cast<D_STRING>(feature));
     }
 
     ++i;
@@ -116,7 +107,7 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
     return false;
   }
 
-  push_back(to_example(r, add_instance));
+  push_back(to_example(r), add_instance);
   return true;
 }
 

@@ -146,6 +146,31 @@ TEST_CASE("set_schema")
   CHECK(d.is_valid());
 }
 
+TEST_CASE("push_back registers string instances for user-provided examples")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  dataframe d;
+  d.set_schema({{"Y", d_double},
+                {"X1", d_string},
+                {"X2", d_double}});
+
+  src::example ex1;
+  ex1.output = 1.0;
+  ex1.input = {D_STRING("alpha"), 3.14};
+
+  src::example ex2;
+  ex2.output = 2.0;
+  ex2.input = {D_STRING("beta"), 2.71};
+
+  d.push_back(ex1, true);
+  d.push_back(ex2, true);
+
+  CHECK(d.size() == 2);
+  CHECK(d.columns[1].states() == std::set<value_t>{"alpha", "beta"});
+}
+
 TEST_CASE("swap")
 {
   using namespace ultra;
@@ -507,4 +532,4 @@ std::istringstream iris_xrff(R"(
   CHECK(d.class_name(2) == "Iris-virginica");
 }
 
-}  // TEST_SUITE("DATAFRAME")
+}  // TEST_SUITE
