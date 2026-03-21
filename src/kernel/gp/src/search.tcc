@@ -17,6 +17,19 @@
 #if !defined(ULTRA_SRC_SEARCH_TCC)
 #define      ULTRA_SRC_SEARCH_TCC
 
+namespace internal
+{
+
+template<class O>
+[[nodiscard]] std::unique_ptr<basic_oracle> to_basic_oracle(O o)
+{
+  using oracle_t = std::remove_cvref_t<O>;
+  static_assert(std::is_base_of_v<basic_oracle, oracle_t>);
+  return std::make_unique<oracle_t>(std::forward<O>(o));
+}
+
+}  // namespace internal
+
 [[nodiscard]] constexpr std::underlying_type_t<metric_flags> operator&(
   metric_flags f1, metric_flags f2)
 {
@@ -50,8 +63,8 @@ template<template<class> class ES, Evaluator E>
 std::unique_ptr<basic_oracle> basic_search<ES, E>::oracle(
   const individual_t &ind) const
 {
-  if constexpr (requires { this->eva_.core().oracle(ind); })
-    return this->eva_.core().oracle(ind);
+  if constexpr (requires { to_basic_oracle(this->eva_.core().oracle(ind)); })
+    return to_basic_oracle(this->eva_.core().oracle(ind));
 
   return nullptr;
 }
@@ -270,9 +283,9 @@ template<Individual P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
   if (prob_.classification())
-    return class_evaluator_t(prob_.data).oracle(prg);
+    return to_basic_oracle(class_evaluator_t(prob_.data).oracle(prg));
   else
-    return reg_evaluator_t(prob_.data).oracle(prg);
+    return to_basic_oracle(reg_evaluator_t(prob_.data).oracle(prg));
 }
 
 ///

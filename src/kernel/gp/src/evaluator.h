@@ -112,7 +112,7 @@ public:
   [[nodiscard]] auto operator()(const P &) const;
   [[nodiscard]] auto fast(const P &) const;
 
-  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] auto oracle(const P &) const;
 
 private:
   [[nodiscard]] auto sum_of_errors_impl(const P &, std::ptrdiff_t) const;
@@ -322,7 +322,7 @@ public:
   explicit gaussian_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
-  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] auto oracle(const P &) const;
 };
 
 ///
@@ -340,7 +340,7 @@ public:
   explicit binary_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
-  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] auto oracle(const P &) const;
 };
 
 #include "kernel/gp/src/evaluator.tcc"

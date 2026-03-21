@@ -130,15 +130,14 @@ auto sum_of_errors_evaluator<P, F, D>::fast(const P &prg) const
 ///
 /// Builds an oracle associated with a program.
 ///
-/// \param[in] prg Program to transform into an oracle
-/// \return        oracle instance (`nullptr` in case of errors)
+/// \param[in] prg program to transform into an oracle
+/// \return        oracle object associated with `prg`
 ///
 template<Individual P, class F, class D>
 requires ErrorFunction<F, D>
-std::unique_ptr<basic_oracle>
-sum_of_errors_evaluator<P, F, D>::oracle(const P &prg) const
+auto sum_of_errors_evaluator<P, F, D>::oracle(const P &prg) const
 {
-  return std::make_unique<reg_oracle<P>>(prg);
+  return reg_oracle<P>(prg);
 }
 
 ///
@@ -320,12 +319,12 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 /// Builds a Gaussian oracle for the given program.
 ///
 /// \param[in] prg program to transform into an oracle
-/// \return        oracle instance (`nullptr` in case of errors).
+/// \return        oracle object associated with `prg`
 ///
 template<Individual P>
-std::unique_ptr<basic_oracle> gaussian_evaluator<P>::oracle(const P &prg) const
+auto gaussian_evaluator<P>::oracle(const P &prg) const
 {
-  return std::make_unique<gaussian_oracle<P>>(prg, *this->data());
+  return gaussian_oracle<P>(prg, *this->data());
 }
 
 ///
@@ -367,12 +366,12 @@ double binary_evaluator<P>::operator()(const P &prg) const
 /// Builds a binary classification oracle.
 ///
 /// \param[in] prg program to transform into an oracle
-/// \return        oracle instance (`nullptr` in case of errors)
+/// \return        oracle object associated with `prg`
 ///
 template<Individual P>
-std::unique_ptr<basic_oracle> binary_evaluator<P>::oracle(const P &prg) const
+auto binary_evaluator<P>::oracle(const P &prg) const
 {
-  return std::make_unique<binary_oracle<P>>(prg, *this->data());
+  return binary_oracle<P>(prg, *this->data());
 }
 
 #endif  // include guard
