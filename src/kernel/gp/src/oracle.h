@@ -28,7 +28,6 @@ namespace ultra::src
 
 // Forward declarations.
 class basic_oracle;
-class model_metric;
 
 namespace serialize
 {
@@ -98,11 +97,6 @@ private:
 // * Symbolic regression                                                 *
 // ***********************************************************************
 
-/// The model_metric class choose the appropriate method considering this type.
-/// \see
-/// core_class_oracle
-class core_reg_oracle : public basic_oracle {};
-
 ///
 /// Oracle function specialized for regression tasks.
 ///
@@ -113,7 +107,7 @@ class core_reg_oracle : public basic_oracle {};
 ///           efficiency (typically inside an evaluator)
 ///
 template<Individual P, bool S>
-class basic_reg_oracle : public core_reg_oracle,
+class basic_reg_oracle : public basic_oracle,
                          protected internal::reg_oracle_storage<P, S>
 {
 public:
@@ -159,11 +153,6 @@ enum class team_composition
   standard = wta
 };
 
-/// The model_metric class choose the appropriate method considering this type.
-/// \see
-/// core_reg_oracle
-class core_class_oracle : public basic_oracle {};
-
 ///
 /// The basic interface of a classification oracle.
 ///
@@ -176,7 +165,7 @@ class core_class_oracle : public basic_oracle {};
 /// - optionally stores class names.
 ///
 template<bool N>
-class basic_class_oracle : public core_class_oracle,
+class basic_class_oracle : public basic_oracle,
                            protected internal::class_names<N>
 {
 public:
