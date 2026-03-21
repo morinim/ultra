@@ -106,20 +106,6 @@ std::string basic_reg_oracle<P, S>::name(const value_t &a) const
 }
 
 ///
-/// Calls (dynamic dispatch) polymhorphic model_metric `m` on `this`.
-///
-/// \param[in] m a metric we are evaluating
-/// \param[in] d a dataset
-/// \return      the value of `this` according to metric `m`
-///
-template<Individual P, bool S>
-double basic_reg_oracle<P, S>::measure(const model_metric &m,
-                                       const dataframe &d) const
-{
-  return m(this, d);
-}
-
-///
 /// \return `true` if the object passes the internal consistency check
 ///
 template<Individual P, bool S>
@@ -161,20 +147,6 @@ template<bool N>
 value_t basic_class_oracle<N>::operator()(const std::vector<value_t> &e) const
 {
   return static_cast<D_INT>(this->tag(e).label);
-}
-
-///
-/// Calls (dynamic dispatch) polymhorphic model_metric `m` on `this`.
-///
-/// \param[in] m a metric we are evaluating
-/// \param[in] d a dataset
-/// \return      the value of `this` according to metric `m`
-///
-template<bool N>
-double basic_class_oracle< N>::measure(const model_metric &m,
-                                       const dataframe &d) const
-{
-  return m(this, d);
 }
 
 ///

@@ -16,6 +16,7 @@
 #include "kernel/distribution.h"
 #include "kernel/exceptions.h"
 #include "kernel/problem.h"
+#include "kernel/gp/src/classification_result.h"
 #include "kernel/gp/src/columns_info.h"
 #include "utility/pocket_csv.h"
 
@@ -31,9 +32,6 @@ namespace tinyxml2 { class XMLDocument; }
 
 namespace ultra::src
 {
-
-/// The type used as class ID in classification tasks.
-using class_t = std::size_t;
 
 /// A raw observation or data entry, typically read from an input source.
 ///

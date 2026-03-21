@@ -83,11 +83,10 @@ basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
   auto ret(ultra::basic_search<ES, E>::calculate_metrics(prg));
 
-  if ((metrics_ & metric_flags::accuracy))
+  if ((metrics_ & metric_flags::accuracy) && prob().classification())
   {
     const auto prg_oracle(oracle(prg));
-    ret.accuracy = prg_oracle->measure(accuracy_metric(),
-                                       prob().data.selected());
+    ret.accuracy = metrics::accuracy(*prg_oracle, prob().data.selected());
   }
 
   return ret;

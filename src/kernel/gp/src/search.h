@@ -14,6 +14,7 @@
 #define      ULTRA_SRC_SEARCH_H
 
 #include "kernel/gp/src/evaluator.h"
+#include "kernel/gp/src/metrics.h"
 #include "kernel/gp/src/problem.h"
 #include "kernel/search.h"
 

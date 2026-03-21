@@ -14,7 +14,7 @@
 #define      ULTRA_ORACLE_H
 
 #include "kernel/exceptions.h"
-#include "kernel/gp/src/calculate_metrics.h"
+#include "kernel/gp/src/classification_result.h"
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/interpreter.h"
 #include "kernel/gp/team.h"
@@ -49,15 +49,6 @@ bool save(std::ostream &, const std::unique_ptr<basic_oracle> &);
 }  // namespace serialize
 
 ///
-/// Contains a class ID / confidence level pair.
-///
-struct classification_result
-{
-  src::class_t label;   /// class ID
-  double    sureness;   /// confidence level
-};
-
-///
 /// The basic interface of an oracle.
 ///
 /// An oracle predicts the answers to our problem. It's the *incarnation* of
@@ -89,8 +80,6 @@ public:
 
   [[nodiscard]] virtual bool is_valid() const = 0;
 
-  [[nodiscard]] virtual double measure(const model_metric &,
-                                       const dataframe &) const = 0;
   [[nodiscard]] virtual std::string name(const value_t &) const = 0;
   [[nodiscard]] virtual classification_result tag(
     const std::vector<value_t> &) const = 0;
@@ -134,9 +123,6 @@ public:
   [[nodiscard]] value_t operator()(const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string name(const value_t &) const final;
-
-  [[nodiscard]] double measure(const model_metric &,
-                               const dataframe &) const final;
 
   [[nodiscard]] bool is_valid() const final;
 
@@ -199,9 +185,6 @@ public:
   [[nodiscard]] value_t operator()(const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string name(const value_t &) const final;
-
-  [[nodiscard]] double measure(const model_metric &,
-                               const dataframe &) const final;
 
 protected:
   basic_class_oracle() = default;
