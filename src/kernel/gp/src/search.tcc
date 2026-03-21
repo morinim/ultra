@@ -21,7 +21,7 @@ namespace internal
 {
 
 template<class O>
-[[nodiscard]] std::unique_ptr<basic_oracle> to_basic_oracle(O o)
+[[nodiscard]] std::unique_ptr<basic_oracle> to_basic_oracle(O &&o)
 {
   using oracle_t = std::remove_cvref_t<O>;
   static_assert(std::is_base_of_v<basic_oracle, oracle_t>);
@@ -63,8 +63,8 @@ template<template<class> class ES, Evaluator E>
 std::unique_ptr<basic_oracle> basic_search<ES, E>::oracle(
   const individual_t &ind) const
 {
-  if constexpr (requires { to_basic_oracle(this->eva_.core().oracle(ind)); })
-    return to_basic_oracle(this->eva_.core().oracle(ind));
+  if constexpr ( requires { internal::to_basic_oracle(this->eva_.core().oracle(ind)); })
+    return internal::to_basic_oracle(this->eva_.core().oracle(ind));
 
   return nullptr;
 }

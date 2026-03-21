@@ -14,8 +14,7 @@
 #define      ULTRA_ORACLE_H
 
 #include "kernel/exceptions.h"
-#include "kernel/gp/src/classification_result.h"
-#include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/predictor.h"
 #include "kernel/gp/src/interpreter.h"
 #include "kernel/gp/team.h"
 
@@ -129,7 +128,46 @@ private:
   [[noreturn]] classification_result tag(
     const std::vector<value_t> &) const final;
 
-  [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+  [[nodiscard]] std::string serialize_id() const noexcept final
+  { return SERIALIZE_ID; }
+};
+
+///
+/// Adapts a regression predictor to the `basic_oracle` interface.
+///
+/// \tparam O predictor type
+///
+/// This adaptor allows any user-defined regression predictor to be used as a
+/// `basic_oracle`. The wrapped predictor must satisfy `RegressionPredictor`,
+/// i.e. be callable with an input example and return a `value_t`.
+///
+/// \note
+/// Calling `tag()` on this adaptor is invalid and results in an exception.
+///
+/// \note
+/// The adaptor is intentionally non-serializable.
+///
+template<RegressionPredictor O>
+class reg_oracle_adaptor final : public basic_oracle
+{
+public:
+  explicit reg_oracle_adaptor(O);
+
+  [[nodiscard]] value_t operator()(const std::vector<value_t> &) const override;
+
+  /// This adaptor does not impose additional validity constraints beyond
+  /// those of the underlying predictor, therefore it always returns `true`.
+  [[nodiscard]] bool is_valid() const override { return true; }
+
+  [[nodiscard]] std::string name(const value_t &v) const;
+
+private:
+  [[noreturn]] classification_result tag(
+    const std::vector<value_t> &) const override;
+  [[nodiscard]] std::string serialize_id() const override;
+  bool save(std::ostream &) const override;
+
+  O oracle_;
 };
 
 // ***********************************************************************
@@ -211,7 +249,8 @@ private:
   bool load_(std::istream &, const symbol_set &, std::true_type);
   bool load_(std::istream &, const symbol_set &, std::false_type);
 
-  [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+  [[nodiscard]] std::string serialize_id() const noexcept final
+  { return SERIALIZE_ID; }
 
   // ---- Private data members ----
   basic_reg_oracle<I, S> oracle_;
@@ -248,9 +287,52 @@ public:
   bool save(std::ostream &) const final;
 
 private:
-  [[nodiscard]] std::string serialize_id() const final { return SERIALIZE_ID; }
+  [[nodiscard]] std::string serialize_id() const noexcept final
+  { return SERIALIZE_ID; }
 
   basic_reg_oracle<I, S> oracle_;
+};
+
+///
+/// Adapts a classification predictor to the `basic_oracle` interface.
+///
+/// \tparam O predictor type
+///
+/// This adaptor allows any user-defined classification predictor to be used
+/// wherever a `basic_oracle` is required, without inheritance or dynamic
+/// polymorphism.
+///
+/// The wrapped predictor must satisfy `ClassificationPredictor`. If it also
+/// satisfies `RichClassificationPredictor`, its callable interface is used
+/// directly to implement `operator()`. Otherwise, the numeric output is derived
+/// from `tag()` by returning the predicted class label.
+///
+/// \note
+/// The adaptor is intentionally non-serializable.
+///
+template<ClassificationPredictor O>
+class class_oracle_adaptor final : public basic_oracle
+{
+public:
+  explicit class_oracle_adaptor(O, std::vector<std::string> = {});
+
+  [[nodiscard]] value_t operator()(const std::vector<value_t> &) const override;
+
+  /// This adaptor does not impose additional validity constraints beyond
+  /// those of the underlying predictor, therefore it always returns `true`.
+  [[nodiscard]] bool is_valid() const override { return true; }
+
+  [[nodiscard]] std::string name(const value_t &) const override;
+
+  [[nodiscard]] classification_result tag(
+    const std::vector<value_t> &) const override;
+
+private:
+  [[nodiscard]] std::string serialize_id() const override;
+  bool save(std::ostream &) const override;
+
+  O oracle_;
+  std::vector<std::string> names_;
 };
 
 // ***********************************************************************
@@ -285,7 +367,7 @@ public:
 
 private:
   bool save(std::ostream &) const final;
-  [[nodiscard]] std::string serialize_id() const final;
+  [[nodiscard]] std::string serialize_id() const noexcept final;
 
   // The components of the team never store the names of the classes. If we
   // need the names, the master class will memorize them.

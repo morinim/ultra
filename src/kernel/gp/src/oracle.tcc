@@ -127,6 +127,81 @@ bool basic_reg_oracle<P, S>::save(std::ostream &out) const
 }
 
 // ***********************************************************************
+// *  reg_oracle_adaptor                                                 *
+// ***********************************************************************
+
+///
+/// \param[in] oracle predictor instance to adapt
+///
+template<RegressionPredictor O>
+reg_oracle_adaptor<O>::reg_oracle_adaptor(O oracle)
+  : oracle_(std::move(oracle))
+{
+}
+
+///
+/// Returns the predicted value for the input example.
+///
+/// \param[in] x input example
+/// \return      predicted value
+///
+/// This function forwards the call to the underlying regression predictor.
+///
+template<RegressionPredictor O>
+value_t reg_oracle_adaptor<O>::operator()(const std::vector<value_t> &x) const
+{
+  return oracle_(x);
+}
+
+///
+/// Returns a string representation of the predicted value.
+///
+/// \param[in] v numeric prediction
+/// \return      string representation of `v`
+///
+template<RegressionPredictor O>
+std::string reg_oracle_adaptor<O>::name(const value_t &v) const
+{
+  return lexical_cast<std::string>(v);
+}
+
+///
+/// Classification is not supported for regression predictors.
+///
+/// \throws std::logic_error always
+///
+template<RegressionPredictor O>
+classification_result reg_oracle_adaptor<O>::tag(
+  const std::vector<value_t> &) const
+{
+  throw std::logic_error("tag() called on regression oracle");
+}
+
+///
+/// \return identifier used for serialization
+///
+/// \note
+/// The adaptor is not serializable. This identifier is provided only to
+/// satisfy the `basic_oracle` interface.
+///
+template<RegressionPredictor O>
+std::string reg_oracle_adaptor<O>::serialize_id() const
+{
+  return "REG_ORACLE_ADAPTOR";
+}
+
+///
+/// Serialization is not supported.
+///
+/// \throws std::logic_error always
+///
+template<RegressionPredictor O>
+bool reg_oracle_adaptor<O>::save(std::ostream &) const
+{
+  throw std::logic_error("reg_oracle_adaptor is not serializable");
+}
+
+// ***********************************************************************
 // *  basic_class_oracle                                                 *
 // ***********************************************************************
 
@@ -583,6 +658,100 @@ bool basic_binary_oracle<I, S, N>::save(std::ostream &out) const
 }
 
 // ***********************************************************************
+// *  class_oracle_adaptor                                               *
+// ***********************************************************************
+
+///
+/// \param[in] oracle predictor instance to adapt
+/// \param[in] names  optional class names used for human-readable output
+///
+template<ClassificationPredictor O>
+class_oracle_adaptor<O>::class_oracle_adaptor(O oracle,
+                                              std::vector<std::string> names)
+  : oracle_(std::move(oracle)), names_(std::move(names))
+{
+}
+
+///
+/// Returns the numeric prediction for the input example.
+///
+/// \param[in] x input example
+/// \return      numeric representation of the predicted class
+///
+/// If the underlying predictor models `RichClassificationPredictor`, its
+/// callable interface is used directly. Otherwise, the predicted class label
+/// obtained via `tag()` is returned.
+///
+template<ClassificationPredictor O>
+value_t class_oracle_adaptor<O>::operator()(
+  const std::vector<value_t> &x) const
+{
+  if constexpr (RichClassificationPredictor<O>)
+    return oracle_(x);
+  else
+    return static_cast<D_INT>(tag(x).label);
+}
+
+///
+/// Returns a human-readable name for a predicted value.
+///
+/// \param[in] v numeric prediction
+/// \return      class name or string representation of `v`
+///
+/// If class names have been provided, the value is interpreted as a class
+/// index and mapped to the corresponding name. Otherwise, the value is
+/// converted to string.
+///
+template<ClassificationPredictor O>
+std::string class_oracle_adaptor<O>::name(const value_t &v) const
+{
+  if (const auto i(lexical_cast<D_INT>(v));
+      0 <= i && static_cast<std::size_t>(i) < names_.size())
+    return names_[i];
+
+  return lexical_cast<std::string>(v);
+}
+
+///
+/// Returns the classification result for the input example.
+///
+/// \param[in] x input example
+/// \return      predicted class label and confidence
+///
+/// This function forwards the call to the underlying predictor.
+///
+template<ClassificationPredictor O>
+classification_result class_oracle_adaptor<O>::tag(
+  const std::vector<value_t> &x) const
+{
+  return oracle_.tag(x);
+}
+
+///
+/// \return identifier used for serialization
+///
+/// \remark
+/// The adaptor is not serializable. This identifier is provided only to
+/// satisfy the `basic_oracle` interface.
+///
+template<ClassificationPredictor O>
+std::string class_oracle_adaptor<O>::serialize_id() const
+{
+  return "CLASS_ORACLE_ADAPTOR";
+}
+
+///
+/// Serialization is not supported.
+///
+/// \throws std::logic_error always
+///
+template<ClassificationPredictor O>
+bool class_oracle_adaptor<O>::save(std::ostream &) const
+{
+  throw std::logic_error("class_oracle_adaptor is not serializable");
+}
+
+// ***********************************************************************
 // *  team_class_oracle                                                  *
 // ***********************************************************************
 
@@ -723,7 +892,7 @@ bool team_class_oracle<I, S, N, L, C>::save(std::ostream &out) const
 ///
 template<Individual I, bool S, bool N, template<class, bool, bool> class L,
          team_composition C>
-std::string team_class_oracle<I, S, N, L, C>::serialize_id() const
+std::string team_class_oracle<I, S, N, L, C>::serialize_id() const noexcept
 {
   Expects(team_.size());
   return "TEAM_" + L<I, S, N>::SERIALIZE_ID;

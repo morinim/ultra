@@ -42,7 +42,7 @@ public:
   using individual_t = typename ultra::basic_search<ES, E>::individual_t;
   using fitness_t = typename ultra::basic_search<ES, E>::fitness_t;
 
-  basic_search(problem &, metric_flags = metric_flags::accuracy);
+  explicit basic_search(problem &, metric_flags = metric_flags::accuracy);
 
   std::unique_ptr<basic_oracle> oracle(const individual_t &) const;
 
@@ -77,7 +77,7 @@ public:
   using class_evaluator_t = gaussian_evaluator<P>;
   using reg_evaluator_t = rmae_evaluator<P>;
 
-  search(problem &, metric_flags = metric_flags::accuracy);
+  explicit search(problem &, metric_flags = metric_flags::accuracy);
 
   search &logger(search_log &);
   search &stop_source(std::stop_source);

@@ -13,8 +13,7 @@
 #if !defined(ULTRA_SRC_CALCULATE_METRICS_H)
 #define      ULTRA_SRC_CALCULATE_METRICS_H
 
-#include "kernel/gp/src/classification_result.h"
-#include "kernel/gp/src/dataframe.h"
+#include "kernel/gp/src/predictor.h"
 
 #include <cmath>
 #include <limits>
@@ -22,32 +21,6 @@
 
 namespace ultra::src::metrics
 {
-
-///
-/// Concept for regression predictors.
-///
-/// A regression predictor must be callable with an input example and return a
-/// `value_t`.
-///
-template<class P>
-concept RegressionPredictor = requires(const P &p,
-                                       const std::vector<value_t> &x)
-{
-  { p(x) } -> std::same_as<value_t>;
-};
-
-///
-/// Concept for classification predictors.
-///
-/// A classification predictor must expose `tag()` returning a
-/// `classification_result`.
-///
-template<class P>
-concept ClassificationPredictor = requires(const P &p,
-                                           const std::vector<value_t> &x)
-{
-  { p.tag(x) } -> std::same_as<classification_result>;
-};
 
 ///
 /// Accuracy for classification problems.
