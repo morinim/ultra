@@ -1,4 +1,4 @@
-[![Ultra](https://github.com/morinim/ultra/wiki/img/logo.png)][homepage]
+[![ULTRA](https://github.com/morinim/ultra/wiki/img/logo.png)][homepage]
 [![Version](https://img.shields.io/github/tag/morinim/ultra.svg)][releases]
 
 ![C++23](https://img.shields.io/badge/c%2B%2B-23-blue.svg)
@@ -17,7 +17,7 @@ We are approaching version 1.0 ([approximate view of the process](https://github
 
 ## OVERVIEW
 
-Ultra is a scalable, high-performance C++ framework for evolutionary algorithms, covering genetic programming, genetic algorithms, and differential evolution.
+ULTRA is a scalable, high-performance C++ framework for evolutionary algorithms, covering genetic programming, genetic algorithms, and differential evolution.
 
 It is suitable for [classification][classification], [symbolic regression][sr], content-based image retrieval, data mining, and [control of software agents][agent], as well as [mathematical optimisation][rastrigin] and [scheduling][scheduling]. Main features include:
 
@@ -75,22 +75,14 @@ src::raw_data training =  // the target function is `y = x + sin(x)`
 };
 
 // READING INPUT DATA
-src::problem prob(training);
-
-// SETTING UP SYMBOLS
-prob.insert<real::sin>();
-prob.insert<real::cos>();
-prob.insert<real::add>();
-prob.insert<real::sub>();
-prob.insert<real::div>();
-prob.insert<real::mul>();
+src::problem prob(training, symbol_init::all);
 
 // SEARCHING
 src::search s(prob);
 const auto result(s.run());
 ```
 
-It is quite straightforward (further details can be found in the [specific tutorial][sr]).
+ULTRA provides a predefined set of mathematical primitives, so you can start immediately. For finer control over the search space, you can explicitly define your own symbol set (see the [specific tutorial][sr]).
 
 ### Classification
 <img src="https://github.com/morinim/ultra/wiki/img/sonar.jpg" width="300">
@@ -125,8 +117,8 @@ Note that the GitHub wiki, which is the source for the ultraevolution.org site, 
 
 ## BUILD REQUIREMENTS
 
-Ultra is designed to have minimal requirements for building and for use with your projects, though some prerequisites are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. macOS, BSD).
-However, since core members of the Ultra project have no access to these platforms, Ultra may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
+ULTRA is designed to have minimal requirements for building and for use with your projects, though some prerequisites are necessary. Currently, we support Linux and Windows. We will also make our best effort to support other platforms (e.g. macOS, BSD).
+However, since core members of the project have no access to these platforms, ULTRA may have outstanding issues there. If you notice any problems on your platform, please use the [issue tracking system][issue]; patches for fixing them are even more welcome!
 
 ### Mandatory
 
@@ -140,7 +132,7 @@ However, since core members of the Ultra project have no access to these platfor
 
 ## GETTING THE SOURCE
 
-There are two ways of getting Ultra's source code: you can [download][download] a stable source release in your preferred archive format or directly clone the source from a repository.
+There are two ways of getting ULTRA's source code: you can [download][download] a stable source release in your preferred archive format or directly clone the source from a repository.
 
 Cloning the repository requires a few extra steps and additional software packages on your system, but it enables you to track the latest development and apply patches more easily. We highly encourage cloning for those who wish to contribute.
 
@@ -162,7 +154,7 @@ ultra/
   src/
     CMakeLists.txt
     examples/ .............Various examples
-    kernel/ ...............Ultra kernel (core library)
+    kernel/ ...............ULTRA kernel (core library)
     test/ .................Test-suite
     third_party/ ..........Third party libraries
     utility/ ..............Support libraries / files
@@ -194,7 +186,7 @@ Further details are available in the [build walkthrough][build].
 
 ## INSTALLING ULTRA
 
-To install Ultra, use the command:
+To install ULTRA, use the command:
 
 ```shell
 cmake --install build/
@@ -222,7 +214,7 @@ As a side note, to build the global header manually, use:
 ## VERSIONING
 <img align="left" src="https://imgs.xkcd.com/comics/workflow.png">
 
-Ultra uses [semantic versioning][semver]. Releases are tagged.
+ULTRA uses [semantic versioning][semver]. Releases are tagged.
 
 When a release is not backward compatible due to API changes, the required modifications for upgrading are usually not too difficult.
 

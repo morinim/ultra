@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2026 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -37,7 +37,15 @@ int main()
   };
 
   // READING INPUT DATA
-  src::problem prob(training, symbol_init::all);
+  src::problem prob(training);
+
+  // SETTING UP SYMBOLS
+  prob.insert<real::sin>();
+  prob.insert<real::cos>();
+  prob.insert<real::add>();
+  prob.insert<real::sub>();
+  prob.insert<real::div>();
+  prob.insert<real::mul>();
 
   // SEARCHING
   src::search s(prob);
