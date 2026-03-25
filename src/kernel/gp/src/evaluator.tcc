@@ -22,7 +22,7 @@
 ///
 /// \param[in] d dataset used for fitness evaluation
 ///
-template<ErrorDataset D>
+template<EvaluationDataset D>
 evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 {
 }
@@ -35,96 +35,61 @@ evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 /// For `multi_dataset `, this returns the currently selected dataset.
 /// Otherwise, it returns the dataset itself.
 ///
-template<ErrorDataset D>
+template<EvaluationDataset D>
 auto *evaluator<D>::data() const noexcept
 {
-  if constexpr (derived_from_template<D, multi_dataset>)
+  if constexpr (internal::derived_from_template<D, multi_dataset>)
     return &dat_->selected();
   else
     return dat_;
 }
-
 
 ///
 /// Constructs the evaluator.
 ///
 /// \param[in] d training dataset
 ///
-template<Individual P, class F, class D>
-requires ErrorFunction<F, D>
-sum_of_errors_evaluator<P, F, D>::sum_of_errors_evaluator(D &d)
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+aggregate_evaluator<P, F, D, A, M>::aggregate_evaluator(D &d) noexcept
   : evaluator<D>(d)
 {
-}
-
-///
-/// Computes the average error using a configurable sampling step.
-///
-/// \param[in] prg  program to evaluate
-/// \param[in] step sampling steo (one example every `step`)
-/// \return         fitness value
-///
-template<Individual P, class F, class D>
-requires ErrorFunction<F, D>
-auto sum_of_errors_evaluator<P, F, D>::sum_of_errors_impl(
-  const P &prg, std::ptrdiff_t step) const
-{
-  const auto &dat(*this->data());
-
-  Expects(std::ranges::distance(dat) >= step);
-  Expects(step > 0);
-
-  const F err_fctr(prg);
-
-  auto it(std::begin(dat));
-  auto average_error(err_fctr(*it));
-  std::advance(it, step);
-
-  double n(1.0);
-
-  const auto end(std::end(dat));
-  while (it != end)
-  {
-    average_error += (err_fctr(*it) - average_error) / ++n;
-
-    std::ranges::advance(it, step, end);
-  }
-
-  // Note that we take the average error: this way fast() and operator()
-  // outputs can be compared.
-  return -average_error;
 }
 
 ///
 /// Computes the fitness using all training examples.
 ///
 /// \param[in] prg program to evaluate
-/// \return        fitness value (greater is better, max is `0`)
+/// \return        fitness value (greater is better)
 ///
-template<Individual P, class F, class D>
-requires ErrorFunction<F, D>
-auto sum_of_errors_evaluator<P, F, D>::operator()(const P &prg) const
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+double aggregate_evaluator<P, F, D, A, M>::operator()(const P &prg) const
 {
-  return sum_of_errors_impl(prg, 1);
+  return eval_impl(prg, 1);
 }
 
 ///
-/// Computes a faster approximation of the fitness.
+/// Computes an approximate fitness value using subsampling.
 ///
 /// \param[in] prg program to evaluate
 /// \return        approximate fitness value
 ///
 /// \pre The dataset must contain at least 100 examples.
 ///
-/// This function is similar to operator()() but will skip `4` out of `5`
-/// training instances, so it's faster.
+/// Evaluates the program on a subset of the dataset (one example every
+/// `step` elements) to reduce computation time.
 ///
-template<Individual P, class F, class D>
-requires ErrorFunction<F, D>
-auto sum_of_errors_evaluator<P, F, D>::fast(const P &prg) const
+/// For average-based evaluators, this yields an estimate of the true
+/// average. For sum-based evaluators, the result is rescaled to remain
+/// comparable with operator()().
+///
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 {
   Expects(std::ranges::distance(*this->data()) >= 100);
-  return sum_of_errors_impl(prg, 5);
+  return eval_impl(prg, 5);
 }
 
 ///
@@ -133,11 +98,66 @@ auto sum_of_errors_evaluator<P, F, D>::fast(const P &prg) const
 /// \param[in] prg program to transform into an oracle
 /// \return        oracle object associated with `prg`
 ///
-template<Individual P, class F, class D>
-requires ErrorFunction<F, D>
-auto sum_of_errors_evaluator<P, F, D>::oracle(const P &prg) const
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+auto aggregate_evaluator<P, F, D, A, M>::oracle(const P &prg) const
 {
   return reg_oracle<P>(prg);
+}
+
+///
+/// \param[in] prg  program to evaluate
+/// \param[in] step sampling step (one example every `step`)
+/// \return         fitness value
+///
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
+                                                     std::ptrdiff_t step) const
+{
+  const auto &dat(*this->data());
+
+  Expects(std::ranges::distance(dat) >= step);
+  Expects(step > 0);
+
+  const F f(prg);
+
+  auto it(std::begin(dat));
+  const auto end(std::end(dat));
+
+  double acc(0.0);
+  std::size_t n(0);
+
+  if constexpr (A == aggregation_mode::average)
+  {
+    acc = f(*it);
+    n = 1;
+    std::ranges::advance(it, step, end);
+
+    while (it != end)
+    {
+      acc += (f(*it) - acc) / static_cast<double>(++n);
+      std::ranges::advance(it, step, end);
+    }
+  }
+  else
+  {
+    while (it != end)
+    {
+      acc += f(*it);
+      ++n;
+      std::ranges::advance(it, step, end);
+    }
+
+    // This keeps `fast()` comparable with `operator()` for sum evaluators.
+    if (step > 1)
+      acc *= static_cast<double>(step);
+  }
+
+  if constexpr (M == evaluation_mode::error)
+    return -acc;
+  else
+    return acc;
 }
 
 ///
@@ -254,18 +274,20 @@ count_error_functor<P>::count_error_functor(const P &prg) : oracle_(prg)
 /// \param[in] example current training case
 /// \return            a measurement of the error of the model/program on the
 ///                    current training case. The value returned is in the
-///                    `[0;+inf[` range
+///                    `[0;1]` range
 ///
 template<Individual P>
 double count_error_functor<P>::operator()(const example &example) const
 {
   const auto foreseen(oracle_(example.input));
 
-  const bool err(!has_value(foreseen)
-                 || !issmall(std::get<D_DOUBLE>(foreseen)
-                             - label_as<D_DOUBLE>(example)));
+  if (!has_value(foreseen))
+    return 1.0;
 
-  return err ? 1.0 : 0.0;
+  if (!issmall(std::get<D_DOUBLE>(foreseen) - label_as<D_DOUBLE>(example)))
+    return 1.0;
+
+  return 0.0;
 }
 
 ///

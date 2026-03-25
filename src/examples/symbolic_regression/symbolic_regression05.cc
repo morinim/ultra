@@ -108,16 +108,9 @@ private:
 
 // Given a team (i.e. a candidate solution of the problem), returns a score
 // measuring how good it performs on a given dataset.
-class my_evaluator
-  : public ultra::src::sum_of_errors_evaluator<candidate_solution,
-                                               error_functor, training_set>
-{
-public:
-  explicit my_evaluator(training_set &d)
-    : sum_of_errors_evaluator<candidate_solution, error_functor,
-                              training_set>(d)
-  {}
-};
+using my_evaluator = ultra::src::avg_error_evaluator<candidate_solution,
+                                                     error_functor,
+                                                     training_set>;
 
 int main()
 {
@@ -129,9 +122,9 @@ int main()
   prob.params.team.individuals = N;
 
   // SETTING UP SYMBOLS
-  prob.sset.insert<src::variable>(0, "x1");
-  prob.sset.insert<src::variable>(1, "x2");
-  prob.sset.insert<src::variable>(2, "x3");
+  prob.insert<src::variable>(0, "x1");
+  prob.insert<src::variable>(1, "x2");
+  prob.insert<src::variable>(2, "x3");
   prob.insert<real::number>();
   prob.insert<real::add>();
   prob.insert<real::sub>();

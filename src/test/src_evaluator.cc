@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "test/debug_datasets.h"
 
 #include "kernel/gp/src/evaluator.h"
@@ -24,6 +21,9 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <cstdlib>
+#include <iostream>
+
 TEST_SUITE("SRC::EVALUATOR")
 {
 
@@ -31,22 +31,22 @@ TEST_CASE("Concepts")
 {
   using namespace ultra;
 
-  CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::mae_error_functor<gp::individual>,
         src::dataframe>);
-  CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::rmae_error_functor<gp::individual>,
         src::dataframe>);
-  CHECK(src::ErrorFunction<src::mse_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::mse_error_functor<gp::individual>,
         src::dataframe>);
-  CHECK(src::ErrorFunction<src::count_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::count_error_functor<gp::individual>,
         src::dataframe>);
 
-  CHECK(src::ErrorFunction<src::mae_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::mae_error_functor<gp::individual>,
         src::multi_dataset<src::dataframe>>);
-  CHECK(src::ErrorFunction<src::rmae_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::rmae_error_functor<gp::individual>,
         src::multi_dataset<src::dataframe>>);
-  CHECK(src::ErrorFunction<src::mse_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::mse_error_functor<gp::individual>,
         src::multi_dataset<src::dataframe>>);
-  CHECK(src::ErrorFunction<src::count_error_functor<gp::individual>,
+  CHECK(src::ExampleEvaluator<src::count_error_functor<gp::individual>,
         src::multi_dataset<src::dataframe>>);
 
   CHECK(Evaluator<src::mae_evaluator<gp::individual>>);
@@ -55,11 +55,11 @@ TEST_CASE("Concepts")
   CHECK(Evaluator<src::rmae_evaluator<gp::team<gp::individual>>>);
   CHECK(Evaluator<src::mse_evaluator<gp::individual>>);
   CHECK(Evaluator<src::mse_evaluator<gp::team<gp::individual>>>);
-  CHECK(Evaluator<src::count_evaluator<gp::individual>>);
-  CHECK(Evaluator<src::count_evaluator<gp::team<gp::individual>>>);
+  CHECK(Evaluator<src::count_error_evaluator<gp::individual>>);
+  CHECK(Evaluator<src::count_error_evaluator<gp::team<gp::individual>>>);
 }
 
-TEST_CASE("Sum of errors evaluators")
+TEST_CASE("Aggregate evaluators")
 {
   using namespace ultra;
 
@@ -179,7 +179,7 @@ TEST_CASE("Sum of errors evaluators")
     }
   }
 
-  SUBCASE("MAE Evaluator")
+  SUBCASE("mae_evaluator")
   {
     src::mae_evaluator<gp::individual> mae(pr.data);
     CHECK(mae(delphi) == doctest::Approx(0.0));
@@ -189,7 +189,7 @@ TEST_CASE("Sum of errors evaluators")
     CHECK(std::isnan(mae(huge2)));
   }
 
-  SUBCASE("RMAE Evaluator")
+  SUBCASE("rmae_evaluator")
   {
     src::rmae_evaluator<gp::individual> rmae(pr.data);
     CHECK(rmae(delphi) == doctest::Approx(0.0));
@@ -199,7 +199,7 @@ TEST_CASE("Sum of errors evaluators")
     CHECK(std::isnan(rmae(huge2)));
   }
 
-  SUBCASE("MSE Evaluator")
+  SUBCASE("mse_evaluator")
   {
     src::mse_evaluator<gp::individual> mse(pr.data);
     CHECK(mse(delphi) == doctest::Approx(0.0));
@@ -209,14 +209,14 @@ TEST_CASE("Sum of errors evaluators")
     CHECK(std::isnan(mse(huge2)));
   }
 
-  SUBCASE("Count Evaluator")
+  SUBCASE("count_error_evaluator")
   {
-    src::count_evaluator<gp::individual> count(pr.data);
+    src::count_error_evaluator<gp::individual> count(pr.data);
     CHECK(count(delphi) == doctest::Approx(0.0));
-    CHECK(count(delta1) == doctest::Approx(-1.0));
-    CHECK(count(delta2) == doctest::Approx(-1.0));
-    CHECK(count(huge1) == doctest::Approx(-1.0 / pr.data.selected().size()));
-    CHECK(count(huge2) == doctest::Approx(-2.0 / pr.data.selected().size()));
+    CHECK(count(delta1) == doctest::Approx(-10.0));
+    CHECK(count(delta2) == doctest::Approx(-10.0));
+    CHECK(count(huge1) == doctest::Approx(-1.0));
+    CHECK(count(huge2) == doctest::Approx(-2.0));
   }
 }
 

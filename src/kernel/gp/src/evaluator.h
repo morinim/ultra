@@ -21,47 +21,47 @@
 namespace ultra::src
 {
 
-///
-/// Concept checking whether a type derives from a given class template.
-///
-/// This concept evaluates to true if `Derived` is publicly convertible to
-/// some instantiation of the class template `Base<Ts...>`.
-///
-/// It is mainly used to detect whether a dataset type is a specialisation
-/// of `multi_dataset`.
-///
-template<class Derived, template<class...> class Base>
-concept derived_from_template = requires(Derived &d)
-{
-  []<class... Ts>(Base<Ts...> &) {}(d);
-};
+#include "kernel/gp/src/evaluator_internal.tcc"
 
 ///
-/// Concept modelling a dataset that exposes training examples suitable for
-/// error evaluation.
+/// Concept modelling a dataset that provides examples for evaluation.
 ///
 /// Supported forms:
 /// - `multi_dataset<T>`: examples are taken from the currently selected
-///   dataset;
+///   dataset via `selected()`
 /// - plain datasets (`DataSet<T>`): examples are taken directly from the
-///   dataset.
+///   dataset
 ///
-template<class D> concept ErrorDataset =
-  (derived_from_template<D, multi_dataset>
-   && DataSet<decltype(std::declval<D>().selected())>)
-  || DataSet<D>;
+/// This concept ensures that evaluators can uniformly access examples
+/// regardless of whether a single dataset or a multi-dataset container is
+/// used.
+///
+template<class D> concept EvaluationDataset =
+  DataSet<D>
+  || (internal::derived_from_template<D, multi_dataset>
+      && DataSet<decltype(std::declval<D>().selected())>);
 
 ///
-/// Concept modelling an error-measuring functor.
+/// Concept modelling a functor that evaluates a single dataset example.
 ///
-/// An error function computes the error committed by a program on a single
-/// training example provided by a compatible dataset.
+/// An `ExampleEvaluator` is a callable object that takes one example from a
+/// dataset and returns a value representing its contribution to the overall
+/// evaluation.
 ///
-template<class F, class D>
-concept ErrorFunction =
-  ErrorDataset<D>
-  && (std::invocable<F, decltype(*std::declval<D>().selected().begin())>
-      || std::invocable<F, decltype(*std::declval<D>().begin())>);
+/// The returned value can represent:
+/// - an error (lower is better);
+/// - a score or reward (higher is better).
+///
+/// This concept is intentionally agnostic with respect to the interpretation
+/// of the returned value. The aggregation semantics are defined by the
+/// evaluator using the functor (e.g. sum vs average, error vs score).
+///
+/// \note
+/// The functor is typically constructed from an individual/program and may
+/// internally use an oracle or interpreter to compute predictions.
+///
+template<class F, class D> concept ExampleEvaluator =
+  EvaluationDataset<D> && std::invocable<F, internal::dataset_example_t<D>>;
 
 ///
 /// Base class for dataset-aware evaluators.
@@ -73,7 +73,7 @@ concept ErrorFunction =
 /// It is intended to be used as a protected base class for concrete
 /// evaluators.
 ///
-template<ErrorDataset D>
+template<EvaluationDataset D>
 class evaluator
 {
 protected:
@@ -83,6 +83,25 @@ protected:
 
 private:
   D *dat_ {nullptr};
+};
+
+enum class aggregation_mode { sum, average };
+enum class evaluation_mode  { error, score };
+
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D>
+class aggregate_evaluator : public evaluator<D>
+{
+public:
+  explicit aggregate_evaluator(D &) noexcept;
+
+  [[nodiscard]] double operator()(const P &) const;
+  [[nodiscard]] double fast(const P &) const;
+
+  [[nodiscard]] auto oracle(const P &) const;
+
+private:
+  [[nodiscard]] double eval_impl(const P &, std::ptrdiff_t) const;
 };
 
 ///
@@ -103,20 +122,24 @@ private:
 /// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
 ///
 template<Individual P, class F, class D = multi_dataset<dataframe>>
-requires ErrorFunction<F, D>
-class sum_of_errors_evaluator : public evaluator<D>
-{
-public:
-  explicit sum_of_errors_evaluator(D &);
+using avg_error_evaluator = aggregate_evaluator<P, F, D,
+                                                aggregation_mode::average,
+                                                evaluation_mode::error>;
 
-  [[nodiscard]] auto operator()(const P &) const;
-  [[nodiscard]] auto fast(const P &) const;
+template<Individual P, class F, class D = multi_dataset<dataframe>>
+using sum_error_evaluator = aggregate_evaluator<P, F, D,
+                                                aggregation_mode::sum,
+                                                evaluation_mode::error>;
 
-  [[nodiscard]] auto oracle(const P &) const;
+template<Individual P, class F, class D = multi_dataset<dataframe>>
+using avg_score_evaluator = aggregate_evaluator<P, F, D,
+                                                aggregation_mode::average,
+                                                evaluation_mode::score>;
 
-private:
-  [[nodiscard]] auto sum_of_errors_impl(const P &, std::ptrdiff_t) const;
-};
+template<Individual P, class F, class D = multi_dataset<dataframe>>
+using sum_score_evaluator = aggregate_evaluator<P, F, D,
+                                                aggregation_mode::sum,
+                                                evaluation_mode::score>;
 
 ///
 /// Mean absolute error functor for evaluating a program on a single examle.
@@ -130,8 +153,7 @@ private:
 ///
 /// Illegal values are assigned a large penalty.
 ///
-/// \see
-/// mae_evaluator
+/// \see mae_evaluator
 ///
 template<Individual P>
 class mae_error_functor
@@ -148,15 +170,10 @@ private:
 ///
 /// Evaluator based on the mean absolute error.
 ///
-/// \see
-/// mae_error_functor
+/// \see mae_error_functor
 ///
 template<Individual P>
-class mae_evaluator : public sum_of_errors_evaluator<P, mae_error_functor<P>>
-{
-public:
-  using mae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-};
+using mae_evaluator = avg_error_evaluator<P, mae_error_functor<P>>;
 
 ///
 /// Relative mean absolute error functor for evaluating a program on a single
@@ -202,11 +219,7 @@ private:
 /// \see rmae_error_functor
 ///
 template<Individual P>
-class rmae_evaluator : public sum_of_errors_evaluator<P, rmae_error_functor<P>>
-{
-public:
-  using rmae_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-};
+using rmae_evaluator = avg_error_evaluator<P, rmae_error_functor<P>>;
 
 ///
 /// Mean squared error functor for evaluating a program on a single example.
@@ -251,15 +264,10 @@ private:
 ///
 /// Evaluator based on the mean squared error.
 ///
-/// \see
-/// mse_error_functor
+/// \see mse_error_functor
 ///
 template<Individual P>
-class mse_evaluator : public sum_of_errors_evaluator<P, mse_error_functor<P>>
-{
-public:
-  using mse_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-};
+using mse_evaluator = avg_error_evaluator<P, mse_error_functor<P>>;
 
 ///
 /// Classification error functor based on exact matches.
@@ -274,7 +282,7 @@ public:
 /// same penalty.
 ///
 /// \see
-/// count_evaluator
+/// count_error_evaluator
 ///
 template<Individual P>
 class count_error_functor
@@ -295,12 +303,7 @@ private:
 /// count_error_functor
 ///
 template<Individual P>
-class count_evaluator : public sum_of_errors_evaluator<P,
-                                                       count_error_functor<P>>
-{
-public:
-  using count_evaluator::sum_of_errors_evaluator::sum_of_errors_evaluator;
-};
+using count_error_evaluator = sum_error_evaluator<P, count_error_functor<P>>;
 
 ///
 /// Evaluator for multi-class classification using Gaussian models.
