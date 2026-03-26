@@ -123,7 +123,7 @@ private:
 /// - values are comparable between full and fast evaluation modes.
 ///
 /// \see
-/// mse_evaluator, mae_evaluator, rmae_evaluator, count_evaluator
+/// mse_evaluator, mae_evaluator, rmae_evaluator, count_error_evaluator
 ///
 template<Individual P, class F, class D = multi_dataset<dataframe>>
 using avg_error_evaluator = aggregate_evaluator<P, F, D,
@@ -146,12 +146,12 @@ using sum_score_evaluator = aggregate_evaluator<P, F, D,
                                                 evaluation_mode::score>;
 
 ///
-/// Mean absolute error functor for evaluating a program on a single examle.
+/// Mean absolute error functor for evaluating a program on a single example.
 ///
 /// \tparam P individual type
 ///
 /// The functor owns an oracle initialised from the program and computes a
-/// a scalar error value for each training example.
+/// scalar error value for each training example.
 ///
 /// Computes (\f$\frac{1}{n} \sum_{i=1}^n |target_i - actual_i|\f$).
 ///
@@ -281,9 +281,9 @@ using mse_evaluator = avg_error_evaluator<P, mse_error_functor<P>>;
 /// The functor owns an oracle initialised from the program and computes a
 /// scalar error value for each training example.
 ///
-/// This functor will drive the evolution towards the maximum sum of matches
-/// (\f$\sum_{i=1}^n target_i == actual_i\f$). Incorrect answers receive the
-/// same penalty.
+/// This functor returns `0` for a correct prediction and `1` otherwise. When
+/// used with `sum_error_evaluator`, fitness corresponds to the negative number
+/// of classification errors.
 ///
 /// \see
 /// count_error_evaluator

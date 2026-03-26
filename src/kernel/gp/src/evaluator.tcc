@@ -32,7 +32,7 @@ evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 ///
 /// \return reference to the active dataset
 ///
-/// For `multi_dataset `, this returns the currently selected dataset.
+/// For `multi_dataset`, this returns the currently selected dataset.
 /// Otherwise, it returns the dataset itself.
 ///
 template<EvaluationDataset D>
