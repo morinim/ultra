@@ -101,6 +101,9 @@ public:
   [[nodiscard]] auto oracle(const P &) const;
 
 private:
+  static constexpr std::ptrdiff_t fast_min_examples = 100;
+  static constexpr std::ptrdiff_t fast_step = 5;
+
   [[nodiscard]] double eval_impl(const P &, std::ptrdiff_t) const;
 };
 

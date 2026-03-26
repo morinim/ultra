@@ -70,26 +70,27 @@ double aggregate_evaluator<P, F, D, A, M>::operator()(const P &prg) const
 }
 
 ///
-/// Computes an approximate fitness value using subsampling.
+/// Computes a (possibly approximate) fitness value using subsampling.
 ///
 /// \param[in] prg program to evaluate
-/// \return        approximate fitness value
+/// \return        fitness value (exact or approximate)
 ///
-/// \pre The dataset must contain at least 100 examples.
+/// For sufficiently large datasets, the program is evaluated on a subset
+/// of the examples (one every `step` elements) to reduce computation time.
 ///
-/// Evaluates the program on a subset of the dataset (one example every
-/// `step` elements) to reduce computation time.
+/// For smaller datasets, the full evaluation is performed, making this
+/// function equivalent to operator()().
 ///
-/// For average-based evaluators, this yields an estimate of the true
-/// average. For sum-based evaluators, the result is rescaled to remain
+/// For average-based evaluators, subsampling yields an estimate of the
+/// true average. For sum-based evaluators, the result is rescaled to remain
 /// comparable with operator()().
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 {
-  Expects(std::ranges::distance(this->data()) >= 100);
-  return eval_impl(prg, 5);
+  const auto n(std::ranges::distance(this->data()));
+  return eval_impl(prg, n >= fast_min_examples ? fast_step : 1);
 }
 
 ///
