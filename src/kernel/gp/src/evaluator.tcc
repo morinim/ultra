@@ -117,9 +117,8 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
                                                      std::ptrdiff_t step) const
 {
   const auto &dat(this->data());
-
-  Expects(std::ranges::distance(dat) >= step);
-  Expects(step > 0);
+  const auto examples(std::ranges::distance(dat));
+  Expects(0 < step && step <= examples);
 
   const F f(prg);
 
@@ -132,7 +131,7 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
   if constexpr (A == aggregation_mode::average)
   {
     acc = f(*it);
-    n = 1;
+    ++n;
     std::ranges::advance(it, step, end);
 
     while (it != end)
@@ -152,8 +151,10 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
 
     // This keeps `fast()` comparable with `operator()` for sum evaluators.
     if (step > 1)
-      acc *= static_cast<double>(step);
+      acc *= static_cast<double>(examples) / static_cast<double>(n);
   }
+
+  Ensures(0 < n && n <= static_cast<std::size_t>(examples));
 
   if constexpr (M == evaluation_mode::error)
     return -acc;
