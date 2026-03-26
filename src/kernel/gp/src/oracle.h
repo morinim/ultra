@@ -159,7 +159,7 @@ public:
   /// those of the underlying predictor, therefore it always returns `true`.
   [[nodiscard]] bool is_valid() const override { return true; }
 
-  [[nodiscard]] std::string name(const value_t &v) const;
+  [[nodiscard]] std::string name(const value_t &v) const override;
 
 private:
   [[noreturn]] classification_result tag(
