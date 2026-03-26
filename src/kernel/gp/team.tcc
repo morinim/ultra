@@ -105,7 +105,7 @@ team<I> crossover(const problem &prb, const team<I> &lhs, const team<I> &rhs)
     lhs, rhs, std::back_inserter(crossed),
     [&prb](const auto &i1, const auto &i2) { return crossover(prb, i1, i2); });
 
-  return team(crossed);
+  return team(std::move(crossed));
 }
 
 ///
@@ -118,7 +118,7 @@ typename team<I>::const_iterator team<I>::begin() const noexcept
 }
 
 ///
-/// \return an iterator pointing to a end-of-team sentry
+/// \return an iterator pointing to an end-of-team sentry
 ///
 template<Individual I>
 typename team<I>::const_iterator team<I>::end() const noexcept
@@ -168,7 +168,7 @@ std::size_t team<I>::size() const noexcept
 ///
 template<Individual I> unsigned active_slots(const team<I> &t)
 {
-  return std::accumulate(t.begin(), t.end(), 0,
+  return std::accumulate(t.begin(), t.end(), 0u,
                          [](unsigned n, const I &ind)
                          {
                            return n + active_slots(ind);
@@ -182,7 +182,7 @@ template<Individual I> unsigned active_slots(const team<I> &t)
 /// \return the signature of `this` team
 ///
 /// In other words identical teams, at genotypic level, have the same
-/// signature; different teams at the genotipic level may be mapped
+/// signature; different teams at the genotypic level may be mapped
 /// to the same signature since the value of terminals is considered and not
 /// the index.
 ///
@@ -215,7 +215,7 @@ hash_t team<I>::hash() const
 
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparision
+/// \param[in] rhs second term of comparison
 /// \return        `true` if the two teams are equal (individual by individual)
 ///
 /// \note
@@ -224,22 +224,9 @@ hash_t team<I>::hash() const
 /// \related team
 ///
 template<Individual I>
-bool operator==(const team<I> &lhs, const team<I> &rhs)
+bool operator==(const team<I> &lhs, const team<I> &rhs) noexcept
 {
   return std::ranges::equal(lhs, rhs);
-}
-
-///
-/// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparision
-/// \return        `true` if the two teams aren't equal
-///
-/// \related team
-///
-template<Individual I>
-bool operator!=(const team<I> &lhs, const team<I> &rhs)
-{
-  return !(lhs == rhs);
 }
 
 ///
@@ -269,12 +256,17 @@ unsigned distance(const team<I> &lhs, const team<I> &rhs)
 template<Individual I>
 ultra::individual::age_t team<I>::age() const
 {
-  const unsigned age_sum(std::accumulate(begin(), end(), 0u,
-                                         [](ultra::individual::age_t sum,
-                                            const I &i)
-                                         {
-                                           return sum + i.age();
-                                         }));
+  if (empty())
+    return 0;
+
+  using age_t = ultra::individual::age_t;
+
+  const unsigned age_sum(std::accumulate(
+                           begin(), end(), static_cast<age_t>(0),
+                           [](age_t sum, const I &i)
+                           {
+                             return sum + i.age();
+                           }));
 
   return age_sum / size();
 }
@@ -297,12 +289,16 @@ void team<I>::inc_age(unsigned delta)
 template<Individual I>
 bool team<I>::is_valid() const
 {
+  if (std::ranges::any_of(individuals_,
+                          [](const I &i) { return !i.is_valid(); }))
+    return false;
+
   return signature_.empty() || signature_ == hash();
 }
 
 ///
-/// \param[in] ss active symbol set
 /// \param[in] in input stream
+/// \param[in] ss active symbol set
 /// \return       `true` if team was loaded correctly
 ///
 /// \note

@@ -13,19 +13,20 @@
 #if !defined(ULTRA_TEAM_H)
 #define      ULTRA_TEAM_H
 
-#include <algorithm>
-
 #include "kernel/cache.h"
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 
+#include <algorithm>
+
 namespace ultra::gp
 {
+
 ///
 /// A collection of cooperating individuals used as a member of
 /// ultra::population.
 ///
-/// In generals teams of individuals can be implemented in different ways.
+/// In generals, teams of individuals can be implemented in different ways.
 /// * Firstly, a certain number of individuals can be selected randomly from
 ///   the population and evaluated in combination as a team (but we have a
 ///   credit assignment problem).
@@ -88,10 +89,10 @@ public:
                                                   const team<U> &);
 
 private:
-  // Private support methods.
+  // ---- Private support methods ----
   [[nodiscard]] hash_t hash() const;
 
-  // Private data members.
+  // ---- Private data members ----
   members_t individuals_ {};
 
   mutable hash_t signature_ {};
@@ -101,9 +102,7 @@ private:
 // *  Comparison operators                                               *
 // ***********************************************************************
 template<Individual I> [[nodiscard]] bool operator==(const team<I> &,
-                                                     const team<I> &);
-template<Individual I> [[nodiscard]] bool operator!=(const team<I> &,
-                                                     const team<I> &);
+                                                     const team<I> &) noexcept;
 template<Individual I> [[nodiscard]] unsigned distance(const team<I> &,
                                                        const team<I> &);
 
@@ -117,14 +116,9 @@ template<Individual I> std::ostream &operator<<(std::ostream &,
                                                 const team<I> &);
 
 
-template<class T> concept Team = requires(T t)
-{
-  // See https://stackoverflow.com/q/71921797/3235496
-  // This C++20 template lambda only binds to `team<I>` specialisations,
-  // including classes derived from them.
-  //
-  []<Individual I>(const team<I> &){}(t);
-};
+template<class> inline constexpr bool is_team_v = false;
+template<Individual I> inline constexpr bool is_team_v<team<I>> = true;
+template<class T> concept Team = is_team_v<std::remove_cvref_t<T>>;
 
 #include "kernel/gp/team.tcc"
 
