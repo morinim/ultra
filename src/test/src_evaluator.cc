@@ -21,10 +21,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-#include <cstdlib>
-#include <iostream>
-
-TEST_SUITE("SRC::EVALUATOR")
+TEST_SUITE("src::evaluator")
 {
 
 TEST_CASE("Concepts")
@@ -59,6 +56,14 @@ TEST_CASE("Concepts")
   CHECK(Evaluator<src::count_error_evaluator<gp::team<gp::individual>>>);
 }
 
+[[nodiscard]] ultra::src::problem make_problem(std::istream &is)
+{
+  ultra::src::problem pr(is);
+  pr.params.init();
+  pr.setup_symbols();
+  return pr;
+}
+
 TEST_CASE("Aggregate evaluators")
 {
   using namespace ultra;
@@ -76,11 +81,8 @@ TEST_CASE("Aggregate evaluators")
     168420,      20
 )");
 
-  ultra::src::problem pr(sr);
+  auto pr(make_problem(sr));
   CHECK(!pr.data.selected().empty());
-
-  pr.params.init();
-  pr.setup_symbols();
 
   const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
   CHECK(x1);
@@ -90,92 +92,65 @@ TEST_CASE("Aggregate evaluators")
   const std::vector out = {95.2425, 1554.0, 2866.5485, 4680.0, 11110.0,
                            18386.0340, 22620.0, 41370.0, 54240.0, 168420.0};
 
-  const gp::individual delphi(
-    {
-      {f_ife, {x1, 15.000, out[8], out[9]}},
-      {f_ife, {x1, 14.000, out[7], 0_addr}},
-      {f_ife, {x1, 12.000, out[6], 1_addr}},
-      {f_ife, {x1, 11.380, out[5], 2_addr}},
-      {f_ife, {x1, 10.000, out[4], 3_addr}},
-      {f_ife, {x1,  8.000, out[3], 4_addr}},
-      {f_ife, {x1,  7.043, out[2], 5_addr}},
-      {f_ife, {x1,  6.000, out[1], 6_addr}},
-      {f_ife, {x1,  2.810, out[0], 7_addr}}
-    });
+  const auto make_individual([&](auto transform)
+  {
+    return gp::individual({
+        {f_ife, {x1, 15.000, transform(out[8]), transform(out[9])}},
+        {f_ife, {x1, 14.000, transform(out[7]), 0_addr}},
+        {f_ife, {x1, 12.000, transform(out[6]), 1_addr}},
+        {f_ife, {x1, 11.380, transform(out[5]), 2_addr}},
+        {f_ife, {x1, 10.000, transform(out[4]), 3_addr}},
+        {f_ife, {x1,  8.000, transform(out[3]), 4_addr}},
+        {f_ife, {x1,  7.043, transform(out[2]), 5_addr}},
+        {f_ife, {x1,  6.000, transform(out[1]), 6_addr}},
+        {f_ife, {x1,  2.810, transform(out[0]), 7_addr}}
+      });
+  });
 
-  const gp::individual delta1(
-    {
-      {f_ife, {x1, 15.000, out[8] + 1.0, out[9] + 1.0}},
-      {f_ife, {x1, 14.000, out[7] + 1.0, 0_addr}},
-      {f_ife, {x1, 12.000, out[6] + 1.0, 1_addr}},
-      {f_ife, {x1, 11.380, out[5] + 1.0, 2_addr}},
-      {f_ife, {x1, 10.000, out[4] + 1.0, 3_addr}},
-      {f_ife, {x1,  8.000, out[3] + 1.0, 4_addr}},
-      {f_ife, {x1,  7.043, out[2] + 1.0, 5_addr}},
-      {f_ife, {x1,  6.000, out[1] + 1.0, 6_addr}},
-      {f_ife, {x1,  2.810, out[0] + 1.0, 7_addr}}
-    });
+  const auto delphi(make_individual([](double v){ return v; }));
+  const auto delta1(make_individual([](double v){ return v + 1.0; }));
+  const auto delta2(make_individual([](double v){ return v + 2.0; }));
 
-  const gp::individual delta2(
-    {
-      {f_ife, {x1, 15.000, out[8] + 2.0, out[9] + 2.0}},
-      {f_ife, {x1, 14.000, out[7] + 2.0, 0_addr}},
-      {f_ife, {x1, 12.000, out[6] + 2.0, 1_addr}},
-      {f_ife, {x1, 11.380, out[5] + 2.0, 2_addr}},
-      {f_ife, {x1, 10.000, out[4] + 2.0, 3_addr}},
-      {f_ife, {x1,  8.000, out[3] + 2.0, 4_addr}},
-      {f_ife, {x1,  7.043, out[2] + 2.0, 5_addr}},
-      {f_ife, {x1,  6.000, out[1] + 2.0, 6_addr}},
-      {f_ife, {x1,  2.810, out[0] + 2.0, 7_addr}}
-    });
+  const auto huge1(make_individual([&](const double &v)
+  {
+    return (&v == &out[0]) ? HUGE_VAL : v;
+  }));
 
-  const gp::individual huge1(
-    {
-      {f_ife, {x1, 15.000, out[8], out[9]}},
-      {f_ife, {x1, 14.000, out[7], 0_addr}},
-      {f_ife, {x1, 12.000, out[6], 1_addr}},
-      {f_ife, {x1, 11.380, out[5], 2_addr}},
-      {f_ife, {x1, 10.000, out[4], 3_addr}},
-      {f_ife, {x1,  8.000, out[3], 4_addr}},
-      {f_ife, {x1,  7.043, out[2], 5_addr}},
-      {f_ife, {x1,  6.000, out[1], 6_addr}},
-      {f_ife, {x1,  2.810, HUGE_VAL, 7_addr}}
-    });
+  const auto huge2(make_individual([&](const double &v)
+  {
+    if (&v != &out[0] && &v != &out[1])
+      return v;
 
-  const gp::individual huge2(
-    {
-      {f_ife, {x1, 15.000, out[8], out[9]}},
-      {f_ife, {x1, 14.000, out[7], 0_addr}},
-      {f_ife, {x1, 12.000, out[6], 1_addr}},
-      {f_ife, {x1, 11.380, out[5], 2_addr}},
-      {f_ife, {x1, 10.000, out[4], 3_addr}},
-      {f_ife, {x1,  8.000, out[3], 4_addr}},
-      {f_ife, {x1,  7.043, out[2], 5_addr}},
-      {f_ife, {x1,  6.000, -HUGE_VAL, 6_addr}},
-      {f_ife, {x1,  2.810, HUGE_VAL, 7_addr}}
-    });
+    return (&v == &out[0]) ? HUGE_VAL : -HUGE_VAL;
+  }));
+
+  using std::ranges::views::zip;
+
+  const auto inputs =
+    pr.data.selected()
+    | std::views::transform([](const auto &e) { return e.input; });
 
   SUBCASE("Delphi knows everything")
   {
     {
       const src::reg_oracle oracle(delphi);
-      for (std::size_t i(0); const auto &e : pr.data.selected())
-        CHECK(std::get<D_DOUBLE>(oracle(e.input))
-              == doctest::Approx(out[i++]));
+
+      for (auto [input, expected] : zip(inputs, out))
+        CHECK(std::get<D_DOUBLE>(oracle(input)) == doctest::Approx(expected));
     }
 
     {
       const src::reg_oracle oracle(delta1);
-      for (std::size_t i(0); const auto &e : pr.data.selected())
-        CHECK(std::get<D_DOUBLE>(oracle(e.input))
-              == doctest::Approx(out[i++] + 1));
+
+      for (auto [input, expected] : zip(inputs, out))
+        CHECK(std::get<D_DOUBLE>(oracle(input)) == doctest::Approx(expected+1));
     }
 
     {
       const src::reg_oracle oracle(delta2);
-      for (std::size_t i(0); const auto &e : pr.data.selected())
-        CHECK(std::get<D_DOUBLE>(oracle(e.input))
-              == doctest::Approx(out[i++] + 2));
+
+      for (auto [input, expected] : zip(inputs, out))
+        CHECK(std::get<D_DOUBLE>(oracle(input)) == doctest::Approx(expected+2));
     }
   }
 
@@ -225,25 +200,129 @@ TEST_CASE("binary_evaluator")
   using namespace ultra;
 
   std::istringstream is(debug::gender_trick);
-  ultra::src::problem pr(is);
+  auto pr(make_problem(is));
   CHECK(!pr.data.selected().empty());
-
-  pr.setup_symbols();
 
   const auto *easy(static_cast<const src::variable *>(
                      pr.sset.decode("EASY")));
-  CHECK(easy);
+  REQUIRE(easy);
 
   const function *f_add(pr.insert<ultra::real::add>());
 
-  const gp::individual delphi(
+  SUBCASE("perfect case")
+  {
+    const gp::individual delphi(
     {
       {f_add, {easy, easy}}
     });
 
-  src::binary_evaluator<gp::individual> eva(pr.data);
+    src::binary_evaluator<gp::individual> eva(pr.data);
 
-  CHECK(eva(delphi) == doctest::Approx(0.0));
+    CHECK(eva(delphi) == doctest::Approx(0.0));
+  }
+
+  SUBCASE("failing individual")
+  {
+    const gp::individual wrong(
+    {
+      {f_add, {easy, 10.0}}
+    });
+
+    src::binary_evaluator<gp::individual> eva(pr.data);
+
+    CHECK(eva(wrong) < 0.0);
+  }
 }
 
-}  // SRC::EVALUATOR
+TEST_CASE("fast evaluation matches full evaluation for constant error")
+{
+  using namespace ultra;
+
+  std::ostringstream os;
+  for (int i(0); i < 100; ++i)
+    os << i << ".0," << i << ".0\n";
+
+  std::istringstream is(os.str());
+  auto pr(make_problem(is));
+
+  const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
+  REQUIRE(x1);
+
+  const function *f_add(pr.insert<ultra::real::add>());
+
+  const gp::individual plus_one({{f_add, {x1, 1.0}}});
+
+  SUBCASE("average evaluator")
+  {
+    src::mae_evaluator<gp::individual> eva(pr.data);
+    CHECK(eva(plus_one) == doctest::Approx(-1.0));
+    CHECK(eva.fast(plus_one) == doctest::Approx(eva(plus_one)));
+  }
+
+  SUBCASE("sum evaluator")
+  {
+    src::sum_error_evaluator<gp::individual,
+                             src::mae_error_functor<gp::individual>>
+      eva(pr.data);
+    CHECK(eva(plus_one) == doctest::Approx(-100.0));
+    CHECK(eva.fast(plus_one) == doctest::Approx(eva(plus_one)));
+  }
+}
+
+template<class E> concept HasOracle =
+  requires(const E &e, const ultra::gp::individual &i)
+{
+  e.oracle(i);
+};
+
+TEST_CASE("aggregate evaluator oracle availability")
+{
+  using namespace ultra;
+
+  using mae_t = src::mae_evaluator<gp::individual>;
+  using rmae_t = src::rmae_evaluator<gp::individual>;
+  using mse_t = src::mse_evaluator<gp::individual>;
+  using count_t = src::count_error_evaluator<gp::individual>;
+
+  CHECK(HasOracle<mae_t>);
+  CHECK(HasOracle<rmae_t>);
+  CHECK(HasOracle<mse_t>);
+  CHECK_FALSE(HasOracle<count_t>);
+}
+
+TEST_CASE("EvaluationDataset concept")
+{
+  using namespace ultra;
+
+  CHECK((src::EvaluationDataset<src::dataframe>));
+  CHECK((src::EvaluationDataset<src::multi_dataset<src::dataframe>>));
+
+  CHECK_FALSE((src::EvaluationDataset<int>));
+}
+
+TEST_CASE("team evaluator with identical members")
+{
+  using namespace ultra;
+
+  std::istringstream is(R"(
+    1.0,1.0
+    2.0,2.0
+    3.0,3.0
+  )");
+
+  auto pr(make_problem(is));
+
+  const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
+  REQUIRE(x1);
+
+  const function *f_add(pr.insert<ultra::real::add>());
+  const gp::individual id({{f_add, {x1, 0.0}}});
+
+  gp::team<gp::individual> team({id, id, id});
+
+  src::mae_evaluator<gp::team<gp::individual>> eva(pr.data);
+
+  CHECK(eva(team) == doctest::Approx(0.0));
+}
+
+}  // TEST_SUITE
