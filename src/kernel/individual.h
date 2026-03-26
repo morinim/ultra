@@ -68,13 +68,15 @@ private:
   age_t age_ {0};
 };  // class individual
 
-template<class I> concept Individual = requires(I i)
-{
-  I();
-
-  i.empty();
-  i.signature();
-};
+template<class I> concept Individual =
+  std::default_initializable<I>
+  && requires(const I &ci, I &i)
+  {
+    { ci.empty() } -> std::convertible_to<bool>;
+    { ci.signature() } -> std::same_as<hash_t>;
+    { ci.age() } -> std::unsigned_integral;
+    i.inc_age();
+  };
 
 namespace out
 {
