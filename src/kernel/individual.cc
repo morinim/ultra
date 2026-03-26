@@ -24,22 +24,23 @@ namespace ultra
 {
 
 ///
-/// Returns the structural signature of the individual.
+/// Returns the cached structural signature of the individual.
 ///
 /// \return the signature of this individual
 ///
 /// The signature is a hash representing the logical structure of the
-/// individual. It may be computed lazily and cached internally.
+/// individual. It must be maintained by the derived type whenever the
+/// individual is mutated.
 ///
 /// Signature maps syntactically distinct (but logically equivalent)
 /// individuals to the same value.
 ///
 /// In other words identical individuals at genotypic level have the same
-/// signature; different individuals at the genotipic level may be mapped
+/// signature; different individuals at the genotypic level may be mapped
 /// to the same signature since real structure/computation is considered and
 /// not the simple storage.
 ///
-/// This is a very interesting  property, useful for individual comparison,
+/// This is a very interesting property, useful for individual comparison,
 /// information retrieval, entropy calculation...
 ///
 /// \note
@@ -58,9 +59,9 @@ hash_t individual::signature() const noexcept
 ///
 /// This is a measure of how long an individual's family of genotypic
 /// material has been in the population. Randomly generated individuals,
-/// such as those that are created when the search algorithm are started,
-/// start with an age of `0`. Each generation that an individual stays in the
-/// population (such as through elitism) its age is increased by `1`.
+/// such as those that are created when search starts, have an age of `0`. Each
+/// generation that an individual stays in the population (such as through
+/// elitism) its age is increased by `1`.
 /// **Individuals that are created through mutation or recombination take the
 /// age of their oldest parent**.
 ///

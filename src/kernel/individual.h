@@ -74,8 +74,8 @@ template<class I> concept Individual =
   {
     { ci.empty() } -> std::convertible_to<bool>;
     { ci.signature() } -> std::same_as<hash_t>;
-    { ci.age() } -> std::unsigned_integral;
-    i.inc_age();
+    { ci.age() } -> std::convertible_to<individual::age_t>;
+    { i.inc_age() } -> std::same_as<void>;
   };
 
 namespace out
@@ -89,7 +89,6 @@ enum print_format_t {list_f,  // default value
                      cpp_language_f = language_f + symbol::cpp_format,
                      python_language_f = language_f + symbol::python_format};
 
-bool long_form_flag(std::ostream &);
 print_format_t print_format_flag(std::ostream &);
 
 class print_format
