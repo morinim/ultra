@@ -10,14 +10,14 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "kernel/gp/src/multi_dataset.h"
 #include "kernel/gp/src/dataframe.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
 
 TEST_SUITE("MULTI DATASET")
 {
@@ -25,6 +25,10 @@ TEST_SUITE("MULTI DATASET")
 TEST_CASE("Concepts")
 {
   CHECK(ultra::src::DataSet<ultra::src::dataframe>);
+  CHECK(!ultra::src::DataSet<ultra::src::multi_dataset<ultra::src::dataframe>>);
+
+  CHECK(ultra::src::is_multi_dataset_v<ultra::src::multi_dataset<ultra::src::dataframe>>);
+  CHECK(!ultra::src::is_multi_dataset_v<ultra::src::dataframe>);
 }
 
 TEST_CASE("dataset_t")
@@ -90,4 +94,4 @@ TEST_CASE("Base")
   CHECK(mds[dataset_t::test].size() == 2);
 }
 
-}  // TEST_SUITE("MULTI DATASET")
+}  // TEST_SUITE
