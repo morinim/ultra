@@ -94,14 +94,21 @@ double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 }
 
 ///
-/// Builds an oracle associated with a program.
+/// Builds a regression oracle associated with a program.
 ///
 /// \param[in] prg program to transform into an oracle
 /// \return        oracle object associated with `prg`
 ///
+/// \remark
+/// This member function is conditionally enabled only when the functor `F`
+/// used by the evaluator is known to support regression semantics (as
+/// indicated by `has_regression_oracle<F, P>`). It is not available for
+/// classification or generic score-based evaluators.
+///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
 auto aggregate_evaluator<P, F, D, A, M>::oracle(const P &prg) const
+  requires internal::has_regression_oracle_v<F, P>
 {
   return reg_oracle<P>(prg);
 }

@@ -24,18 +24,15 @@ namespace internal
 ///
 /// This helper metafunction determines the type of elements yielded by a
 /// dataset, abstracting over the two supported dataset forms.
-template<class D, bool = is_multi_dataset_v<D>>
-struct dataset_example_impl;
+template<class D, bool = is_multi_dataset_v<D>> struct dataset_example_impl;
 
-template<class D>
-struct dataset_example_impl<D, true>
+template<class D> struct dataset_example_impl<D, true>
 {
   using type =
     std::remove_cvref_t<decltype(*std::declval<D>().selected().begin())>;
 };
 
-template<class D>
-struct dataset_example_impl<D, false>
+template<class D> struct dataset_example_impl<D, false>
 {
   using type =
     std::remove_cvref_t<decltype(*std::declval<D>().begin())>;
@@ -43,6 +40,19 @@ struct dataset_example_impl<D, false>
 
 template<class D>
 using dataset_example_t = typename dataset_example_impl<D>::type;
+
+
+/// Trait indicating whether a functor can expose a regression oracle through
+/// `aggregate_evaluator::oracle()`.
+///
+/// This trait is used to selectively enable the
+/// `aggregate_evaluator::oracle()` member function only for functors whose
+/// semantics are compatible with `reg_oracle`.
+template<class F, class P> struct has_regression_oracle : std::false_type {};
+
+/// Convenience variable template for `has_regression_oracle`.
+template<class F, class P> inline constexpr bool has_regression_oracle_v =
+  has_regression_oracle<F, P>::value;
 
 }  // namespace internal
 
