@@ -32,22 +32,22 @@ TEST_CASE("Concepts")
   using namespace ultra;
 
   CHECK(src::ExampleEvaluator<src::mae_error_functor<gp::individual>,
-        src::dataframe>);
+        src::dataframe, gp::individual>);
   CHECK(src::ExampleEvaluator<src::rmae_error_functor<gp::individual>,
-        src::dataframe>);
+        src::dataframe, gp::individual>);
   CHECK(src::ExampleEvaluator<src::mse_error_functor<gp::individual>,
-        src::dataframe>);
+        src::dataframe, gp::individual>);
   CHECK(src::ExampleEvaluator<src::count_error_functor<gp::individual>,
-        src::dataframe>);
+        src::dataframe, gp::individual>);
 
   CHECK(src::ExampleEvaluator<src::mae_error_functor<gp::individual>,
-        src::multi_dataset<src::dataframe>>);
+        src::multi_dataset<src::dataframe>, gp::individual>);
   CHECK(src::ExampleEvaluator<src::rmae_error_functor<gp::individual>,
-        src::multi_dataset<src::dataframe>>);
+        src::multi_dataset<src::dataframe>, gp::individual>);
   CHECK(src::ExampleEvaluator<src::mse_error_functor<gp::individual>,
-        src::multi_dataset<src::dataframe>>);
+        src::multi_dataset<src::dataframe>, gp::individual>);
   CHECK(src::ExampleEvaluator<src::count_error_functor<gp::individual>,
-        src::multi_dataset<src::dataframe>>);
+        src::multi_dataset<src::dataframe>, gp::individual>);
 
   CHECK(Evaluator<src::mae_evaluator<gp::individual>>);
   CHECK(Evaluator<src::mae_evaluator<gp::team<gp::individual>>>);

@@ -20,24 +20,11 @@
 namespace internal
 {
 
-/// Concept checking whether a type derives from a given class template.
-///
-/// This concept evaluates to true if `Derived` is publicly convertible to
-/// some instantiation of the class template `Base<Ts...>`.
-///
-/// It is mainly used to detect whether a dataset type is a specialisation
-/// of `multi_dataset`.
-template<class Derived, template<class...> class Base>
-concept derived_from_template = requires(Derived &d)
-{
-  []<class... Ts>(Base<Ts...> &) {}(d);
-};
-
 /// Extracts the type of a single example from a dataset.
 ///
 /// This helper metafunction determines the type of elements yielded by a
 /// dataset, abstracting over the two supported dataset forms.
-template<class D, bool = derived_from_template<D, multi_dataset>>
+template<class D, bool = is_multi_dataset_v<D>>
 struct dataset_example_impl;
 
 template<class D>

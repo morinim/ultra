@@ -37,9 +37,8 @@ namespace ultra::src
 /// used.
 ///
 template<class D> concept EvaluationDataset =
-  DataSet<D>
-  || (internal::derived_from_template<D, multi_dataset>
-      && DataSet<decltype(std::declval<D>().selected())>);
+  (is_multi_dataset_v<D> && DataSet<decltype(std::declval<D>().selected())>)
+  || DataSet<D>;
 
 ///
 /// Concept modelling a functor that evaluates a single dataset example.
@@ -60,8 +59,9 @@ template<class D> concept EvaluationDataset =
 /// The functor is typically constructed from an individual/program and may
 /// internally use an oracle or interpreter to compute predictions.
 ///
-template<class F, class D> concept ExampleEvaluator =
-  EvaluationDataset<D> && std::invocable<F, internal::dataset_example_t<D>>;
+template<class F, class D, class P> concept ExampleEvaluator =
+  EvaluationDataset<D> && Individual<P>
+  && std::invocable<F, internal::dataset_example_t<D>>;
 
 ///
 /// Base class for dataset-aware evaluators.
@@ -89,7 +89,7 @@ enum class aggregation_mode { sum, average };
 enum class evaluation_mode  { error, score };
 
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 class aggregate_evaluator : public evaluator<D>
 {
 public:

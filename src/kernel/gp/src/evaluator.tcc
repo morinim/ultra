@@ -38,7 +38,7 @@ evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 template<EvaluationDataset D>
 auto *evaluator<D>::data() const noexcept
 {
-  if constexpr (internal::derived_from_template<D, multi_dataset>)
+  if constexpr (is_multi_dataset_v<D>)
     return &dat_->selected();
   else
     return dat_;
@@ -50,7 +50,7 @@ auto *evaluator<D>::data() const noexcept
 /// \param[in] d training dataset
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 aggregate_evaluator<P, F, D, A, M>::aggregate_evaluator(D &d) noexcept
   : evaluator<D>(d)
 {
@@ -63,7 +63,7 @@ aggregate_evaluator<P, F, D, A, M>::aggregate_evaluator(D &d) noexcept
 /// \return        fitness value (greater is better)
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::operator()(const P &prg) const
 {
   return eval_impl(prg, 1);
@@ -85,7 +85,7 @@ double aggregate_evaluator<P, F, D, A, M>::operator()(const P &prg) const
 /// comparable with operator()().
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 {
   Expects(std::ranges::distance(*this->data()) >= 100);
@@ -99,7 +99,7 @@ double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 /// \return        oracle object associated with `prg`
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 auto aggregate_evaluator<P, F, D, A, M>::oracle(const P &prg) const
 {
   return reg_oracle<P>(prg);
@@ -111,7 +111,7 @@ auto aggregate_evaluator<P, F, D, A, M>::oracle(const P &prg) const
 /// \return         fitness value
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
-requires ExampleEvaluator<F, D>
+requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
                                                      std::ptrdiff_t step) const
 {
