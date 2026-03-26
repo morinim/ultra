@@ -75,6 +75,21 @@ private:
   dataset_t selected_ {dataset_t::training};
 };  // class multi_dataset
 
+
+///
+/// Type trait detecting whether a type is a specialisation of `multi_dataset`.
+///
+/// This trait evaluates to `true` if `T` is exactly a `multi_dataset<U>`
+/// (for some `U`), ignoring cv-qualifiers and references. Otherwise, it
+/// evaluates to `false`.
+template<class T> struct is_multi_dataset : std::false_type {};
+template<class T> struct is_multi_dataset<multi_dataset<T>> : std::true_type {};
+
+/// Convenience variable template for `is_multi_dataset`.
+template<class T> inline constexpr bool is_multi_dataset_v =
+  is_multi_dataset<std::remove_cvref_t<T>>::value;
+
+
 #include "kernel/gp/src/multi_dataset.tcc"
 
 }  // namespace ultra::src
