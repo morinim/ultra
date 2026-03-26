@@ -30,18 +30,18 @@ evaluator<D>::evaluator(D &d) noexcept : dat_(&d)
 ///
 /// Returns the dataset currently used for evaluation.
 ///
-/// \return pointer to the active dataset
+/// \return reference to the active dataset
 ///
 /// For `multi_dataset `, this returns the currently selected dataset.
 /// Otherwise, it returns the dataset itself.
 ///
 template<EvaluationDataset D>
-auto *evaluator<D>::data() const noexcept
+const auto &evaluator<D>::data() const noexcept
 {
   if constexpr (is_multi_dataset_v<D>)
-    return &dat_->selected();
+    return dat_->selected();
   else
-    return dat_;
+    return *dat_;
 }
 
 ///
@@ -88,7 +88,7 @@ template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 {
-  Expects(std::ranges::distance(*this->data()) >= 100);
+  Expects(std::ranges::distance(this->data()) >= 100);
   return eval_impl(prg, 5);
 }
 
@@ -115,7 +115,7 @@ requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
                                                      std::ptrdiff_t step) const
 {
-  const auto &dat(*this->data());
+  const auto &dat(this->data());
 
   Expects(std::ranges::distance(dat) >= step);
   Expects(step > 0);
@@ -310,8 +310,8 @@ gaussian_evaluator<P>::gaussian_evaluator(multi_dataset<dataframe> &d)
 template<Individual P>
 double gaussian_evaluator<P>::operator()(const P &prg) const
 {
-  Expects(this->data()->classes() >= 2);
-  const auto &dat(*this->data());
+  const auto &dat(this->data());
+  Expects(dat.classes() >= 2);
   basic_gaussian_oracle<P, false, false> oracle(prg, dat);
 
   double d(0.0);
@@ -346,7 +346,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 template<Individual P>
 auto gaussian_evaluator<P>::oracle(const P &prg) const
 {
-  return gaussian_oracle<P>(prg, *this->data());
+  return gaussian_oracle<P>(prg, this->data());
 }
 
 ///
@@ -371,8 +371,8 @@ binary_evaluator<P>::binary_evaluator(multi_dataset<dataframe> &d)
 template<Individual P>
 double binary_evaluator<P>::operator()(const P &prg) const
 {
-  Expects(this->data()->classes() == 2);
-  const auto &dat(*this->data());
+  const auto &dat(this->data());
+  Expects(dat.classes() == 2);
   basic_binary_oracle<P, false, false> oracle(prg, dat);
 
   double err(0.0);
@@ -393,7 +393,7 @@ double binary_evaluator<P>::operator()(const P &prg) const
 template<Individual P>
 auto binary_evaluator<P>::oracle(const P &prg) const
 {
-  return binary_oracle<P>(prg, *this->data());
+  return binary_oracle<P>(prg, this->data());
 }
 
 #endif  // include guard

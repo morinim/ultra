@@ -79,7 +79,7 @@ class evaluator
 protected:
   explicit evaluator(D &) noexcept;
 
-  [[nodiscard]] auto *data() const noexcept;
+  [[nodiscard]] const auto &data() const noexcept;
 
 private:
   D *dat_ {nullptr};
