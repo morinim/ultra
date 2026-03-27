@@ -14,10 +14,15 @@
 #define      ULTRA_TEAM_H
 
 #include "kernel/cache.h"
-#include "kernel/individual_format.h"
+#include "kernel/individual.h"
 #include "kernel/problem.h"
 
 #include <algorithm>
+
+namespace ultra::out
+{
+print_format_t print_format_flag(std::ostream &);
+}
 
 namespace ultra::gp
 {
@@ -58,14 +63,20 @@ public:
   explicit team(const problem &);
   explicit team(std::vector<I>);
 
-  // Recombination operators.
+  // ---- Recombination operators ----
   unsigned mutation(const problem &);
+  template<Individual U> friend team<U> crossover(const problem &,
+                                                  const team<U> &,
+                                                  const team<U> &);
 
+  // ---- Element access ----
   [[nodiscard]] const I &operator[](std::size_t) const;
 
+  // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
 
+  // ---- Misc ----
   [[nodiscard]] hash_t signature() const;
 
   [[nodiscard]] ultra::individual::age_t age() const;
@@ -73,20 +84,16 @@ public:
 
   [[nodiscard]] bool is_valid() const;
 
-  // Iterators.
+  // ---- Iterators ----
   using members_t = std::vector<I>;
   using const_iterator = typename members_t::const_iterator;
   using value_type = typename members_t::value_type;
   [[nodiscard]] const_iterator begin() const noexcept;
   [[nodiscard]] const_iterator end() const noexcept;
 
-  // Serialization.
+  // ---- Serialization ----
   bool load(std::istream &, const symbol_set &);
   bool save(std::ostream &) const;
-
-  template<Individual U> friend team<U> crossover(const problem &,
-                                                  const team<U> &,
-                                                  const team<U> &);
 
 private:
   // ---- Private support methods ----
