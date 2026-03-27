@@ -14,11 +14,11 @@
 
 #include "test/fixture6.h"
 
-#include <cstdlib>
-#include <sstream>
-
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <sstream>
 
 TEST_SUITE("hga::individual")
 {
@@ -316,4 +316,13 @@ TEST_CASE_FIXTURE(fixture6, "Signature")
   CHECK(i1.signature() != i2.signature());
 }
 
-}  // TEST_SUITE("hga::individual")
+TEST_CASE_FIXTURE(fixture6, "std::format integration")
+{
+  using namespace ultra;
+
+  const hga::individual i(prob);
+
+  CHECK(std::format("{}", i) == i.format(out::list_f));
+}
+
+}  // TEST_SUITE

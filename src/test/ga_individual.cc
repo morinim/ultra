@@ -14,15 +14,15 @@
 
 #include "test/fixture5.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
+
 #include <cstdlib>
 #include <future>
 #include <iterator>
 #include <latch>
 #include <set>
 #include <sstream>
-
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
 
 TEST_SUITE("ga::individual")
 {
@@ -357,4 +357,11 @@ TEST_CASE_FIXTURE(fixture5, "Serialisation")
   }
 }
 
-}  // TEST_SUITE("ga::individual")
+TEST_CASE_FIXTURE(fixture5, "std::format integration")
+{
+  const ultra::ga::individual i(prob);
+
+  CHECK(std::format("{}", i) == i.format(ultra::out::list_f));
+}
+
+}  // TEST_SUITE

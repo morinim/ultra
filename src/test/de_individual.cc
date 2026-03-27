@@ -26,7 +26,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("DE INDIVIDUAL")
+TEST_SUITE("de::individual")
 {
 
 TEST_CASE_FIXTURE(fixture4, "Random creation")
@@ -315,4 +315,13 @@ TEST_CASE_FIXTURE(fixture4, "Serialization")
   }
 }
 
-}  // TEST_SUITE("DE INDIVIDUAL")
+TEST_CASE_FIXTURE(fixture4, "std::format integration")
+{
+  using namespace ultra;
+
+  const de::individual i(prob);
+
+  CHECK(std::format("{}", i) == i.format(out::list_f));
+}
+
+}  // TEST_SUITE

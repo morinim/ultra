@@ -24,6 +24,19 @@ namespace ultra
 
 std::ostream &operator<<(std::ostream &, const individual &);
 
+namespace internal
+{
+
+template<class Individual, class FormatContext>
+auto format_individual(const Individual &ind, out::print_format_t fmt,
+                       FormatContext &ctx)
+{
+  const auto s(ind.format(fmt));
+  return std::ranges::copy(s, ctx.out()).out;
+}
+
+}  // namespace internal
+
 namespace out
 {
 
@@ -108,8 +121,7 @@ template<> struct formatter<ultra::individual, char>
   template<class FormatContext>
   auto format(const ultra::individual &ind, FormatContext &ctx) const
   {
-    const auto s(ind.format(fmt_));
-    return std::ranges::copy(s, ctx.out()).out;
+    return ultra::internal::format_individual(ind, fmt_, ctx);
   }
 };
 

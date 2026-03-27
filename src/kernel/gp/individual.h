@@ -109,4 +109,6 @@ private:
 
 }  // namespace ultra::gp
 
+#include "kernel/gp/individual_format.h"
+
 #endif  // include guard

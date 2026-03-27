@@ -10,20 +10,20 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_GP_INDIVIDUAL_FORMAT_H)
-#define      ULTRA_GP_INDIVIDUAL_FORMAT_H
+#if !defined(ULTRA_HGA_INDIVIDUAL_FORMAT_H)
+#define      ULTRA_HGA_INDIVIDUAL_FORMAT_H
 
-#include "kernel/gp/individual.h"
+#include "kernel/hga/individual.h"
 #include "kernel/individual_format.h"
 
 namespace std
 {
 
-template<> struct formatter<ultra::gp::individual, char>
+template<> struct formatter<ultra::hga::individual, char>
   : formatter<ultra::individual, char>
 {
   template<class FormatContext>
-  auto format(const ultra::gp::individual &ind, FormatContext &ctx) const
+  auto format(const ultra::hga::individual &ind, FormatContext &ctx) const
   {
     return ultra::internal::format_individual(ind, this->fmt_, ctx);
   }
