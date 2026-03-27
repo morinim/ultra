@@ -16,10 +16,24 @@
 #include "kernel/hash_t.h"
 #include "kernel/symbol_set.h"
 
-#include <fstream>
+#include <iosfwd>
+#include <string>
 
 namespace ultra
 {
+
+namespace out
+{
+
+/// Rendering format used to print an individual.
+enum print_format_t {list_f,  // default value
+                     dump_f, graphviz_f, in_line_f, tree_f,
+                     language_f,
+                     c_language_f = language_f + symbol::c_format,
+                     cpp_language_f = language_f + symbol::cpp_format,
+                     python_language_f = language_f + symbol::python_format};
+
+}  // namespace out
 
 ///
 /// A single member of a `population`.
@@ -30,7 +44,7 @@ namespace ultra
 /// This class is the base class of every type of individual and factorizes out
 /// common code / data members.
 ///
-/// \note AKA chromosome.
+/// \note AKA chromosome
 ///
 /// \note
 /// Thread-safety guarantees are type-specific. See derived class
@@ -39,16 +53,21 @@ namespace ultra
 class individual
 {
 public:
+  // ---- Member types ----
   using age_t = unsigned;
 
-  [[nodiscard]] hash_t signature() const noexcept;
-
+  // ---- Age management ----
   [[nodiscard]] age_t age() const noexcept;
   void inc_age(unsigned = 1) noexcept;
 
-  // Serialization.
+  // ---- Serialization ----
   [[nodiscard]] bool load(std::istream &, const symbol_set & = {});
   [[nodiscard]] bool save(std::ostream &) const;
+
+  // ---- Misc ----
+  [[nodiscard]] hash_t signature() const noexcept;
+
+  [[nodiscard]] std::string format(out::print_format_t) const;
 
 protected:
   ~individual() = default;
@@ -65,6 +84,9 @@ private:
   [[nodiscard]] virtual bool save_impl(std::ostream &) const = 0;
   [[nodiscard]] virtual hash_t hash() const = 0;
 
+  // Writes the representation selected by `format` to the output stream.
+  virtual void print_impl(std::ostream &, out::print_format_t) const = 0;
+
   age_t age_ {0};
 };  // class individual
 
@@ -77,40 +99,6 @@ template<class I> concept Individual =
     { ci.age() } -> std::convertible_to<individual::age_t>;
     { i.inc_age() } -> std::same_as<void>;
   };
-
-namespace out
-{
-
-/// Rendering format used to print an individual.
-enum print_format_t {list_f,  // default value
-                     dump_f, graphviz_f, in_line_f, tree_f,
-                     language_f,
-                     c_language_f = language_f + symbol::c_format,
-                     cpp_language_f = language_f + symbol::cpp_format,
-                     python_language_f = language_f + symbol::python_format};
-
-print_format_t print_format_flag(std::ostream &);
-
-class print_format
-{
-public:
-  explicit print_format(print_format_t t) : t_(t) {}
-
-  friend std::ostream &operator<<(std::ostream &, print_format);
-
-private:
-  print_format_t t_;
-};
-
-std::ostream &c_language(std::ostream &);
-std::ostream &cpp_language(std::ostream &);
-std::ostream &dump(std::ostream &);
-std::ostream &graphviz(std::ostream &);
-std::ostream &in_line(std::ostream &);
-std::ostream &list(std::ostream &);
-std::ostream &python_language(std::ostream &);
-std::ostream &tree(std::ostream &);
-}  // namespace out
 
 }  // namespace ultra
 

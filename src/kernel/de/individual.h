@@ -92,6 +92,8 @@ private:
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
+  void print_impl(std::ostream &, out::print_format_t) const override;
+
   // ---- Private data members ----
 
   // This is the genome: the entire collection of genes (the entirety of an
@@ -103,11 +105,6 @@ private:
 [[nodiscard]] bool operator==(const individual &, const individual &);
 [[nodiscard]] double distance(const individual &, const individual &);
 [[nodiscard]] std::size_t active_slots(const individual &) noexcept;
-
-// Visualization/output functions.
-std::ostream &graphviz(std::ostream &, const individual &);
-std::ostream &in_line(std::ostream &, const individual &);
-std::ostream &operator<<(std::ostream &, const individual &);
 
 #include "kernel/de/individual.tcc"
 

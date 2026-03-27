@@ -12,6 +12,7 @@
 
 #include "kernel/ga/individual.h"
 #include "kernel/hash_t.h"
+#include "kernel/print_internal.h"
 #include "kernel/random.h"
 
 #include "utility/log.h"
@@ -195,52 +196,6 @@ bool operator==(const individual &lhs, const individual &rhs)
 }
 
 ///
-/// Inserts into the output stream the graph representation of the individual.
-///
-/// \param[out] s  output stream
-/// \param[in]  ga data to be printed
-///
-/// \note
-/// The format used to describe the graph is the dot language
-/// (https://www.graphviz.org/).
-///
-/// \relates ga::individual
-///
-std::ostream &graphviz(std::ostream &s, const individual &ga)
-{
-  s << "graph {";
-
-  for (const auto &g : ga)
-    s << "g [label=" << g << ", shape=circle];";
-
-  s << '}';
-
-  return s;
-}
-
-///
-/// Prints the genes of the individual.
-///
-/// \param[out] s  output stream
-/// \param[in]  ga data to be printed
-/// \return        a reference to the output stream
-///
-/// \relates ga::individual
-///
-std::ostream &in_line(std::ostream &s, const individual &ga)
-{
-  if (!ga.empty())
-  {
-    s << *ga.begin();
-
-    for (auto it(std::next(ga.begin())); it != ga.end(); ++it)
-      s << " " << *it;
-  }
-
-  return s;
-}
-
-///
 /// Two points crossover.
 ///
 /// \param[in] lhs first parent
@@ -369,16 +324,9 @@ bool individual::save_impl(std::ostream &out) const
   return out.good();
 }
 
-///
-/// \param[out] s  output stream
-/// \param[in] ind individual to print
-/// \return        output stream including `ind`
-///
-/// \relates ga::individual
-///
-std::ostream &operator<<(std::ostream &s, const individual &ind)
+void individual::print_impl(std::ostream &s, out::print_format_t format) const
 {
-  return in_line(s, ind);
+  internal::print_linear(s, *this, format, "ga::individual");
 }
 
 }  // namespace ultra::ga

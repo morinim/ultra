@@ -20,6 +20,7 @@
 #include "utility/matrix.h"
 #include "utility/misc.h"
 
+#include <iosfwd>
 #include <set>
 
 namespace ultra::gp
@@ -80,12 +81,14 @@ private:
 
   // ---- Private member functions ----
   [[nodiscard]] exon_view exons();
-  [[nodiscard]] hash_t hash() const final;
+  [[nodiscard]] hash_t hash() const override;
   void pack(const locus &, hash_sink &) const;
 
   // Serialization.
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
+
+  void print_impl(std::ostream &, out::print_format_t) const override;
 
   // ---- Private data members ----
   // This is the genome: the entire collection of genes.
@@ -103,8 +106,6 @@ private:
                                    const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] locus random_locus(const individual &);
-
-std::ostream &operator<<(std::ostream &, const individual &);
 
 }  // namespace ultra::gp
 

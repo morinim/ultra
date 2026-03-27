@@ -17,7 +17,232 @@
 #include "utility/log.h"
 #include "utility/misc.h"
 
-#include <functional>
+namespace
+{
+
+void print_locus(std::ostream &s, const ultra::gp::individual &prg,
+                 const ultra::locus &l)
+{
+  Expects(prg.categories());
+
+  constexpr auto decimal_width([](std::size_t n)
+  {
+    int w(1);
+    for (; n >= 10; ++w)
+      n /= 10;
+
+    return w;
+  });
+
+  const auto w1(decimal_width(prg.size() - 1));
+  const auto w2(decimal_width(prg.categories() - 1));
+
+  ultra::SAVE_FLAGS(s);
+  s << '[' << std::setfill('0') << std::setw(w1) << l.index;
+
+  if (prg.categories() > 1)
+    s << ',' << std::setw(w2) << l.category;
+
+  s << ']';
+}
+
+void print_arg(std::ostream &s, ultra::symbol::format fmt,
+               const ultra::gp::individual &prg, const ultra::gene &g,
+               std::size_t idx)
+{
+  const auto a(g.args[idx]);
+
+  switch (a.index())
+  {
+  case ultra::d_address:
+    print_locus(s, prg, g.locus_of_argument(idx));
+    break;
+  case ultra::d_nullary:
+    s << std::get<const ultra::D_NULLARY *>(a)->to_string(fmt);
+    break;
+  default:
+    s << a;
+  }
+}
+
+void print_gene(std::ostream &s, const ultra::gp::individual &prg,
+                const ultra::gene &g)
+{
+  if (g.func)
+  {
+    s << ' ' << g.func->name();
+
+    for (std::size_t j(0); j < g.args.size(); ++j)
+    {
+      s << ' ';
+      print_arg(s, ultra::symbol::c_format, prg, g, j);
+    }
+  }
+}
+
+void print_language(std::ostream &s, ultra::symbol::format fmt,
+                    const ultra::gp::individual &prg)
+{
+  const auto language_ =
+    [&](this auto &&self, const ultra::gene &g) -> std::string
+    {
+      std::string ret(g.func->to_string(fmt));
+
+      for (std::size_t i(0); i < g.func->arity(); ++i)
+      {
+        const std::string from("{" + std::to_string(i) + "}");
+
+        if (g.args[i].index() != ultra::d_address)
+        {
+          std::ostringstream ss;
+          print_arg(ss, fmt, prg, g, i);
+          ret = ultra::replace_all(ret, from, ss.str());
+        }
+        else
+          ret = ultra::replace_all(
+            ret, from, self(prg[g.locus_of_argument(i)]));
+      }
+
+      return ret;
+    };
+
+  std::string out(language_(prg[prg.start()]));
+  if (out.length() > 2 && out.front() == '(' && out.back() == ')')
+    out = out.substr(1, out.length() - 2);
+
+  s << out;
+}
+
+void print_in_line(std::ostream &s, const ultra::gp::individual &prg)
+{
+  const auto in_line_ = [&](this auto &&self, ultra::locus l) -> void
+  {
+    const auto &g(prg[l]);
+
+    if (l != prg.start())
+      s << ' ';
+    s << g.func->name();
+
+    for (const auto &a : g.args)
+      if (a.index() != ultra::d_address)
+        s << ' ' << a;
+      else
+        self(g.locus_of_argument(a));
+  };
+
+  in_line_(prg.start());
+}
+
+void print_dump(std::ostream &s, const ultra::gp::individual &prg)
+{
+  ultra::SAVE_FLAGS(s);
+
+  const auto size(prg.size());
+  const auto categories(prg.categories());
+
+  for (ultra::locus::index_t i(0); i < size; ++i)
+    for (ultra::symbol::category_t c(0); c < categories; ++c)
+    {
+      const ultra::locus l(i, c);
+      print_locus(s, prg, l);
+      print_gene(s, prg, prg[l]);
+
+      s << '\n';
+    }
+}
+
+void print_graphviz(std::ostream &s, const ultra::gp::individual &prg)
+{
+  s << "graph\n{\n";
+
+  const auto exr(prg.cexons());
+  for (auto i(exr.begin()); i != exr.end(); ++i)
+  {
+    s << 'g' << i.locus().index << '_' << i.locus().category << " [label="
+      << std::quoted(i->func->name()) << ", shape=box];\n";
+
+    for (unsigned j(0); j < i->func->arity(); ++j)
+    {
+      s << 'g' << i.locus().index << '_' << i.locus().category << " -- ";
+
+      const std::string arg_ord_attr(" [label="
+                                     + std::to_string(j)
+                                     + ", fontcolor=lightgray];\n");
+
+      const auto index(i->args[j].index());
+      switch (index)
+      {
+      case ultra::d_address:
+        s << 'g' << std::get<ultra::D_ADDRESS>(i->args[j]) << '_'
+          << i->func->param_category(j) << arg_ord_attr;
+        break;
+      default:
+      {
+        const std::string arg_unique_id(
+          "a"
+          + std::to_string(i.locus().index) + "_"
+          + std::to_string(i.locus().category)  + "_"
+          + std::to_string(j));
+
+        s << arg_unique_id << arg_ord_attr
+          << arg_unique_id << " [label=";
+
+        if (index == ultra::d_nullary) s << '"';
+        s << i->args[j];
+        if (index == ultra::d_nullary) s << '"';
+
+        s << "];\n";
+        break;
+      }
+      }
+    }
+  }
+
+  s << '}';
+}
+
+void print_list(std::ostream &s, const ultra::gp::individual &prg)
+{
+  ultra::SAVE_FLAGS(s);
+
+  const auto exr(prg.cexons());
+  for (auto i(exr.begin()); i != exr.end(); ++i)
+  {
+    print_locus(s, prg, i.locus());
+    print_gene(s, prg, *i);
+
+    s << '\n';
+  }
+}
+
+void print_tree(std::ostream &s, const ultra::gp::individual &prg)
+{
+  const auto tree_ = [&](this auto &&self, const ultra::gene &curr,
+                         unsigned indent) -> void
+  {
+    s << std::string(indent, ' ') << curr.func->name() << '\n';
+
+    indent += 2;
+
+    for (std::size_t i(0); i < curr.args.size(); ++i)
+      switch (curr.args[i].index())
+      {
+      case ultra::d_address:
+        self(prg[curr.locus_of_argument(i)], indent);
+        break;
+
+      default:
+        s << std::string(indent, ' ');
+        print_arg(s, ultra::symbol::c_format, prg, curr, i);
+        s << '\n';
+        break;
+      }
+  };
+
+  tree_(prg[prg.start()], 0);
+}
+
+}  // namespace
 
 namespace ultra::gp
 {
@@ -611,268 +836,33 @@ bool individual::save_impl(std::ostream &out) const
   return out.good();
 }
 
-namespace
+void individual::print_impl(std::ostream &s, out::print_format_t format) const
 {
-
-std::string print_locus(const individual &prg, const locus &l)
-{
-  const auto w1(1 + static_cast<int>(std::log10(prg.size() - 1)));
-  const auto w2(1 + static_cast<int>(std::log10(prg.categories())));
-
-  std::stringstream ss;
-  ss << '[' << std::setfill('0') << std::setw(w1) << l.index;
-
-  if (prg.categories() > 1)
-    ss << ',' << std::setw(w2) << l.category;
-
-  ss  << "]";
-
-  return ss.str();
-}
-
-std::ostream &print_arg(std::ostream &s, symbol::format fmt,
-                        const individual &prg,
-                        const gene &g, std::size_t idx)
-{
-  const auto a(g.args[idx]);
-
-  switch (a.index())
-  {
-  case d_address:
-    s << print_locus(prg, g.locus_of_argument(idx));
-    break;
-  case d_nullary:
-    s << std::get<const D_NULLARY *>(a)->to_string(fmt);
-    break;
-  default:
-    s << a;
-    break;
-  }
-
-  return s;
-}
-
-std::ostream &print_gene(std::ostream &s, const individual &prg, const gene &g)
-{
-  if (g.func)
-  {
-    s << ' ' << g.func->name();
-
-    for (std::size_t j(0); j < g.args.size(); ++j)
-    {
-      s << ' ';
-      print_arg(s, symbol::c_format, prg, g, j);
-    }
-  }
-
-  return s;
-}
-
-std::ostream &language(std::ostream &s, symbol::format fmt,
-                       const individual &prg)
-{
-  std::function<std::string (const gene &)> language_;
-  language_ = [&](const gene &g)
-              {
-                std::string ret(g.func->to_string(fmt));
-
-                for (std::size_t i(0); i < g.func->arity(); ++i)
-                {
-                  const std::string from("{" + std::to_string(i) + "}");
-
-                  if (g.args[i].index() != d_address)
-                  {
-                    std::stringstream ss;
-                    print_arg(ss, fmt, prg, g, i);
-                    ret = replace_all(ret, from, ss.str());
-                  }
-                  else
-                    ret = replace_all(ret, from,
-                                      language_(prg[g.locus_of_argument(i)]));
-                }
-
-                return ret;
-              };
-
-  std::string out(language_(prg[prg.start()]));
-  if (out.length() > 2 && out.front() == '(' && out.back() == ')')
-    out = out.substr(1, out.length() - 2);
-
-  return s << out;
-}
-
-std::ostream &in_line(std::ostream &s, const individual &prg)
-{
-  std::function<void (locus)> in_line_;
-  in_line_ = [&](locus l)
-             {
-               const gene &g(prg[l]);
-
-               if (l != prg.start())
-                 s << ' ';
-               s << g.func->name();
-
-               for (const auto &a : g.args)
-                  if (a.index() != d_address)
-                    s << ' ' << a;
-                  else
-                    in_line_(g.locus_of_argument(a));
-             };
-
-  in_line_(prg.start());
-  return s;
-}
-
-std::ostream &dump(std::ostream &s, const individual &prg)
-{
-  SAVE_FLAGS(s);
-
-  const auto size(prg.size());
-  const auto categories(prg.categories());
-
-  for (locus::index_t i(0); i < size; ++i)
-    for (symbol::category_t c(0); c < categories; ++c)
-    {
-      const locus l(i, c);
-      s << print_locus(prg, l);
-
-      print_gene(s, prg, prg[l]);
-
-      s << '\n';
-    }
-
-  return s;
-}
-
-std::ostream &graphviz(std::ostream &s, const individual &prg)
-{
-  s << "graph\n{\n";
-
-  const auto exr(prg.cexons());
-  for (auto i(exr.begin()); i != exr.end(); ++i)
-  {
-    s << 'g' << i.locus().index << '_' << i.locus().category << " [label="
-      << std::quoted(i->func->name()) << ", shape=box];\n";
-
-    for (unsigned j(0); j < i->func->arity(); ++j)
-    {
-      s << 'g' << i.locus().index << '_' << i.locus().category << " -- ";
-
-      const std::string arg_ord_attr(" [label="
-                                     + std::to_string(j)
-                                     + ", fontcolor=lightgray];\n");
-
-      const auto index(i->args[j].index());
-      switch (index)
-      {
-      case d_address:
-        s << 'g' << std::get<D_ADDRESS>(i->args[j]) << '_'
-          << i->func->param_category(j) << arg_ord_attr;
-        break;
-      default:
-      {
-        const std::string arg_unique_id(
-          "a"
-          + std::to_string(i.locus().index) + "_"
-          + std::to_string(i.locus().category)  + "_"
-          + std::to_string(j));
-
-        s << arg_unique_id << arg_ord_attr
-          << arg_unique_id << " [label=";
-
-        if (index == d_nullary) s << '"';
-        s << i->args[j];
-        if (index == d_nullary) s << '"';
-
-        s << "];\n";
-        break;
-      }
-      }
-    }
-  }
-
-  s << '}';
-
-  return s;
-}
-
-std::ostream &list(std::ostream &s, const individual &prg)
-{
-  SAVE_FLAGS(s);
-
-  const auto exr(prg.cexons());
-  for (auto i(exr.begin()); i != exr.end(); ++i)
-  {
-    s << print_locus(prg, i.locus());
-
-    print_gene(s, prg, *i);
-
-    s << '\n';
-  }
-
-  return s;
-}
-
-std::ostream &tree(std::ostream &s, const individual &prg)
-{
-  std::function<void (const gene &, unsigned)> tree_;
-  tree_ = [&](const gene &curr, unsigned indent)
-          {
-            s << std::string(indent, ' ') << curr.func->name() << '\n';
-
-            indent += 2;
-
-            for (std::size_t i(0); i < curr.args.size(); ++i)
-              switch (curr.args[i].index())
-              {
-              case d_address:
-                tree_(prg[curr.locus_of_argument(i)], indent);
-                break;
-              default:
-                s << std::string(indent, ' ');
-                print_arg(s, symbol::c_format, prg, curr, i);
-                s << '\n';
-                break;
-              }
-          };
-
-  tree_(prg[prg.start()], 0);
-  return s;
-}
-
-}  // namespace
-
-///
-/// \param[out] s   output stream
-/// \param[in]  prg individual to be printed
-/// \return         output stream including `prg`
-///
-/// \relates gp::individual
-///
-std::ostream &operator<<(std::ostream &s, const individual &prg)
-{
-  const auto format(out::print_format_flag(s));
-
   switch (format)
   {
   case out::dump_f:
-    return dump(s, prg);
+    print_dump(s, *this);
+    return;
 
   case out::in_line_f:
-    return in_line(s, prg);
+    print_in_line(s, *this);
+    return;
 
   case out::graphviz_f:
-    return graphviz(s, prg);
+    print_graphviz(s, *this);
+    return;
 
   case out::list_f:
-    return list(s, prg);
+    print_list(s, *this);
+    return;
 
   case out::tree_f:
-    return tree(s, prg);
+    print_tree(s, *this);
+    return;
 
   default:
     assert(format >= out::language_f);
-    return language(s, symbol::format(format - out::language_f), prg);
+    print_language(s, symbol::format(format - out::language_f), *this);
   }
 }
 

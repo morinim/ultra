@@ -80,6 +80,8 @@ private:
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
+  void print_impl(std::ostream &, out::print_format_t) const override;
+
   // ---- Private data members ----
   // This is the genome: the entire collection of genes (the entirety of an
   // organism's hereditary information).
@@ -95,11 +97,6 @@ private:
 // Recombination operators.
 [[nodiscard]] individual crossover(const problem &,
                                    const individual &, const individual &);
-
-// Visualization/output functions.
-std::ostream &graphviz(std::ostream &, const individual &);
-std::ostream &in_line(std::ostream &, const individual &);
-std::ostream &operator<<(std::ostream &, const individual &);
 
 #include "kernel/hga/individual.tcc"
 

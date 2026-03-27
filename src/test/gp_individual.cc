@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/gp/individual.h"
+#include "kernel/gp/individual_format.h"
 
 #include "test/fixture1.h"
 #include "test/fixture2.h"
@@ -23,7 +23,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("GP INDIVIDUAL")
+TEST_SUITE("gp::individual")
 {
 
 TEST_CASE_FIXTURE(fixture1, "Random creation")
@@ -435,7 +435,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialisation")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Output")
+TEST_CASE_FIXTURE(fixture1, "gp::individual format")
 {
   using namespace ultra;
 
@@ -446,26 +446,21 @@ TEST_CASE_FIXTURE(fixture1, "Output")
       {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
-  std::stringstream ss;
-
-  SUBCASE("Dump")
+  SUBCASE("dump")
   {
-    ss << ultra::out::dump << i;
-    CHECK(ss.str() == "[0] FADD 2 Z()\n"
-                      "[1] FADD 3 4\n"
-                      "[2] FSUB [0] [1]\n");
+    CHECK(i.format(out::dump_f)  == "[0] FADD 2 Z()\n"
+                                    "[1] FADD 3 4\n"
+                                    "[2] FSUB [0] [1]\n");
   }
 
-  SUBCASE("Inline")
+  SUBCASE("in_line")
   {
-    ss << ultra::out::in_line << i;
-    CHECK(ss.str() == "FSUB FADD 2 Z() FADD 3 4");
+    CHECK(i.format(out::in_line_f) == "FSUB FADD 2 Z() FADD 3 4");
   }
 
-  SUBCASE("Graphviz")
+  SUBCASE("graphviz")
   {
-    ss << ultra::out::graphviz << i;
-    CHECK(ss.str()
+    CHECK(i.format(out::graphviz_f)
           == "graph\n"
              "{\n"
              "g2_0 [label=\"FSUB\", shape=box];\n"
@@ -484,66 +479,59 @@ TEST_CASE_FIXTURE(fixture1, "Output")
              "}");
   }
 
-  SUBCASE("List")
+  SUBCASE("list")
   {
-    ss << ultra::out::list << i;
-    CHECK(ss.str() == "[2] FSUB [0] [1]\n"
-                      "[1] FADD 3 4\n"
-                      "[0] FADD 2 Z()\n");
+    CHECK(i.format(out::list_f) == "[2] FSUB [0] [1]\n"
+                                   "[1] FADD 3 4\n"
+                                   "[0] FADD 2 Z()\n");
   }
 
-  SUBCASE("Tree")
+  SUBCASE("tree")
   {
-    ss << ultra::out::tree << i;
-    CHECK(ss.str() == "FSUB\n"
-                      "  FADD\n"
-                      "    2\n"
-                      "    Z()\n"
-                      "  FADD\n"
-                      "    3\n"
-                      "    4\n");
+    CHECK(i.format(out::tree_f) == "FSUB\n"
+                                   "  FADD\n"
+                                   "    2\n"
+                                   "    Z()\n"
+                                   "  FADD\n"
+                                   "    3\n"
+                                   "    4\n");
   }
 }
 
-TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
+TEST_CASE_FIXTURE(fixture3, "gp::individual format full multicategories")
 {
   using namespace ultra;
 
-  gp::individual i(
+  const gp::individual i(
     {
       {s_ife, {s1->instance(), s2->instance(), s1->instance(), s3->instance()}},
-                                  // [0] SIFE "hello" "world" "hello" ":-)"
-      {f_len, {0_addr}},          // [1] FLENGTH [0]
-      {f_len, {s2->instance()}},  // [2] FLENGTH "world"
-      {f_add, {1_addr, 2_addr}}   // [3] FADD [1] [2]
+      {f_len, {0_addr}},
+      {f_len, {s2->instance()}},
+      {f_add, {1_addr, 2_addr}}
     });
 
-  std::stringstream ss;
-
-  SUBCASE("Dump")
+  SUBCASE("dump")
   {
-    ss << ultra::out::dump << i;
-    CHECK(ss.str() == "[0,0]\n"
-                      "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n"
-                      "[1,0] FLENGTH [0,1]\n"
-                      "[1,1]\n"
-                      "[2,0] FLENGTH \"world\"\n"
-                      "[2,1]\n"
-                      "[3,0] FADD [1,0] [2,0]\n"
-                      "[3,1]\n");
+    CHECK(i.format(out::dump_f)
+          == "[0,0]\n"
+             "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n"
+             "[1,0] FLENGTH [0,1]\n"
+             "[1,1]\n"
+             "[2,0] FLENGTH \"world\"\n"
+             "[2,1]\n"
+             "[3,0] FADD [1,0] [2,0]\n"
+             "[3,1]\n");
   }
 
-  SUBCASE("Inline")
+  SUBCASE("in line")
   {
-    ss << ultra::out::in_line << i;
-    CHECK(ss.str()
+    CHECK(i.format(out::in_line_f)
           == "FADD FLENGTH SIFE \"hello\" \"world\" \"hello\" \":-)\" FLENGTH \"world\"");
   }
 
-  SUBCASE("Graphviz")
+  SUBCASE("graphviz")
   {
-    ss << ultra::out::graphviz << i;
-    CHECK(ss.str()
+    CHECK(i.format(out::graphviz_f)
           == "graph\n"
              "{\n"
              "g3_0 [label=\"FADD\", shape=box];\n"
@@ -566,28 +554,58 @@ TEST_CASE_FIXTURE(fixture3, "Output full multicategories")
              "}");
   }
 
-  SUBCASE("List")
+  SUBCASE("list")
   {
-    ss << ultra::out::list << i;
-    CHECK(ss.str() == "[3,0] FADD [1,0] [2,0]\n"
-                      "[2,0] FLENGTH \"world\"\n"
-                      "[1,0] FLENGTH [0,1]\n"
-                      "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n");
+    CHECK(i.format(out::list_f)
+          == "[3,0] FADD [1,0] [2,0]\n"
+             "[2,0] FLENGTH \"world\"\n"
+             "[1,0] FLENGTH [0,1]\n"
+             "[0,1] SIFE \"hello\" \"world\" \"hello\" \":-)\"\n");
   }
 
-  SUBCASE("Tree")
+  SUBCASE("tree")
   {
-    ss << ultra::out::tree << i;
-    CHECK(ss.str() == "FADD\n"
-                      "  FLENGTH\n"
-                      "    SIFE\n"
-                      "      \"hello\"\n"
-                      "      \"world\"\n"
-                      "      \"hello\"\n"
-                      "      \":-)\"\n"
-                      "  FLENGTH\n"
-                      "    \"world\"\n");
+    CHECK(i.format(out::tree_f) == "FADD\n"
+                                   "  FLENGTH\n"
+                                   "    SIFE\n"
+                                   "      \"hello\"\n"
+                                   "      \"world\"\n"
+                                   "      \"hello\"\n"
+                                   "      \":-)\"\n"
+                                   "  FLENGTH\n"
+                                   "    \"world\"\n");
   }
 }
 
-}  // TEST_SUITE("GP INDIVIDUAL")
+TEST_CASE_FIXTURE(fixture1, "gp::individual ostream integration")
+{
+  using namespace ultra;
+
+  const gp::individual i(
+    {
+      {f_add, {2.0, z}},
+      {f_add, {3.0, 4.0}},
+      {f_sub, {0_addr, 1_addr}}
+    });
+
+  std::ostringstream oss;
+  oss << out::tree << i;
+
+  CHECK(oss.str() == i.format(out::tree_f));
+}
+
+TEST_CASE_FIXTURE(fixture1, "gp::individual std::format integration")
+{
+  using namespace ultra;
+
+  const gp::individual i(
+    {
+      {f_add, {2.0, z}},
+      {f_add, {3.0, 4.0}},
+      {f_sub, {0_addr, 1_addr}}
+    });
+
+  CHECK(std::format("{:tree}", i) == i.format(out::tree_f));
+}
+
+}  // TEST_SUITE

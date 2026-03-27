@@ -14,7 +14,7 @@
 #define      ULTRA_TEAM_H
 
 #include "kernel/cache.h"
-#include "kernel/individual.h"
+#include "kernel/individual_format.h"
 #include "kernel/problem.h"
 
 #include <algorithm>
