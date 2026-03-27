@@ -180,12 +180,13 @@ std::string_view trim(std::string_view sv)
 /// \param[in] to   substitute string
 /// \return         the modified input
 ///
-std::string replace(std::string s,
-                    const std::string &from, const std::string &to)
+std::string replace(std::string s, std::string_view from, std::string_view to)
 {
-  const auto start_pos(s.find(from));
-  if (start_pos != std::string::npos)
-    s.replace(start_pos, from.length(), to);
+  if (from.empty())  [[unlikely]]
+    return s;
+
+  if (const auto pos(s.find(from)); pos != std::string::npos)
+    s.replace(pos, from.size(), to);
 
   return s;
 }

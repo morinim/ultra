@@ -233,8 +233,8 @@ private:
 [[nodiscard]] bool is_integer(std::string_view);
 [[nodiscard]] bool is_number(std::string_view);
 [[nodiscard]] bool iequals(const std::string &, const std::string &);
-[[nodiscard]] std::string replace(std::string, const std::string &,
-                                  const std::string &);
+[[nodiscard]] std::string replace(std::string, std::string_view,
+                                  std::string_view);
 [[nodiscard]] std::string replace_all(std::string, const std::string &,
                                       const std::string &);
 [[nodiscard]] std::string_view trim(std::string_view);

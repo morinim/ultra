@@ -15,11 +15,11 @@
 #include "kernel/gp/primitive/real.h"
 #include "utility/misc.h"
 
-#include <numbers>
-#include <thread>
-
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <numbers>
+#include <thread>
 
 enum class myenum : unsigned
 {
@@ -201,6 +201,7 @@ TEST_CASE("replace")
   CHECK(replace("abcabc", "abc", "123") == "123abc");
   CHECK(replace("abc", "bcd", "") == "abc");
   CHECK(replace("", "a", "b") == "");
+  CHECK(replace("abc", "", "x") == "abc");
 }
 
 TEST_CASE("replace_all")
