@@ -83,8 +83,11 @@ void print_gene(std::ostream &s, const ultra::gp::individual &prg,
 void print_language(std::ostream &s, ultra::symbol::format fmt,
                     const ultra::gp::individual &prg)
 {
+  // NOTE: keep recursion in C++20-compatible form (explicit `self` parameter
+  // passed as first argument). GitHub's current clang toolchain used by CI
+  // doesn't fully support "deducing this" lambdas yet.
   const auto language_ =
-    [&](this auto &&self, const ultra::gene &g) -> std::string
+    [&](auto &&self, const ultra::gene &g) -> std::string
     {
       std::string ret(g.func->to_string(fmt));
 
@@ -100,13 +103,13 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
         }
         else
           ret = ultra::replace_all(
-            ret, from, self(prg[g.locus_of_argument(i)]));
+            ret, from, self(self, prg[g.locus_of_argument(i)]));
       }
 
       return ret;
     };
 
-  std::string out(language_(prg[prg.start()]));
+  std::string out(language_(language_, prg[prg.start()]));
   if (out.length() > 2 && out.front() == '(' && out.back() == ')')
     out = out.substr(1, out.length() - 2);
 
@@ -115,7 +118,8 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
 
 void print_in_line(std::ostream &s, const ultra::gp::individual &prg)
 {
-  const auto in_line_ = [&](this auto &&self, ultra::locus l) -> void
+  // NOTE: avoid "deducing this" here for compatibility with CI clang.
+  const auto in_line_ = [&](auto &&self, ultra::locus l) -> void
   {
     const auto &g(prg[l]);
 
@@ -127,10 +131,10 @@ void print_in_line(std::ostream &s, const ultra::gp::individual &prg)
       if (a.index() != ultra::d_address)
         s << ' ' << a;
       else
-        self(g.locus_of_argument(a));
+        self(self, g.locus_of_argument(a));
   };
 
-  in_line_(prg.start());
+  in_line_(in_line_, prg.start());
 }
 
 void print_dump(std::ostream &s, const ultra::gp::individual &prg)
@@ -217,7 +221,8 @@ void print_list(std::ostream &s, const ultra::gp::individual &prg)
 
 void print_tree(std::ostream &s, const ultra::gp::individual &prg)
 {
-  const auto tree_ = [&](this auto &&self, const ultra::gene &curr,
+  // NOTE: avoid "deducing this" here for compatibility with CI clang.
+  const auto tree_ = [&](auto &&self, const ultra::gene &curr,
                          unsigned indent) -> void
   {
     s << std::string(indent, ' ') << curr.func->name() << '\n';
@@ -228,7 +233,7 @@ void print_tree(std::ostream &s, const ultra::gp::individual &prg)
       switch (curr.args[i].index())
       {
       case ultra::d_address:
-        self(prg[curr.locus_of_argument(i)], indent);
+        self(self, prg[curr.locus_of_argument(i)], indent);
         break;
 
       default:
@@ -239,7 +244,7 @@ void print_tree(std::ostream &s, const ultra::gp::individual &prg)
       }
   };
 
-  tree_(prg[prg.start()], 0);
+  tree_(tree_, prg[prg.start()], 0);
 }
 
 }  // namespace
