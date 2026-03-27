@@ -59,7 +59,7 @@ template<> struct formatter<ultra::individual, char>
 {
   ultra::out::print_format_t fmt_ = ultra::out::list_f;
 
-  constexpr auto parse(std::format_parse_context &ctx)
+  [[nodiscard]] constexpr auto parse(std::format_parse_context &ctx)
   {
     auto it(ctx.begin());
     const auto end(ctx.end());
@@ -106,7 +106,8 @@ template<> struct formatter<ultra::individual, char>
   }
 
   template<class FormatContext>
-  auto format(const ultra::individual &ind, FormatContext &ctx) const
+  [[nodiscard]] auto format(const ultra::individual &ind,
+                            FormatContext &ctx) const
   {
     const auto s(ind.format(fmt_));
     return std::ranges::copy(s, ctx.out()).out;
