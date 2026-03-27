@@ -20,14 +20,8 @@ namespace std
 {
 
 template<> struct formatter<ultra::gp::individual, char>
-  : formatter<ultra::individual, char>
-{
-  template<class FormatContext>
-  auto format(const ultra::gp::individual &ind, FormatContext &ctx) const
-  {
-    return ultra::internal::format_individual(ind, this->fmt_, ctx);
-  }
-};
+  : ultra::internal::derived_individual_formatter<ultra::gp::individual>
+{};
 
 }  // namespace std
 
