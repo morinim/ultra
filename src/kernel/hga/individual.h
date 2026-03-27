@@ -90,7 +90,7 @@ private:
 
 
 // ---- Non-member functions ----
-[[nodiscard]] bool operator==(const individual &, const individual &);
+[[nodiscard]] bool operator==(const individual &, const individual &) noexcept;
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] std::size_t active_slots(const individual &) noexcept;
 

@@ -327,7 +327,7 @@ void individual::print_impl(std::ostream &s, out::print_format_t format) const
 /// \note
 /// Age is not checked.
 ///
-bool operator==(const individual &lhs, const individual &rhs)
+bool operator==(const individual &lhs, const individual &rhs) noexcept
 {
   return std::ranges::equal(lhs, rhs);
 }

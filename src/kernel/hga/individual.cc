@@ -233,7 +233,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// \relates hga::individual
 ///
-bool operator==(const individual &lhs, const individual &rhs)
+bool operator==(const individual &lhs, const individual &rhs) noexcept
 {
   return std::ranges::equal(lhs, rhs);
 }

@@ -190,7 +190,7 @@ unsigned distance(const individual &lhs, const individual &rhs)
 ///
 /// \relates ga::individual
 ///
-bool operator==(const individual &lhs, const individual &rhs)
+bool operator==(const individual &lhs, const individual &rhs) noexcept
 {
   return std::ranges::equal(lhs, rhs);
 }
