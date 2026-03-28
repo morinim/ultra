@@ -446,6 +446,21 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual format")
       {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
+  SUBCASE("c")
+  {
+    CHECK(i.format(out::c_language_f)  == "(2+Z())-(3+4)");
+  }
+
+  SUBCASE("cpp")
+  {
+    CHECK(i.format(out::cpp_language_f)  == "(2+Z())-(3+4)");
+  }
+
+  SUBCASE("python")
+  {
+    CHECK(i.format(out::python_language_f)  == "(2+Z())-(3+4)");
+  }
+
   SUBCASE("dump")
   {
     CHECK(i.format(out::dump_f)  == "[0] FADD 2 Z()\n"
