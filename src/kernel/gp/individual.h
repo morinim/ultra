@@ -29,6 +29,38 @@ namespace ultra::gp
 #include "kernel/gp/individual_exon_view.tcc"
 
 ///
+/// A DE-facing view of the tunable scalar parameters of an individual.
+///
+/// For every index `i`:
+/// - `values[i]` is the scalar value exposed to the optimiser;
+/// - `coords[i]` identifies the corresponding argument in the individual
+///   and records how the value must be written back.
+///
+struct decision_vector
+{
+  enum class param_kind : unsigned char { real, integer };
+
+  struct coordinate
+  {
+    locus loc;
+    std::size_t arg_index;
+    param_kind kind;
+  };
+
+  std::vector<double> values;
+  std::vector<coordinate> coords;
+
+  [[nodiscard]] bool empty() const noexcept { return values.empty(); }
+  [[nodiscard]] std::size_t size() const noexcept { return values.size(); }
+
+  [[nodiscard]] bool is_valid() const noexcept
+  {
+    return values.size() == coords.size();
+  }
+};
+
+
+///
 /// A single member of a genetic programming population.
 ///
 /// Straight Line Program (SLP) is the encoding / data structure used to
@@ -42,6 +74,7 @@ namespace ultra::gp
 class individual final : public ultra::individual
 {
 public:
+  // ---- Constructors ----
   individual() = default;
   explicit individual(const problem &);
   explicit individual(const std::vector<gene> &);
@@ -51,12 +84,9 @@ public:
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] locus::index_t size() const noexcept;
 
+  // ---- Element access ----
   [[nodiscard]] const gene &operator[](const locus &) const;
   [[nodiscard]] locus start() const noexcept;
-
-  [[nodiscard]] bool operator==(const individual &) const noexcept;
-
-  [[nodiscard]] bool is_valid() const;
 
   // ---- Recombination operators ----
   enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
@@ -64,6 +94,8 @@ public:
   friend individual crossover(const problem &,
                               const individual &, const individual &);
   unsigned mutation(const problem &);
+
+  void apply_decision_vector(const decision_vector &);
 
   [[nodiscard]] crossover_t active_crossover_type() const noexcept;
 
@@ -76,6 +108,10 @@ public:
   [[nodiscard]] auto begin() const noexcept { return genome_.cbegin(); }
   [[nodiscard]] auto end() const noexcept { return genome_.cend(); }
 
+  // ---- Misc ----
+  [[nodiscard]] bool operator==(const individual &) const noexcept;
+  [[nodiscard]] bool is_valid() const;
+
 private:
   template<bool> friend class internal::basic_exon_iterator;
 
@@ -84,7 +120,7 @@ private:
   [[nodiscard]] hash_t hash() const override;
   void pack(const locus &, hash_sink &) const;
 
-  // Serialization.
+  // ---- Serialization ----
   [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
   [[nodiscard]] bool save_impl(std::ostream &) const override;
 
@@ -106,6 +142,7 @@ private:
                                    const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
 [[nodiscard]] locus random_locus(const individual &);
+[[nodiscard]] decision_vector extract_decision_vector(const individual &);
 
 }  // namespace ultra::gp
 

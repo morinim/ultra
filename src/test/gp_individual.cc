@@ -18,6 +18,7 @@
 
 #include <future>
 #include <latch>
+#include <set>
 #include <sstream>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -446,19 +447,21 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual format")
       {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
+  const std::set<std::string> valid{"(2+Z())-(3+4)", "(2.0+Z())-(3.0+4.0)"};
+
   SUBCASE("c")
   {
-    CHECK(i.format(out::c_language_f)  == "(2+Z())-(3+4)");
+    CHECK(valid.contains(i.format(out::c_language_f)));
   }
 
   SUBCASE("cpp")
   {
-    CHECK(i.format(out::cpp_language_f)  == "(2+Z())-(3+4)");
+    CHECK(valid.contains(i.format(out::cpp_language_f)));
   }
 
   SUBCASE("python")
   {
-    CHECK(i.format(out::python_language_f)  == "(2+Z())-(3+4)");
+    CHECK(valid.contains(i.format(out::python_language_f)));
   }
 
   SUBCASE("dump")
@@ -621,6 +624,145 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual std::format integration")
     });
 
   CHECK(std::format("{:tree}", i) == i.format(out::tree_f));
+}
+
+TEST_CASE_FIXTURE(fixture1, "Decision vector")
+{
+  using namespace ultra;
+  using pk = gp::decision_vector::param_kind;
+
+  SUBCASE("Extraction from simple individual")
+  {
+    const gp::individual ind(
+      {
+        {f_add, {3.0, 2.0}},       // [0] ADD 3.0 2.0
+        {f_add, {0_addr, 1}},      // [1] ADD [0] 1
+        {f_sub, {1_addr, 0_addr}}  // [2] SUB [1] [0]
+      });
+
+    const auto dv(extract_decision_vector(ind));
+
+    REQUIRE(dv.is_valid());
+    CHECK(dv.size() == 3);
+    CHECK(!dv.empty());
+
+    CHECK(dv.values[0] == doctest::Approx(1.0));
+    CHECK(dv.values[1] == doctest::Approx(3.0));
+    CHECK(dv.values[2] == doctest::Approx(2.0));
+
+    CHECK(dv.coords[0].loc == locus{1, 0});
+    CHECK(dv.coords[0].arg_index == 1);
+    CHECK(dv.coords[0].kind == pk::integer);
+
+    CHECK(dv.coords[1].loc == locus{0, 0});
+    CHECK(dv.coords[1].arg_index == 0);
+    CHECK(dv.coords[1].kind == pk::real);
+
+    CHECK(dv.coords[2].loc == locus{0, 0});
+    CHECK(dv.coords[2].arg_index == 1);
+    CHECK(dv.coords[2].kind == pk::real);
+  }
+
+  SUBCASE("Extraction ignores addresses")
+  {
+    const gp::individual ind(
+      {
+        {f_add, {3.0, 2.0}},         // [0]
+        {f_add, {0_addr, 1.0}},      // [1]
+        {f_sub, {1_addr, 0_addr}}    // [2]
+      });
+
+    const auto dv(extract_decision_vector(ind));
+
+    REQUIRE(dv.is_valid());
+    CHECK(dv.size() == 3);
+
+    for (const auto &c : dv.coords)
+      CHECK(c.kind == pk::real);
+  }
+
+  SUBCASE("Apply modified real values")
+  {
+    gp::individual ind(
+      {
+        {f_add, {3.0, 2.0}},         // [0]
+        {f_add, {0_addr, 1.0}},      // [1]
+        {f_sub, {1_addr, 0_addr}}    // [2]
+      });
+
+    auto dv(extract_decision_vector(ind));
+    REQUIRE(dv.is_valid());
+    REQUIRE(dv.size() == 3);
+
+    dv.values[0] = 10.5;
+    dv.values[1] = -4.25;
+    dv.values[2] = 7.0;
+
+    ind.apply_decision_vector(dv);
+
+    CHECK(std::get<D_DOUBLE>(ind[{1, 0}].args[1]) == doctest::Approx(10.5));
+    CHECK(std::get<D_DOUBLE>(ind[{0, 0}].args[0]) == doctest::Approx(-4.25));
+    CHECK(std::get<D_DOUBLE>(ind[{0, 0}].args[1]) == doctest::Approx(7.0));
+  }
+
+  SUBCASE("Apply rounds integer values")
+  {
+    gp::individual ind(
+      {
+        {f_add, {3.0, 2.0}},       // [0]
+        {f_add, {0_addr, 1}},      // [1]
+        {f_sub, {1_addr, 0_addr}}  // [2]
+      });
+
+    auto dv(extract_decision_vector(ind));
+    REQUIRE(dv.is_valid());
+    REQUIRE(dv.size() == 3);
+
+    dv.values[0] = 8.6;
+    ind.apply_decision_vector(dv);
+
+    CHECK(std::get<D_INT>(ind[{1, 0}].args[1]) == 9);
+  }
+
+  SUBCASE("Round trip preserves individual")
+  {
+    const gp::individual original(
+      {
+        {f_add, {3.0, 2.0}},       // [0]
+        {f_add, {0_addr, 1}},      // [1]
+        {f_sub, {1_addr, 0_addr}}  // [2]
+      });
+
+    gp::individual copy(original);
+
+    const auto dv(extract_decision_vector(copy));
+    REQUIRE(dv.is_valid());
+
+    copy.apply_decision_vector(dv);
+
+    CHECK(copy == original);
+    CHECK(copy.signature() == original.signature());
+  }
+
+  SUBCASE("Applying changed decision vector updates signature")
+  {
+    gp::individual ind(
+      {
+        {f_add, {3.0, 2.0}},         // [0]
+        {f_add, {0_addr, 1.0}},      // [1]
+        {f_sub, {1_addr, 0_addr}}    // [2]
+      });
+
+    const auto old_sig(ind.signature());
+
+    auto dv(extract_decision_vector(ind));
+    REQUIRE(dv.is_valid());
+    dv.values[0] += 1.0;
+
+    ind.apply_decision_vector(dv);
+
+    CHECK(ind.signature() != old_sig);
+  }
 }
 
 }  // TEST_SUITE

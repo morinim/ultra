@@ -615,6 +615,98 @@ locus random_locus(const individual &prg)
 }
 
 ///
+/// Extracts the decision vector associated with an individual.
+///
+/// \return a valid decision vector
+///
+/// The returned `decision_vector` provides a flat, optimiser-friendly view of
+/// all tunable scalar parameters (currently `D_DOUBLE` and `D_INT`) appearing
+/// in the active portion of the genome.
+///
+/// \note
+/// Only parameters in active genes (exons) are included. Inactive code is
+/// ignored.
+///
+/// \note
+/// Integer parameters are converted to `double` for optimisation. The original
+/// type information is preserved in `decision_vector::coordinate::kind` and
+/// restored when applying the vector.
+///
+/// \note
+/// The ordering of parameters is deterministic for a fixed individual and
+/// reflects the traversal order of its active genes. The returned vector is
+/// therefore compatible with `apply_decision_vector()` as long as the
+/// structure of the individual is unchanged.
+///
+decision_vector extract_decision_vector(const individual &ind)
+{
+  decision_vector ret;
+  using pk = decision_vector::param_kind;
+
+  const auto exons(ind.cexons());
+  for (auto it(exons.begin()); it != exons.end(); ++it)
+  {
+    const auto &args(it->args);
+
+    for (std::size_t j(0); j < args.size(); ++j)
+      if (const auto *d = std::get_if<ultra::D_DOUBLE>(&args[j]))
+      {
+        ret.values.push_back(*d);
+        ret.coords.push_back({it.locus(), j, pk::real});
+      }
+      else if (const auto *n = std::get_if<ultra::D_INT>(&args[j]))
+      {
+        ret.values.push_back(static_cast<double>(*n));
+        ret.coords.push_back({it.locus(), j, pk::integer});
+      }
+  }
+
+  Ensures(ret.is_valid());
+  return ret;
+}
+
+///
+/// Applies a decision vector to this individual.
+///
+/// \param[in] v decision vector previously extracted from a compatible
+///              individual
+///
+/// \pre
+/// - `v.is_valid()`;
+/// - `v` must have been obtained from an individual with the same structure
+///   (same active exons, loci, and argument layout). Applying a decision
+///   vector to a structurally different individual results in undefined
+///   behaviour.
+///
+/// Each entry of the decision vector is written back to the corresponding
+/// argument in the genome, as identified by `decision_vector::coordinate`.
+/// Real-valued parameters are copied directly, while integer parameters are
+/// reconstructed by rounding the provided value to the nearest integer
+/// (`std::lround`).
+///
+void individual::apply_decision_vector(const decision_vector &v)
+{
+  Expects(v.is_valid());
+
+  using pk = decision_vector::param_kind;
+
+  for (std::size_t i(0); i < v.size(); ++i)
+  {
+    const auto &coord(v.coords[i]);
+    const auto value(v.values[i]);
+
+    auto &arg(genome_(coord.loc).args[coord.arg_index]);
+    if (coord.kind == pk::integer)
+      arg = static_cast<ultra::D_INT>(std::lround(value));
+    else
+      arg = static_cast<ultra::D_DOUBLE>(value);
+  }
+
+  signature_ = hash();
+  Ensures(is_valid());
+}
+
+///
 /// A Self-Adaptive Crossover operator.
 ///
 /// \param[in] lhs first parent
