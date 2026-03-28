@@ -20,6 +20,67 @@
 namespace
 {
 
+[[nodiscard]] std::string format_call(std::string_view fmt,
+                                      std::span<const std::string> args)
+{
+  const auto is_digit([](char c)
+  {
+    return std::isdigit(static_cast<unsigned char>(c)) != 0;
+  });
+
+  std::string out;
+  out.reserve(fmt.size() + args.size() * 8);
+
+  for (std::size_t i(0); i < fmt.size(); ++i)
+    switch (fmt[i])
+    {
+    case '{':
+      if (i + 1 < fmt.size() && fmt[i + 1] == '{')
+      {
+        out.push_back('{');
+        ++i;
+        break;
+      }
+
+      if (++i >= fmt.size())
+        throw std::format_error("Unmatched '{' in GP format string");
+
+      if (!is_digit(fmt[i]))
+        throw std::format_error("Expected argument index after '{'");
+
+      {
+        std::size_t index(0);
+        while (i < fmt.size() && is_digit(fmt[i]))
+          index = index * 10 + static_cast<std::size_t>(fmt[i++] - '0');
+
+        if (i >= fmt.size() || fmt[i] != '}')
+          throw std::format_error("Missing closing '}' in GP format string");
+
+        if (index >= args.size())
+          throw std::format_error("Argument index out of range in GP format "
+                                  "string");
+
+        out += args[index];
+      }
+      break;
+
+    case '}':
+      if (i + 1 < fmt.size() && fmt[i + 1] == '}')
+      {
+        out.push_back('}');
+        ++i;
+        break;
+      }
+
+      throw std::format_error("Unmatched '}' in GP format string");
+
+    default:
+      out.push_back(fmt[i]);
+    }
+
+  return out;
+}
+
 void print_locus(std::ostream &s, const ultra::gp::individual &prg,
                  const ultra::locus &l)
 {
@@ -89,24 +150,20 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
   const auto language_ =
     [&](auto &&self, const ultra::gene &g) -> std::string
     {
-      std::string ret(g.func->to_string(fmt));
+      std::vector<std::string> args;
+      args.reserve(g.func->arity());
 
       for (std::size_t i(0); i < g.func->arity(); ++i)
-      {
-        const std::string from("{" + std::to_string(i) + "}");
-
         if (g.args[i].index() != ultra::d_address)
         {
           std::ostringstream ss;
           print_arg(ss, fmt, prg, g, i);
-          ret = ultra::replace_all(ret, from, ss.str());
+          args.push_back(ss.str());
         }
         else
-          ret = ultra::replace_all(
-            ret, from, self(self, prg[g.locus_of_argument(i)]));
-      }
+          args.push_back(self(self, prg[g.locus_of_argument(i)]));
 
-      return ret;
+      return format_call(g.func->to_string(fmt), args);
     };
 
   std::string out(language_(language_, prg[prg.start()]));

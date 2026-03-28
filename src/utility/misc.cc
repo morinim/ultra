@@ -192,35 +192,6 @@ std::string replace(std::string s, std::string_view from, std::string_view to)
 }
 
 ///
-/// Replaces all occurrences of a string with another string.
-///
-/// \param[in] s    input string
-/// \param[in] from substring to be searched for
-/// \param[in] to   substitute string
-/// \return         the modified input
-///
-std::string replace_all(std::string s,
-                        const std::string &from, const std::string &to)
-{
-  if (!from.empty())
-  {
-    std::size_t start(0);
-    while ((start = s.find(from, start)) != std::string::npos)
-    {
-      s.replace(start, from.length(), to);
-      start += to.length();  // in case `to` contains `from`, like replacing
-                             // "x" with "yx"
-    }
-  }
-
-  return s;
-
-  // With std::regex it'd be something like:
-  //     s = std::regex_replace(s, std::regex(from), to);
-  // (possibly escaping special characters in the `from` string)
-}
-
-///
 /// Converts a `value_t` to `double`.
 ///
 /// \param[in] v value that should be converted to `double`

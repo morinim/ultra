@@ -235,8 +235,6 @@ private:
 [[nodiscard]] bool iequals(const std::string &, const std::string &);
 [[nodiscard]] std::string replace(std::string, std::string_view,
                                   std::string_view);
-[[nodiscard]] std::string replace_all(std::string, const std::string &,
-                                      const std::string &);
 [[nodiscard]] std::string_view trim(std::string_view);
 
 template<typename T> concept IsEnum = std::is_enum_v<T>;

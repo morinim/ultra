@@ -204,15 +204,6 @@ TEST_CASE("replace")
   CHECK(replace("abc", "", "x") == "abc");
 }
 
-TEST_CASE("replace_all")
-{
-  using namespace ultra;
-
-  CHECK(replace_all("suburban", "sub", "") == "urban");
-  CHECK(replace_all("abcabc", "abc", "123") == "123123");
-  CHECK(replace_all("abcdabcdabcdabcd", "cd", "") == "abababab");
-}
-
 TEST_CASE("iterator_of")
 {
   using namespace ultra;
