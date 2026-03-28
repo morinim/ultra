@@ -221,8 +221,8 @@ bool save(std::ostream &out, const value_t &v)
     const auto &iv(std::get<D_IVECTOR>(v));
     out << iv.size();
 
-    for (std::size_t i(0); i < iv.size(); ++i)
-      out << ' ' << iv[i];
+    for (const auto elem : iv)
+      out << ' ' << elem;
     break;
   }
   case d_nullary:
