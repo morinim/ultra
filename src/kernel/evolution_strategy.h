@@ -212,15 +212,24 @@ private:
   const replacement::de<E> replace_;
 };  // class de_es
 
-template<class S>
-concept Strategy = requires(S s)
-{
-  // See https://stackoverflow.com/q/71921797/3235496
-  // This C++20 template lambda only binds to `S<...>` specialisations,
-  // including classes derived from them.
-  //
-  []<Evaluator E>(evolution_strategy<E> &){}(s);
-};
+
+template<class T> struct strategy_base : std::false_type {};
+template<Evaluator E> struct strategy_base<evolution_strategy<E>>
+  : std::true_type {};
+
+///
+/// Concept identifying valid evolution strategies.
+///
+/// A type models `Strategy` if it is a specialisation of
+/// `evolution_strategy<E>`.
+///
+/// This concept is intentionally strict and only recognises the base
+/// strategy type itself. Derived classes are **not** matched unless they
+/// explicitly expose or reuse the base type (e.g. via type aliases or
+/// further specialisation of `strategy_base`).
+///
+template<class T> concept Strategy =
+  strategy_base<std::remove_cvref_t<T>>::value;
 
 #include "kernel/evolution_strategy.tcc"
 }  // namespace ultra
