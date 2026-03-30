@@ -38,8 +38,6 @@ public:
   ///
   /// \return `true` if the training environment has changed
   ///
-  /// By default does nothing, signalling that nothing is changed.
-  ///
   /// \note
   /// Called at the beginning of every generation (multiple times per run).
   ///
