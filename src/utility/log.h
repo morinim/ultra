@@ -139,7 +139,7 @@ private:
 template<>
 struct std::formatter<ultra::log::level> : std::formatter<std::string_view>
 {
-  auto format(ultra::log::level, format_context &) const;
+  [[nodiscard]] auto format(ultra::log::level, format_context &) const;
 };
 
 #endif  // include guard

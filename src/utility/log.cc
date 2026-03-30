@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
-#include <print>
 #include <string_view>
 
 auto std::formatter<ultra::log::level>::format(ultra::log::level l,
