@@ -264,18 +264,21 @@ void alps_es<E>::after_generation(P &pop,
 /// Shapes parameters for ALPS evolution.
 ///
 /// \param[out] params generic evolution parameters
-/// \return            modified parameters suitable for ALPS
+/// \return            parameters adjusted for ALPS
 ///
-/// Adjusts generic parameters to values required by ALPS.
+/// Adjusts generic parameters to values suitable for ALPS.
 ///
-/// In particular enforces a minimum number of age layers.
-///
-/// \note At least two layers are required by ALPS.
+/// If `params.alps.max_layers` is `0`, it is treated as an automatic
+/// setting and replaced with a value derived from the system hardware
+/// concurrency, with a minimum of `2` (required by ALPS).
 ///
 template<Evaluator E>
 parameters alps_es<E>::shape(parameters params)
 {
-  params.alps.max_layers = 8;
+  if (!params.alps.max_layers)
+    params.alps.max_layers =
+      std::max<unsigned>(2, std::thread::hardware_concurrency());
+
   return params;
 }
 

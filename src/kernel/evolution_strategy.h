@@ -21,6 +21,8 @@
 #include "kernel/evolution_summary.h"
 #include "kernel/population.h"
 
+#include <thread>
+
 namespace ultra
 {
 
