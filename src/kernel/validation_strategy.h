@@ -21,7 +21,7 @@ namespace ultra
 
 ///
 /// Interface for specific training / cross validation techniques (e.g.
-/// holdout validation, dynamic subsect selection...).
+/// holdout validation, dynamic subset selection...).
 ///
 class validation_strategy
 {
