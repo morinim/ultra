@@ -27,29 +27,28 @@ namespace ultra
 {
 
 ///
-/// Defines the strategy interface for evolutionary algorithms.
+/// Base class for compile-time evolutionary strategies.
 ///
 /// An `evolution_strategy` encapsulates all strategy-dependent aspects of the
 /// evolutionary process, while leaving the overall control flow to the
 /// `evolution` driver.
 ///
-/// The design follows the *Template Method* and *Strategy* patterns:
-/// - `evolution` owns the main generational loop, termination conditions,
-///    concurrency, and logging;
-/// - `evolution_strategy` customises *how* evolution is performed within
-///   each generation.
+/// This design uses static polymorphism: concrete strategies derive from
+/// `evolution_strategy<E>` and provide the required operations at compile
+/// time. No runtime polymorphism is involved.
 ///
-/// Concrete strategies (e.g. standard evolution, ALPS, differential evolution)
-/// implement this interface to define:
-/// - how parents are selected,
-/// - how offspring are generated,
-/// - how individuals are replaced or promoted,
-/// - how population structure evolves over time.
+/// The `evolution` driver owns the main generational loop, termination
+/// conditions, concurrency, and logging, while concrete strategies define
+/// how one evolutionary step is assembled and how generation-level
+/// maintenance is performed.
 ///
 /// Strategies are expected to be:
 /// - stateless or minimally stateful;
 /// - reusable across runs;
 /// - independent from the evaluation logic.
+///
+/// The base class stores shared references to the optimisation problem and
+/// evaluator, and provides default no-op hooks where appropriate.
 ///
 /// \remark
 /// Implementations should avoid performing expensive operations in
@@ -59,6 +58,7 @@ template<Evaluator E>
 class evolution_strategy
 {
 public:
+  using evaluator_type = E;
   using fitness_t = evaluator_fitness_t<E>;
   using individual_t = evaluator_individual_t<E>;
 
@@ -155,7 +155,7 @@ public:
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 
-  template<Population P> void init(P &);
+  template<Population P> void init(P &) const;
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
@@ -215,23 +215,28 @@ private:
 };  // class de_es
 
 
-template<class T> struct strategy_base : std::false_type {};
-template<Evaluator E> struct strategy_base<evolution_strategy<E>>
-  : std::true_type {};
-
 ///
-/// Concept identifying valid evolution strategies.
+/// Concept identifying valid compile-time evolutionary strategies.
 ///
-/// A type models `Strategy` if it is a specialisation of
-/// `evolution_strategy<E>`.
+/// A type satisfies `Strategy` if, after removing cv/ref qualifiers:
+/// - it exposes an `evaluator_type`;
+/// - that type satisfies `Evaluator`;
+/// - the type derives from `evolution_strategy<evaluator_type>`.
 ///
-/// This concept is intentionally strict and only recognises the base
-/// strategy type itself. Derived classes are **not** matched unless they
-/// explicitly expose or reuse the base type (e.g. via type aliases or
-/// further specialisation of `strategy_base`).
+/// This allows the concept to recognise both `evolution_strategy<E>` itself
+/// and concrete strategy classes derived from it, such as `alps_es<E>`,
+/// `std_es<E>`, and `de_es<E>`.
 ///
-template<class T> concept Strategy =
-  strategy_base<std::remove_cvref_t<T>>::value;
+template<class T>
+concept Strategy =
+  requires
+  {
+    typename std::remove_cvref_t<T>::evaluator_type;
+  }
+  && Evaluator<typename std::remove_cvref_t<T>::evaluator_type>
+  && std::derived_from<
+       std::remove_cvref_t<T>,
+       evolution_strategy<typename std::remove_cvref_t<T>::evaluator_type>>;
 
 #include "kernel/evolution_strategy.tcc"
 }  // namespace ultra

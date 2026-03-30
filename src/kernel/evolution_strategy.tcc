@@ -27,7 +27,7 @@
 /// references are shared by all operators composing the strategy (selection,
 /// recombination, replacement).
 ///
-/// \remnark
+/// \remark
 /// No ownership is taken. No initialisation of the population is performed
 /// here.
 ///
@@ -162,7 +162,7 @@ auto alps_es<E>::operations(
 ///
 template<Evaluator E>
 template<Population P>
-void alps_es<E>::init(P &pop)
+void alps_es<E>::init(P &pop) const
 {
   alps::set_age(pop);
 }
