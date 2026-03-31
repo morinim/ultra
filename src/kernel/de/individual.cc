@@ -86,7 +86,7 @@ const individual::value_type &individual::operator[](std::size_t i) const
 ///
 /// \return a vector of real values
 ///
-individual::operator std::vector<individual::value_type>() const noexcept
+individual::operator const std::vector<individual::value_type> &() const noexcept
 {
   return genome_;
 }

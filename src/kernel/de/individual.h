@@ -79,7 +79,7 @@ public:
   [[nodiscard]] std::size_t parameters() const noexcept;
 
   // ---- Misc ----
-  [[nodiscard]] operator std::vector<value_type>() const noexcept;
+  [[nodiscard]] operator const std::vector<value_type> &() const noexcept;
   individual &operator=(const std::vector<value_type> &);
 
   [[nodiscard]] bool is_valid() const;
