@@ -176,6 +176,13 @@ evolution<E> &evolution<E>::after_generation(after_generation_callback_t f)
   return *this;
 }
 
+template<Evaluator E>
+evolution<E> &evolution<E>::on_new_best(on_new_best_callback_t f)
+{
+  sum_.on_new_best(std::move(f));
+  return *this;
+}
+
 ///
 /// Sets an external stop source.
 ///

@@ -33,18 +33,26 @@ template<template<class> class ES, Evaluator E>
 class basic_search
 {
 public:
+  // ---- Member types ----
   using individual_t = evaluator_individual_t<E>;
   using fitness_t = evaluator_fitness_t<E>;
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
+  using on_training_new_best_callback_t =
+    ultra::on_new_best_callback_t<individual_t, fitness_t>;
 
+  // ---- Constructor ----
   basic_search(problem &, E);
 
+  // ---- Run ----
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
 
+  // ---- Hooks ----
   basic_search &after_generation(after_generation_callback_t);
   basic_search &logger(search_log &);
+  basic_search &on_training_new_best(on_training_new_best_callback_t);
+
   basic_search &tag(const std::string &);
   basic_search &stop_source(std::stop_source);
 
@@ -52,14 +60,17 @@ public:
   basic_search &validation_strategy(Args && ...);
   basic_search &validation_strategy(const ultra::validation_strategy &);
 
+  // ---- Misc ----
   [[nodiscard]] virtual bool is_valid() const;
 
 protected:
   // ---- Template methods ----
   virtual void after_evolution(
     unsigned, const std::vector<model_measurements<fitness_t>> &);
+
   [[nodiscard]] virtual model_measurements<fitness_t> calculate_metrics(
     const individual_t &) const;
+
   virtual void tune_parameters();
 
   // ---- Data members ----
@@ -72,6 +83,7 @@ protected:
 
   // Callback functions.
   after_generation_callback_t after_generation_callback_ {};
+  on_training_new_best_callback_t on_training_new_best_callback_ {};
 
 private:
   // Template method of the `basic_search::run` member function.

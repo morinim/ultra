@@ -45,6 +45,42 @@ evolution_status<I, F> summary<I, F>::starting_status()
                                 });
 }
 
+///
+/// Registers a callback invoked whenever a new best individual is discovered.
+///
+/// \param[in] f the callback to invoke on improvement. If empty, no callback
+///              is invoked
+/// \return      a reference to `*this` (fluent interface)
+///
+/// \pre This function must be called during the configuration phase, before
+///      concurrent evolution begins
+///
+/// The callback is triggered only when `update_if_better()` observes an
+/// improvement over the current best.
+///
+/// The callback is copied while holding the internal mutex and invoked after
+/// releasing it. As a consequence, it must be thread-safe and must not assume
+/// any additional synchronisation with `summary`.
+///
+/// \warning
+/// Changing the callback while evolution is running is not supported.
+///
+template<Individual I, Fitness F>
+summary<I, F> &summary<I, F>::on_new_best(on_new_best_callback_t f)
+{
+  // This lock isn't required, but the cost is negligible and it keeps the
+  // implementation safe even if someone breaks the contract later.
+  std::lock_guard lock(mutex_);
+
+  Expects(!elapsed);
+  Expects(!generation);
+  Expects(data_.best.empty());
+  Expects(!data_.last_improvement);
+
+  on_new_best_callback_ = std::move(f);
+  return *this;
+}
+
 template<Individual I, Fitness F>
 typename summary<I, F>::data summary<I, F>::data_snapshot() const
 {
@@ -60,16 +96,21 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 template<Individual I, Fitness F>
 bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
 {
-  std::lock_guard lock(mutex_);
+  on_new_best_callback_t callback(nullptr);
+  bool improved(false);
 
-  if (prg > data_.best)
+  if (std::lock_guard lock(mutex_); prg > data_.best)
   {
     data_.best = prg;
     data_.last_improvement = generation;
-    return true;
+    callback = on_new_best_callback_;
+    improved = true;
   }
 
-  return false;
+  if (callback)
+    callback(prg);
+
+  return improved;
 }
 
 ///

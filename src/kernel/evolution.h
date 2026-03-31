@@ -13,6 +13,7 @@
 #if !defined(ULTRA_EVOLUTION_H)
 #define      ULTRA_EVOLUTION_H
 
+#include "kernel/evolution_callbacks.h"
 #include "kernel/evolution_strategy.h"
 #include "kernel/layered_population.h"
 #include "kernel/search_log.h"
@@ -23,10 +24,6 @@
 
 namespace ultra
 {
-
-template<Individual I, Fitness F>
-using after_generation_callback_t =
-  std::function<void(const layered_population<I> &, const summary<I, F> &)>;
 
 ///
 /// The evolution class orchestrates the iterative improvement of a population
@@ -76,6 +73,8 @@ public:
 
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
+  using on_new_best_callback_t =
+    ultra::on_new_best_callback_t<individual_t, fitness_t>;
 
   // ---- Constructor ----
   explicit evolution(const problem &, E &);
@@ -87,6 +86,7 @@ public:
   // ---- Callback and configuration methods ----
   evolution &after_generation(after_generation_callback_t);
   evolution &logger(search_log &);
+  evolution &on_new_best(on_new_best_callback_t);
   evolution &shake_function(const std::function<bool(unsigned)> &);
   evolution &stop_source(std::stop_source);
   evolution &tag(const std::string &);

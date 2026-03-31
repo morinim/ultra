@@ -68,39 +68,46 @@ template<Individual P = gp::individual>
 class search
 {
 public:
-  using after_generation_callback_t =
-    ultra::after_generation_callback_t<P, double>;
-
+  // ---- Member types ----
   using individual_t = P;
   using fitness_t = double;
+
+  using after_generation_callback_t =
+    ultra::after_generation_callback_t<P, fitness_t>;
+  using on_training_new_best_callback_t =
+    ultra::on_new_best_callback_t<P, fitness_t>;
 
   using class_evaluator_t = gaussian_evaluator<P>;
   using reg_evaluator_t = rmae_evaluator<P>;
 
+  // ---- Constructor ----
   explicit search(problem &, metric_flags = metric_flags::accuracy);
 
-  search &logger(search_log &);
-  search &stop_source(std::stop_source);
-  search &tag(const std::string &);
-
+  // ---- Run ----
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
 
   std::unique_ptr<basic_oracle> oracle(const P &) const;
 
+  // ---- Hooks ----
+  search &after_generation(after_generation_callback_t);
+  search &logger(search_log &);
+  search &on_training_new_best(on_training_new_best_callback_t);
+  search &stop_source(std::stop_source);
+  search &tag(const std::string &);
+
   template<ValidationStrategy, class... Args>
   search &validation_strategy(Args && ...);
 
-  search &after_generation(after_generation_callback_t);
-
 private:
-  // *** Private data members ***
+  // ---- Private data members ----
   problem &prob_;  // problem we're working on
   metric_flags metrics_;  // metrics we have to calculate during the search
 
   std::unique_ptr<ultra::validation_strategy> vs_ {};
 
   after_generation_callback_t after_generation_callback_ {};
+  on_training_new_best_callback_t on_training_new_best_callback_ {};
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {};

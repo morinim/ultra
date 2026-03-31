@@ -156,6 +156,21 @@ basic_search<ES, E> &basic_search<ES, E>::after_generation(
 }
 
 ///
+/// Hook invoked whenever the evolution discovers a new training-set best.
+///
+/// \param[in] f callback function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::on_training_new_best(
+  on_training_new_best_callback_t f)
+{
+  on_training_new_best_callback_ = std::move(f);
+  return *this;
+}
+
+///
 /// Tries to tune search parameters for the current problem.
 ///
 template<template<class> class ES, Evaluator E>
@@ -234,6 +249,7 @@ basic_search<ES, E>::run(unsigned n,
     if (search_log_)
       evo.logger(*search_log_);
     evo.after_generation(after_generation_callback_)
+       .on_new_best(on_training_new_best_callback_)
        .shake_function(shake)
        .stop_source(stop_source_)
        .tag(tag_);

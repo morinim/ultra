@@ -268,6 +268,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     if (search_log_)
       alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_)
+        .on_training_new_best(on_training_new_best_callback_)
         .stop_source(stop_source_).tag(tag_);
 
     return alps.run(n, threshold);
@@ -299,6 +300,20 @@ template<Individual P>
 search<P> &search<P>::after_generation(after_generation_callback_t f)
 {
   after_generation_callback_ = std::move(f);
+  return *this;
+}
+
+///
+/// Hook invoked whenever the evolution discovers a new training-set best.
+///
+/// \param[in] f callback function
+/// \return      a reference to *this* object (method chaining / fluent
+///              interface)
+///
+template<Individual P>
+search<P> &search<P>::on_training_new_best(on_training_new_best_callback_t f)
+{
+  on_training_new_best_callback_ = std::move(f);
   return *this;
 }
 

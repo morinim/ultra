@@ -16,6 +16,7 @@
 #include <chrono>
 
 #include "kernel/analyzer.h"
+#include "kernel/evolution_callbacks.h"
 #include "kernel/evolution_status.h"
 
 namespace ultra
@@ -31,12 +32,16 @@ template<Individual I, Fitness F>
 class summary
 {
 public:
+  // ---- Member types ----
+  using on_new_best_callback_t = ultra::on_new_best_callback_t<I, F>;
+
   // --- Constructor and support functions ---
   summary() = default;
 
   void clear();
 
   [[nodiscard]] evolution_status<I, F> starting_status();
+  summary &on_new_best(on_new_best_callback_t);
 
   // --- Concurrency aware functions ---
   bool update_if_better(scored_individual<I, F>);
@@ -68,6 +73,8 @@ private:
   [[nodiscard]] data data_snapshot() const;
 
   data data_ {};
+
+  on_new_best_callback_t on_new_best_callback_ {};
 };
 
 #include "kernel/evolution_summary.tcc"
