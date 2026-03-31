@@ -72,7 +72,7 @@ summary<I, F> &summary<I, F>::on_new_best(on_new_best_callback_t f)
   // implementation safe even if someone breaks the contract later.
   std::lock_guard lock(mutex_);
 
-  Expects(!elapsed);
+  Expects(elapsed == std::chrono::milliseconds(0));
   Expects(!generation);
   Expects(data_.best.empty());
   Expects(!data_.last_improvement);
