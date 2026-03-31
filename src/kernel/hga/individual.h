@@ -65,7 +65,7 @@ public:
   [[nodiscard]] std::size_t size() const noexcept;
 
   // ---- Misc ----
-  [[nodiscard]] operator std::vector<value_type>() const noexcept;
+  [[nodiscard]] operator const std::vector<value_type> &() const noexcept;
 
   individual &operator=(const std::vector<value_type> &);
 
