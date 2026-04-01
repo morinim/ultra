@@ -95,6 +95,9 @@ public:
 protected:
   evolution_strategy(const problem &, E &);
 
+  template<Population P>
+  [[nodiscard]] static bool valid_layer(P &, typename P::layer_iter);
+
   E &eva_;
   const problem &prob_;
 };

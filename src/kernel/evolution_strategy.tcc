@@ -37,6 +37,13 @@ evolution_strategy<E>::evolution_strategy(const problem &prob, E &eva)
 {
 }
 
+template<Evaluator E>
+template<Population P>
+bool evolution_strategy<E>::valid_layer(P &pop, typename P::layer_iter iter)
+{
+  return pop.layers() && iterator_of(iter, pop.range_of_layers());
+}
+
 ///
 /// Performs post-generation bookkeeping.
 ///
@@ -133,8 +140,7 @@ auto alps_es<E>::operations(
   P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
-  Expects(pop.layers());
-  Expects(iterator_of(iter, pop.range_of_layers()));
+  Expects(this->valid_layer(pop, iter));
 
   return
     [this,
@@ -314,8 +320,7 @@ auto std_es<E>::operations(
   [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
-  Expects(pop.layers());
-  Expects(iterator_of(iter, pop.range_of_layers()));
+  Expects(this->valid_layer(pop, iter));
 
   return
     [this, &pop_layer = *iter, status = starting_status]() mutable
@@ -356,11 +361,10 @@ de_es<E>::de_es(const problem &prob, E &eva)
 template<Evaluator E>
 template<Population P>
 auto de_es<E>::operations(
-  [[maybe_unused]]  P &pop, typename P::layer_iter iter,
+  [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
-  Expects(pop.layers());
-  Expects(iterator_of(iter, pop.range_of_layers()));
+  Expects(this->valid_layer(pop, iter));
 
   return
     [this, &pop_layer = *iter, status = starting_status]() mutable
