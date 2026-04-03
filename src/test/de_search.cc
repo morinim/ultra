@@ -10,17 +10,17 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <numbers>
-
 #include "kernel/de/individual.h"
 #include "kernel/de/search.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-TEST_SUITE("DE::SEARCH")
+#include <cstdlib>
+#include <iostream>
+#include <numbers>
+
+TEST_SUITE("de::search")
 {
 
 TEST_CASE("Rastrigin")
@@ -59,4 +59,24 @@ TEST_CASE("Rastrigin")
   CHECK(res.best_measurements().fitness == doctest::Approx(0.0));
 }
 
-}  // TEST_SUITE("DE::SEARCH")
+TEST_CASE("Construction from base problem reference")
+{
+  using namespace ultra;
+
+  de::problem prob(2, {-5.12, 5.12});
+  ultra::problem &base(prob);
+
+  de::search search(base,
+                    [](const ultra::de::individual &x)
+                    {
+                      return -std::accumulate(x.begin(), x.end(), 0.0,
+                                              [](double sum, double xi)
+                                              {
+                                                return sum + xi * xi;
+                                              });
+                    });
+
+  CHECK(search.run(1).best_measurements().fitness <= 0.0);
+}
+
+}  // TEST_SUITE

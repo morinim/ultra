@@ -21,7 +21,7 @@
 /// Search class specialization DE.
 ///
 template<Evaluator E>
-search<E>::search(problem &prob, E eva)
+search<E>::search(ultra::problem &prob, E eva)
   : ultra::basic_search<de_es, E>(prob, eva)
 {
 }

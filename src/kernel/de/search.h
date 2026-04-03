@@ -27,7 +27,7 @@ template<Evaluator E>
 class search : public ultra::basic_search<de_es, E>
 {
 public:
-  search(problem &, E);
+  search(ultra::problem &, E);
 
 protected:
   void tune_parameters() override;
