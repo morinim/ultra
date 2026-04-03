@@ -47,9 +47,8 @@ public:
 
     /// Percentage of the dataset used for validation.
     ///
-    /// - Valid range: `0...(100 - training_perc)`;
-    /// - if negative, it is set to `100 - training_perc`;
-    /// - if too large, it is clamped to `100 - training_perc`.
+    /// Valid range: `0...(100 - training_perc)`; if negative or too large, it
+    /// is set to `100 - training_perc`.
     int validation_perc {30};
 
     /// Whether or not to shuffle the data before splitting.
