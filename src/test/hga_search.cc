@@ -13,14 +13,14 @@
 #include "kernel/hga/individual.h"
 #include "kernel/hga/search.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <numbers>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
-
-TEST_SUITE("HGA::SEARCH")
+TEST_SUITE("hga::search")
 {
 
 TEST_CASE("String guess")
@@ -92,6 +92,26 @@ TEST_CASE("8 Queens")
   const auto res(search.run(5));
 
   CHECK(res.best_measurements().fitness == doctest::Approx(0.0));
+}
+
+TEST_CASE("Construction from base problem reference")
+{
+  using namespace ultra;
+
+  hga::problem prob;
+  prob.insert<ultra::hga::integer>(interval(0, 10));
+  prob.insert<ultra::hga::integer>(interval(0, 10));
+
+  ultra::problem &base(prob);
+
+  hga::search search(base,
+                     [](const ultra::hga::individual &x)
+                     {
+                       return -static_cast<double>(std::get<int>(x[0])
+                                                   + std::get<int>(x[1]));
+                     });
+
+  CHECK(search.run(1).best_measurements().fitness <= 0.0);
 }
 
 }  // TEST_SUITE
