@@ -13,14 +13,14 @@
 #include "kernel/ga/individual.h"
 #include "kernel/ga/search.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <numbers>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
-
-TEST_SUITE("GA::SEARCH")
+TEST_SUITE("ga::search")
 {
 
 TEST_CASE("Rastrigin")
@@ -89,4 +89,20 @@ TEST_CASE("8 Queens")
   CHECK(result.best_measurements().fitness == doctest::Approx(0.0));
 }
 
-}  // TEST_SUITE("GA::SEARCH")
+TEST_CASE("Construction from base problem reference")
+{
+  using namespace ultra;
+
+  ga::problem prob(4, {0, 10});
+  ultra::problem &base(prob);
+
+  ga::search search(base,
+                    [](const ultra::ga::individual &x)
+                    {
+                      return -std::accumulate(x.begin(), x.end(), 0.0);
+                    });
+
+  CHECK(search.run(1).best_measurements().fitness <= 0.0);
+}
+
+}  // TEST_SUITE

@@ -26,7 +26,7 @@
 ///                 may be used to build a proxy evaluator.
 ///
 template<Evaluator E>
-search<E>::search(problem &prob, E eva)
+search<E>::search(ultra::problem &prob, E eva)
   : ultra::basic_search<alps_es, E>(prob, eva)
 {
 }
