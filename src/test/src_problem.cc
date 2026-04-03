@@ -10,7 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <sstream>
 
 #include "test/debug_datasets.h"
 
@@ -20,13 +19,15 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <sstream>
+
 namespace ultra::src::internal
 {
 bool compatible(const function::param_data_types &,
                 const std::vector<std::string> &, const columns_info &);
 }
 
-TEST_SUITE("SRC::PROBLEM")
+TEST_SUITE("src::problem")
 {
 
 TEST_CASE("Base")
@@ -188,4 +189,54 @@ TEST_CASE("compatible")
   }
 }
 
-}  // TEST_SUITE("SRC::PROBLEM")
+TEST_CASE("disabled symbol initialization")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream wine(debug::wine);
+  src::problem p(wine, src::dataframe::params());
+
+  REQUIRE(p.sset.terminals() > 0);
+
+  std::istringstream wine2(debug::wine);
+  src::problem disabled(src::dataframe(wine2), symbol_init::disabled);
+
+  CHECK(disabled.is_valid());
+  CHECK(disabled.sset.terminals() == 0);
+  CHECK(disabled.sset.functions() == 0);
+}
+
+TEST_CASE("construct from moved base problem")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream wine(debug::wine);
+  src::problem source(wine);
+
+  source.params.population.individuals = 123;
+  source.params.evolution.generations = 7;
+
+  const auto source_terminals(source.sset.terminals());
+  const auto source_functions(source.sset.functions());
+
+  ultra::problem base;
+  using std::swap;
+  swap(base.params, source.params);
+  swap(base.sset, source.sset);
+
+  std::istringstream iris(debug::iris);
+  src::dataframe::params p;
+  p.output_index = 4;
+  src::problem moved(std::move(base), src::dataframe(iris, p));
+
+  REQUIRE(moved.is_valid());
+  CHECK(moved.params.population.individuals == 123);
+  CHECK(moved.params.evolution.generations == 7);
+  CHECK(moved.sset.terminals() == source_terminals);
+  CHECK(moved.sset.functions() == source_functions);
+  CHECK(moved.data[src::dataset_t::training].size() == debug::IRIS_COUNT);
+}
+
+}  // TEST_SUITE

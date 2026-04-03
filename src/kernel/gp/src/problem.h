@@ -76,6 +76,7 @@ public:
   explicit problem(const std::filesystem::path &,
                    const dataframe::params & = {});
   explicit problem(std::istream &, const dataframe::params & = {});
+  problem(ultra::problem &&, dataframe);
 
   // ---- Information about the problem ----
   /// Just a shorthand for checking number of classes.
@@ -96,7 +97,7 @@ public:
   multi_dataset<dataframe> data;
 
 private:
-  // Private support methods.
+  // ---- Private support methods ----
   [[nodiscard]] bool compatible(const function::param_data_types &,
                                 const std::vector<std::string> &) const;
 };

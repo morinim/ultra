@@ -102,7 +102,8 @@ problem::problem(dataframe d, symbol_init init_flags)
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
   data[dataset_t::test].clone_schema(data[dataset_t::training]);
 
-  setup_symbols(init_flags);
+  if (init_flags != symbol_init::disabled)
+    setup_symbols(init_flags);
 }
 
 ///
@@ -143,6 +144,31 @@ problem::problem(const std::filesystem::path &ds, const dataframe::params &p)
 problem::problem(std::istream &ds, const dataframe::params &p)
   : problem(dataframe(ds, p))
 {
+}
+
+///
+/// Constructs a src::problem from an existing base problem by transferring
+/// configuration and symbol set ownership.
+///
+/// \param[in,out] base source problem to consume (moved-from on return)
+/// \param[in]     d    training dataset for the new problem
+///
+/// \post
+/// - `this->params` and `this->sset` are taken from `base`
+/// - `base` remains valid but its `params`/`sset` are in a moved-from state
+///
+/// \warning
+/// This constructor does not prove semantic compatibility between `d` and the
+/// moved symbol set. The caller must ensure categories/domains are coherent.
+///
+problem::problem(ultra::problem &&base, dataframe d)
+  : problem(std::move(d), symbol_init::disabled)
+{
+  using std::swap;
+  swap(params, base.params);
+  swap(sset, base.sset);
+
+  Ensures(is_valid());
 }
 
 ///
