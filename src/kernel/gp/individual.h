@@ -26,6 +26,11 @@
 namespace ultra::gp
 {
 
+namespace internal
+{
+  class crossover_engine;
+}
+
 #include "kernel/gp/individual_exon_view.tcc"
 
 ///
@@ -90,9 +95,6 @@ public:
 
   // ---- Recombination operators ----
   enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
-
-  friend individual crossover(const problem &,
-                              const individual &, const individual &);
   unsigned mutation(const problem &);
 
   void apply_decision_vector(const decision_vector &);
@@ -114,6 +116,7 @@ public:
 
 private:
   template<bool> friend class internal::basic_exon_iterator;
+  friend class internal::crossover_engine;
 
   // ---- Private member functions ----
   [[nodiscard]] exon_view exons();

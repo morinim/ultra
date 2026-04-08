@@ -417,6 +417,200 @@ void individual::apply_decision_vector(const decision_vector &v)
   Ensures(is_valid());
 }
 
+namespace internal
+{
+
+///
+/// Internal implementation of GP crossover.
+///
+/// `crossover_engine` centralises all privileged genome rewriting required by
+/// recombination. The public `crossover(...)` function remains the user-facing
+/// API, while this helper dispatches to the selected elementary crossover
+/// operator and finalises offspring metadata.
+///
+/// Keeping the implementation here avoids exposing multiple helper functions
+/// as friends of `gp::individual`.
+///
+class crossover_engine
+{
+public:
+  [[nodiscard]] individual operator()(const problem &,
+                                      const individual &lhs,
+                                      const individual &rhs) const;
+
+private:
+  struct context
+  {
+    // const problem &prob;
+    const individual &from;
+    individual to;
+  };
+
+  void copy_gene(context &, const locus &) const;
+  void copy_range(context &, std::size_t, std::size_t) const;
+
+  void finalise(context &) const;
+  void run(context &) const;
+
+  void one_point(context &) const;
+  void two_points(context &) const;
+  void tree(context &) const;
+  void uniform(context &) const;
+};
+
+/// Copies a single locus from the donor into the recipient.
+void crossover_engine::copy_gene(context &ctx, const locus &l) const
+{
+  ctx.to.genome_(l) = ctx.from[l];
+}
+
+/// Copies the half-open range `[first, last_exclusive)` from the donor into
+/// the corresponding loci of the recipient.
+void crossover_engine::copy_range(context &ctx, std::size_t first,
+                                  std::size_t last_exclusive) const
+{
+  std::copy(std::next(ctx.from.begin(), first),
+            std::next(ctx.from.begin(), last_exclusive),
+            std::next(ctx.to.genome_.begin(), first));
+}
+
+/// One-point crossover.
+///
+/// The offspring is initialised as a copy of one parent. A crossover point is
+/// then selected, and all loci in the suffix `[cut, end)` are copied from the
+/// donor parent.
+void crossover_engine::one_point(context &ctx) const
+{
+  const auto genes(std::ranges::distance(ctx.from));
+  Expects(genes > 1);
+
+  const auto cut(random::sup(genes - 1));
+  copy_range(ctx, cut, genes);
+}
+
+/// Two-points crossover.
+///
+/// The offspring is initialised as a copy of one parent. Two crossover points
+/// are selected, and the half-open interval `[cut1, cut2)` is copied from the
+/// donor parent.
+void crossover_engine::two_points(context &ctx) const
+{
+  const auto genes(std::ranges::distance(ctx.from));
+  Expects(genes > 1);
+
+  const auto cut1(random::sup(genes - 1));
+  const auto cut2(random::between(cut1 + 1, genes));
+  copy_range(ctx, cut1, cut2);
+}
+
+/// Uniform crossover.
+///
+/// The offspring is initialised as a copy of one parent. Then, for each locus,
+/// the donor gene replaces the current one with probability 0.5.
+///
+/// Uniform crossover, as the name suggests, is a GP operator inspired by the
+/// GA operator of the same name. GA uniform crossover constructs offspring on
+/// a bitwise basis, copying each allele from each parent with a 50%
+/// probability. Thus the information at each gene location is equally likely
+/// to have come from either parent and on average each parent donates 50%
+/// of its genetic material. The whole operation, of course, relies on the
+/// fact that all the chromosomes in the population are of the same structure
+/// and the same length. GP uniform crossover begins with the observation that
+/// many parse trees are at least partially structurally similar.
+void crossover_engine::uniform(context &ctx) const
+{
+  // NOTE: we are intentionally using `std::transform` instead of
+  // `std::ranges::transform`. As of Clang 18.1.3, using ranges here
+  // triggers a known Internal Compiler Error (ICE) in the frontend:
+  // "error: cannot compile this l-value expression yet".
+  // Do not refactor to ranges until CI confirms Clang stability for
+  // nested lambda expressions in this context.
+  std::transform(ctx.from.begin(), ctx.from.end(), ctx.to.genome_.begin(),
+                 ctx.to.genome_.begin(),
+                 [](const auto &g1, const auto &g2)
+                 { return random::boolean() ? g1 : g2; });
+}
+
+/// Tree crossover.
+///
+/// A random active locus is selected in the donor, and the dependency-closed
+/// subtree rooted at that locus is copied into the offspring at the same loci.
+/// This is typically less disruptive than segment-based crossover because an
+/// entire functional subexpression is preserved.
+void crossover_engine::tree(context &ctx) const
+{
+  // FIXME: reverted to a standard lambda capture.
+  // Although fixed in Clang 21, Clang 18.x (current CI/LTS baseline)
+  // suffers from an Internal Compiler Error (ICE) when combining deducing
+  // `this` with nested l-value member access:
+  // "error: cannot compile this l-value expression yet"
+  auto crossover_ = [&](const locus &l, const auto &self) -> void
+  {
+    copy_gene(ctx, l);
+
+    for (const auto &al : ctx.from[l].args)
+      if (std::holds_alternative<D_ADDRESS>(al))
+        self(ctx.from[l].locus_of_argument(al), self);
+  };
+
+  crossover_(random_locus(ctx.from), crossover_);
+}
+
+/// Dispatches to the crossover operator selected by the donor parent.
+void crossover_engine::run(context &ctx) const
+{
+  switch (ctx.from.active_crossover_type_)
+  {
+  case individual::crossover_t::one_point:
+    one_point(ctx);
+    break;
+
+  case individual::crossover_t::two_points:
+    two_points(ctx);
+    break;
+
+  case individual::crossover_t::uniform:
+    uniform(ctx);
+    break;
+
+  default:
+    tree(ctx);
+  }
+}
+
+/// Restores offspring metadata after recombination.
+///
+/// In particular, this propagates the donor's active crossover type, updates
+/// age information, and recomputes the structural signature.
+void crossover_engine::finalise(context &ctx) const
+{
+  ctx.to.active_crossover_type_ = ctx.from.active_crossover_type_;
+  ctx.to.set_if_older_age(ctx.from.age());
+  ctx.to.signature_ = ctx.to.hash();
+}
+
+individual crossover_engine::operator()(const problem &,
+                                        const individual &lhs,
+                                        const individual &rhs) const
+{
+  Expects(lhs.size() == rhs.size());
+  Expects(std::ranges::distance(lhs) == std::ranges::distance(rhs));
+
+  const bool b(random::boolean());
+  const auto &from(b ? rhs : lhs);
+  auto to(b ? lhs : rhs);
+
+  context ctx{from, std::move(to)};
+
+  run(ctx);
+  finalise(ctx);
+
+  Ensures(ctx.to.is_valid());
+  return std::move(ctx.to);
+}
+
+}  // namespace internal
+
 ///
 /// A Self-Adaptive Crossover operator.
 ///
@@ -436,52 +630,14 @@ void individual::apply_decision_vector(const decision_vector &v)
 /// determine which crossover to apply and allows the algorithm to adjust the
 /// relative mixture of operators.
 ///
-/// Here we briefly describe the elementary crossover operators that are
-/// utilised:
-///
-/// **ONE POINT**
-///
-/// We randomly select a parent (between `from` and `to`) and a single locus
-/// (common crossover point). The offspring is created with genes from the
-/// chosen parent up to the crossover point and genes from the other parent
-/// beyond that point.
-/// One-point crossover is the oldest homologous crossover in tree-based GP.
-///
-/// **TREE**
-///
-/// Inserts a complete tree from one parent into the other.
-/// The operation is less disruptive than other forms of crossover since
-/// an entire tree is copied (not just a part).
-///
-/// **TWO POINTS**
-///
-/// We randomly select two loci (common crossover points). The offspring is
-/// created with genes from the one parent before the first crossover point and
-/// after the second crossover point; genes between crossover points are taken
-/// from the other parent.
-///
-/// **UNIFORM CROSSOVER**
-///
-/// The i-th locus of the offspring has a 50% probability to be filled with
-/// the i-th gene of `from` and 50% with i-th gene of `to`.
-///
-/// Uniform crossover, as the name suggests, is a GP operator inspired by the
-/// GA operator of the same name. GA uniform crossover constructs offspring on
-/// a bitwise basis, copying each allele from each parent with a 50%
-/// probability. Thus the information at each gene location is equally likely
-/// to have come from either parent and on average each parent donates 50%
-/// of its genetic material. The whole operation, of course, relies on the
-/// fact that all the chromosomes in the population are of the same structure
-/// and the same length. GP uniform crossover begins with the observation that
-/// many parse trees are at least partially structurally similar.
-///
 /// \note
 /// Parents must have the same size.
 ///
 /// \remark
-/// What has to be noticed is that the adaption of the parameter happens before
-/// the fitness is given to it. That means that getting a good parameter
-/// doesn't rise the individual's fitness but only its performance over time.
+/// The adaptation of the crossover parameter happens before the offspring is
+/// assigned fitness. As a consequence, choosing a good operator does not
+/// directly increase the individual's current fitness, but may improve its
+/// reproductive performance over time.
 ///
 /// \see
 /// - https://github.com/morinim/ultra/wiki/bibliography#1
@@ -489,79 +645,10 @@ void individual::apply_decision_vector(const decision_vector &v)
 ///
 /// \relates gp::individual
 ///
-individual crossover(const problem &,
+individual crossover(const problem &p,
                      const individual &lhs, const individual &rhs)
 {
-  Expects(lhs.size() == rhs.size());
-  Expects(std::ranges::distance(lhs) == std::ranges::distance(rhs));
-
-  const bool b(random::boolean());
-  const auto &from(b ? rhs : lhs);
-  auto          to(b ? lhs : rhs);
-
-  const auto genes(std::ranges::distance(from));
-  Expects(genes > 1);
-
-  switch (from.active_crossover_type_)
-  {
-  case individual::crossover_t::one_point:
-  {
-    const auto cut(random::sup(genes - 1));
-
-    std::copy(std::next(from.begin(), cut), from.end(),
-              std::next(to.genome_.begin(), cut));
-    break;
-  }
-
-  case individual::crossover_t::two_points:
-  {
-    const auto cut1(random::sup(genes - 1));
-    const auto cut2(random::between(cut1 + 1, genes));
-
-    std::copy(std::next(from.begin(), cut1), std::next(from.begin(), cut2),
-              std::next(to.genome_.begin(), cut1));
-    break;
-  }
-
-  case individual::crossover_t::uniform:
-    // NOTE: we are intentionally using `std::transform` instead of
-    // `std::ranges::transform`. As of Clang 18.1.3, using ranges here
-    // triggers a known Internal Compiler Error (ICE) in the frontend:
-    // "error: cannot compile this l-value expression yet".
-    // Do not refactor to ranges until CI confirms Clang stability for
-    // nested lambda expressions in this context.
-    std::transform(from.begin(), from.end(), to.begin(), to.genome_.begin(),
-                   [](const auto &g1, const auto &g2)
-                   { return random::boolean() ? g1 : g2; });
-    break;
-
-  default:  // Tree crossover
-    {
-      // FIXME: reverted to a standard lambda capture.
-      // Although fixed in Clang 21, Clang 18.x (current CI/LTS baseline)
-      // suffers from an Internal Compiler Error (ICE) when combining deducing
-      // `this` with nested l-value member access:
-      // "error: cannot compile this l-value expression yet"
-      auto crossover_ = [&](const locus &l, const auto &lambda) -> void
-      {
-        to.genome_(l) = from[l];
-
-        for (const auto &al : from[l].args)
-          if (std::holds_alternative<D_ADDRESS>(al))
-            lambda(from[l].locus_of_argument(al), lambda);
-      };
-
-      crossover_(random_locus(from), crossover_);
-    }
-    break;
-  }
-
-  to.active_crossover_type_ = from.active_crossover_type_;
-  to.set_if_older_age(from.age());
-  to.signature_ = to.hash();
-
-  Ensures(to.is_valid());
-  return to;
+  return internal::crossover_engine{}(p, lhs, rhs);
 }
 
 ///

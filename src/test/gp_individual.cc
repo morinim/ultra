@@ -16,13 +16,13 @@
 #include "test/fixture2.h"
 #include "test/fixture3.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
+
 #include <future>
 #include <latch>
 #include <set>
 #include <sstream>
-
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
 
 TEST_SUITE("gp::individual")
 {
@@ -369,6 +369,45 @@ TEST_CASE_FIXTURE(fixture1, "Crossover")
 
   CHECK(95 * n / 100 < different);
   CHECK(different < n);
+}
+
+TEST_CASE_FIXTURE(fixture1, "Crossover propagates metadata")
+{
+  using namespace ultra;
+
+  prob.params.slp.code_length = 30;
+
+  for (unsigned j(0); j < 500; ++j)
+  {
+    gp::individual i1(prob), i2(prob);
+
+    i1.inc_age(random::sup(100));
+    i2.inc_age(random::sup(100));
+
+    const auto ic(crossover(prob, i1, i2));
+
+    CHECK(ic.is_valid());
+    CHECK(ic.age() == std::max(i1.age(), i2.age()));
+    CHECK(!ic.signature().empty());
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Repeated crossover remains valid")
+{
+  using namespace ultra;
+
+  prob.params.slp.code_length = 50;
+
+  gp::individual current(prob);
+
+  for (unsigned i(0); i < 2000; ++i)
+  {
+    gp::individual other(prob);
+    current = crossover(prob, current, other);
+
+    CHECK(current.is_valid());
+    CHECK(!current.signature().empty());
+  }
 }
 
 TEST_CASE_FIXTURE(fixture3, "Random locus")
