@@ -44,7 +44,7 @@ public:
 
   explicit basic_search(problem &, metric_flags = metric_flags::accuracy);
 
-  std::unique_ptr<basic_oracle> oracle(const individual_t &) const;
+  [[nodiscard]] auto oracle(const individual_t &) const;
 
   [[nodiscard]] bool is_valid() const override;
 
@@ -57,7 +57,6 @@ protected:
 
 private:
   [[nodiscard]] problem &prob() const noexcept;
-  //template<class E, class... Args> void set_evaluator(Args && ...);
 
   // *** Private data members ***
   metric_flags metrics_;  // metrics we have to calculate during the search
@@ -87,7 +86,7 @@ public:
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
 
-  std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
 
   // ---- Hooks ----
   search &after_generation(after_generation_callback_t);

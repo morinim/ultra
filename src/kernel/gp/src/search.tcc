@@ -17,8 +17,25 @@
 #if !defined(ULTRA_SRC_SEARCH_TCC)
 #define      ULTRA_SRC_SEARCH_TCC
 
+/// Sentinel type representing the absence of an oracle.
+///
+/// This type is produced when the active evaluator does not provide an
+/// `oracle()` method.
+struct no_oracle
+{
+};
+
 namespace internal
 {
+
+template<class Eva, class P>
+[[nodiscard]] auto get_oracle(Eva &&eva, const P &prg)
+{
+  if constexpr (requires { eva.oracle(prg); })
+    return std::forward<Eva>(eva).oracle(prg);
+  else
+    return no_oracle {};
+}
 
 template<class O>
 [[nodiscard]] std::unique_ptr<basic_oracle> to_basic_oracle(O &&o)
@@ -26,6 +43,16 @@ template<class O>
   using oracle_t = std::remove_cvref_t<O>;
   static_assert(std::is_base_of_v<basic_oracle, oracle_t>);
   return std::make_unique<oracle_t>(std::forward<O>(o));
+}
+
+template<class O>
+[[nodiscard]] std::unique_ptr<basic_oracle> wrap_oracle(O &&o)
+{
+  using oracle_t = std::remove_cvref_t<O>;
+  if constexpr (std::same_as<oracle_t, no_oracle>)
+    return nullptr;
+  else
+    return to_basic_oracle(std::forward<O>(o));
 }
 
 }  // namespace internal
@@ -55,18 +82,20 @@ basic_search<ES, E>::basic_search(problem &p, metric_flags m)
 /// Creates an oracle associated with a given individual.
 ///
 /// \param[in] ind individual used as building block for the oracle
-/// \return        a pointer to the oracle (`nullptr` in case of errors)
+/// \return        the evaluator-specific oracle, or `no_oracle` if the active
+///                evaluator does not provide one
 ///
-/// The oracle depends on the active training evaluator.
+/// The returned object depends on the evaluator used during training:
+/// - if the evaluator exposes an `oracle()` method, its result is forwarded;
+/// - otherwise, a `no_oracle` sentinel is returned.
+///
+/// This function is always well-formed: lack of oracle support is handled at
+/// compile time via the `no_oracle` fallback rather than via runtime errors.
 ///
 template<template<class> class ES, Evaluator E>
-std::unique_ptr<basic_oracle> basic_search<ES, E>::oracle(
-  const individual_t &ind) const
+auto basic_search<ES, E>::oracle(const individual_t &ind) const
 {
-  if constexpr ( requires { internal::to_basic_oracle(this->eva_.core().oracle(ind)); })
-    return internal::to_basic_oracle(this->eva_.core().oracle(ind));
-
-  return nullptr;
+  return internal::get_oracle(this->eva_.core(), ind);
 }
 
 ///
@@ -95,12 +124,13 @@ model_measurements<typename basic_search<ES, E>::fitness_t>
 basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
   auto ret(ultra::basic_search<ES, E>::calculate_metrics(prg));
+  const auto prg_oracle(oracle(prg));
 
-  if ((metrics_ & metric_flags::accuracy) && prob().classification())
-  {
-    const auto prg_oracle(oracle(prg));
-    ret.accuracy = metrics::accuracy(*prg_oracle, prob().data.selected());
-  }
+  if constexpr (ClassificationPredictor<decltype(prg_oracle)>)
+    if ((metrics_ & metric_flags::accuracy) && prob().classification())
+    {
+      ret.accuracy = metrics::accuracy(prg_oracle, prob().data.selected());
+    }
 
   return ret;
 }
@@ -280,13 +310,33 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     return search_scheme.template operator()<reg_evaluator_t>();
 }
 
+///
+/// Creates a runtime-polymorphic oracle associated with a given individual.
+///
+/// \param[in] prg individual used as building block for the oracle
+/// \return        a dynamically allocated oracle or `nullptr` if the active
+///                evaluator does not provide one
+///
+/// This function provides a uniform interface over different evaluator types.
+/// If the selected evaluator exposes an `oracle()` method, its result is
+/// wrapped into a `std::unique_ptr<basic_oracle>`. Otherwise `nullptr` is
+/// returned.
+///
+/// \note
+/// Oracle availability is detected at compile time and mapped to a runtime
+/// polymorphic interface.
+///
+/// \see basic_search::oracle
+///
 template<Individual P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
   if (prob_.classification())
-    return to_basic_oracle(class_evaluator_t(prob_.data).oracle(prg));
+    return internal::wrap_oracle(
+      internal::get_oracle(class_evaluator_t(prob_.data), prg));
   else
-    return to_basic_oracle(reg_evaluator_t(prob_.data).oracle(prg));
+    return internal::wrap_oracle(
+      internal::get_oracle(reg_evaluator_t(prob_.data), prg));
 }
 
 ///
