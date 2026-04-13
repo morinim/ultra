@@ -22,7 +22,7 @@ namespace ultra
 {
 
 ///
-/// Allows multiple threads to aenqueue and dequeue elements concurrently.
+/// Allows multiple threads to enqueue and dequeue elements concurrently.
 ///
 ///
 ///
