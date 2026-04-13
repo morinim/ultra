@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -17,21 +17,35 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <utility>
 
 namespace ultra
 {
 
 ///
-/// Allows multiple threads to enqueue and dequeue elements concurrently.
+/// A thread-safe FIFO queue.
 ///
+/// \tparam T type of the stored elements
 ///
+/// `ts_queue` provides synchronized access to a `std::queue`, allowing
+/// multiple threads to enqueue and dequeue elements concurrently.
+///
+/// The class offers two ways to remove elements:
+/// - `pop()` blocks until an element becomes available;
+/// - `try_pop()` returns immediately and reports failure via `std::optional`.
+///
+/// \warning
+/// This class does **not** provide a shutdown or close mechanism. A thread
+/// blocked in `pop()` remains blocked until another thread pushes an element.
+/// Users must therefore ensure that no thread waits on a queue that will never
+/// receive further elements.
 ///
 template <class T>
 class ts_queue
 {
 public:
   // ---- Member types ----
-  using container_type = typename std::queue<T>;
+  using container_type = std::queue<T>;
   using value_type = typename container_type::value_type;
   using size_type = typename container_type::size_type;
   using reference = typename container_type::reference;
@@ -45,24 +59,28 @@ public:
   // ---- Modifiers ----
   /// Pushes the given element to the end of the queue.
   ///
-  /// \\param[in] value the value of the element to push
-  void push(const T &item)
+  /// \param[in] item element to be inserted
+  ///
+  /// After the new element has been enqueued, one waiting consumer is
+  /// notified.
+  void push(T item)
   {
     {
       std::lock_guard lock(mutex_);
-      queue_.push(item);
+      queue_.push(std::move(item));
     }
 
     cond_.notify_one();
   }
 
-  /// Pushes a new element to the end of the queue.
+  /// Constructs an element in-place at the back of the queue.
   ///
-  /// \param[in] args arguments to forward to the constructor of the element
+  /// \param[in] args arguments to forward to the constructor of `T`
   ///
-  /// The element is constructed in-place, i.e. no copy or move operations are
-  /// performed. The constructor of the element is called with exactly the same
-  /// arguments as supplied to the function.
+  /// The element is constructed directly in the underlying container.
+  ///
+  /// After the new element has been enqueued, one waiting consumer is
+  /// notified.
   template<class... Args>
   void emplace(Args &&...args)
   {
@@ -74,9 +92,9 @@ public:
     cond_.notify_one();
   }
 
-  /// Removes an element from the front of the queue.
+  /// Removes and returns the element at the front of the queue.
   ///
-  /// \return the first element
+  /// \return the first available element
   ///
   /// \warning
   /// Blocks if queue is empty.
@@ -97,12 +115,13 @@ public:
     return item;
   }
 
-  /// Removes an element from the front of the queue.
+  /// Tries to remove and return the element at the front of the queue.
   ///
-  /// \return the first element if available, otherwise an empty object
+  /// \return the first available element, or `std::nullopt` if the queue is
+  ///         empty
   ///
   /// \remark
-  /// Doesn't block if queue is empty.
+  /// Unlike `pop()`, this function never blocks.
   [[nodiscard]] std::optional<T> try_pop()
   {
     std::lock_guard lock(mutex_);
@@ -125,19 +144,10 @@ public:
   /// \return `true` if the container is empty, `false` otherwise
   ///
   /// \warning
-  /// Should only be used in a multiple producer single consumer environment.
-  /// In general the queue cannot guarantee that matters won't change between
-  /// the time the client queries `empty()` and the time `pop()` is called,
-  /// making the point entirely moot, and this code a potential source of
-  /// intermittent (read: hard to pin) bugs:
-  ///
-  /// ```c++
-  /// if (!queue.empty())
-  /// {
-  ///   // What could possibly go wrong? A lot, it turns out.
-  ///   auto elem = queue.pop();
-  /// }
-  /// ```
+  /// The returned value is only a snapshot. In a concurrent environment,
+  /// another thread may modify the queue immediately after this function
+  /// returns. In particular, it must not be used to decide whether a
+  /// subsequent call to `pop()` can proceed safely.
   ///
   [[nodiscard]] bool empty() const
   {
@@ -149,21 +159,12 @@ public:
   /// \return the number of elements in the container
   ///
   /// \warning
-  /// Should only be used in a multiple producer single consumer environment.
-  /// In general the queue cannot guarantee that matters won't change between
-  /// the time the client queries `size()` and the time `pop()` is called,
-  /// making the point entirely moot, and this code a potential source of
-  /// intermittent (read: hard to pin) bugs:
+  /// The returned value is only a snapshot. In a concurrent environment,
+  /// another thread may modify the queue immediately after this function
+  /// returns. In particular, it must not be used to decide whether a
+  /// subsequent call to `pop()` can proceed safely.
   ///
-  /// ```c++
-  /// if (queue.size())
-  /// {
-  ///   // What could possibly go wrong? A lot, it turns out.
-  ///   auto elem = queue.pop();
-  /// }
-  /// ```
-  ///
-  [[nodiscard]] std::size_t size() const
+  [[nodiscard]] size_type size() const
   {
     std::lock_guard lock(mutex_);
     return queue_.size();

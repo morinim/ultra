@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,12 +10,14 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <thread>
-
 #include "utility/ts_queue.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <chrono>
+#include <thread>
+#include <vector>
 
 TEST_SUITE("ts_queue")
 {
@@ -59,24 +61,34 @@ TEST_CASE("try_pop")
 
     const auto consumer([&queue, &sum]()
     {
-      for (int j(0); j < n; ++j)
-        if (auto val(queue.try_pop()); val)
+      for (int j(0); j < n;)
+        if (auto val = queue.try_pop())
+        {
           sum += *val;
+          ++j;
+        }
         else
-          --j;
+          std::this_thread::yield();
     });
 
     std::jthread producer_thread(producer);
-
-    // Give the producer thread a lead
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     std::jthread consumer_thread(consumer);
   }
 
   const int expected_sum(n * (n + 1) / 2);
   CHECK(sum == expected_sum);
-
   CHECK(queue.empty());
+}
+
+
+TEST_CASE("try_pop on empty queue")
+{
+  using namespace ultra;
+
+  ts_queue<int> queue;
+  CHECK(!queue.try_pop().has_value());
+  CHECK(queue.empty());
+  CHECK(queue.size() == 0);
 }
 
 TEST_CASE("pop 1")
@@ -111,7 +123,6 @@ TEST_CASE("pop 1")
 
   const int expected_sum(n * (n + 1) / 2);
   CHECK(sum == expected_sum);
-
   CHECK(queue.empty());
 }
 
@@ -122,15 +133,16 @@ TEST_CASE("pop 2")
   ts_queue<int> queue;
   const std::vector delays =
     {
-      std::chrono::milliseconds{100},
-      std::chrono::milliseconds{200},
-      std::chrono::milliseconds{300}
+      std::chrono::milliseconds{1},
+      std::chrono::milliseconds{2},
+      std::chrono::milliseconds{3}
     };
 
   const int n(10);
+  const int producer_count(static_cast<int>(delays.size()));
+  const int total_items(n * producer_count);
+  const int expected_sum(n * (n + 1) / 2 * producer_count);
   int sum(0);
-
-  const int expected_sum(n * (n + 1) / 2 * delays.size());
 
   {
     std::vector<std::jthread> producer_threads;
@@ -146,12 +158,12 @@ TEST_CASE("pop 2")
         }
       });
 
-      producer_threads.push_back(std::jthread(producer));
+      producer_threads.emplace_back(producer);
     }
 
-    const auto consumer([&queue, &sum, expected_sum]()
+    const auto consumer([&queue, &sum, total_items]()
     {
-      while (sum < expected_sum)  // fully consume
+      for (int i(0); i < total_items; ++i)
         sum += queue.pop();
     });
 
@@ -162,4 +174,16 @@ TEST_CASE("pop 2")
   CHECK(queue.empty());
 }
 
-}  // TEST_SUITE("ts_queue")
+TEST_CASE("move-only type")
+{
+  using namespace ultra;
+
+  ts_queue<std::unique_ptr<int>> queue;
+  queue.push(std::make_unique<int>(42));
+
+  auto val = queue.pop();
+  CHECK(*val == 42);
+  CHECK(queue.empty());
+}
+
+}  // TEST_SUITE
