@@ -51,7 +51,7 @@ bool evolution<E>::stop_condition() const
   Expects(planned_generations);
 
   // Check the number of generations.
-  if (sum_.generation > planned_generations)
+  if (sum_.generation >= planned_generations)
     return true;
 
   if (console.user_stop())
