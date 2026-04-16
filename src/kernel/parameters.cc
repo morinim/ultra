@@ -223,6 +223,32 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
+  // The following parameters are not auto-tuned and therefore must always
+  // satisfy their domain constraints.
+  if (numerical_optimisation.rel_radius < 0.0)
+  {
+    ultraERROR << "`numerical_optimisation.rel_radius` cannot be negative";
+    return false;
+  }
+
+  if (numerical_optimisation.min_radius < 0.0)
+  {
+    ultraERROR << "`numerical_optimisation.min_radius` cannot be negative";
+    return false;
+  }
+
+  if (!numerical_optimisation.individuals)
+  {
+    ultraERROR << "`numerical_optimisation.individuals` must be positive";
+    return false;
+  }
+
+  if (!numerical_optimisation.generations)
+  {
+    ultraERROR << "`numerical_optimisation.generations` must be positive";
+    return false;
+  }
+
   return true;
 }
 

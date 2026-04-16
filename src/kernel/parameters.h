@@ -187,6 +187,36 @@ struct parameters
     interval<double> weight {0.5, 1.0};
   } de;
 
+  /// Parameters controlling numerical optimisation of GP individuals.
+  struct numerical_optimisation_parameters
+  {
+    /// Relative radius of the search interval.
+    ///
+    /// For a parameter with current value `v`, the search interval is:
+    ///   `[v - delta, v + delta]`
+    /// where:
+    ///   `delta = max(|v| * rel_radius, min_radius)`
+    ///
+    /// This makes the search scale with the magnitude of the parameter.
+    double rel_radius {0.25};
+
+    /// Minimum radius of the search interval.
+    ///
+    /// Ensures a non-degenerate search space even when the current value is
+    /// close to zero.
+    double min_radius {1.0};
+
+    /// Population size used by the DE optimiser.
+    ///
+    /// Controls the number of candidate solutions evolved at each iteration.
+    std::size_t individuals {20};
+
+    /// Number of generations of the DE optimiser.
+    ///
+    /// Higher values increase optimisation quality at the cost of runtime.
+    std::size_t generations {20};
+  } numerical_optimisation;
+
   struct cache_parameters
   {
     /// `2^size` is the number of elements of the cache. `0` disables caching.
