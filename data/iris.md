@@ -1,5 +1,5 @@
 # Iris Plants Database
-Updated Sept 21 by C.Blake - Added discrepency information
+Updated Sept 21 by C.Blake - Added discrepancy information
 
 ## Sources
 - Creator: R.A. Fisher
