@@ -435,4 +435,79 @@ TEST_CASE("Fails cleanly on negative standard_deviation (exit code 2)")
   fs::remove_all(tmp, ec);
 }
 
+TEST_CASE("CLI directory mode works when both inputs are directories")
+{
+  REQUIRE_MESSAGE(fs::exists(script),
+                  "Script not found at: " << script.string());
+
+  const auto tmp(make_temp_dir());
+  const auto dir_a(tmp / "dir_a");
+  const auto dir_b(tmp / "dir_b");
+  const auto out_dir(tmp / "out_dir");
+  const auto err(tmp / "err.txt");
+
+  REQUIRE(fs::create_directory(dir_a));
+  REQUIRE(fs::create_directory(dir_b));
+
+  // Matching filenames should be merged.
+  write_all(dir_a / "same.summary.xml",
+            make_input_xml(/*runs*/2, /*elapsed*/3,
+                           /*success*/0.5,
+                           /*mean*/1.0, /*stddev*/0.5,
+                           /*best_fitness*/2.0, /*best_accuracy*/0.8,
+                           /*best_run*/1, /*best_code*/"A",
+                           /*solutions*/{0}));
+
+  write_all(dir_b / "same.summary.xml",
+            make_input_xml(/*runs*/1, /*elapsed*/4,
+                           /*success*/1.0,
+                           /*mean*/3.0, /*stddev*/0.0,
+                           /*best_fitness*/4.0, /*best_accuracy*/0.9,
+                           /*best_run*/0, /*best_code*/"B",
+                           /*solutions*/{0}));
+
+  // Non-matching filenames should be copied.
+  write_all(dir_a / "only_a.summary.xml",
+            make_input_xml(/*runs*/1, /*elapsed*/1,
+                           /*success*/1.0,
+                           /*mean*/0.0, /*stddev*/0.0,
+                           /*best_fitness*/1.0, /*best_accuracy*/1.0,
+                           /*best_run*/0, /*best_code*/"ONLY_A",
+                           /*solutions*/{0}));
+
+  const int rc(run_cli(dir_a, dir_b, out_dir, err));
+  CHECK_MESSAGE(rc == 0, "CLI failed; stderr:\n" << read_all(err));
+
+  CHECK(fs::is_directory(out_dir));
+  CHECK(fs::exists(out_dir / "same.summary.xml"));
+  CHECK(fs::exists(out_dir / "only_a.summary.xml"));
+
+  // Spot-check merged file content.
+  {
+    const auto xml_bytes(read_all(out_dir / "same.summary.xml"));
+
+    XMLDocument doc;
+    const auto parse_rc(doc.Parse(xml_bytes.c_str(), xml_bytes.size()));
+    REQUIRE_MESSAGE(parse_rc == tinyxml2::XML_SUCCESS,
+                    "Output XML parse failed: " << doc.ErrorStr());
+
+    auto *ultra(doc.FirstChildElement("ultra"));
+    REQUIRE(ultra != nullptr);
+
+    auto *summary(require_child(ultra, "summary"));
+    CHECK(require_ll(require_child(summary, "runs")) == 3);
+    CHECK(require_ll(require_child(summary, "elapsed_time")) == 7);
+
+    auto *best(require_child(summary, "best"));
+    CHECK(doctest::Approx(require_double(require_child(best, "fitness")))
+          .epsilon(1e-12) == 4.0);
+    CHECK(require_ll(require_child(best, "run")) == 2);  // B offset by A.runs
+
+    check_checksum_matches(xml_bytes);
+  }
+
+  [[maybe_unused]] std::error_code ec;
+  fs::remove_all(tmp, ec);
+}
+
 }  // TEST_SUITE
