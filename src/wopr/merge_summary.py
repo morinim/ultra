@@ -496,15 +496,32 @@ if __name__ == "__main__":
     p3 = Path(sys.argv[3])
 
     try:
-        if p1.is_dir() or p2.is_dir() or p3.is_dir():
-            # Directory mode requires all three to be directories (out may not
-            # exist yet).
-            if not p1.is_dir() or not p2.is_dir():
-                raise UltraParseError("In directory mode, both inputs must be directories")
+        p1_is_dir = p1.is_dir()
+        p2_is_dir = p2.is_dir()
+
+        if p1_is_dir and p2_is_dir:
+            # Directory mode. If the output already exists, it must be a directory.
+            if p3.exists() and not p3.is_dir():
+                raise UltraParseError(
+                    f"In directory mode, output must be a directory: {p3}"
+                )
             merge_ultra_dirs(p1, p2, p3)
-        else:
+
+        elif not p1_is_dir and not p2_is_dir:
+            # File mode. If the output already exists, it must not be a directory.
+            if p3.exists() and p3.is_dir():
+                raise UltraParseError(
+                    f"In file mode, output must be a file path, not a directory: {p3}"
+                )
             merge_ultra_files(p1, p2, p3)
             print("Merged file written.")
+
+        else:
+            raise UltraParseError(
+                "Mixed input modes are not allowed: both inputs must be files "
+                "or both inputs must be directories"
+            )
+
     except UltraParseError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(2)
