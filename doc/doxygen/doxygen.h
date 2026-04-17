@@ -30,7 +30,7 @@
 /**
  *  \page page1 Understanding the architecture
  *  - [Anatomy of Ultra](https://github.com/morinim/ultra/wiki/anatomy)
- *  - [Do it yourself](https://github.com/morinim/ultra/wiki/diy)
+ *  - [Do it yourself](https://github.com/morinim/ultra/wiki/first_60_minutes)
  *
  *  \page page2 Contributor guidelines
  *  - [Coding style](https://ultraevolution.org/wiki/coding_style/)
