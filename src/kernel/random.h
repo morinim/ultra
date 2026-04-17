@@ -146,7 +146,7 @@ template<std::ranges::sized_range C>
 
 ///
 /// \param[in] p a probability (`[0;1]` range)
-/// \return      `true` `p%` times
+/// \return      `true` with probability `p`
 ///
 /// \note
 /// `bool` values are produced according to the Bernoulli distribution.
