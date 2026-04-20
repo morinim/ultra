@@ -105,9 +105,8 @@ coord(const P &p, std::size_t i, std::size_t mate_zone)
 template<PopulationWithMutex P>
 [[nodiscard]] std::ranges::range_value_t<P> individual(const P &p)
 {
-  const auto coord(random::coord(p));
   std::shared_lock lock(p.mutex());
-  return p[coord];
+  return p[random::coord(p)];
 }
 
 }  // namespace random
