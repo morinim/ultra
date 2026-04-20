@@ -115,7 +115,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Coord")
+TEST_CASE_FIXTURE(fixture1, "random::coord")
 {
   using namespace ultra;
 
@@ -137,6 +137,21 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
     for (const auto &p : frequency)
       CHECK(std::abs(p.second - expected) <= tolerance);
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "random::individual")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 1;
+  prob.params.population.min_individuals = 1;
+  linear_population<gp::individual> pop(prob);
+
+  REQUIRE(pop.size() == 1);
+
+  const auto &expected(pop[0]);
+  const auto ind(random::individual(pop));
+  CHECK(ind == expected);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Allowed")
