@@ -21,9 +21,6 @@
 namespace ultra
 {
 
-namespace gp
-{
-
 ///
 /// Checks whether a type supports decision vector extraction.
 ///
@@ -32,6 +29,9 @@ concept DecisionVectorExtractable = requires(const T &t)
 {
   { extract_decision_vector(t) } -> std::same_as<gp::decision_vector>;
 };
+
+namespace gp
+{
 
 class numerical_optimiser
 {

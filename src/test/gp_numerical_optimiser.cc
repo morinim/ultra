@@ -245,11 +245,10 @@ TEST_CASE("DecisionVectorExtractable concept")
 {
   using namespace ultra;
 
-
-  static_assert(gp::DecisionVectorExtractable<gp::individual>);
+  static_assert(DecisionVectorExtractable<gp::individual>);
 
   struct without_dv {};
-  static_assert(!gp::DecisionVectorExtractable<without_dv>);
+  static_assert(!DecisionVectorExtractable<without_dv>);
 }
 
 }  // TEST_SUITE
