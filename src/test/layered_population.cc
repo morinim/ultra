@@ -10,10 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <map>
-#include <sstream>
-
 #include "kernel/layered_population.h"
 #include "kernel/gp/individual.h"
 
@@ -23,8 +19,22 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <cstdlib>
+#include <map>
+#include <sstream>
+
 TEST_SUITE("LAYERED POPULATION")
 {
+
+TEST_CASE("Concepts")
+{
+  using namespace ultra;
+
+  CHECK(Population<layered_population<gp::individual>>);
+  CHECK(LayeredPopulation<layered_population<gp::individual>>);
+  CHECK(!RandomAccessIndividuals<layered_population<gp::individual>>);
+  CHECK(!SizedRandomAccessPopulation<layered_population<gp::individual>>);
+}
 
 TEST_CASE_FIXTURE(fixture1, "Creation")
 {
@@ -242,4 +252,4 @@ TEST_CASE_FIXTURE(fixture1, "Make debug population")
   }
 }
 
-}  // TEST_SUITE("POPULATION")
+}  // TEST_SUITE
