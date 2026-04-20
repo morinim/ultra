@@ -18,8 +18,20 @@
 #include "kernel/de/search.h"
 #include "kernel/gp/individual.h"
 
-namespace ultra::gp
+namespace ultra
 {
+
+namespace gp
+{
+
+///
+/// Checks whether a type supports decision vector extraction.
+///
+template<class T>
+concept DecisionVectorExtractable = requires(const T &t)
+{
+  { extract_decision_vector(t) } -> std::same_as<gp::decision_vector>;
+};
 
 class numerical_optimiser
 {
@@ -35,5 +47,7 @@ private:
 #include "numerical_optimiser.tcc"
 
 }  // namespace ultra::gp
+
+}  // namespace ultra
 
 #endif  // include guard

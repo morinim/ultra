@@ -241,4 +241,15 @@ TEST_CASE_FIXTURE(fixture1,
   CHECK(std::get<D_INT>(ind[{0, 0}].args[1]) == 2);
 }
 
+TEST_CASE("DecisionVectorExtractable concept")
+{
+  using namespace ultra;
+
+
+  static_assert(gp::DecisionVectorExtractable<gp::individual>);
+
+  struct without_dv {};
+  static_assert(!gp::DecisionVectorExtractable<without_dv>);
+}
+
 }  // TEST_SUITE
