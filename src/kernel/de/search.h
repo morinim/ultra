@@ -35,6 +35,6 @@ protected:
 
 #include "kernel/de/search.tcc"
 
-}  // namespace ultra
+}  // namespace ultra::de
 
 #endif  // include guard
