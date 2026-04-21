@@ -11,6 +11,9 @@
  */
 
 #include "kernel/numerical_optimiser.h"
+#include "kernel/de/numerical_optimiser.h"
+#include "kernel/gp/individual.h"
+#include "kernel/gp/team.h"
 
 #include "test/fixture1.h"
 
@@ -94,7 +97,7 @@ TEST_CASE_FIXTURE(fixture1, "No optimisable slots is a no-op")
 
   const auto eva([](const gp::individual &) { return 0.0; });
 
-  opt.optimise(ind, eva);
+  de::optimise(opt, ind, eva);
 
   CHECK(ind == original);
   CHECK(ind.signature() == original.signature());
@@ -140,7 +143,7 @@ TEST_CASE_FIXTURE(fixture1, "Optimisation preserves validity and structure")
   prob.params.numerical_optimisation.generations = 60;
 
   const numerical_optimiser opt(prob);
-  opt.optimise(ind, eva);
+  de::optimise(opt, ind, eva);
 
   CHECK(ind.is_valid());
   CHECK(same_structure_ignoring_numeric(ind, original));
@@ -199,7 +202,7 @@ TEST_CASE_FIXTURE(fixture1,
   prob.params.numerical_optimisation.generations = 60;
 
   const numerical_optimiser opt(prob);
-  opt.optimise(ind, eva);
+  de::optimise(opt, ind, eva);
 
   const auto after(eva(ind));
 
@@ -235,7 +238,7 @@ TEST_CASE_FIXTURE(fixture1,
   prob.params.numerical_optimisation.generations = 80;
 
   const numerical_optimiser opt(prob);
-  opt.optimise(ind, eva);
+  de::optimise(opt, ind, eva);
 
   CHECK(ind.is_valid());
   CHECK(std::holds_alternative<D_INT>(ind[{0, 0}].args[1]));
@@ -248,6 +251,9 @@ TEST_CASE("Concepts")
 
   static_assert(DecisionVectorExtractable<gp::individual>);
   static_assert(NumericalOptimisable<gp::individual>);
+
+  static_assert(DecisionVectorExtractable<gp::team<gp::individual>>);
+  static_assert(NumericalOptimisable<gp::team<gp::individual>>);
 
   struct without_dv {};
   static_assert(!DecisionVectorExtractable<without_dv>);

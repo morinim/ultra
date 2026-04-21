@@ -21,6 +21,9 @@
 namespace ultra
 {
 
+/// Original scalar category used when writing back an optimised value.
+enum class dv_param_kind : unsigned char { real, integer };
+
 ///
 /// A flat optimiser-facing view of tunable scalar parameters.
 ///
@@ -35,9 +38,6 @@ namespace ultra
 template<class Coord>
 struct decision_vector
 {
-  /// Original scalar category used when writing back an optimised value.
-  enum class param_kind : unsigned char { real, integer };
-
   /// Metadata describing one optimisable parameter.
   ///
   /// `coord` identifies the parameter within the source object.
@@ -45,7 +45,7 @@ struct decision_vector
   struct coordinate
   {
     Coord coord;
-    param_kind kind;
+    dv_param_kind kind;
   };
 
   decision_vector() = default;
@@ -89,6 +89,11 @@ concept DecisionVectorExtractable = requires(const T &t)
 {
   { extract_decision_vector(t) } -> DecisionVector;
 };
+
+/// Concrete decision-vector type associated with `I`.
+template<class I> using decision_vector_t =
+  std::remove_cvref_t<
+    decltype(extract_decision_vector(std::declval<const I &>()))>;
 
 }  // namespace ultra
 

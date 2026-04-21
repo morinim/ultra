@@ -109,6 +109,83 @@ team<I> crossover(const problem &prb, const team<I> &lhs, const team<I> &rhs)
 }
 
 ///
+/// Extracts a flat decision vector from a team.
+///
+/// \param[in] t team to analyse
+/// \return      a valid team decision vector
+///
+/// The resulting vector is obtained by concatenating the decision vectors of
+/// all member individuals. Each extracted coordinate is extended with the
+/// index of the corresponding team member so that the parameter can later be
+/// written back to the correct individual.
+///
+/// \related team
+///
+template<Individual I>
+team_decision_vector extract_decision_vector(const team<I> &t)
+{
+  team_decision_vector ret;
+
+  for (std::size_t i(0); i < t.size(); ++i)
+  {
+    auto i_dv = extract_decision_vector(t[i]);
+
+    for (std::size_t j(0); j < i_dv.size(); ++j)
+    {
+      const auto &e(i_dv.coords[j]);
+      ret.values.push_back(i_dv.values[j]);
+      ret.coords.push_back({{i, e.coord.loc, e.coord.arg_index}, e.kind});
+    }
+  }
+
+  Ensures(ret.is_valid());
+  return ret;
+}
+
+///
+/// Applies a flat team decision vector to the corresponding team members.
+///
+/// \param[in] v decision vector to be written back
+///
+/// \pre `v.is_valid()`
+/// \post `is_valid()`
+///
+/// The entries of `v` are first regrouped by team member, then each member
+/// receives its own individual-level decision vector via
+/// `I::apply_decision_vector()`.
+///
+/// This function updates only numeric arguments; it does not alter the team
+/// structure nor the structure of the contained individuals.
+///
+template<Individual I>
+void team<I>::apply_decision_vector(const team_decision_vector &v)
+{
+  Expects(v.is_valid());
+
+  using ind_dv_t = ultra::decision_vector_t<I>;
+
+  std::vector<ind_dv_t> per_ind(size());
+
+  for (std::size_t i(0); i < v.size(); ++i)
+  {
+    const auto &c(v.coords[i]);
+
+    Expects(c.coord.ind_index < size());
+
+    per_ind[c.coord.ind_index].values.push_back(v.values[i]);
+    per_ind[c.coord.ind_index].coords.push_back(
+      {{c.coord.loc, c.coord.arg_index}, c.kind});
+  }
+
+  for (std::size_t i(0); i < size(); ++i)
+    if (!per_ind[i].empty())
+      individuals_[i].apply_decision_vector(per_ind[i]);
+
+  signature_.clear();
+  Ensures(is_valid());
+}
+
+///
 /// \return an iterator pointing to the first individual of the team
 ///
 template<Individual I>

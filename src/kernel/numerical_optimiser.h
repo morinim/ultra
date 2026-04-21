@@ -16,15 +16,9 @@
 #include "kernel/decision_vector.h"
 #include "kernel/evaluator.h"
 #include "kernel/problem.h"
-#include "kernel/de/search.h"
 
 namespace ultra
 {
-
-/// Concrete decision-vector type associated with `I`.
-template<class I> using decision_vector_t =
-  std::remove_cvref_t<
-    decltype(extract_decision_vector(std::declval<const I &>()))>;
 
 /// Checks whether a type supports numerical optimisation.
 template<class I>
@@ -42,8 +36,8 @@ class numerical_optimiser
 public:
   explicit numerical_optimiser(const problem &p);
 
-  template<NumericalOptimisable I, Evaluator E>
-  void optimise(I &, const E &) const;
+  template<NumericalOptimisable I, Evaluator E, class Backend>
+  void optimise(I &ind, const E &eva, Backend &&backend) const;
 
 private:
   const parameters::numerical_optimisation_parameters params_;

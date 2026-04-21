@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <sstream>
-
 #include "kernel/gp/individual.h"
 #include "kernel/gp/team.h"
 
@@ -20,6 +17,9 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <sstream>
 
 TEST_SUITE("TEAM")
 {
@@ -179,4 +179,173 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-}  // TEST_SUITE("TEAM")
+TEST_CASE_FIXTURE(fixture1, "Decision vector")
+{
+  using namespace ultra;
+  using pk = dv_param_kind;
+
+  SUBCASE("Extraction from simple team")
+  {
+    const gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},       // member 0, [0]
+            {f_add, {0_addr, 1}},      // member 0, [1]
+            {f_sub, {1_addr, 0_addr}}  // member 0, [2]
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},       // member 1, [0]
+            {f_sub, {0_addr, 2.0}}     // member 1, [1]
+          })
+      });
+
+    const auto dv(extract_decision_vector(t));
+
+    REQUIRE(dv.is_valid());
+    CHECK(!dv.empty());
+    CHECK(dv.size() == 6);
+
+    CHECK(dv.values[0] == doctest::Approx(1.0));
+    CHECK(dv.values[1] == doctest::Approx(3.0));
+    CHECK(dv.values[2] == doctest::Approx(2.0));
+    CHECK(dv.values[3] == doctest::Approx(2.0));
+    CHECK(dv.values[4] == doctest::Approx(4.0));
+    CHECK(dv.values[5] == doctest::Approx(5.0));
+
+    CHECK(dv.coords[0].coord.ind_index == 0);
+    CHECK(dv.coords[0].coord.loc == locus{1, 0});
+    CHECK(dv.coords[0].coord.arg_index == 1);
+    CHECK(dv.coords[0].kind == pk::integer);
+
+    CHECK(dv.coords[1].coord.ind_index == 0);
+    CHECK(dv.coords[1].coord.loc == locus{0, 0});
+    CHECK(dv.coords[1].coord.arg_index == 0);
+    CHECK(dv.coords[1].kind == pk::real);
+
+    CHECK(dv.coords[3].coord.ind_index == 1);
+    CHECK(dv.coords[3].coord.loc == locus{1, 0});
+    CHECK(dv.coords[3].coord.arg_index == 1);
+    CHECK(dv.coords[3].kind == pk::real);
+
+    CHECK(dv.coords[5].coord.ind_index == 1);
+    CHECK(dv.coords[5].coord.loc == locus{0, 0});
+    CHECK(dv.coords[5].coord.arg_index == 1);
+    CHECK(dv.coords[5].kind == pk::real);
+  }
+
+  SUBCASE("Apply modified real values")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_add, {0_addr, 1.0}},
+            {f_sub, {1_addr, 0_addr}}
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},
+            {f_sub, {0_addr, 2.0}}
+          })
+      });
+
+    auto dv(extract_decision_vector(t));
+    REQUIRE(dv.is_valid());
+    REQUIRE(dv.size() == 6);
+
+    dv.values[0] = -4.25;
+    dv.values[1] =  7.0;
+    dv.values[2] =  9.5;
+    dv.values[3] = -1.5;
+
+    t.apply_decision_vector(dv);
+
+    CHECK(std::get<D_DOUBLE>(t[0][{1, 0}].args[1]) == doctest::Approx(-4.25));
+    CHECK(std::get<D_DOUBLE>(t[0][{0, 0}].args[0]) == doctest::Approx(7.0));
+    CHECK(std::get<D_DOUBLE>(t[0][{0, 0}].args[1]) == doctest::Approx(9.5));
+    CHECK(std::get<D_DOUBLE>(t[1][{1, 0}].args[1]) == doctest::Approx(-1.5));
+  }
+
+  SUBCASE("Apply rounds integer values")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_add, {0_addr, 1}},
+            {f_sub, {1_addr, 0_addr}}
+          })
+      });
+
+    auto dv(extract_decision_vector(t));
+    REQUIRE(dv.is_valid());
+    REQUIRE(dv.size() == 3);
+
+    dv.values[0] = 8.6;
+    t.apply_decision_vector(dv);
+
+    CHECK(std::get<D_INT>(t[0][{1, 0}].args[1]) == 9);
+  }
+
+  SUBCASE("Round trip preserves team")
+  {
+    const gp::team<gp::individual> original(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_add, {0_addr, 1}},
+            {f_sub, {1_addr, 0_addr}}
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},
+            {f_sub, {0_addr, 2.0}}
+          })
+      });
+
+    gp::team<gp::individual> copy(original);
+
+    const auto dv(extract_decision_vector(copy));
+    REQUIRE(dv.is_valid());
+
+    copy.apply_decision_vector(dv);
+
+    CHECK(copy == original);
+    CHECK(copy.signature() == original.signature());
+  }
+
+  SUBCASE("Applying changed decision vector updates signature")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_add, {0_addr, 1.0}},
+            {f_sub, {1_addr, 0_addr}}
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},
+            {f_sub, {0_addr, 2.0}}
+          })
+      });
+
+    const auto old_sig(t.signature());
+
+    auto dv(extract_decision_vector(t));
+    REQUIRE(dv.is_valid());
+
+    dv.values[0] += 1.0;
+    t.apply_decision_vector(dv);
+
+    CHECK(t.signature() != old_sig);
+  }
+}
+
+}  // TEST_SUITE

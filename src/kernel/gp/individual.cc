@@ -352,7 +352,7 @@ locus random_locus(const individual &prg)
 decision_vector extract_decision_vector(const individual &ind)
 {
   decision_vector ret;
-  using pk = decision_vector::param_kind;
+  using pk = dv_param_kind;
 
   const auto exons(ind.cexons());
   for (auto it(exons.begin()); it != exons.end(); ++it)
@@ -399,7 +399,7 @@ void individual::apply_decision_vector(const decision_vector &v)
 {
   Expects(v.is_valid());
 
-  using pk = decision_vector::param_kind;
+  using pk = dv_param_kind;
 
   for (std::size_t i(0); i < v.size(); ++i)
   {

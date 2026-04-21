@@ -14,6 +14,7 @@
 #define      ULTRA_TEAM_H
 
 #include "kernel/cache.h"
+#include "kernel/decision_vector.h"
 #include "kernel/individual.h"
 #include "kernel/problem.h"
 
@@ -28,10 +29,26 @@ namespace ultra::gp
 {
 
 ///
+/// Identifies one optimisable argument within a team.
+///
+/// `ind_index` selects the individual within the team, `loc` selects the gene
+/// and `arg_index` selects the argument within that gene.
+///
+struct team_decision_coordinate
+{
+  std::size_t ind_index;
+  locus loc;
+  std::size_t arg_index;
+};
+
+/// Team-specific decision-vector type used for numerical optimisation.
+using team_decision_vector = ultra::decision_vector<team_decision_coordinate>;
+
+///
 /// A collection of cooperating individuals used as a member of
 /// ultra::population.
 ///
-/// In generals, teams of individuals can be implemented in different ways.
+/// In general, teams of individuals can be implemented in different ways.
 /// * Firstly, a certain number of individuals can be selected randomly from
 ///   the population and evaluated in combination as a team (but we have a
 ///   credit assignment problem).
@@ -68,6 +85,7 @@ public:
   template<Individual U> friend team<U> crossover(const problem &,
                                                   const team<U> &,
                                                   const team<U> &);
+  void apply_decision_vector(const team_decision_vector &v);
 
   // ---- Element access ----
   [[nodiscard]] const I &operator[](std::size_t) const;
@@ -118,6 +136,8 @@ template<Individual I> [[nodiscard]] unsigned active_slots(const team<I> &);
 template<Individual I> [[nodiscard]] team<I> crossover(const problem &,
                                                        const team<I> &,
                                                        const team<I> &);
+template<Individual I> [[nodiscard]]
+team_decision_vector extract_decision_vector(const team<I> &);
 
 template<Individual I> std::ostream &operator<<(std::ostream &,
                                                 const team<I> &);

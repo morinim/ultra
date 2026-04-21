@@ -668,7 +668,7 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual std::format integration")
 TEST_CASE_FIXTURE(fixture1, "Decision vector")
 {
   using namespace ultra;
-  using pk = gp::decision_vector::param_kind;
+  using pk = dv_param_kind;
 
   SUBCASE("Extraction from simple individual")
   {

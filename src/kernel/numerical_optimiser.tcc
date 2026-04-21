@@ -18,49 +18,17 @@
 #define      ULTRA_NUMERICAL_OPTIMISER_TCC
 
 ///
-/// Refines the tunable scalar parameters of `p`.
+/// Refines the tunable scalar parameters of `ind` by delegating to
+/// `backend`.
 ///
-/// The optimiser extracts a decision vector from `p`, performs numerical
-/// optimisation over a bounded region around the current parameter values, and
-/// writes the best solution back into `p`.
+/// `backend` receives `(ind, eva, params)` and is expected to update `ind`
+/// with the numerically improved decision vector.
 ///
-/// If `p` exposes no optimisable parameters, this function has no effect.
-///
-template<NumericalOptimisable I, Evaluator E>
-void numerical_optimiser::optimise(I &p, const E &eva) const
+template<NumericalOptimisable I, Evaluator E, class Backend>
+void numerical_optimiser::optimise(I &ind, const E &eva,
+                                   Backend &&backend) const
 {
-  const auto dv(extract_decision_vector(p));
-  using dv_t = decision_vector_t<I>;
-
-  if (dv.empty())
-    return;
-
-  std::vector<interval<double>> ranges;
-  ranges.reserve(dv.size());
-
-  for (std::size_t i(0); i < dv.size(); ++i)
-  {
-    const auto delta(std::max(std::abs(dv.values[i]) * params_.rel_radius,
-                              params_.min_radius));
-    ranges.emplace_back(dv.values[i] - delta, dv.values[i] + delta);
-  }
-
-  de::problem de_prob(ranges);
-  de_prob.params.population.individuals = params_.individuals;
-  de_prob.params.evolution.generations  = params_.generations;
-
-  const auto de_eva([&](const de::individual &vec)
-  {
-    auto trial(p);
-    trial.apply_decision_vector(dv_t(vec, dv.coords));
-
-    return eva(trial);
-  });
-
-  de::search search(de_prob, de_eva);
-  const auto res(search.run());
-
-  p.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
+  std::forward<Backend>(backend)(ind, eva, params_);
 }
 
 #endif  // include guard
