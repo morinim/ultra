@@ -14,6 +14,7 @@
 #define      ULTRA_GP_INDIVIDUAL_H
 
 #include "kernel/individual.h"
+#include "kernel/decision_vector.h"
 #include "kernel/problem.h"
 #include "kernel/random.h"
 #include "kernel/gp/gene.h"
@@ -34,35 +35,19 @@ namespace internal
 #include "kernel/gp/individual_exon_view.tcc"
 
 ///
-/// A DE-facing view of the tunable scalar parameters of an individual.
+/// Identifies one optimisable argument within a GP individual.
 ///
-/// For every index `i`:
-/// - `values[i]` is the scalar value exposed to the optimiser;
-/// - `coords[i]` identifies the corresponding argument in the individual
-///   and records how the value must be written back.
+/// `loc` selects the gene and `arg_index` selects the argument within that
+/// gene.
 ///
-struct decision_vector
+struct decision_coordinate
 {
-  enum class param_kind : unsigned char { real, integer };
-
-  struct coordinate
-  {
-    locus loc;
-    std::size_t arg_index;
-    param_kind kind;
-  };
-
-  std::vector<double> values;
-  std::vector<coordinate> coords;
-
-  [[nodiscard]] bool empty() const noexcept { return values.empty(); }
-  [[nodiscard]] std::size_t size() const noexcept { return values.size(); }
-
-  [[nodiscard]] bool is_valid() const noexcept
-  {
-    return values.size() == coords.size();
-  }
+  locus loc;
+  std::size_t arg_index;
 };
+
+/// GP-specific decision-vector type used for numerical optimisation.
+using decision_vector = ultra::decision_vector<decision_coordinate>;
 
 
 ///

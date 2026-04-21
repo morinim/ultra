@@ -10,9 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/gp/numerical_optimiser.h"
+#include "kernel/numerical_optimiser.h"
 
-namespace ultra::gp
+namespace ultra
 {
 
 numerical_optimiser::numerical_optimiser(const problem &p)

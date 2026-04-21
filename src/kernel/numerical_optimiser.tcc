@@ -17,10 +17,20 @@
 #if !defined(ULTRA_NUMERICAL_OPTIMISER_TCC)
 #define      ULTRA_NUMERICAL_OPTIMISER_TCC
 
-template<Evaluator E>
-void numerical_optimiser::optimise(gp::individual &p, const E &eva) const
+///
+/// Refines the tunable scalar parameters of `p`.
+///
+/// The optimiser extracts a decision vector from `p`, performs numerical
+/// optimisation over a bounded region around the current parameter values, and
+/// writes the best solution back into `p`.
+///
+/// If `p` exposes no optimisable parameters, this function has no effect.
+///
+template<NumericalOptimisable I, Evaluator E>
+void numerical_optimiser::optimise(I &p, const E &eva) const
 {
   const auto dv(extract_decision_vector(p));
+  using dv_t = decision_vector_t<I>;
 
   if (dv.empty())
     return;
@@ -42,7 +52,7 @@ void numerical_optimiser::optimise(gp::individual &p, const E &eva) const
   const auto de_eva([&](const de::individual &vec)
   {
     auto trial(p);
-    trial.apply_decision_vector(decision_vector{vec, dv.coords});
+    trial.apply_decision_vector(dv_t(vec, dv.coords));
 
     return eva(trial);
   });
@@ -50,7 +60,7 @@ void numerical_optimiser::optimise(gp::individual &p, const E &eva) const
   de::search search(de_prob, de_eva);
   const auto res(search.run());
 
-  p.apply_decision_vector(decision_vector{res.best_individual(), dv.coords});
+  p.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
 }
 
 #endif  // include guard

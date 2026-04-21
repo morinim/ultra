@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/gp/numerical_optimiser.h"
+#include "kernel/numerical_optimiser.h"
 
 #include "test/fixture1.h"
 
@@ -90,7 +90,7 @@ TEST_CASE_FIXTURE(fixture1, "No optimisable slots is a no-op")
 
   const auto original(ind);
 
-  const gp::numerical_optimiser opt(prob);
+  const numerical_optimiser opt(prob);
 
   const auto eva([](const gp::individual &) { return 0.0; });
 
@@ -139,7 +139,7 @@ TEST_CASE_FIXTURE(fixture1, "Optimisation preserves validity and structure")
   prob.params.numerical_optimisation.individuals = 40;
   prob.params.numerical_optimisation.generations = 60;
 
-  const gp::numerical_optimiser opt(prob);
+  const numerical_optimiser opt(prob);
   opt.optimise(ind, eva);
 
   CHECK(ind.is_valid());
@@ -151,8 +151,9 @@ TEST_CASE_FIXTURE(fixture1, "Optimisation preserves validity and structure")
 
   for (std::size_t i(0); i < before_dv.size(); ++i)
   {
-    CHECK(after_dv.coords[i].loc == before_dv.coords[i].loc);
-    CHECK(after_dv.coords[i].arg_index == before_dv.coords[i].arg_index);
+    CHECK(after_dv.coords[i].coord.loc == before_dv.coords[i].coord.loc);
+    CHECK(after_dv.coords[i].coord.arg_index
+          == before_dv.coords[i].coord.arg_index);
     CHECK(after_dv.coords[i].kind == before_dv.coords[i].kind);
   }
 }
@@ -197,7 +198,7 @@ TEST_CASE_FIXTURE(fixture1,
   prob.params.numerical_optimisation.individuals = 40;
   prob.params.numerical_optimisation.generations = 60;
 
-  const gp::numerical_optimiser opt(prob);
+  const numerical_optimiser opt(prob);
   opt.optimise(ind, eva);
 
   const auto after(eva(ind));
@@ -233,7 +234,7 @@ TEST_CASE_FIXTURE(fixture1,
   prob.params.numerical_optimisation.individuals = 40;
   prob.params.numerical_optimisation.generations = 80;
 
-  const gp::numerical_optimiser opt(prob);
+  const numerical_optimiser opt(prob);
   opt.optimise(ind, eva);
 
   CHECK(ind.is_valid());
@@ -241,14 +242,38 @@ TEST_CASE_FIXTURE(fixture1,
   CHECK(std::get<D_INT>(ind[{0, 0}].args[1]) == 2);
 }
 
-TEST_CASE("DecisionVectorExtractable concept")
+TEST_CASE("Concepts")
 {
   using namespace ultra;
 
   static_assert(DecisionVectorExtractable<gp::individual>);
+  static_assert(NumericalOptimisable<gp::individual>);
 
   struct without_dv {};
   static_assert(!DecisionVectorExtractable<without_dv>);
+  static_assert(!NumericalOptimisable<without_dv>);
+}
+
+TEST_CASE_FIXTURE(fixture1, "decision_vector round-trip")
+{
+  ultra::gp::individual ind(prob);
+
+  const auto before(extract_decision_vector(ind));
+
+  auto copy(ind);
+  copy.apply_decision_vector(before);
+
+  const auto after(extract_decision_vector(copy));
+
+  CHECK(before.values == after.values);
+  CHECK(before.coords.size() == after.coords.size());
+
+  for (std::size_t i(0); i < before.coords.size(); ++i)
+  {
+    CHECK(before.coords[i].coord.loc == after.coords[i].coord.loc);
+    CHECK(before.coords[i].coord.arg_index == after.coords[i].coord.arg_index);
+    CHECK(before.coords[i].kind == after.coords[i].kind);
+  }
 }
 
 }  // TEST_SUITE

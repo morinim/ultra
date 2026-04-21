@@ -689,16 +689,16 @@ TEST_CASE_FIXTURE(fixture1, "Decision vector")
     CHECK(dv.values[1] == doctest::Approx(3.0));
     CHECK(dv.values[2] == doctest::Approx(2.0));
 
-    CHECK(dv.coords[0].loc == locus{1, 0});
-    CHECK(dv.coords[0].arg_index == 1);
+    CHECK(dv.coords[0].coord.loc == locus{1, 0});
+    CHECK(dv.coords[0].coord.arg_index == 1);
     CHECK(dv.coords[0].kind == pk::integer);
 
-    CHECK(dv.coords[1].loc == locus{0, 0});
-    CHECK(dv.coords[1].arg_index == 0);
+    CHECK(dv.coords[1].coord.loc == locus{0, 0});
+    CHECK(dv.coords[1].coord.arg_index == 0);
     CHECK(dv.coords[1].kind == pk::real);
 
-    CHECK(dv.coords[2].loc == locus{0, 0});
-    CHECK(dv.coords[2].arg_index == 1);
+    CHECK(dv.coords[2].coord.loc == locus{0, 0});
+    CHECK(dv.coords[2].coord.arg_index == 1);
     CHECK(dv.coords[2].kind == pk::real);
   }
 

@@ -13,40 +13,43 @@
 #if !defined(ULTRA_NUMERICAL_OPTIMISER_H)
 #define      ULTRA_NUMERICAL_OPTIMISER_H
 
+#include "kernel/decision_vector.h"
 #include "kernel/evaluator.h"
 #include "kernel/problem.h"
 #include "kernel/de/search.h"
-#include "kernel/gp/individual.h"
 
 namespace ultra
 {
 
-///
-/// Checks whether a type supports decision vector extraction.
-///
-template<class T>
-concept DecisionVectorExtractable = requires(const T &t)
-{
-  { extract_decision_vector(t) } -> std::same_as<gp::decision_vector>;
-};
+/// Concrete decision-vector type associated with `I`.
+template<class I> using decision_vector_t =
+  std::remove_cvref_t<
+    decltype(extract_decision_vector(std::declval<const I &>()))>;
 
-namespace gp
-{
+/// Checks whether a type supports numerical optimisation.
+template<class I>
+concept NumericalOptimisable =
+  Individual<I>
+  && std::copy_constructible<I>
+  && DecisionVectorExtractable<I>
+  && requires(I &ind, const decision_vector_t<I> &dv)
+     {
+       ind.apply_decision_vector(dv);
+     };
 
 class numerical_optimiser
 {
 public:
   explicit numerical_optimiser(const problem &p);
 
-  template<Evaluator E> void optimise(gp::individual &, const E &) const;
+  template<NumericalOptimisable I, Evaluator E>
+  void optimise(I &, const E &) const;
 
 private:
   const parameters::numerical_optimisation_parameters params_;
 };
 
 #include "numerical_optimiser.tcc"
-
-}  // namespace ultra::gp
 
 }  // namespace ultra
 

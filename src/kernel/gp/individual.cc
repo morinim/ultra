@@ -363,12 +363,12 @@ decision_vector extract_decision_vector(const individual &ind)
       if (const auto *d = std::get_if<ultra::D_DOUBLE>(&args[j]))
       {
         ret.values.push_back(*d);
-        ret.coords.push_back({it.locus(), j, pk::real});
+        ret.coords.push_back({{it.locus(), j}, pk::real});
       }
       else if (const auto *n = std::get_if<ultra::D_INT>(&args[j]))
       {
         ret.values.push_back(static_cast<double>(*n));
-        ret.coords.push_back({it.locus(), j, pk::integer});
+        ret.coords.push_back({{it.locus(), j}, pk::integer});
       }
   }
 
@@ -403,11 +403,11 @@ void individual::apply_decision_vector(const decision_vector &v)
 
   for (std::size_t i(0); i < v.size(); ++i)
   {
-    const auto &coord(v.coords[i]);
+    const auto &coord(v.coords[i].coord);
     const auto value(v.values[i]);
 
-    auto &arg(genome_(coord.loc).args[coord.arg_index]);
-    if (coord.kind == pk::integer)
+    if (auto &arg(genome_(coord.loc).args[coord.arg_index]);
+        v.coords[i].kind == pk::integer)
       arg = static_cast<ultra::D_INT>(std::lround(value));
     else
       arg = static_cast<ultra::D_DOUBLE>(value);
