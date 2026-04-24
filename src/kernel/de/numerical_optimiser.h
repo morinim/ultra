@@ -26,20 +26,21 @@ struct refinement_backend
   ///
   /// The optimiser extracts a decision vector from `ind`, performs numerical
   /// optimisation over a bounded region around the current parameter values,
-  /// and writes the best solution back into `int`.
+  /// and writes the best solution back into `ind`.
   ///
   /// If `ind` exposes no optimisable parameters, this function has no effect.
   ///
-  template<NumericalOptimisable I, Evaluator E>
-  void operator()(
-    I &ind, const E &eva,
+  template<Evaluator E>
+  requires NumericalOptimisable<evaluator_individual_t<E>>
+  std::optional<evaluator_fitness_t<E>> operator()(
+    evaluator_individual_t<E> &ind, const E &eva,
     const parameters::numerical_optimisation_parameters &params) const
   {
     const auto dv(extract_decision_vector(ind));
-    using dv_t = decision_vector_t<I>;
+    using dv_t = decision_vector_t<evaluator_individual_t<E>>;
 
     if (dv.empty())
-      return;
+      return {};
 
     std::vector<interval<double>> ranges;
     ranges.reserve(dv.size());
@@ -67,14 +68,17 @@ struct refinement_backend
     const auto res(de_search.run());
 
     ind.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
+    return res.best_measurements().fitness;
   }
 };
 
 /// Convenience API for DE-based numerical refinement.
-template<NumericalOptimisable I, Evaluator E>
-void optimise(const numerical_optimiser &opt, I &ind, const E &eva)
+template<Evaluator E>
+std::optional<evaluator_fitness_t<E>> optimise(const numerical_optimiser &opt,
+                                               evaluator_individual_t<E> &ind,
+                                               const E &eva)
 {
-  opt.optimise(ind, eva, refinement_backend {});
+  return opt.optimise(ind, eva, refinement_backend {});
 }
 
 }  // namespace ultra::de

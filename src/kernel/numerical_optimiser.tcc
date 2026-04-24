@@ -24,11 +24,12 @@
 /// `backend` receives `(ind, eva, params)` and is expected to update `ind`
 /// with the numerically improved decision vector.
 ///
-template<NumericalOptimisable I, Evaluator E, class Backend>
-void numerical_optimiser::optimise(I &ind, const E &eva,
-                                   Backend &&backend) const
+template<Evaluator E, class Backend>
+requires NumericalOptimisable<evaluator_individual_t<E>>
+std::optional<evaluator_fitness_t<E>> numerical_optimiser::optimise(
+  evaluator_individual_t<E> &ind, const E &eva, Backend &&backend) const
 {
-  std::forward<Backend>(backend)(ind, eva, params_);
+  return std::forward<Backend>(backend)(ind, eva, params_);
 }
 
 #endif  // include guard

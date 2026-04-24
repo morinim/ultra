@@ -36,8 +36,10 @@ class numerical_optimiser
 public:
   explicit numerical_optimiser(const problem &p);
 
-  template<NumericalOptimisable I, Evaluator E, class Backend>
-  void optimise(I &ind, const E &eva, Backend &&backend) const;
+  template<Evaluator E, class Backend>
+  requires NumericalOptimisable<evaluator_individual_t<E>>
+  std::optional<evaluator_fitness_t<E>> optimise(evaluator_individual_t<E> &,
+                                                 const E &, Backend &&) const;
 
 private:
   const parameters::numerical_optimisation_parameters params_;
