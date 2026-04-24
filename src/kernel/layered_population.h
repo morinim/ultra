@@ -46,14 +46,19 @@ public:
   using layer_const_iter = typename std::list<layer_t>::const_iterator;
 
   using value_type = I;
-  using difference_type = std::ptrdiff_t;
 
-  using coord = std::pair<std::size_t, typename layer_t::coord>;
+  struct coord
+  {
+    std::size_t layer_index;
+    layer_t::coord individual_coord;
+
+    friend auto operator<=>(const coord &, const coord &) noexcept = default;
+  };
 
   // ---- Constructors ----
   explicit layered_population(const ultra::problem &, bool = true);
 
-  // ---- Layer-related ----
+  // ---- Layer-related / accessors ----
   [[nodiscard]] const layer_t &front() const;
   [[nodiscard]] layer_t &front();
   [[nodiscard]] const layer_t &back() const;
@@ -65,6 +70,9 @@ public:
 
   [[nodiscard]] auto range_of_layers() const;
   [[nodiscard]] auto range_of_layers();
+
+  [[nodiscard]] const I &operator[](coord) const;
+  [[nodiscard]] I &operator[](coord);
 
   void init(layer_t &);
   void add_layer();

@@ -137,6 +137,46 @@ typename layered_population<I>::layer_t &layered_population<I>::back()
   return layers_.back();
 }
 
+///
+/// \param[in] c coordinate identifying an individual within the population
+/// \return      a const reference to the selected individual
+///
+/// \warning
+/// Access through this operator is not constant-time. While indexing within
+/// a layer is typically O(1), locating the layer requires traversing the
+/// underlying container, resulting in linear complexity in the number of
+/// layers.
+///
+/// \remark
+/// Prefer caching a reference to the target layer when performing repeated
+/// accesses to avoid repeated traversal.
+///
+template<Individual I>
+const I &layered_population<I>::operator[](coord c) const
+{
+  return layer(c.layer_index)[c.individual_index];
+}
+
+///
+/// \param[in] c coordinate identifying an individual within the population
+/// \return      a reference to the selected individual
+///
+/// \warning
+/// Access through this operator is not constant-time. While indexing within
+/// a layer is typically O(1), locating the layer requires traversing the
+/// underlying container, resulting in linear complexity in the number of
+/// layers.
+///
+/// \remark
+/// Prefer caching a reference to the target layer when performing repeated
+/// accesses to avoid repeated traversal.
+///
+template<Individual I>
+I &layered_population<I>::operator[](coord c)
+{
+  return layer(c.layer_index)[c.individual_index];
+}
+
 template<Individual I>
 auto layered_population<I>::range_of_layers() const
 {

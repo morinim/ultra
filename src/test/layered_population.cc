@@ -125,6 +125,51 @@ TEST_CASE_FIXTURE(fixture1, "Layers and individuals")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "operator[]")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals    = 10;
+  prob.params.population.init_subgroups = 3;
+
+  layered_population<gp::individual> pop(prob);
+
+  REQUIRE(pop.layers() == 3);
+
+  SUBCASE("Access correctness")
+  {
+    for (std::size_t l(0); l < pop.layers(); ++l)
+    {
+      const auto &layer(pop.layer(l));
+
+      for (std::size_t i(0); i < layer.size(); ++i)
+      {
+        const layered_population<gp::individual>::coord c{l, i};
+
+        CHECK(&pop[c] == &layer[i]);
+        CHECK(pop[c] == layer[i]);
+      }
+    }
+  }
+
+  SUBCASE("Const correctness")
+  {
+    const auto &cpop(pop);
+
+    for (std::size_t l(0); l < cpop.layers(); ++l)
+    {
+      const auto &layer(cpop.layer(l));
+
+      for (std::size_t i(0); i < layer.size(); ++i)
+      {
+        const layered_population<gp::individual>::coord c{l, i};
+
+        CHECK(&cpop[c] == &layer[i]);
+      }
+    }
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Age")
 {
   using namespace ultra;
@@ -230,13 +275,13 @@ TEST_CASE_FIXTURE(fixture1, "random::coord()")
       const int draws(1000 * pop.size());
       for (int j(0); j < draws; ++j)
       {
-        const auto [layer_i, coord] = random::coord(pop);
+        const auto c(random::coord(pop));
 
         // --- Structural correctness ---
-        CHECK(layer_i < pop.layers());
-        CHECK(coord < pop.layer(layer_i).size());
+        CHECK(c.layer_index < pop.layers());
+        CHECK(c.individual_coord < pop.layer(c.layer_index).size());
 
-        ++frequency[{layer_i, coord}];
+        ++frequency[c];
       }
 
       // --- Statistical correctness ---
