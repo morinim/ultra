@@ -31,8 +31,9 @@ using after_generation_callback_t =
 
 template<Evaluator E>
 using numerical_refinement_callback_t =
-  std::function<void(evaluator_individual_t<E> &, const E &,
-                     const parameters::numerical_optimisation_parameters &)>;
+  std::function<std::optional<evaluator_fitness_t<E>>(
+    evaluator_individual_t<E> &, const E &,
+    const parameters::numerical_optimisation_parameters &)>;
 
 template<Individual I, Fitness F>
 using on_new_best_callback_t =

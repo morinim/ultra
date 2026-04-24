@@ -21,6 +21,7 @@
 #define      ULTRA_ULTRA_H
 
 #include "kernel/de/individual.h"
+#include "kernel/de/numerical_optimiser.h"
 #include "kernel/de/problem.h"
 #include "kernel/de/search.h"
 #include "kernel/ga/individual.h"

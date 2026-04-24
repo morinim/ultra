@@ -78,7 +78,7 @@ std::optional<evaluator_fitness_t<E>> optimise(const numerical_optimiser &opt,
                                                evaluator_individual_t<E> &ind,
                                                const E &eva)
 {
-  return opt.optimise(ind, eva, refinement_backend {});
+  return opt.optimise(ind, eva, refinement_backend());
 }
 
 }  // namespace ultra::de

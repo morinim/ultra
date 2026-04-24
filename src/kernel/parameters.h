@@ -215,6 +215,18 @@ struct parameters
     ///
     /// Higher values increase optimisation quality at the cost of runtime.
     std::size_t generations {20};
+
+    /// Fraction of individuals to be refined via numerical optimisation.
+    ///
+    /// Controls how many individuals are selected (per generation) for local
+    /// numerical optimisation of their tunable parameters.
+    ///
+    /// The value is interpreted as a fraction in the range `[0, 1]`:
+    /// - `0.0` disables numerical refinement;
+    /// - `1.0` applies refinement to the entire population;
+    /// - intermediate values select a proportion of individuals (typically
+    ///   via random sampling).
+    double refinement_fraction {0.01};
   } numerical_optimisation;
 
   struct cache_parameters

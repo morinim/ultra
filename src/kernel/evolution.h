@@ -91,7 +91,7 @@ public:
   evolution &logger(search_log &);
   evolution &numerical_refinement(numerical_refinement_callback_t);
   evolution &on_new_best(on_new_best_callback_t);
-  evolution &shake_function(const shake_function_callback_t &);
+  evolution &shake_function(shake_function_callback_t);
   evolution &stop_source(std::stop_source);
   evolution &tag(const std::string &);
 
@@ -99,16 +99,18 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
+  // ---- Private methods ----
+  void perform_numerical_refinement(std::chrono::milliseconds, timer *);
   void print(bool, std::chrono::milliseconds, timer *) const;
   [[nodiscard]] bool stop_condition() const;
 
-  // *** Data members ***
+  // ---- Data members ----
   layered_population<individual_t> pop_;
   E &eva_;
 
   summary<individual_t, fitness_t> sum_ {};
 
-  std::function<bool(unsigned)> shake_ {};
+  shake_function_callback_t shake_ {};
 
   after_generation_callback_t after_generation_callback_ {};
   numerical_refinement_callback_t numerical_refinement_callback_ {};

@@ -92,6 +92,7 @@ typename summary<I, F>::data summary<I, F>::data_snapshot() const
 /// Keeps updated the best individual found so far.
 ///
 /// \param[in] prg candidate new best scored individual
+/// \return        `true` if `prg` contains a new best individual
 ///
 template<Individual I, Fitness F>
 bool summary<I, F>::update_if_better(scored_individual<I, F> prg)

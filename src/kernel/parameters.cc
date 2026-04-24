@@ -249,6 +249,13 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
+  if (!in_0_1(numerical_optimisation.refinement_fraction))
+  {
+    ultraERROR << "`numerical_optimisation.refinement_fraction` is out of "
+                  "range";
+    return false;
+  }
+
   return true;
 }
 

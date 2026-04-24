@@ -171,10 +171,9 @@ evolution<E> &evolution<E>::tag(const std::string &t)
 /// noise injection...).
 ///
 template<Evaluator E>
-evolution<E> &evolution<E>::shake_function(
-  const std::function<bool(unsigned)> &f)
+evolution<E> &evolution<E>::shake_function(shake_function_callback_t f)
 {
-  shake_ = f;
+  shake_ = std::move(f);
   return *this;
 }
 
@@ -212,6 +211,57 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 {
   external_stop_source_ = ss;
   return *this;
+}
+
+///
+/// Performs numerical refinement on a subset of the population.
+///
+/// \param[in] elapsed        elapsed time since the start of the search
+/// \param[in] from_last_msg  timer used to regulate logging output
+///
+/// A fraction of individuals (controlled by `refinement_fraction`) is selected
+/// and refined via local numerical optimisation of their tunable parameters.
+///
+/// Individuals are sampled randomly (with possible repetitions) from the
+/// population.
+///
+template<Evaluator E>
+void evolution<E>::perform_numerical_refinement(
+  std::chrono::milliseconds elapsed, timer *from_last_msg)
+{
+  if (!pop_.size())
+    return;
+
+  const auto refinement_fraction(
+    pop_.problem().params.numerical_optimisation.refinement_fraction);
+  Expects(in_0_1(refinement_fraction));
+
+  if (issmall(refinement_fraction))
+    return;
+
+  const auto base_n(
+    static_cast<std::size_t>(refinement_fraction * pop_.size()));
+  const std::size_t n(std::max(base_n, 1uz));
+
+  std::vector<typename decltype(pop_)::coord> coords(n);
+
+  std::ranges::generate(coords, [this] { return random::coord(pop_); });
+
+  const numerical_optimiser optimiser(pop_.problem());
+  for (auto c : coords)
+  {
+    auto &ind(pop_[c]);
+
+    const auto fit(optimiser.optimise(ind, eva_,
+                                      numerical_refinement_callback_));
+
+    if (fit)
+    {
+      const scored_individual si(ind, *fit);
+      if (sum_.update_if_better(si))
+        print(true, elapsed, from_last_msg);
+    }
+  }
 }
 
 ///
@@ -337,13 +387,7 @@ summary<typename evolution<E>::individual_t,
 
     if constexpr (NumericalOptimisable<individual_t>)
       if (numerical_refinement_callback_)
-      {
-        /* TO BE IMPLEMENTED
-           const numerical_optimiser optimiser(pop_.problem());
-
-           for (auto &ind : pop_)
-             optimiser.optimise(ind, eva_, numerical_refinement_callback_); */
-      }
+        perform_numerical_refinement(from_start.elapsed(), &from_last_msg);
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)
