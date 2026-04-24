@@ -154,7 +154,7 @@ typename layered_population<I>::layer_t &layered_population<I>::back()
 template<Individual I>
 const I &layered_population<I>::operator[](coord c) const
 {
-  return layer(c.layer_index)[c.individual_index];
+  return layer(c.layer_index)[c.individual_coord];
 }
 
 ///
@@ -174,7 +174,7 @@ const I &layered_population<I>::operator[](coord c) const
 template<Individual I>
 I &layered_population<I>::operator[](coord c)
 {
-  return layer(c.layer_index)[c.individual_index];
+  return layer(c.layer_index)[c.individual_coord];
 }
 
 template<Individual I>
