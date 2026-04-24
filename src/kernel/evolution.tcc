@@ -129,6 +129,21 @@ evolution<E> &evolution<E>::logger(search_log &sl)
   return *this;
 }
 
+template<Evaluator E>
+evolution<E> &evolution<E>::numerical_refinement(
+  numerical_refinement_callback_t f)
+{
+  if constexpr (NumericalOptimisable<individual_t>)
+    numerical_refinement_callback_ = std::move(f);
+  else
+  {
+    ultraERROR << "Numerical optimisation won't be performed because of "
+                  "an incompatible individual type";
+  }
+
+  return *this;
+}
+
 ///
 /// Assigns an identification tag.
 ///
@@ -319,6 +334,16 @@ summary<typename evolution<E>::individual_t,
     }
 
     print_and_update_if_better(sum_.best());
+
+    if constexpr (NumericalOptimisable<individual_t>)
+      if (numerical_refinement_callback_)
+      {
+        /* TO BE IMPLEMENTED
+           const numerical_optimiser optimiser(pop_.problem());
+
+           for (auto &ind : pop_)
+             optimiser.optimise(ind, eva_, numerical_refinement_callback_); */
+      }
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)

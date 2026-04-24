@@ -13,8 +13,8 @@
 #if !defined(ULTRA_EVOLUTION_CALLBACKS_H)
 #define      ULTRA_EVOLUTION_CALLBACKS_H
 
-#include "kernel/individual.h"
-#include "kernel/fitness.h"
+#include "kernel/evaluator.h"
+#include "kernel/parameters.h"
 
 #include <functional>
 
@@ -28,6 +28,11 @@ template<Individual I, Fitness F> class summary;
 template<Individual I, Fitness F>
 using after_generation_callback_t =
   std::function<void(const layered_population<I> &, const summary<I, F> &)>;
+
+template<Evaluator E>
+using numerical_refinement_callback_t =
+  std::function<void(evaluator_individual_t<E> &, const E &,
+                     const parameters::numerical_optimisation_parameters &)>;
 
 template<Individual I, Fitness F>
 using on_new_best_callback_t =

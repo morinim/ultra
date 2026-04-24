@@ -38,6 +38,8 @@ public:
   using fitness_t = evaluator_fitness_t<E>;
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
+  using numerical_refinement_callback_t =
+    ultra::numerical_refinement_callback_t<E>;
   using on_training_new_best_callback_t =
     ultra::on_new_best_callback_t<individual_t, fitness_t>;
 
@@ -51,6 +53,7 @@ public:
   // ---- Hooks ----
   basic_search &after_generation(after_generation_callback_t);
   basic_search &logger(search_log &);
+  basic_search &numerical_refinement(numerical_refinement_callback_t);
   basic_search &on_training_new_best(on_training_new_best_callback_t);
 
   basic_search &tag(const std::string &);
@@ -83,6 +86,7 @@ protected:
 
   // Callback functions.
   after_generation_callback_t after_generation_callback_ {};
+  numerical_refinement_callback_t numerical_refinement_callback_ {};
   on_training_new_best_callback_t on_training_new_best_callback_ {};
 
 private:

@@ -140,6 +140,21 @@ void basic_search<ES, E>::after_evolution(
   }
 }
 
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::numerical_refinement(
+  numerical_refinement_callback_t f)
+{
+  if constexpr (NumericalOptimisable<individual_t>)
+    numerical_refinement_callback_ = std::move(f);
+  else
+  {
+    ultraERROR << "Numerical optimisation won't be performed because of "
+                  "an incompatible individual type";
+  }
+
+  return *this;
+}
+
 ///
 /// Sets a callback function executed at the end of every generation.
 ///
