@@ -17,6 +17,37 @@
 #if !defined(ULTRA_LAYERED_POPULATION_TCC)
 #define      ULTRA_LAYERED_POPULATION_TCC
 
+namespace internal
+{
+
+template<LayeredPopulation P>
+[[nodiscard]] std::size_t random_layer_index(const P &p)
+{
+  Expects(p.layers());
+  Expects(p.size());
+
+  const auto n_layers(p.layers());
+
+  // With multiple layers we cannot be sure that every layer has the same
+  // number of individuals. So the simple (and fast) solution:
+  //
+  //     return random::sup(n_layers);
+  //
+  // isn't appropriate.
+
+  std::vector<double> weights(n_layers);
+  std::ranges::transform(p.range_of_layers(), weights.begin(),
+                         [](const auto &layer)
+                         {
+                           return static_cast<double>(layer.size());
+                         });
+
+  std::discrete_distribution<std::size_t> dd(weights.begin(), weights.end());
+  return dd(random::engine());
+}
+
+}  // namespace internal
+
 ///
 /// Creates a random population.
 ///
@@ -291,22 +322,22 @@ namespace random
 template<LayeredPopulation P>
 const auto &subgroup(const P &p)
 {
-  const auto n_layers(p.layers());
+  return p.layer(internal::random_layer_index(p));
+}
 
-  // With multiple layers we cannot be sure that every layer has the same
-  // number of individuals. So the simple (and fast) solution:
-  //
-  //     return random::sup(n_layers);
-  //
-  // isn't appropriate.
-
-  std::vector<double> s(n_layers);
-  std::ranges::transform(p.range_of_layers(), s.begin(),
-                         [](const auto &layer)
-                         { return static_cast<double>(layer.size()); });
-
-  std::discrete_distribution dd(s.begin(), s.end());
-  return p.layer(dd(random::engine()));
+///
+/// Selects a random individual coordinate from a layered population.
+///
+/// The layer is chosen proportionally to its size, then a coordinate is
+/// sampled uniformly within the selected layer.
+///
+/// \related layered_population
+///
+template<LayeredPopulation P>
+typename P::coord coord(const P &p)
+{
+  const auto layer_i(internal::random_layer_index(p));
+  return {layer_i, random::coord(p.layer(layer_i))};
 }
 
 }  // namespace random

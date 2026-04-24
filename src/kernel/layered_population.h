@@ -40,6 +40,7 @@ template<Individual I>
 class layered_population
 {
 public:
+  // ---- Member types ----
   using layer_t = linear_population<I>;
   using layer_iter = typename std::list<layer_t>::iterator;
   using layer_const_iter = typename std::list<layer_t>::const_iterator;
@@ -47,9 +48,12 @@ public:
   using value_type = I;
   using difference_type = std::ptrdiff_t;
 
+  using coord = std::pair<std::size_t, typename layer_t::coord>;
+
+  // ---- Constructors ----
   explicit layered_population(const ultra::problem &, bool = true);
 
-  // Layer-related.
+  // ---- Layer-related ----
   [[nodiscard]] const layer_t &front() const;
   [[nodiscard]] layer_t &front();
   [[nodiscard]] const layer_t &back() const;
@@ -67,14 +71,15 @@ public:
   bool erase(layer_t &);
   layer_iter erase(layer_iter);
 
+  // ---- Capacity ----
   [[nodiscard]] std::size_t size() const;
 
-  // Misc.
+  // ---- Misc ----
   void inc_age();
 
   [[nodiscard]] const ultra::problem &problem() const;
 
-  // Iterators.
+  // ---- Iterators ----
   template<bool> class base_iterator;
   using const_iterator = base_iterator<true>;
   using iterator = base_iterator<false>;
@@ -86,7 +91,7 @@ public:
 
   [[nodiscard]] bool is_valid() const;
 
-  // Serialization.
+  // ---- Serialization ----
   [[nodiscard]] bool load(std::istream &);
   [[nodiscard]] bool save(std::ostream &) const;
 
@@ -103,6 +108,8 @@ namespace random
 
 template<LayeredPopulation P>
 [[nodiscard]] const auto &subgroup(const P &);
+template<LayeredPopulation P>
+[[nodiscard]] typename P::coord coord(const P &);
 
 }  // namespace random
 

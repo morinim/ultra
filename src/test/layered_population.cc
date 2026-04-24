@@ -182,7 +182,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Coord")
+TEST_CASE_FIXTURE(fixture1, "random::subgroup()")
 {
   using namespace ultra;
 
@@ -193,8 +193,7 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
 
   for (unsigned i(0); i < 10; ++i)
   {
-    std::map<std::pair<std::size_t, linear_population<gp::individual>::coord>,
-             int> frequency;
+    std::map<layered_population<gp::individual>::coord, int> frequency;
 
     const int draws(1000 * pop.size());
     for (int j(0); j < draws; ++j)
@@ -210,6 +209,72 @@ TEST_CASE_FIXTURE(fixture1, "Coord")
       CHECK(std::abs(p.second - expected) <= tolerance);
 
     pop.add_layer();
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "random::coord()")
+{
+  using namespace ultra;
+
+  SUBCASE("standard")
+  {
+    prob.params.population.individuals    = 20;
+    prob.params.population.init_subgroups =  1;
+
+    layered_population<gp::individual> pop(prob);
+
+    for (unsigned i(0); i < 10; ++i)
+    {
+      std::map<layered_population<gp::individual>::coord, int> frequency;
+
+      const int draws(1000 * pop.size());
+      for (int j(0); j < draws; ++j)
+      {
+        const auto [layer_i, coord] = random::coord(pop);
+
+        // --- Structural correctness ---
+        CHECK(layer_i < pop.layers());
+        CHECK(coord < pop.layer(layer_i).size());
+
+        ++frequency[{layer_i, coord}];
+      }
+
+      // --- Statistical correctness ---
+      const int expected(draws / pop.size());
+      const int tolerance(16 * expected / 100);
+
+      for (const auto &[coord, count] : frequency)
+        CHECK(std::abs(count - expected) <= tolerance);
+
+      pop.add_layer();
+    }
+  }
+
+  SUBCASE("imbalance")
+  {
+    prob.params.population.init_subgroups = 2;
+
+    layered_population<gp::individual> pop(prob);
+
+    // Force imbalance.
+    pop.front().allowed(10);
+    pop.back().allowed(100);
+
+    int count_small(0);
+    int count_large(0);
+
+    for (std::size_t draws(10000); draws; --draws)
+    {
+      const auto [layer_i, _] = random::coord(pop);
+
+      if (layer_i == 0) ++count_small;
+      else              ++count_large;
+    }
+
+    // Should roughly match 10:100 ratio.
+    const auto ratio(static_cast<double>(count_large) / count_small);
+    CHECK(ratio > 8.0);
+    CHECK(ratio < 12.0);
   }
 }
 
