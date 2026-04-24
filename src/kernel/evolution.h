@@ -91,7 +91,7 @@ public:
   evolution &logger(search_log &);
   evolution &numerical_refinement(numerical_refinement_callback_t);
   evolution &on_new_best(on_new_best_callback_t);
-  evolution &shake_function(const std::function<bool(unsigned)> &);
+  evolution &shake_function(const shake_function_callback_t &);
   evolution &stop_source(std::stop_source);
   evolution &tag(const std::string &);
 

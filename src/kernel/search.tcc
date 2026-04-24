@@ -253,7 +253,7 @@ basic_search<ES, E>::run(unsigned n,
 {
   init();
 
-  auto shake([this](unsigned g) { return vs_->shake(g); });
+  shake_function_callback_t shake([this](unsigned g) { return vs_->shake(g); });
   search_stats<individual_t, fitness_t> stats;
 
   for (unsigned r(0); r < n && !stop_source_.stop_requested(); ++r)

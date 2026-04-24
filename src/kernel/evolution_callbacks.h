@@ -38,6 +38,8 @@ template<Individual I, Fitness F>
 using on_new_best_callback_t =
   std::function<void (const scored_individual<I, F> &)>;
 
+using shake_function_callback_t = std::function<bool(unsigned)>;
+
 }  // namespace ultra
 
 #endif  // include guard
