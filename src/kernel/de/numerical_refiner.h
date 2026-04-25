@@ -10,16 +10,17 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_DE_NUMERICAL_OPTIMISER_H)
-#define      ULTRA_DE_NUMERICAL_OPTIMISER_H
+#if !defined(ULTRA_DE_NUMERICAL_REFINER_H)
+#define      ULTRA_DE_NUMERICAL_REFINER_H
 
 #include "kernel/de/search.h"
-#include "kernel/numerical_optimiser.h"
+#include "kernel/decision_vector.h"
+#include "kernel/refiner.h"
 
 namespace ultra::de
 {
 
-struct refinement_backend
+struct numerical_refinement_backend
 {
   ///
   /// Refines the tunable scalar parameters of `ind`.
@@ -34,7 +35,7 @@ struct refinement_backend
   requires NumericalOptimisable<evaluator_individual_t<E>>
   std::optional<evaluator_fitness_t<E>> operator()(
     evaluator_individual_t<E> &ind, const E &eva,
-    const parameters::numerical_optimisation_parameters &params) const
+    const parameters::refinement_parameters &params) const
   {
     const auto dv(extract_decision_vector(ind));
     using dv_t = decision_vector_t<evaluator_individual_t<E>>;
@@ -47,14 +48,14 @@ struct refinement_backend
 
     for (std::size_t i(0); i < dv.size(); ++i)
     {
-      const auto delta(std::max(std::abs(dv.values[i]) * params.rel_radius,
-                                params.min_radius));
+      const auto delta(std::max(std::abs(dv.values[i]) * params.de.rel_radius,
+                                params.de.min_radius));
       ranges.emplace_back(dv.values[i] - delta, dv.values[i] + delta);
     }
 
     problem de_prob(ranges);
-    de_prob.params.population.individuals = params.individuals;
-    de_prob.params.evolution.generations  = params.generations;
+    de_prob.params.population.individuals = params.de.individuals;
+    de_prob.params.evolution.generations  = params.de.generations;
 
     const auto de_eva([&](const de::individual &vec)
     {
@@ -74,11 +75,11 @@ struct refinement_backend
 
 /// Convenience API for DE-based numerical refinement.
 template<Evaluator E>
-std::optional<evaluator_fitness_t<E>> optimise(const numerical_optimiser &opt,
+std::optional<evaluator_fitness_t<E>> optimise(const refiner &opt,
                                                evaluator_individual_t<E> &ind,
                                                const E &eva)
 {
-  return opt.optimise(ind, eva, refinement_backend());
+  return opt.optimise(ind, eva, numerical_refinement_backend());
 }
 
 }  // namespace ultra::de

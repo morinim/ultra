@@ -16,7 +16,7 @@
 #include "kernel/evolution_callbacks.h"
 #include "kernel/evolution_strategy.h"
 #include "kernel/layered_population.h"
-#include "kernel/numerical_optimiser.h"
+#include "kernel/refiner.h"
 #include "kernel/search_log.h"
 
 #include "utility/term.h"
@@ -74,8 +74,7 @@ public:
 
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
-  using numerical_refinement_callback_t =
-    ultra::numerical_refinement_callback_t<E>;
+  using refinement_callback_t = ultra::refinement_callback_t<E>;
   using on_new_best_callback_t =
     ultra::on_new_best_callback_t<individual_t, fitness_t>;
 
@@ -89,7 +88,7 @@ public:
   // ---- Callback and configuration methods ----
   evolution &after_generation(after_generation_callback_t);
   evolution &logger(search_log &);
-  evolution &numerical_refinement(numerical_refinement_callback_t);
+  evolution &refinement(refinement_callback_t);
   evolution &on_new_best(on_new_best_callback_t);
   evolution &shake_function(shake_function_callback_t);
   evolution &stop_source(std::stop_source);
@@ -100,7 +99,7 @@ public:
 
 private:
   // ---- Private methods ----
-  void perform_numerical_refinement(std::chrono::milliseconds, timer *);
+  void perform_refinement(std::chrono::milliseconds, timer *);
   void print(bool, std::chrono::milliseconds, timer *) const;
   [[nodiscard]] bool stop_condition() const;
 
@@ -113,7 +112,7 @@ private:
   shake_function_callback_t shake_ {};
 
   after_generation_callback_t after_generation_callback_ {};
-  numerical_refinement_callback_t numerical_refinement_callback_ {};
+  refinement_callback_t refinement_callback_ {};
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source external_stop_source_ {std::nostopstate};

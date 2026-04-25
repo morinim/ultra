@@ -10,23 +10,20 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_NUMERICAL_OPTIMISER_H)
+#if !defined(ULTRA_REFINER_H)
 #  error "Don't include this file directly, include the specific .h instead"
 #endif
 
-#if !defined(ULTRA_NUMERICAL_OPTIMISER_TCC)
-#define      ULTRA_NUMERICAL_OPTIMISER_TCC
+#if !defined(ULTRA_REFINER_TCC)
+#define      ULTRA_REFINER_TCC
 
 ///
-/// Refines the tunable scalar parameters of `ind` by delegating to
-/// `backend`.
+/// Applies a refinement backend to `ind`.
 ///
-/// `backend` receives `(ind, eva, params)` and is expected to update `ind`
-/// with the numerically improved decision vector.
+/// `backend` receives `(ind, eva, params)` and is expected to update `ind`.
 ///
 template<Evaluator E, class Backend>
-requires NumericalOptimisable<evaluator_individual_t<E>>
-std::optional<evaluator_fitness_t<E>> numerical_optimiser::optimise(
+std::optional<evaluator_fitness_t<E>> refiner::optimise(
   evaluator_individual_t<E> &ind, const E &eva, Backend &&backend) const
 {
   return std::forward<Backend>(backend)(ind, eva, params_);

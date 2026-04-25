@@ -29,15 +29,15 @@ template<Individual I, Fitness F>
 using after_generation_callback_t =
   std::function<void(const layered_population<I> &, const summary<I, F> &)>;
 
-template<Evaluator E>
-using numerical_refinement_callback_t =
-  std::function<std::optional<evaluator_fitness_t<E>>(
-    evaluator_individual_t<E> &, const E &,
-    const parameters::numerical_optimisation_parameters &)>;
-
 template<Individual I, Fitness F>
 using on_new_best_callback_t =
   std::function<void (const scored_individual<I, F> &)>;
+
+template<Evaluator E>
+using refinement_callback_t =
+  std::function<std::optional<evaluator_fitness_t<E>>(
+    evaluator_individual_t<E> &, const E &,
+    const parameters::refinement_parameters &)>;
 
 using shake_function_callback_t = std::function<bool(unsigned)>;
 

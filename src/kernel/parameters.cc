@@ -225,34 +225,33 @@ bool parameters::is_valid(bool force_defined) const
 
   // The following parameters are not auto-tuned and therefore must always
   // satisfy their domain constraints.
-  if (numerical_optimisation.rel_radius < 0.0)
+  if (refinement.de.rel_radius < 0.0)
   {
-    ultraERROR << "`numerical_optimisation.rel_radius` cannot be negative";
+    ultraERROR << "`refinement.de.rel_radius` cannot be negative";
     return false;
   }
 
-  if (numerical_optimisation.min_radius < 0.0)
+  if (refinement.de.min_radius < 0.0)
   {
-    ultraERROR << "`numerical_optimisation.min_radius` cannot be negative";
+    ultraERROR << "`refinement.de.min_radius` cannot be negative";
     return false;
   }
 
-  if (!numerical_optimisation.individuals)
+  if (!refinement.de.individuals)
   {
-    ultraERROR << "`numerical_optimisation.individuals` must be positive";
+    ultraERROR << "`refinement.de.individuals` must be positive";
     return false;
   }
 
-  if (!numerical_optimisation.generations)
+  if (!refinement.de.generations)
   {
-    ultraERROR << "`numerical_optimisation.generations` must be positive";
+    ultraERROR << "`refinement.de.generations` must be positive";
     return false;
   }
 
-  if (!in_0_1(numerical_optimisation.refinement_fraction))
+  if (!in_0_1(refinement.fraction))
   {
-    ultraERROR << "`numerical_optimisation.refinement_fraction` is out of "
-                  "range";
+    ultraERROR << "`refinement.fraction` is out of range";
     return false;
   }
 

@@ -10,14 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/numerical_optimiser.h"
+#include "kernel/refiner.h"
 
 namespace ultra
 {
 
-numerical_optimiser::numerical_optimiser(const problem &p)
-  : params_(p.params.numerical_optimisation)
+refiner::refiner(const problem &p) : params_(p.params.refinement)
 {
 }
 
-}  // namespace ultra::gp
+}  // namespace ultra

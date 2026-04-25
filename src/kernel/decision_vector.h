@@ -13,6 +13,8 @@
 #if !defined(ULTRA_DECISION_VECTOR_H)
 #define      ULTRA_DECISION_VECTOR_H
 
+#include "kernel/individual.h"
+
 #include <concepts>
 #include <cstddef>
 #include <utility>
@@ -94,6 +96,17 @@ concept DecisionVectorExtractable = requires(const T &t)
 template<class I> using decision_vector_t =
   std::remove_cvref_t<
     decltype(extract_decision_vector(std::declval<const I &>()))>;
+
+/// Supports numerical optimisation via decision-vector perturbation.
+template<class I>
+concept NumericalOptimisable =
+  Individual<I>
+  && std::copy_constructible<I>
+  && DecisionVectorExtractable<I>
+  && requires(I &ind, const decision_vector_t<I> &dv)
+     {
+       ind.apply_decision_vector(dv);
+     };
 
 }  // namespace ultra
 

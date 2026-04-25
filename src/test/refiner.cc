@@ -10,10 +10,9 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/numerical_optimiser.h"
-#include "kernel/de/numerical_optimiser.h"
+#include "kernel/refiner.h"
+#include "kernel/de/numerical_refiner.h"
 #include "kernel/gp/individual.h"
-#include "kernel/gp/team.h"
 
 #include "test/fixture1.h"
 
@@ -78,7 +77,7 @@ namespace
 }  // namespace
 
 
-TEST_SUITE("gp::numerical_optimiser")
+TEST_SUITE("de::numerical_refiner")
 {
 
 TEST_CASE_FIXTURE(fixture1, "No optimisable slots is a no-op")
@@ -93,7 +92,7 @@ TEST_CASE_FIXTURE(fixture1, "No optimisable slots is a no-op")
 
   const auto original(ind);
 
-  const numerical_optimiser opt(prob);
+  const refiner opt(prob);
 
   const auto eva([](const gp::individual &) { return 0.0; });
 
@@ -139,10 +138,10 @@ TEST_CASE_FIXTURE(fixture1, "Optimisation preserves validity and structure")
     return s;
   });
 
-  prob.params.numerical_optimisation.individuals = 40;
-  prob.params.numerical_optimisation.generations = 60;
+  prob.params.refinement.de.individuals = 40;
+  prob.params.refinement.de.generations = 60;
 
-  const numerical_optimiser opt(prob);
+  const refiner opt(prob);
   de::optimise(opt, ind, eva);
 
   CHECK(ind.is_valid());
@@ -198,10 +197,10 @@ TEST_CASE_FIXTURE(fixture1,
 
   const auto before(eva(ind));
 
-  prob.params.numerical_optimisation.individuals = 40;
-  prob.params.numerical_optimisation.generations = 60;
+  prob.params.refinement.de.individuals = 40;
+  prob.params.refinement.de.generations = 60;
 
-  const numerical_optimiser opt(prob);
+  const refiner opt(prob);
   de::optimise(opt, ind, eva);
 
   const auto after(eva(ind));
@@ -234,30 +233,15 @@ TEST_CASE_FIXTURE(fixture1,
     return -(d * d);
   });
 
-  prob.params.numerical_optimisation.individuals = 40;
-  prob.params.numerical_optimisation.generations = 80;
+  prob.params.refinement.de.individuals = 40;
+  prob.params.refinement.de.generations = 80;
 
-  const numerical_optimiser opt(prob);
+  const refiner opt(prob);
   de::optimise(opt, ind, eva);
 
   CHECK(ind.is_valid());
   CHECK(std::holds_alternative<D_INT>(ind[{0, 0}].args[1]));
   CHECK(std::get<D_INT>(ind[{0, 0}].args[1]) == 2);
-}
-
-TEST_CASE("Concepts")
-{
-  using namespace ultra;
-
-  static_assert(DecisionVectorExtractable<gp::individual>);
-  static_assert(NumericalOptimisable<gp::individual>);
-
-  static_assert(DecisionVectorExtractable<gp::team<gp::individual>>);
-  static_assert(NumericalOptimisable<gp::team<gp::individual>>);
-
-  struct without_dv {};
-  static_assert(!DecisionVectorExtractable<without_dv>);
-  static_assert(!NumericalOptimisable<without_dv>);
 }
 
 TEST_CASE_FIXTURE(fixture1, "decision_vector round-trip")

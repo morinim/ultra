@@ -188,46 +188,49 @@ struct parameters
   } de;
 
   /// Parameters controlling numerical optimisation of GP individuals.
-  struct numerical_optimisation_parameters
+  struct refinement_parameters
   {
-    /// Relative radius of the search interval.
-    ///
-    /// For a parameter with current value `v`, the search interval is:
-    ///   `[v - delta, v + delta]`
-    /// where:
-    ///   `delta = max(|v| * rel_radius, min_radius)`
-    ///
-    /// This makes the search scale with the magnitude of the parameter.
-    double rel_radius {0.25};
+    struct de_numerical_refinement_parameters
+    {
+      /// Relative radius of the search interval.
+      ///
+      /// For a parameter with current value `v`, the search interval is:
+      ///   `[v - delta, v + delta]`
+      /// where:
+      ///   `delta = max(|v| * rel_radius, min_radius)`
+      ///
+      /// This makes the search scale with the magnitude of the parameter.
+      double rel_radius {0.25};
 
-    /// Minimum radius of the search interval.
-    ///
-    /// Ensures a non-degenerate search space even when the current value is
-    /// close to zero.
-    double min_radius {1.0};
+      /// Minimum radius of the search interval.
+      ///
+      /// Ensures a non-degenerate search space even when the current value is
+      /// close to zero.
+      double min_radius {1.0};
 
-    /// Population size used by the DE optimiser.
-    ///
-    /// Controls the number of candidate solutions evolved at each iteration.
-    std::size_t individuals {20};
+      /// Population size used by the DE optimiser.
+      ///
+      /// Controls the number of candidate solutions evolved at each iteration.
+      std::size_t individuals {20};
 
-    /// Number of generations of the DE optimiser.
-    ///
-    /// Higher values increase optimisation quality at the cost of runtime.
-    std::size_t generations {20};
+      /// Number of generations of the DE optimiser.
+      ///
+      /// Higher values increase optimisation quality at the cost of runtime.
+      std::size_t generations {20};
+    } de;
 
-    /// Fraction of individuals to be refined via numerical optimisation.
+    /// Fraction of individuals to be refined.
     ///
     /// Controls how many individuals are selected (per generation) for local
-    /// numerical optimisation of their tunable parameters.
+    /// refinement.
     ///
     /// The value is interpreted as a fraction in the range `[0, 1]`:
-    /// - `0.0` disables numerical refinement;
+    /// - `0.0` disables refinement;
     /// - `1.0` applies refinement to the entire population;
     /// - intermediate values select a proportion of individuals (typically
     ///   via random sampling).
-    double refinement_fraction {0.01};
-  } numerical_optimisation;
+    double fraction {0.01};
+  } refinement;
 
   struct cache_parameters
   {

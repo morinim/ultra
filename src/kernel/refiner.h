@@ -10,42 +10,31 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#if !defined(ULTRA_NUMERICAL_OPTIMISER_H)
-#define      ULTRA_NUMERICAL_OPTIMISER_H
+#if !defined(ULTRA_REFINER_H)
+#define      ULTRA_REFINER_H
 
-#include "kernel/decision_vector.h"
 #include "kernel/evaluator.h"
 #include "kernel/problem.h"
+
+#include <optional>
 
 namespace ultra
 {
 
-/// Checks whether a type supports numerical optimisation.
-template<class I>
-concept NumericalOptimisable =
-  Individual<I>
-  && std::copy_constructible<I>
-  && DecisionVectorExtractable<I>
-  && requires(I &ind, const decision_vector_t<I> &dv)
-     {
-       ind.apply_decision_vector(dv);
-     };
-
-class numerical_optimiser
+class refiner
 {
 public:
-  explicit numerical_optimiser(const problem &p);
+  explicit refiner(const problem &p);
 
   template<Evaluator E, class Backend>
-  requires NumericalOptimisable<evaluator_individual_t<E>>
   std::optional<evaluator_fitness_t<E>> optimise(evaluator_individual_t<E> &,
                                                  const E &, Backend &&) const;
 
 private:
-  const parameters::numerical_optimisation_parameters params_;
+  const parameters::refinement_parameters params_;
 };
 
-#include "numerical_optimiser.tcc"
+#include "refiner.tcc"
 
 }  // namespace ultra
 
