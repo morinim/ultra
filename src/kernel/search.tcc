@@ -248,14 +248,6 @@ basic_search<ES, E>::run(unsigned n,
   shake_function_callback_t shake([this](unsigned g) { return vs_->shake(g); });
   search_stats<individual_t, fitness_t> stats;
 
-  typename evolution<evaluator_proxy<E>>::refinement_callback_t refinement;
-  if (refinement_callback_)
-    refinement = [this](individual_t &ind, const evaluator_proxy<E> &,
-                        const parameters::refinement_parameters &params)
-    {
-      return refinement_callback_(ind, eva_.core(), params);
-    };
-
   for (unsigned r(0); r < n && !stop_source_.stop_requested(); ++r)
   {
     vs_->training_setup(r);
@@ -265,7 +257,7 @@ basic_search<ES, E>::run(unsigned n,
       evo.logger(*search_log_);
     evo.after_generation(after_generation_callback_)
        .on_new_best(on_training_new_best_callback_)
-       .refinement(refinement)
+       .refinement(refinement_callback_)
        .shake_function(shake)
        .stop_source(stop_source_)
        .tag(tag_);

@@ -286,23 +286,11 @@ search<P> &search<P>::tag(const std::string &t)
 }
 
 template<Individual P>
-template<Evaluator E>
-auto search<P>::refinement_callback() const
-{
-  if constexpr (std::same_as<E, class_evaluator_t>)
-    return class_refinement_callback_;
-  else
-  {
-    static_assert(std::same_as<E, reg_evaluator_t>);
-    return reg_refinement_callback_;
-  }
-}
-
-template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
 {
-  const auto search_scheme([&]<Evaluator E>()
+  const auto search_scheme(
+    [&]<Evaluator E>(const ultra::refinement_callback_t<evaluator_proxy<E>> &r)
   {
     basic_search<alps_es, E> alps(prob_, metrics_);
 
@@ -312,18 +300,65 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
       alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_)
         .on_training_new_best(on_training_new_best_callback_)
-        .refinement(refinement_callback<E>())
-        .stop_source(stop_source_).tag(tag_);
+        .refinement(r)
+        .stop_source(stop_source_)
+        .tag(tag_);
 
     return alps.run(n, threshold);
   });
 
   if (prob_.classification())
-    return search_scheme.template operator()<class_evaluator_t>();
+    return search_scheme.template operator()<class_evaluator_t>(
+      class_refinement_callback_);
   else
-    return search_scheme.template operator()<reg_evaluator_t>();
+    return search_scheme.template operator()<reg_evaluator_t>(
+      reg_refinement_callback_);
 }
 
+///
+/// Sets a refinement callback used to locally improve individuals.
+///
+/// \param[in] f callable object implementing the refinement logic
+/// \return      a reference to `*this` object (method chaining / fluent
+///              interface)
+///
+/// The refinement callback is invoked during the evolutionary process to
+/// perform local optimisation (e.g. numerical tuning of parameters) on
+/// candidate solutions.
+///
+/// The callable must have a signature compatible with at least one of the
+/// following forms:
+///
+/// ```
+/// std::optional<fitness_t>(
+///   P &, const evaluator_proxy<class_evaluator_t> &,
+///   const parameters::refinement_parameters &)
+///
+/// std::optional<fitness_t>(
+///   P &, const evaluator_proxy<reg_evaluator_t> &,
+///   const parameters::refinement_parameters &)
+/// ```
+///
+/// A generic callable can be used to support both cases:
+///
+/// ```
+/// [](P &ind, const auto &eva,
+///    const parameters::refinement_parameters &params)
+/// {
+///   // eva is the evaluator proxy used by the search engine
+///   // (includes caching and other internal mechanisms)
+///   return std::optional<fitness_t>();
+/// }
+/// ```
+///
+/// The evaluator passed to the callback is the same object used internally
+/// by the evolutionary engine (i.e. an `evaluator_proxy`), ensuring that
+/// refinement benefits from cached evaluations and consistent semantics.
+///
+/// \note
+/// The concrete evaluator type depends on the problem (classification or
+/// regression) and is selected automatically at runtime.
+///
 template<Individual P>
 template<class F>
 search<P> &search<P>::refinement(F &&f)
@@ -331,10 +366,13 @@ search<P> &search<P>::refinement(F &&f)
   using callback_t = std::remove_cvref_t<F>;
 
   constexpr bool class_ok = std::is_invocable_r_v<
-    std::optional<fitness_t>, callback_t &, P &, const class_evaluator_t &,
+    std::optional<fitness_t>, callback_t &, P &,
+    const evaluator_proxy<class_evaluator_t> &,
     const parameters::refinement_parameters &>;
+
   constexpr bool reg_ok = std::is_invocable_r_v<
-    std::optional<fitness_t>, callback_t &, P &, const reg_evaluator_t &,
+    std::optional<fitness_t>, callback_t &, P &,
+    const evaluator_proxy<reg_evaluator_t> &,
     const parameters::refinement_parameters &>;
 
   static_assert(class_ok || reg_ok,

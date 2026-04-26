@@ -38,7 +38,8 @@ public:
   using fitness_t = evaluator_fitness_t<E>;
   using after_generation_callback_t =
     ultra::after_generation_callback_t<individual_t, fitness_t>;
-  using refinement_callback_t = ultra::refinement_callback_t<E>;
+  using refinement_callback_t =
+    ultra::refinement_callback_t<evaluator_proxy<E>>;
   using on_training_new_best_callback_t =
     ultra::on_new_best_callback_t<individual_t, fitness_t>;
 

@@ -166,8 +166,10 @@ TEST_CASE("Refinement callback dispatches by problem type")
                    gp::individual &, const E &,
                    const parameters::refinement_parameters &)
                  {
-                   called = std::same_as<E, src::search<>::reg_evaluator_t>;
-                   return std::optional<double> {};
+                   called = std::same_as<
+                     E, evaluator_proxy<src::search<>::reg_evaluator_t>>;
+
+                   return std::optional<double>();
                  });
 
     prob.params.refinement.fraction = 1.0;
@@ -198,8 +200,10 @@ TEST_CASE("Refinement callback dispatches by problem type")
                    gp::individual &, const E &,
                    const parameters::refinement_parameters &)
                  {
-                   called = std::same_as<E, src::search<>::class_evaluator_t>;
-                   return std::optional<double> {};
+                   called = std::same_as<
+                     E, evaluator_proxy<src::search<>::class_evaluator_t>>;
+
+                   return std::optional<double>();
                  });
 
     prob.params.refinement.fraction = 1.0;

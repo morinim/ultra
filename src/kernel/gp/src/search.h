@@ -101,11 +101,9 @@ public:
 
 private:
   using class_refinement_callback_t =
-    ultra::refinement_callback_t<class_evaluator_t>;
+    ultra::refinement_callback_t<evaluator_proxy<class_evaluator_t>>;
   using reg_refinement_callback_t =
-    ultra::refinement_callback_t<reg_evaluator_t>;
-
-  template<Evaluator E> [[nodiscard]] auto refinement_callback() const;
+    ultra::refinement_callback_t<evaluator_proxy<reg_evaluator_t>>;
 
   // ---- Private data members ----
   problem &prob_;  // problem we're working on

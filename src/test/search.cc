@@ -54,7 +54,7 @@ TEST_CASE_FIXTURE(fixture1, "refiner is called")
 
   auto &ret(
     s.refinement(
-      [&](gp::individual &, const test_evaluator<gp::individual> &,
+      [&](gp::individual &, const auto &,
           const parameters::refinement_parameters &)
       {
         called = true;
@@ -78,7 +78,7 @@ TEST_CASE_FIXTURE(fixture1, "DE backend setter compatibility")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   search s(prob, eva);
 
-  CHECK(&s.refinement(de::numerical_refinement_backend{}) == &s);
+  CHECK(&s.refinement(de::numerical_refinement_backend()) == &s);
 }
 
 }  // TEST_SUITE
