@@ -13,15 +13,16 @@
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/search.h"
+#include "kernel/de/numerical_refiner.h"
+
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
 
 #include <sstream>
 #include <utility>
 #include <vector>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
-
-TEST_SUITE("SRC::SEARCH")
+TEST_SUITE("src::search")
 {
 
 TEST_CASE("Symbolic regression - single variable")
@@ -138,6 +139,75 @@ TEST_CASE("Symbolic regression - multiple variables")
     const auto v(oracle(in));
     REQUIRE(has_value(v));
     CHECK(std::get<D_DOUBLE>(v) == doctest::Approx(out).epsilon(1e-4));
+  }
+}
+
+TEST_CASE("Refinement callback dispatches by problem type")
+{
+  using namespace ultra;
+
+  log::reporting_level = log::lWARNING;
+
+  SUBCASE("Regression evaluator")
+  {
+    std::istringstream training(R"(
+      -1.0, -1.0
+       0.0,  0.0
+       1.0,  1.0
+    )");
+
+    src::problem prob(training);
+    prob.setup_symbols();
+
+    src::search s(prob);
+
+    bool called(false);
+    s.refinement([&called]<Evaluator E>(
+                   gp::individual &, const E &,
+                   const parameters::refinement_parameters &)
+                 {
+                   called = std::same_as<E, src::search<>::reg_evaluator_t>;
+                   return std::optional<double> {};
+                 });
+
+    prob.params.refinement.fraction = 1.0;
+    prob.params.evolution.generations = 1;
+
+    s.run(1);
+
+    CHECK(called);
+  }
+
+  SUBCASE("Classification evaluator")
+  {
+    std::istringstream training(R"(
+      A, 0.0
+      B, 1.0
+      A, 0.1
+      B, 0.9
+    )");
+
+    src::problem prob(training);
+    CHECK(prob.classification());
+    prob.setup_symbols();
+
+    src::search s(prob);
+
+    bool called(false);
+    s.refinement([&called]<Evaluator E>(
+                   gp::individual &, const E &,
+                   const parameters::refinement_parameters &)
+                 {
+                   called = std::same_as<E, src::search<>::class_evaluator_t>;
+                   return std::optional<double> {};
+                 });
+
+    prob.params.refinement.fraction = 1.0;
+    prob.params.evolution.generations = 1;
+
+    s.run(1);
+
+    CHECK(called);
   }
 }
 

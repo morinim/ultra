@@ -286,6 +286,19 @@ search<P> &search<P>::tag(const std::string &t)
 }
 
 template<Individual P>
+template<Evaluator E>
+auto search<P>::refinement_callback() const
+{
+  if constexpr (std::same_as<E, class_evaluator_t>)
+    return class_refinement_callback_;
+  else
+  {
+    static_assert(std::same_as<E, reg_evaluator_t>);
+    return reg_refinement_callback_;
+  }
+}
+
+template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
 {
@@ -299,6 +312,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
       alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_)
         .on_training_new_best(on_training_new_best_callback_)
+        .refinement(refinement_callback<E>())
         .stop_source(stop_source_).tag(tag_);
 
     return alps.run(n, threshold);
@@ -308,6 +322,38 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     return search_scheme.template operator()<class_evaluator_t>();
   else
     return search_scheme.template operator()<reg_evaluator_t>();
+}
+
+template<Individual P>
+template<class F>
+search<P> &search<P>::refinement(F &&f)
+{
+  using callback_t = std::remove_cvref_t<F>;
+
+  constexpr bool class_ok = std::is_invocable_r_v<
+    std::optional<fitness_t>, callback_t &, P &, const class_evaluator_t &,
+    const parameters::refinement_parameters &>;
+  constexpr bool reg_ok = std::is_invocable_r_v<
+    std::optional<fitness_t>, callback_t &, P &, const reg_evaluator_t &,
+    const parameters::refinement_parameters &>;
+
+  static_assert(class_ok || reg_ok,
+                "Refinement callback is not compatible with available "
+                "evaluator signatures");
+
+  auto callback(std::forward<F>(f));
+
+  if constexpr (class_ok)
+    class_refinement_callback_ = callback;
+  else
+    class_refinement_callback_ = {};
+
+  if constexpr (reg_ok)
+    reg_refinement_callback_ = callback;
+  else
+    reg_refinement_callback_ = {};
+
+  return *this;
 }
 
 ///

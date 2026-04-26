@@ -92,6 +92,7 @@ public:
   search &after_generation(after_generation_callback_t);
   search &logger(search_log &);
   search &on_training_new_best(on_training_new_best_callback_t);
+  template<class F> search &refinement(F &&);
   search &stop_source(std::stop_source);
   search &tag(const std::string &);
 
@@ -99,6 +100,13 @@ public:
   search &validation_strategy(Args && ...);
 
 private:
+  using class_refinement_callback_t =
+    ultra::refinement_callback_t<class_evaluator_t>;
+  using reg_refinement_callback_t =
+    ultra::refinement_callback_t<reg_evaluator_t>;
+
+  template<Evaluator E> [[nodiscard]] auto refinement_callback() const;
+
   // ---- Private data members ----
   problem &prob_;  // problem we're working on
   metric_flags metrics_;  // metrics we have to calculate during the search
@@ -107,6 +115,9 @@ private:
 
   after_generation_callback_t after_generation_callback_ {};
   on_training_new_best_callback_t on_training_new_best_callback_ {};
+
+  class_refinement_callback_t class_refinement_callback_ {};
+  reg_refinement_callback_t reg_refinement_callback_ {};
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {};
