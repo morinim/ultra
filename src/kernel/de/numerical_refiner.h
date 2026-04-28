@@ -37,6 +37,14 @@ struct numerical_refinement_backend
     evaluator_individual_t<E> &ind, const E &eva,
     const parameters::refinement_parameters &params) const
   {
+    const auto eval([&eva](const auto &cand)
+    {
+      if constexpr (requires { eva.core(); })
+        return eva.core()(cand);
+      else
+        return eva(cand);
+    });
+
     const auto dv(extract_decision_vector(ind));
     using dv_t = decision_vector_t<evaluator_individual_t<E>>;
 
@@ -62,7 +70,7 @@ struct numerical_refinement_backend
       auto trial(ind);
       trial.apply_decision_vector(dv_t(vec, dv.coords));
 
-      return eva(trial);
+      return eval(trial);
     });
 
     search de_search(de_prob, de_eva);
