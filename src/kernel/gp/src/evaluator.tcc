@@ -188,7 +188,7 @@ template<Individual P>
 double mae_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
-    return std::fabs(std::get<D_DOUBLE>(foreseen)
+    return std::fabs(lexical_cast<D_DOUBLE>(foreseen)
                      - label_as<D_DOUBLE>(example));
 
   return std::numeric_limits<double>::max() / 1000.0;
@@ -261,7 +261,7 @@ double mse_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
-    const double err(std::get<D_DOUBLE>(foreseen)
+    const double err(lexical_cast<D_DOUBLE>(foreseen)
                      - label_as<D_DOUBLE>(example));
     return err * err;
   }
@@ -293,7 +293,7 @@ double count_error_functor<P>::operator()(const example &example) const
   if (!has_value(foreseen))
     return 1.0;
 
-  if (!issmall(std::get<D_DOUBLE>(foreseen) - label_as<D_DOUBLE>(example)))
+  if (!issmall(lexical_cast<D_DOUBLE>(foreseen) - label_as<D_DOUBLE>(example)))
     return 1.0;
 
   return 0.0;
