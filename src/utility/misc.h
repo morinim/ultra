@@ -77,6 +77,7 @@ inline constexpr bool is_bitmask_enum_v = is_bitmask_enum<E>::value;
 template<class E>
 concept bitmask_enum = is_bitmask_enum_v<E> && std::is_enum_v<E>;
 
+
 // *******************************************************************
 // Classes
 // *******************************************************************
@@ -167,6 +168,9 @@ struct closure_info<R(C::*)(Arg) const> : closure_info<R(C::*)(Arg)>
 {
 };
 
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 }  // namespace internal
 
 ///
@@ -224,6 +228,7 @@ private:
 
   const unsigned val_ {next_id()};
 };
+
 
 // *******************************************************************
 // Functions

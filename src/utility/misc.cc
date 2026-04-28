@@ -211,13 +211,14 @@ double lexical_cast<double>(const ultra::value_t &v)
 {
   using namespace ultra;
 
-  switch (v.index())
-  {
-  case d_double:  return std::get<D_DOUBLE>(v);
-  case d_int:     return std::get<D_INT>(v);
-  case d_string:  return lexical_cast<double>(std::get<D_STRING>(v));
-  default:        return 0.0;
-  }
+  return std::visit(
+    internal::overloaded
+    {
+      [](D_DOUBLE d) { return d; },
+      [](D_INT i) { return static_cast<double>(i); },
+      [](const D_STRING &s) { return lexical_cast<double>(s); },
+      [](const auto &) { return 0.0; }
+    }, v);
 }
 
 template<>
@@ -225,13 +226,14 @@ int lexical_cast<int>(const ultra::value_t &v)
 {
   using namespace ultra;
 
-  switch (v.index())
-  {
-  case d_double:  return static_cast<int>(std::get<D_DOUBLE>(v));
-  case d_int:     return std::get<D_INT>(v);
-  case d_string:  return lexical_cast<int>(std::get<D_STRING>(v));
-  default:        return 0;
-  }
+  return std::visit(
+    internal::overloaded
+    {
+      [](D_DOUBLE d) { return static_cast<int>(d); },
+      [](D_INT i) { return i; },
+      [](const D_STRING &s) { return lexical_cast<int>(s); },
+      [](const auto &) { return 0; }
+    }, v);
 }
 
 ///
@@ -248,14 +250,15 @@ std::string lexical_cast<std::string>(const ultra::value_t &v)
 {
   using namespace ultra;
 
-  switch (v.index())
-  {
-  case d_double:  return std::to_string(std::get<D_DOUBLE>(v));
-  case d_int:     return std::to_string(   std::get<D_INT>(v));
-  case d_string:  return std::get<D_STRING>(v);
-  case d_nullary: return get_if_nullary(v)->name();
-  default:        return {};
-  }
+  return std::visit(
+    internal::overloaded
+    {
+      [](D_DOUBLE d) { return std::to_string(d); },
+      [](D_INT i) { return std::to_string(i); },
+      [](const D_STRING &s) { return s; },
+      [](const D_NULLARY *n) { return n ? n->name() : std::string(); },
+      [](const auto &) { return std::string(); }
+    }, v);
 }
 
 template<>
