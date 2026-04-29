@@ -48,8 +48,15 @@ void basic_search<ES, E>::init()
 
   if (!load())
   {
-    ultraWARNING << "Init continues without cache";
+    ultraINFO << "Init continues without cache";
   }
+}
+
+template<template<class> class ES, Evaluator E>
+basic_search<ES, E> &basic_search<ES, E>::messages(bool m) noexcept
+{
+  emit_messages_ = m;
+  return *this;
 }
 
 ///
@@ -132,9 +139,12 @@ void basic_search<ES, E>::after_evolution(
       accuracy = ss.str();
     }
 
-    ultraPAROUT << tags << "Run " << run << ' ' << phase[i]
-                << ". Fitness: " << *m.fitness
-                << "  Accuracy: " << accuracy;
+    if (emit_messages_)
+    {
+      ultraPAROUT << tags << "Run " << run << ' ' << phase[i]
+                  << ". Fitness: " << *m.fitness
+                  << "  Accuracy: " << accuracy;
+    }
 
     ++i;
   }
@@ -256,6 +266,7 @@ basic_search<ES, E>::run(unsigned n,
     if (search_log_)
       evo.logger(*search_log_);
     evo.after_generation(after_generation_callback_)
+       .messages(emit_messages_)
        .on_new_best(on_training_new_best_callback_)
        .refinement(refinement_callback_)
        .shake_function(shake)

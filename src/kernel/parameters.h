@@ -230,6 +230,10 @@ struct parameters
     /// - intermediate values select a proportion of individuals (typically
     ///   via random sampling).
     double fraction {0.01};
+
+    /// If `true`, print progress / summary messages from the refinement
+    /// engine.
+    bool messages {true};
   } refinement;
 
   struct cache_parameters

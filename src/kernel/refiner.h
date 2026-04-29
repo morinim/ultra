@@ -24,14 +24,14 @@ namespace ultra
 class refiner
 {
 public:
-  explicit refiner(const problem &p);
+  explicit refiner(const problem &p, bool = true);
 
   template<Evaluator E, class Backend>
   std::optional<evaluator_fitness_t<E>> optimise(evaluator_individual_t<E> &,
                                                  const E &, Backend &&) const;
 
 private:
-  const parameters::refinement_parameters params_;
+  parameters::refinement_parameters params_;
 };
 
 #include "refiner.tcc"

@@ -91,6 +91,7 @@ public:
   // ---- Hooks ----
   search &after_generation(after_generation_callback_t);
   search &logger(search_log &);
+  search &messages(bool) noexcept;
   search &on_training_new_best(on_training_new_best_callback_t);
   template<class F> search &refinement(F &&);
   search &stop_source(std::stop_source);
@@ -120,6 +121,7 @@ private:
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {};
   std::string tag_ {};
+  bool emit_messages_ {true};
 };
 
 

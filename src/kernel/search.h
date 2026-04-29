@@ -56,6 +56,7 @@ public:
   basic_search &refinement(refinement_callback_t);
   basic_search &on_training_new_best(on_training_new_best_callback_t);
 
+  basic_search &messages(bool) noexcept;
   basic_search &tag(const std::string &);
   basic_search &stop_source(std::stop_source);
 
@@ -99,6 +100,7 @@ private:
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {std::nostopstate};
   std::string tag_ {};
+  bool emit_messages_ {true};
 };  // class basic_search
 
 

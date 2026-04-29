@@ -15,8 +15,9 @@
 namespace ultra
 {
 
-refiner::refiner(const problem &p) : params_(p.params.refinement)
+refiner::refiner(const problem &p, bool messages) : params_(p.params.refinement)
 {
+  params_.messages = messages;
 }
 
 }  // namespace ultra

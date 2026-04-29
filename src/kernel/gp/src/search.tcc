@@ -268,6 +268,13 @@ search<P> &search<P>::logger(search_log &sl)
   return *this;
 }
 
+template<Individual P>
+search<P> &search<P>::messages(bool m) noexcept
+{
+  emit_messages_ = m;
+  return *this;
+}
+
 ///
 /// Sets the identification tag for this object.
 ///
@@ -299,6 +306,7 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
     if (search_log_)
       alps.logger(*search_log_);
     alps.after_generation(after_generation_callback_)
+        .messages(emit_messages_)
         .on_training_new_best(on_training_new_best_callback_)
         .refinement(r)
         .stop_source(stop_source_)

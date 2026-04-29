@@ -89,6 +89,7 @@ public:
   evolution &after_generation(after_generation_callback_t);
   evolution &logger(search_log &);
   evolution &refinement(refinement_callback_t);
+  evolution &messages(bool) noexcept;
   evolution &on_new_best(on_new_best_callback_t);
   evolution &shake_function(shake_function_callback_t);
   evolution &stop_source(std::stop_source);
@@ -98,9 +99,13 @@ public:
   [[nodiscard]] bool is_valid() const;
 
 private:
+  enum class message {status, summary};
+  enum class phase {evolution, refinement};
+
   // ---- Private methods ----
-  void perform_refinement(std::chrono::milliseconds, timer *);
-  void print(bool, std::chrono::milliseconds, timer *) const;
+  void perform_refinement(const timer &);
+  void print(phase, message, std::chrono::milliseconds,
+             timer * = nullptr) const;
   [[nodiscard]] bool stop_condition() const;
 
   // ---- Data members ----
@@ -117,6 +122,7 @@ private:
   mutable search_log *search_log_ {nullptr};
   std::stop_source external_stop_source_ {std::nostopstate};
   std::string tag_ {};
+  bool emit_messages_ {true};
 };
 
 #include "kernel/evolution.tcc"

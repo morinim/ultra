@@ -61,31 +61,34 @@ bool evolution<E>::stop_condition() const
 }
 
 template<Evaluator E>
-void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
+void evolution<E>::print(phase p, message m, std::chrono::milliseconds elapsed,
                          timer *from_last_msg) const
 {
-  if (log::reporting_level > log::lPAROUT)
+  if (!emit_messages_ || log::reporting_level > log::lPAROUT)
     return;
 
   const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
 
-  if (summary)
+  const char *str_phase[] = {"evolution", "refinement"};
+
+  if (m == message::summary)
   {
     ultraPAROUT << tags << std::setw(8) << lexical_cast<std::string>(elapsed)
                 << std::setw(8) << sum_.generation
+                << std::setw(12) << str_phase[as_integer(p)]
                 << ':' << std::setw(13) << sum_.best().fit;
   }
-  else
+  else  // message::status
   {
     static const std::string clear_line(std::string(30, ' ')
                                         + std::string(1, '\r'));
 
     if (log::reporting_level == log::lPAROUT)
     {
-      static const std::string chrs("|/-\\");
+      static const std::string_view chrs("|/-\\");
 
-      std::cout << tags << chrs[elapsed.count() % chrs.size()] << clear_line
-                << std::flush;
+      std::cout << tags << chrs[elapsed.count() % chrs.size()]
+                << str_phase[as_integer(p)] << clear_line << std::flush;
     }
     else if (log::reporting_level <= log::lSTDOUT)
     {
@@ -104,11 +107,13 @@ void evolution<E>::print(bool summary, std::chrono::milliseconds elapsed,
       if (sum_.generation)
         std::cout << "x " << gph << "gph";
 
-      std::cout << ']' << clear_line << std::flush;
+      std::cout << "] " << str_phase[as_integer(p)] << clear_line
+                << std::flush;
     }
   }
 
-  from_last_msg->restart();
+  if (from_last_msg)
+    from_last_msg->restart();
 }
 
 ///
@@ -133,6 +138,13 @@ template<Evaluator E>
 evolution<E> &evolution<E>::refinement(refinement_callback_t f)
 {
   refinement_callback_ = std::move(f);
+  return *this;
+}
+
+template<Evaluator E>
+evolution<E> &evolution<E>::messages(bool m) noexcept
+{
+  emit_messages_ = m;
   return *this;
 }
 
@@ -209,7 +221,6 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 /// Performs refinement on a subset of the population.
 ///
 /// \param[in] elapsed        elapsed time since the start of the search
-/// \param[in] from_last_msg  timer used to regulate logging output
 ///
 /// A fraction of individuals (controlled by `refinement_fraction`) is selected
 /// and refined via local optimisation.
@@ -218,8 +229,7 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 /// population.
 ///
 template<Evaluator E>
-void evolution<E>::perform_refinement(std::chrono::milliseconds elapsed,
-                                      timer *from_last_msg)
+void evolution<E>::perform_refinement(const timer &elapsed)
 {
   if (!pop_.size())
     return;
@@ -230,6 +240,8 @@ void evolution<E>::perform_refinement(std::chrono::milliseconds elapsed,
   if (issmall(refinement_fraction))
     return;
 
+  const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
+
   const auto base_n(
     static_cast<std::size_t>(refinement_fraction * pop_.size()));
   const std::size_t n(std::max(base_n, 1uz));
@@ -238,18 +250,19 @@ void evolution<E>::perform_refinement(std::chrono::milliseconds elapsed,
 
   std::ranges::generate(coords, [this] { return random::coord(pop_); });
 
-  const refiner optimiser(pop_.problem());
+  const refiner optimiser(pop_.problem(), false);
+
   for (auto c : coords)
   {
     auto &ind(pop_[c]);
+    print(phase::refinement, message::status, elapsed.elapsed());
 
-    const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
-
-    if (fit)
+    if (const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
+        fit)
     {
       const scored_individual si(ind, *fit);
       if (sum_.update_if_better(si))
-        print(true, elapsed, from_last_msg);
+        print(phase::refinement, message::summary, elapsed.elapsed());
     }
   }
 }
@@ -320,7 +333,8 @@ summary<typename evolution<E>::individual_t,
       if (previous_best < candidate)
       {
         previous_best = candidate;
-        print(true, from_start.elapsed(), &from_last_msg);
+        print(phase::evolution, message::summary, from_start.elapsed(),
+              &from_last_msg);
         return true;
       }
 
@@ -358,7 +372,8 @@ summary<typename evolution<E>::individual_t,
         use_sleep = true;
 
         if (!print_and_update_if_better(sum_.best()))
-          print(false, from_start.elapsed(), &from_last_msg);
+          print(phase::evolution, message::status, from_start.elapsed(),
+                &from_last_msg);
       }
 
       if (!stop && (stop = stop_condition()))
@@ -376,7 +391,7 @@ summary<typename evolution<E>::individual_t,
     print_and_update_if_better(sum_.best());
 
     if (refinement_callback_)
-      perform_refinement(from_start.elapsed(), &from_last_msg);
+      perform_refinement(from_start);
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)
@@ -389,9 +404,12 @@ summary<typename evolution<E>::individual_t,
 
   sum_.elapsed = from_start.elapsed();
 
-  ultraINFO << "Evolution completed at generation: " << sum_.generation
-            << ". Elapsed time: "
-            << lexical_cast<std::string>(from_start.elapsed());
+  if (emit_messages_)
+  {
+    ultraINFO << "Evolution completed at generation: " << sum_.generation
+              << ". Elapsed time: "
+              << lexical_cast<std::string>(from_start.elapsed());
+  }
 
   return sum_;
 }
