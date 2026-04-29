@@ -408,9 +408,9 @@ void individual::apply_decision_vector(const decision_vector &v)
 
     if (auto &arg(genome_(coord.loc).args[coord.arg_index]);
         v.coords[i].kind == pk::integer)
-      arg = static_cast<ultra::D_INT>(std::lround(value));
+      arg = static_cast<D_INT>(std::lround(value));
     else
-      arg = static_cast<ultra::D_DOUBLE>(value);
+      arg = static_cast<D_DOUBLE>(value);
   }
 
   signature_ = hash();
