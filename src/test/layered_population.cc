@@ -34,6 +34,15 @@ TEST_CASE("Concepts")
   CHECK(LayeredPopulation<layered_population<gp::individual>>);
   CHECK(!RandomAccessIndividuals<layered_population<gp::individual>>);
   CHECK(!SizedRandomAccessPopulation<layered_population<gp::individual>>);
+
+  CHECK(std::forward_iterator<layered_population<gp::individual>::iterator>);
+  CHECK(std::sentinel_for<layered_population<gp::individual>::iterator,
+                          layered_population<gp::individual>::iterator>);
+
+  CHECK(std::forward_iterator<
+        layered_population<gp::individual>::const_iterator>);
+  CHECK(std::sentinel_for<layered_population<gp::individual>::const_iterator,
+                          layered_population<gp::individual>::const_iterator>);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Creation")
@@ -360,6 +369,130 @@ TEST_CASE_FIXTURE(fixture1, "Make debug population")
     CHECK(!seen[prg.age()]);
     seen[prg.age()] = true;
   }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterators skip empty leading layers")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 10;
+  prob.params.population.init_subgroups = 3;
+
+  layered_population<gp::individual> pop(prob);
+
+  pop.layer(0).clear();
+  pop.layer(1).clear();
+
+  CHECK(pop.size() == pop.layer(2).size());
+  CHECK(pop.begin() != pop.end());
+
+  auto it(pop.begin());
+
+  CHECK(it.coord().layer_index == 2);
+  CHECK(it.coord().individual_coord == 0);
+  CHECK(&*it == &pop.layer(2)[0]);
+
+  CHECK(std::distance(pop.begin(), pop.end()) == pop.size());
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterators skip empty middle layers")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 5;
+  prob.params.population.init_subgroups = 4;
+
+  layered_population<gp::individual> pop(prob);
+
+  pop.layer(1).clear();
+  pop.layer(2).clear();
+
+  std::vector<layered_population<gp::individual>::coord> coords;
+
+  for (auto it(pop.begin()); it != pop.end(); ++it)
+    coords.push_back(it.coord());
+
+  CHECK(coords.size() == pop.size());
+
+  for (const auto &c : coords)
+  {
+    CHECK(c.layer_index != 1);
+    CHECK(c.layer_index != 2);
+    CHECK(c.individual_coord < pop.layer(c.layer_index).size());
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterator coordinates")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 7;
+  prob.params.population.init_subgroups = 4;
+
+  layered_population<gp::individual> pop(prob);
+
+  // Create non-uniform layer sizes.
+  pop.layer(0).pop_back();
+  pop.layer(1).pop_back();
+  pop.layer(1).pop_back();
+  pop.layer(2).clear();
+
+  std::size_t count(0);
+
+  for (auto it(pop.begin()); it != pop.end(); ++it)
+  {
+    const auto c(it.coord());
+
+    CHECK(c.layer_index < pop.layers());
+    CHECK(c.individual_coord < pop.layer(c.layer_index).size());
+    CHECK(&*it == &pop[c]);
+
+    ++count;
+  }
+
+  CHECK(count == pop.size());
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterator multi-pass behaviour")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 10;
+  prob.params.population.init_subgroups = 3;
+
+  layered_population<gp::individual> pop(prob);
+
+  auto a(pop.begin());
+  auto b(a);
+
+  CHECK(a == b);
+  CHECK(&*a == &*b);
+
+  ++a;
+
+  CHECK(a != b);
+
+  ++b;
+
+  CHECK(a == b);
+  CHECK(&*a == &*b);
+}
+
+TEST_CASE_FIXTURE(fixture1, "Iterator over empty population")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 5;
+  prob.params.population.init_subgroups = 3;
+
+  layered_population<gp::individual> pop(prob);
+
+  for (auto &layer : pop.range_of_layers())
+    layer.clear();
+
+  CHECK(pop.size() == 0);
+  CHECK(pop.begin() == pop.end());
+  CHECK(std::distance(pop.begin(), pop.end()) == 0);
 }
 
 }  // TEST_SUITE
