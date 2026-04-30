@@ -48,10 +48,15 @@ public:
   /// \param[in] p     a population
   /// \param[in] begin `false` for the `end()` iterator
   base_iterator(pop &p, bool begin) noexcept
-    : begin_(p.range_of_layers().begin()),
-      end_(p.range_of_layers().end()),
-    layer_(begin ? begin_ : end_)
   {
+    const auto layers(p.range_of_layers());
+
+    end_ = layers.end();
+    layer_ = begin ? layers.begin() : end_;
+    pos_.layer_index = begin ? 0 : p.layers();
+
+    if (begin)
+      skip_empty_layers();
   }
 
   /// Prefix increment operator.
@@ -60,17 +65,19 @@ public:
   /// Advancing past the `end()` iterator results in undefined behaviour.
   base_iterator &operator++() noexcept
   {
-    if (++index_ >= layer_->size())
-    {
-      index_ = 0;
+    Expects(layer_ != end_);
 
-      do  // skipping empty layers
-        ++layer_;
-      while (layer_ != end_ && layer_->empty());
+    if (++pos_.individual_coord >= layer_->size())
+    {
+      ++layer_;
+      ++pos_.layer_index;
+      pos_.individual_coord = 0;
+
+      skip_empty_layers();
     }
 
-    assert((layer_ != end_ && index_ < layer_->size())
-           || (layer_ == end_ && index_ == 0));
+    assert((layer_ != end_ && pos_.individual_coord < layer_->size())
+           || (layer_ == end_ && pos_.individual_coord == 0));
 
     return *this;
   }
@@ -84,18 +91,39 @@ public:
     return tmp;
   }
 
-  /// \return `true` if iterators point to correspondant individuals
-  [[nodiscard]] bool operator==(const base_iterator &) const noexcept = default;
+  /// \return `true` if iterators point to corresponding individuals
+  ///
+  /// Equality is intentionally defined only in terms of the current layer
+  /// iterator and offset within that layer. We do not default this comparison
+  /// because cached implementation details that do not identify the position
+  /// could make two independently-created iterators to the same individual
+  /// compare unequal, violating the multi-pass guarantee required by forward
+  /// iterators.
+  [[nodiscard]] bool operator==(const base_iterator &other) const noexcept
+  {
+    return layer_ == other.layer_
+           && pos_.individual_coord == other.pos_.individual_coord;
+  }
 
   [[nodiscard]] std::size_t uid() const noexcept
   {
+    Expects(layer_ != end_);
     return layer_->uid();
+  }
+
+  [[nodiscard]] typename layered_population<I>::coord coord() const noexcept
+  {
+    Expects(layer_ != end_);
+    Expects(pos_.individual_coord < layer_->size());
+    return pos_;
   }
 
   /// \return reference to the current individual
   [[nodiscard]] ref operator*() const noexcept
   {
-    return (*layer_)[index_];
+    Expects(layer_ != end_);
+    Expects(pos_.individual_coord < layer_->size());
+    return (*layer_)[pos_.individual_coord];
   }
 
   /// \return pointer to the current individual
@@ -106,14 +134,23 @@ public:
 
   friend std::ostream &operator<<(std::ostream &out, const base_iterator &i)
   {
-    out << '[' << i.uid() << ',' << i.index_ << ']';
+    out << '[' << i.pos_.layer_index << ',' << i.pos_.individual_coord << ']';
     return out;
   }
 
 private:
-  itr begin_ {}, end_ {};
+  void skip_empty_layers() noexcept
+  {
+    while (layer_ != end_ && layer_->empty())
+    {
+      ++layer_;
+      ++pos_.layer_index;
+    }
+  }
+
+  itr end_ {};
   itr layer_ {};
-  std::size_t index_ {0};
+  layered_population<I>::coord pos_ {0, 0};
 };
 
 #endif  // include guard
