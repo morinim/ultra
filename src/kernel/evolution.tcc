@@ -17,6 +17,37 @@
 #if !defined(ULTRA_EVOLUTION_TCC)
 #define      ULTRA_EVOLUTION_TCC
 
+namespace internal
+{
+
+enum class phase {evolution, refinement};
+
+struct print_status
+{
+  phase run_phase {phase::evolution};
+
+  std::atomic<unsigned> planned_evolve_calls {0};
+  std::atomic<unsigned> completed_evolve_calls {0};
+
+  std::atomic<unsigned> to_be_refined {0};
+  std::atomic<unsigned> refined {0};
+
+  timer from_start {};
+  timer from_last_msg {};
+
+  void new_generation()
+  {
+    run_phase = phase::evolution;
+
+    planned_evolve_calls.store(0, std::memory_order_relaxed);
+    completed_evolve_calls.store(0, std::memory_order_relaxed);
+    to_be_refined.store(0, std::memory_order_relaxed);
+    refined.store(0, std::memory_order_relaxed);
+  }
+};
+
+}  // namespace internal
+
 ///
 /// Construct an evolution object.
 ///
@@ -61,59 +92,87 @@ bool evolution<E>::stop_condition() const
 }
 
 template<Evaluator E>
-void evolution<E>::print(phase p, message m, std::chrono::milliseconds elapsed,
-                         timer *from_last_msg) const
+void evolution<E>::print(message m, internal::print_status &ps) const
 {
   if (!emit_messages_ || log::reporting_level > log::lPAROUT)
     return;
 
   const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
 
-  const char *str_phase[] = {"evolution", "refinement"};
+  const std::string_view str_phase(ps.run_phase == internal::phase::evolution
+                                   ? "evolution" : "refinement");
+
+  const auto elapsed(ps.from_start.elapsed());
 
   if (m == message::summary)
   {
     ultraPAROUT << tags << std::setw(8) << lexical_cast<std::string>(elapsed)
                 << std::setw(8) << sum_.generation
-                << std::setw(12) << str_phase[as_integer(p)]
-                << ':' << std::setw(13) << sum_.best().fit;
+                << std::setw(12) << str_phase << ':'
+                << std::setw(13) << sum_.best().fit;
   }
   else  // message::status
   {
-    static const std::string clear_line(std::string(30, ' ')
-                                        + std::string(1, '\r'));
+    std::string perc;
+
+    if (ps.run_phase == internal::phase::evolution)
+    {
+      const auto planned(
+        ps.planned_evolve_calls.load(std::memory_order_relaxed));
+
+      if (planned)
+      {
+        const auto completed(
+          ps.completed_evolve_calls.load(std::memory_order_relaxed));
+
+        perc = std::to_string(100u * completed / planned) + "%";
+      }
+    }
+    else
+    {
+      const auto to_be_refined(
+        ps.to_be_refined.load(std::memory_order_relaxed));
+
+      if (to_be_refined)
+      {
+        const auto refined(
+          ps.refined.load(std::memory_order_relaxed));
+
+        perc = std::to_string(100u * refined / to_be_refined) + "%";
+      }
+    }
 
     if (log::reporting_level == log::lPAROUT)
     {
       static const std::string_view chrs("|/-\\");
 
-      std::cout << tags << chrs[elapsed.count() % chrs.size()]
-                << str_phase[as_integer(p)] << clear_line << std::flush;
+      std::cout << tags << chrs[elapsed.count() % chrs.size()] << ' '
+                << str_phase << ' ' << perc;
     }
     else if (log::reporting_level <= log::lSTDOUT)
     {
       const auto seconds(
-        std::max(
-          std::chrono::duration_cast<std::chrono::seconds>(elapsed),
-          1s).count());
-
-      double gph(3600.0 * sum_.generation / seconds);
-      if (gph > 2.0)
-        gph = std::floor(gph);
+        std::max(std::chrono::duration_cast<std::chrono::seconds>(elapsed),
+                 1s).count());
 
       std::cout << lexical_cast<std::string>(elapsed) << "  gen "
-                << sum_.generation << "  [" << pop_.layers();
+                << sum_.generation << ' ' << str_phase << ' ' << perc;
 
       if (sum_.generation)
-        std::cout << "x " << gph << "gph";
+      {
+        double gph(3600.0 * sum_.generation / seconds);
+        if (gph > 2.0)
+          gph = std::floor(gph);
 
-      std::cout << "] " << str_phase[as_integer(p)] << clear_line
-                << std::flush;
+        std::cout << "  [" << pop_.layers() << "x " << gph << "gph]";
+      }
     }
+
+    std::cout << "                            \r" << std::flush;
   }
 
-  if (from_last_msg)
-    from_last_msg->restart();
+  if (ps.run_phase == internal::phase::evolution)
+    ps.from_last_msg.restart();
 }
 
 ///
@@ -220,7 +279,7 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 ///
 /// Performs refinement on a subset of the population.
 ///
-/// \param[in] elapsed        elapsed time since the start of the search
+/// \param[in] ps console print-related data
 ///
 /// A fraction of individuals (controlled by `refinement_fraction`) is selected
 /// and refined via local optimisation.
@@ -229,7 +288,7 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 /// population.
 ///
 template<Evaluator E>
-void evolution<E>::perform_refinement(const timer &elapsed)
+void evolution<E>::perform_refinement(internal::print_status &ps)
 {
   if (!pop_.size())
     return;
@@ -239,8 +298,6 @@ void evolution<E>::perform_refinement(const timer &elapsed)
 
   if (issmall(refinement_fraction))
     return;
-
-  const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
 
   const auto base_n(
     static_cast<std::size_t>(refinement_fraction * pop_.size()));
@@ -252,18 +309,24 @@ void evolution<E>::perform_refinement(const timer &elapsed)
 
   const refiner optimiser(pop_.problem(), false);
 
+  ps.run_phase = internal::phase::refinement;
+  ps.to_be_refined.store(n, std::memory_order_relaxed);
+  ps.refined.store(0, std::memory_order_relaxed);
+
   for (auto c : coords)
   {
     auto &ind(pop_[c]);
-    print(phase::refinement, message::status, elapsed.elapsed());
+    print(message::status, ps);
 
     if (const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
         fit)
     {
       const scored_individual si(ind, *fit);
       if (sum_.update_if_better(si))
-        print(phase::refinement, message::summary, elapsed.elapsed());
+        print(message::summary, ps);
     }
+
+    ps.refined.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -302,9 +365,11 @@ summary<typename evolution<E>::individual_t,
 
   using namespace std::chrono_literals;
 
-  timer from_start, from_last_msg;
-
   ES<E> strategy(pop_.problem(), eva_);
+
+  scored_individual previous_best {sum_.best()};
+
+  internal::print_status ps;
 
   std::stop_source source;
 
@@ -320,12 +385,17 @@ summary<typename evolution<E>::individual_t,
 
       // We must use `safe_size()` because other threads might migrate
       // individuals in this subpopulation.
-      for (auto cycles(subpop_it->safe_size()); cycles; --cycles)
-        if (!stop_token.stop_requested())
-          evolve();
-    });
+      auto cycles(subpop_it->safe_size());
 
-  scored_individual previous_best(sum_.best());
+      ps.planned_evolve_calls.fetch_add(cycles, std::memory_order_relaxed);
+
+      while (cycles--)
+        if (!stop_token.stop_requested())
+        {
+          evolve();
+          ps.completed_evolve_calls.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
 
   const auto print_and_update_if_better(
     [&](auto candidate)
@@ -333,8 +403,7 @@ summary<typename evolution<E>::individual_t,
       if (previous_best < candidate)
       {
         previous_best = candidate;
-        print(phase::evolution, message::summary, from_start.elapsed(),
-              &from_last_msg);
+        print(message::summary, ps);
         return true;
       }
 
@@ -355,8 +424,9 @@ summary<typename evolution<E>::individual_t,
 
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
 
-    const auto subpops(pop_.range_of_layers());
+    ps.new_generation();
 
+    const auto subpops(pop_.range_of_layers());
     for (auto l(subpops.begin()); l != subpops.end(); ++l)
       pool.execute(evolve_subpop, l);
 
@@ -367,13 +437,12 @@ summary<typename evolution<E>::individual_t,
     // no new tasks will be enqueued during this loop.
     while (pool.has_pending_tasks())
     {
-      if (from_last_msg.elapsed() > 2s)
+      if (ps.from_last_msg.elapsed() > 2s)
       {
         use_sleep = true;
 
         if (!print_and_update_if_better(sum_.best()))
-          print(phase::evolution, message::status, from_start.elapsed(),
-                &from_last_msg);
+          print(message::status, ps);
       }
 
       if (!stop && (stop = stop_condition()))
@@ -391,7 +460,7 @@ summary<typename evolution<E>::individual_t,
     print_and_update_if_better(sum_.best());
 
     if (refinement_callback_)
-      perform_refinement(from_start);
+      perform_refinement(ps);
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)
@@ -402,13 +471,13 @@ summary<typename evolution<E>::individual_t,
       after_generation_callback_(pop_, sum_);
   }
 
-  sum_.elapsed = from_start.elapsed();
+  sum_.elapsed = ps.from_start.elapsed();
 
   if (emit_messages_)
   {
     ultraINFO << "Evolution completed at generation: " << sum_.generation
               << ". Elapsed time: "
-              << lexical_cast<std::string>(from_start.elapsed());
+              << lexical_cast<std::string>(ps.from_start.elapsed());
   }
 
   return sum_;

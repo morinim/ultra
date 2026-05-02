@@ -23,8 +23,15 @@
 #include "utility/thread_pool.h"
 #include "utility/timer.h"
 
+#include <atomic>
+
 namespace ultra
 {
+
+namespace internal
+{
+struct print_status;
+}
 
 ///
 /// The evolution class orchestrates the iterative improvement of a population
@@ -100,12 +107,10 @@ public:
 
 private:
   enum class message {status, summary};
-  enum class phase {evolution, refinement};
 
   // ---- Private methods ----
-  void perform_refinement(const timer &);
-  void print(phase, message, std::chrono::milliseconds,
-             timer * = nullptr) const;
+  void perform_refinement(internal::print_status &);
+  void print(message, internal::print_status &) const;
   [[nodiscard]] bool stop_condition() const;
 
   // ---- Data members ----
