@@ -473,4 +473,46 @@ TEST_CASE_FIXTURE(fixture1, "Default init / after_generation")
   }
 }
 
-}  // TEST_SUITE("EVOLUTION STRATEGY")
+TEST_CASE_FIXTURE(fixture1, "ALPS refinement depends on the number of layers")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+  alps_es strategy(prob, eva);
+
+  SUBCASE("Fewer than three layers")
+  {
+    prob.params.population.init_subgroups = 2;
+
+    layered_population<gp::individual> pop(prob);
+
+    CHECK(strategy.refinement_subgroup(pop) == nullptr);
+  }
+
+  SUBCASE("At least three layers")
+  {
+    prob.params.population.init_subgroups = 3;
+
+    layered_population<gp::individual> pop(prob);
+
+    CHECK(strategy.refinement_subgroup(pop) == &pop.back());
+  }
+}
+
+TEST_CASE("DE disables generic refinement")
+{
+  using namespace ultra;
+
+  auto dummy_eva = [](de::individual) { return 0.0; };
+
+  de::problem prob;
+  prob.params.population.init_subgroups = 4;
+
+  de_es strategy(prob, dummy_eva);
+
+  linear_population<de::individual> pop(prob);
+
+  CHECK(strategy.refinement_subgroup(pop) == nullptr);
+}
+
+}  // TEST_SUITE

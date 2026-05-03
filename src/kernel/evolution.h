@@ -109,7 +109,7 @@ private:
   enum class message {status, summary};
 
   // ---- Private methods ----
-  void perform_refinement(internal::print_status &);
+  template<Population P> void perform_refinement(P &, internal::print_status &);
   void print(message, internal::print_status &) const;
   [[nodiscard]] bool stop_condition() const;
 

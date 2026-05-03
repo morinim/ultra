@@ -174,6 +174,7 @@ TEST_CASE("Refinement callback dispatches by problem type")
 
     prob.params.refinement.fraction = 1.0;
     prob.params.evolution.generations = 1;
+    prob.params.population.init_subgroups = 3;
 
     s.run(1);
 
@@ -208,6 +209,7 @@ TEST_CASE("Refinement callback dispatches by problem type")
 
     prob.params.refinement.fraction = 1.0;
     prob.params.evolution.generations = 1;
+    prob.params.population.init_subgroups = 3;
 
     s.run(1);
 

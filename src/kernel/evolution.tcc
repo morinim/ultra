@@ -288,9 +288,10 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 /// population.
 ///
 template<Evaluator E>
-void evolution<E>::perform_refinement(internal::print_status &ps)
+template<Population P>
+void evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 {
-  if (!pop_.size())
+  if (!ref_pop.size())
     return;
 
   const auto refinement_fraction(pop_.problem().params.refinement.fraction);
@@ -300,12 +301,13 @@ void evolution<E>::perform_refinement(internal::print_status &ps)
     return;
 
   const auto base_n(
-    static_cast<std::size_t>(refinement_fraction * pop_.size()));
+    static_cast<std::size_t>(refinement_fraction * ref_pop.size()));
   const std::size_t n(std::max(base_n, 1uz));
 
-  std::vector<typename decltype(pop_)::coord> coords(n);
+  using ref_pop_t = std::remove_cvref_t<decltype(ref_pop)>;
+  std::vector<typename ref_pop_t::coord> coords(n);
 
-  std::ranges::generate(coords, [this] { return random::coord(pop_); });
+  std::ranges::generate(coords, [&] { return random::coord(ref_pop); });
 
   const refiner optimiser(pop_.problem(), false);
 
@@ -315,7 +317,7 @@ void evolution<E>::perform_refinement(internal::print_status &ps)
 
   for (auto c : coords)
   {
-    auto &ind(pop_[c]);
+    auto &ind(ref_pop[c]);
     print(message::status, ps);
 
     if (const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
@@ -367,7 +369,7 @@ summary<typename evolution<E>::individual_t,
 
   ES<E> strategy(pop_.problem(), eva_);
 
-  scored_individual previous_best {sum_.best()};
+  scored_individual previous_best(sum_.best());
 
   internal::print_status ps;
 
@@ -460,7 +462,8 @@ summary<typename evolution<E>::individual_t,
     print_and_update_if_better(sum_.best());
 
     if (refinement_callback_)
-      perform_refinement(ps);
+      if (auto *ref_pop = strategy.refinement_subgroup(pop_))
+        perform_refinement(*ref_pop, ps);
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)

@@ -45,6 +45,30 @@ bool evolution_strategy<E>::valid_layer(P &pop, typename P::layer_iter iter)
 }
 
 ///
+/// Returns the population subgroup eligible for refinement.
+///
+/// \param[in,out] pop population managed by the evolutionary process
+/// \return            pointer to the population subgroup to refine, or
+///                    `nullptr` to skip refinement
+///
+/// This hook lets an evolutionary strategy restrict refinement to a specific
+/// part of the population.
+///
+/// The returned pointer is non-owning and must refer to a population-like
+/// object whose lifetime is tied to `pop`. Returning `nullptr` means that the
+/// strategy currently has no suitable refinement candidates and refinement
+/// should be skipped.
+///
+/// The default implementation returns the whole population.
+///
+template<Evaluator E>
+template<Population P>
+P *evolution_strategy<E>::refinement_subgroup(P &pop) const noexcept
+{
+  return &pop;
+}
+
+///
 /// Performs post-generation bookkeeping.
 ///
 /// \tparam P population type
@@ -171,6 +195,25 @@ template<Population P>
 void alps_es<E>::init(P &pop) const
 {
   alps::set_age(pop);
+}
+
+///
+/// Returns the ALPS layer eligible for refinement.
+///
+/// \param[in,out] pop layered population managed by ALPS
+/// \return pointer to the last layer, or `nullptr` when refinement should be
+///         skipped
+///
+/// Refinement is deliberately disabled while the population has fewer than
+/// three layers. In that phase ALPS is still dominated by young layers, whose
+/// main purpose is exploration and periodic injection of fresh genetic
+/// material.
+///
+template<Evaluator E>
+template<LayeredPopulation P>
+auto *alps_es<E>::refinement_subgroup(P &pop) const noexcept
+{
+  return pop.layers() < 3 ? nullptr : &pop.back();
 }
 
 ///
