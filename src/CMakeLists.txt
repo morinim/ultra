@@ -27,8 +27,7 @@ endif()
 
 # The general idea is to use the default values and overwrite them only for
 # specific, well experimented environments.
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU"
-    OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
   set(NO_WARN_FLAGS "-w")
 

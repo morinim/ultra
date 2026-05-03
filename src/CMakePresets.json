@@ -1,110 +1,135 @@
 {
-	"version": 3,
-	"configurePresets":
-	[
-		{
-			"name": "base",
-			"hidden": true,
-			"generator": "Ninja",
-			"binaryDir": "${sourceParentDir}/build/",
-			"cacheVariables":
-			{
-                "CMAKE_EXE_LINKER_FLAGS": "$env{SPECIFIC_LINKER_FLAGS}",
-				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s",
-				"OTHER_FLAGS": "-pipe;-march=native;$env{SPECIFIC_OTHER_FLAGS}",
-				"WARN_FLAGS": "-Wall;-Wextra;-Winvalid-pch;-Wpedantic;-Wformat=2;-Wfloat-equal;-Wshadow;-Wdouble-promotion;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wextra-semi;$env{SPECIFIC_WARN_FLAGS}"
-			},
-			"warnings":
-			{
-				"dev": true
-			}
-		},
+    "version": 3,
+    "configurePresets": [
         {
-            "name": "sanitize_address",
-            "environment":
-            {
-                "SPECIFIC_LINKER_FLAGS": "-fsanitize=address",
-                "SPECIFIC_OTHER_FLAGS": "-fsanitize=address"
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceParentDir}/build/",
+            "warnings":
+			{
+                "dev": true
             }
         },
-		{
-			"name": "sanitize_thread",
-			"environment":
+        {
+            "name": "gcc_clang_base",
+            "hidden": true,
+            "inherits": "base",
+            "cacheVariables":
 			{
-				"SPECIFIC_LINKER_FLAGS": "-fsanitize=thread",
-				"SPECIFIC_OTHER_FLAGS": "-fsanitize=thread"
-			}
-		},
-		{
-			"name": "gcc",
-			"inherits": "base",
-			"environment":
+                "CMAKE_EXE_LINKER_FLAGS": "$env{COMPILER_LINK_FLAGS} $env{SANITISER_FLAGS}",
+                "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s",
+                "OTHER_FLAGS": "-pipe;-march=native;$env{COMPILER_OTHER_FLAGS};$env{SANITISER_FLAGS}",
+                "WARN_FLAGS": "-Wall;-Wextra;-Wpedantic;-Wformat=2;-Wshadow;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wextra-semi;-Wrange-loop-analysis;-Wmove;-Wdeprecated-copy;$env{COMPILER_WARN_FLAGS}"
+            }
+        },
+        {
+            "name": "sanitize_address",
+            "hidden": true,
+            "environment":
+			{
+                "SANITISER_FLAGS": "-fsanitize=address"
+            }
+        },
+        {
+            "name": "sanitize_thread",
+            "hidden": true,
+            "environment":
+			{
+                "SANITISER_FLAGS": "-fsanitize=thread"
+            }
+        },
+        {
+            "name": "gcc",
+            "inherits": "gcc_clang_base",
+            "environment":
 			{
                 "CC": "gcc",
-				"CXX": "g++",
-				"SPECIFIC_WARN_FLAGS": "-Wlogical-op;-Wduplicated-cond;-Wduplicated-branches;-Wstringop-truncation"
-			}
-		},
-		{
-			"name": "gcc_debug",
-			"inherits": "gcc",
-			"cacheVariables":
+                "CXX": "g++",
+                "COMPILER_WARN_FLAGS": "-Wlogical-op;-Wduplicated-cond;-Wduplicated-branches;-Wstringop-truncation"
+            }
+        },
+        {
+            "name": "gcc_debug",
+            "inherits": "gcc",
+            "cacheVariables":
 			{
-				"CMAKE_BUILD_TYPE": "Debug"
-			}
-		},
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
         {
             "name": "gcc_sanitize_address",
-            "inherits": ["gcc", "sanitize_address"]
+            "inherits": ["gcc", "sanitize_address"],
+            "cacheVariables":
+			{
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         },
         {
             "name": "gcc_sanitize_thread",
             "inherits": ["gcc", "sanitize_thread"],
             "cacheVariables":
 			{
-				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
-			}
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         },
         {
             "name": "gcc_debug_sanitize_thread",
-            "inherits": ["gcc_debug", "sanitize_thread"]
+            "inherits": ["gcc", "sanitize_thread"],
+            "cacheVariables":
+			{
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
         },
-		{
-			"name": "clang",
-			"inherits": "base",
-			"environment":
+        {
+            "name": "clang",
+            "inherits": "gcc_clang_base",
+            "environment":
 			{
                 "CC": "clang",
-				"CXX": "clang++ --stdlib=libc++",
-				"SPECIFIC_WARN_FLAGS": "-Wdocumentation;-Warc-repeated-use-of-weak;-Wbitfield-enum-conversion;-Wclass-varargs;-Wconditional-uninitialized;-Wthread-safety;-Wconsumed;-Wdirect-ivar-access;-Wexpansion-to-defined;-Winconsistent-missing-destructor-override;-Winfinite-recursion;-Wloop-analysis;-Wmethod-signatures;-Wmismatched-tags;-Wnonportable-system-include-path;-Wnull-pointer-arithmetic;-Wover-aligned;-Woverriding-method-mismatch;-Wpch-date-time;-Wpragmas;-Wreserved-user-defined-literal;-Wretained-language-linkage;-Wsemicolon-before-method-body;-Wsometimes-uninitialized;-Wstring-conversion;-Wsuper-class-method-mismatch;-Wtautological-compare;-Wundefined-reinterpret-cast;-Wunreachable-code;-Wcomma;-Wduplicate-method-arg;-Wduplicate-method-match;-Wdynamic-exception-spec;-Wempty-translation-unit;-Wexplicit-ownership-type;-Wignored-qualifiers;-Wredundant-parens;-Wstatic-in-inline;-Wzero-length-array;-Wunneeded-internal-declaration"
-			}
-		},
-		{
-			"name": "clang_debug",
-			"inherits": "clang",
-			"cacheVariables":
+                "CXX": "clang++",
+                "COMPILER_OTHER_FLAGS": "-stdlib=libc++",
+                "COMPILER_LINK_FLAGS": "-stdlib=libc++",
+                "COMPILER_WARN_FLAGS": "-Wdocumentation;-Wbitfield-enum-conversion;-Wconditional-uninitialized;-Wexpansion-to-defined;-Winfinite-recursion;-Wloop-analysis;-Wmismatched-tags;-Wnonportable-system-include-path;-Wnull-pointer-arithmetic;-Wover-aligned;-Wpch-date-time;-Wpragmas;-Wreserved-user-defined-literal;-Wsometimes-uninitialized;-Wstring-conversion;-Wtautological-compare;-Wundefined-reinterpret-cast;-Wunreachable-code;-Wcomma;-Wempty-translation-unit;-Wignored-qualifiers;-Wredundant-parens;-Wzero-length-array;-Wunneeded-internal-declaration"
+            }
+        },
+        {
+            "name": "clang_debug",
+            "inherits": "clang",
+            "cacheVariables":
 			{
-				"CMAKE_BUILD_TYPE": "Debug"
-			}
-		},
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
         {
             "name": "clang_sanitize_address",
-            "inherits": ["clang", "sanitize_address"]
+            "inherits": ["clang", "sanitize_address"],
+            "cacheVariables":
+			{
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         },
         {
             "name": "clang_sanitize_thread",
             "inherits": ["clang", "sanitize_thread"],
             "cacheVariables":
 			{
-				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
-			}
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         },
-		{
-			"name": "msvc",
-			"cacheVariables":
+        {
+            "name": "msvc",
+            "inherits": "base",
+            "condition":
 			{
-				"WARN_FLAGS": "/W3"
-			}
-		}
-	]
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables":
+			{
+                "WARN_FLAGS": "/W3"
+            }
+        }
+    ]
 }
