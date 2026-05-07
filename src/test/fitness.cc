@@ -308,7 +308,7 @@ TEST_CASE("Distance")
     const std::vector a{1, 2, 3};
     const std::vector b{3, 2, 1};
 
-    CHECK(distance(a, b) == doctest::Approx(4.0));
+    CHECK(ultra::distance(a, b) == doctest::Approx(4.0));
   }
 }
 
@@ -326,8 +326,8 @@ TEST_CASE("Generic multidimensional fitness")
   CHECK(!dominating(f1, f3));
   CHECK(!dominating(f3, f1));
 
-  CHECK(distance(f1, f2) == doctest::Approx(1.0));
-  CHECK(distance(f1, f3) == doctest::Approx(2.0));
+  CHECK(ultra::distance(f1, f2) == doctest::Approx(1.0));
+  CHECK(ultra::distance(f1, f3) == doctest::Approx(2.0));
 
   CHECK(almost_equal(f1, f1));
   CHECK(!almost_equal(f1, f2));

@@ -141,7 +141,7 @@ template<MultiDimFitness F>
 
   return std::transform_reduce(
     std::ranges::begin(f1), std::ranges::end(f1), std::ranges::begin(f2), 0.0,
-    std::plus{}, [](auto a, auto b) { return distance(a, b); });
+    std::plus{}, [](auto a, auto b) { return ultra::distance(a, b); });
 }
 
 ///
