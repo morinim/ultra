@@ -29,7 +29,6 @@ namespace ultra
 ///
 fitnd::fitnd(with_size s, value_type v) : vect_(s(), v)
 {
-  Expects(s());
 }
 
 ///
@@ -120,17 +119,17 @@ fitnd::const_iterator fitnd::end() const noexcept
 ///
 bool load(std::istream &in, fitnd *f)
 {
-  std::string line;
-  if (!std::getline(in >> std::ws, line))
+  std::size_t n;
+  if (!(in >> n))
     return false;
 
-  std::istringstream line_in(line);
+  fitnd tmp{with_size(n)};
 
-  fitnd tmp;
-  for (fitnd::value_type elem; load_float_from_stream(line_in, &elem);)
-    tmp.vect_.push_back(elem);
+  for (auto &v : tmp)
+    if (!load_float_from_stream(in, &v))
+      return false;
 
-  *f = tmp;
+  *f = std::move(tmp);
   return true;
 }
 
@@ -177,22 +176,47 @@ std::istream &operator>>(std::istream &in, fitnd &f)
 {
   in >> std::ws;
 
-  std::string values;
-
   if (in.peek() == '(')
   {
-    in.get();  // discards the open parenthesis
+    in.get();  // discards '('
 
-    std::getline(in >> std::ws, values, ')');
+    std::string values;
+    if (!std::getline(in >> std::ws, values, ')'))
+    {
+      in.setstate(std::ios::failbit);
+      return in;
+    }
+
     std::ranges::replace(values, ',', ' ');
 
-  }
-  else
-    in >> values;
+    std::istringstream ss(values);
 
-  fitnd tmp;
-  if (std::istringstream ss(values); load(ss, &tmp))
-    f = tmp;
+    fitnd::values_t tmp;
+    for (;;)
+    {
+      ss >> std::ws;
+      if (ss.eof())
+        break;
+
+      fitnd::value_type value;
+      if (!load_float_from_stream(ss, &value))
+      {
+        in.setstate(std::ios::failbit);
+        return in;
+      }
+
+      tmp.push_back(value);
+    }
+
+    f = fitnd(std::move(tmp));
+    return in;
+  }
+
+  fitnd::value_type value;
+  if (load_float_from_stream(in, &value))
+    f = fitnd{value};
+  else
+    in.setstate(std::ios::failbit);
 
   return in;
 }

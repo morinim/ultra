@@ -101,20 +101,52 @@ TEST_CASE("Serialisation")
 {
   using namespace ultra;
 
-  const fitnd f{0.0, 1.0, 2.0,
-                std::numeric_limits<fitnd::value_type>::lowest(),
-                std::numeric_limits<fitnd::value_type>::infinity()};
-
   std::stringstream ss;
 
-  CHECK(save(ss, f));
+  SUBCASE("Round-trip")
+  {
+    const fitnd f{0.0, 1.0, 2.0,
+                  std::numeric_limits<fitnd::value_type>::lowest(),
+                  std::numeric_limits<fitnd::value_type>::infinity()};
 
-  fitnd f2;
-  CHECK(f2.size() == 0);
-  CHECK(load(ss, &f2));
+    CHECK(save(ss, f));
 
-  CHECK(f2.size() == f.size());
-  CHECK(f == f2);
+    fitnd f2;
+    CHECK(f2.size() == 0);
+    CHECK(load(ss, &f2));
+
+    CHECK(f2.size() == f.size());
+    CHECK(f == f2);
+  }
+
+  SUBCASE("Length")
+  {
+    CHECK(save(ss, fitnd{1.0, 2.0, 3.0}));
+    CHECK(ss.str().starts_with("3 "));
+  }
+
+  SUBCASE("Composability")
+  {
+    CHECK(save(ss, fitnd{1.0, 2.0, 3.0}));
+    ss << ' ';
+    CHECK(save(ss, fitnd{4.0, 5.0}));
+
+    fitnd a, b;
+    CHECK(load(ss, &a));
+    CHECK(load(ss, &b));
+
+    CHECK(almost_equal(a, fitnd{1.0, 2.0, 3.0}));
+    CHECK(almost_equal(b, fitnd{4.0, 5.0}));
+  }
+
+  SUBCASE("Failed load doesn't modify destination")
+  {
+    ss.str("3 1 2 invalid");
+
+    fitnd f{9.0, 9.0};
+    CHECK(!load(ss, &f));
+    CHECK(f == fitnd{9.0, 9.0});
+  }
 }
 
 TEST_CASE("Input/Output")
@@ -143,24 +175,43 @@ TEST_CASE("Input/Output")
   {
     const auto val(std::numeric_limits<fitnd::value_type>::lowest());
     const fitnd f{val};
-    ss << f;
 
-    // Value between parentheses.
-    const auto str(ss.str());
-    CHECK(str.front() == '(');
-    CHECK(str.back() == ')');
+    SUBCASE("Value between parentheses")
+    {
+      ss << f;
 
-    fitnd f1;
-    ss >> f1;
-    CHECK(f1.size() == f.size());
-    CHECK(almost_equal(f1, f));
+      const auto str(ss.str());
+      CHECK(str.front() == '(');
+      CHECK(str.back() == ')');
 
-    // Value without parentheses.
-    ss << val;
-    fitnd f2;
-    ss >> f2;
-    CHECK(f2.size() == f.size());
-    CHECK(almost_equal(f2, f));
+      fitnd f1;
+      ss >> f1;
+
+      CHECK(f1.size() == f.size());
+      CHECK(almost_equal(f1, f));
+    }
+
+    SUBCASE("Value without parentheses")
+    {
+      ss << val;
+
+      fitnd f1;
+      ss >> f1;
+
+      CHECK(f1.size() == f.size());
+      CHECK(almost_equal(f1, f));
+    }
+
+    SUBCASE("Invalid input does not modify destination")
+    {
+      ss.str("(1, invalid)");
+
+      fitnd f1(f);
+
+      const bool result(ss >> f1);
+      CHECK(!result);
+      CHECK(f1 == f);
+    }
   }
 }
 

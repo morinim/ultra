@@ -171,20 +171,13 @@ template<MultiDimFitness F>
 requires std::floating_point<std::ranges::range_value_t<F>>
 [[nodiscard]] bool save(std::ostream &out, const F &f)
 {
-  const auto sup(std::ranges::end(f));
+  out << std::ranges::size(f);
 
-  if (auto it(std::ranges::begin(f)); it != sup)
+  for (auto v : f)
   {
-    save_float_to_stream(out, *it);
-
-    while (++it != sup)
-    {
-      out << ' ';
-      save_float_to_stream(out, *it);
-    }
+    out << ' ';
+    save_float_to_stream(out, v);
   }
-
-  out << '\n';
 
   return out.good();
 }
