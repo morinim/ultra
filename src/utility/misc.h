@@ -470,8 +470,8 @@ template<std::ranges::contiguous_range C>
 ///
 /// \param[in] v1 a floating point number
 /// \param[in] v2 a floating point number
-/// \param[in] e  max relative error. If we want 99.999% accuracy then we
-///               should pass `0.0001`
+/// \param[in] e  max relative error. For example, `0.0001` means a relative
+///               tolerance of `0.01%`
 /// \return       `true` if the difference between `v1` and `v2` is *small*
 ///               compared to their magnitude
 ///
@@ -482,10 +482,17 @@ template<std::ranges::contiguous_range C>
 template<std::floating_point T>
 [[nodiscard]] bool almost_equal(T v1, T v2, T e = 0.0001)
 {
-  // Handles special values of `v1` / `v2 (infinity, Nan...).
+  Expects(e >= T(0));
+
+  // Handles special values of `v1` / `v2` (infinity, NaN...).
   // `std::equal_to` (usually) avoids warnings with floating point comparison.
   if (std::equal_to()(v1, v2))
     return true;
+
+  // Equal infinities have already been handled above. Any remaining case
+  // involving infinity or NaN is not almost equal.
+  if (!std::isfinite(v1) || !std::isfinite(v2))
+    return false;
 
   const T diff(std::abs(v1 - v2));
 
@@ -496,10 +503,6 @@ template<std::floating_point T>
 
   v1 = std::abs(v1);
   v2 = std::abs(v2);
-
-  // Handles the `v1 == +inf` / `v2 == -inf` case.
-  if (std::equal_to()(v1, v2) && std::equal_to()(diff, v1))
-    return false;
 
   // In order to get consistent results, we always compare the difference to
   // the largest of the two numbers.
@@ -547,7 +550,7 @@ std::ostream &save_float_to_stream(std::ostream &out, T i)
 /// \return        `true` if the operation is successful
 ///
 /// Supports both decimal and hexadecimal floating point expressions, as well
-/// as infinity and Nan.
+/// as infinity and NaN.
 ///
 template<std::floating_point T>
 bool load_float_from_stream(std::istream &in, T *i)
@@ -562,13 +565,12 @@ bool load_float_from_stream(std::istream &in, T *i)
   str = trim(str);
 
   char *end;
-  const double val(std::strtod(str.c_str(), &end));
+  const auto val(std::strtold(str.c_str(), &end));
 
-  if (end == str.c_str() || *end != '\0')  // if no conversion can be
-    return false;                          // performed, `end` is set
-                                           // to `str.c_str()`
+  if (end == str.c_str() || *end != '\0')  // if no conversion can be performed
+    return false;                          // `end` is set to `str.c_str()`
 
-  *i = val;
+  *i = static_cast<T>(val);
   return true;
 }
 
