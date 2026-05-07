@@ -13,12 +13,17 @@
 #if !defined(ULTRA_FITNESS_H)
 #define      ULTRA_FITNESS_H
 
-#include <cmath>
-#include <numeric>
-#include <vector>
-
 #include "utility/assert.h"
 #include "utility/misc.h"
+
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <iterator>
+#include <numeric>
+#include <ranges>
+#include <type_traits>
+#include <vector>
 
 namespace ultra
 {
@@ -53,11 +58,24 @@ namespace ultra
 /// all you have to remember when dealing with examples/problems expressed
 /// in the other notation.
 ///
+/// \remark
+/// This intentionally excludes `bool`, since `bool{-1} < bool{0}` is
+/// equivalent to `true < false`, which is `false`.
+///
 template<class F> concept Fitness =
   OrderedArithmeticType<F> && requires { requires F{-1} < F{0}; };
 
+/// \note
+/// Generic `MultiDimFitness` algorithms use `std::ranges::begin`,
+/// `std::ranges::end`, and `std::ranges::size` instead of `.begin()`,
+/// `.end()`, and `.size()`.
+///
+/// This keeps the implementation aligned with the concept: `MultiDimFitness`
+/// requires a sized range of scalar fitness values, not necessarily a
+/// container exposing member iterator functions.
 template<class F> concept MultiDimFitness =
-  Fitness<F> && std::ranges::sized_range<F>;
+  std::ranges::sized_range<F> && std::ranges::sized_range<const F>
+  && Fitness<std::ranges::range_value_t<F>>;
 
 ///
 /// Tag representing size.
@@ -97,13 +115,14 @@ public:
   fitnd(values_t);
   fitnd(with_size, value_type = std::numeric_limits<value_type>::lowest());
 
-  [[nodiscard]] std::size_t size() const;
+  [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] value_type operator[](std::size_t) const;
   [[nodiscard]] value_type &operator[](std::size_t);
 
-  [[nodiscard]] iterator begin();
-  [[nodiscard]] const_iterator begin() const;
-  [[nodiscard]] const_iterator end() const;
+  [[nodiscard]] iterator begin() noexcept;
+  [[nodiscard]] iterator end() noexcept;
+  [[nodiscard]] const_iterator begin() const noexcept;
+  [[nodiscard]] const_iterator end() const noexcept;
 
   [[nodiscard]] friend auto operator<=>(const fitnd &, const fitnd &) = default;
 
@@ -127,6 +146,7 @@ private:
 [[nodiscard]] fitnd operator*(fitnd, const fitnd &);
 [[nodiscard]] fitnd operator/(fitnd, const fitnd &);
 [[nodiscard]] fitnd operator*(fitnd, fitnd::value_type);
+[[nodiscard]] fitnd operator*(fitnd::value_type, fitnd);
 [[nodiscard]] fitnd operator/(fitnd, fitnd::value_type);
 [[nodiscard]] fitnd operator-(fitnd);
 
