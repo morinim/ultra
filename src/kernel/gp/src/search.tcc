@@ -28,31 +28,18 @@ struct no_oracle
 namespace internal
 {
 
-template<class Eva, class P>
-[[nodiscard]] auto get_oracle(Eva &&eva, const P &prg)
-{
-  if constexpr (requires { eva.oracle(prg); })
-    return std::forward<Eva>(eva).oracle(prg);
-  else
-    return no_oracle {};
-}
-
 template<class O>
-[[nodiscard]] std::unique_ptr<basic_oracle> to_basic_oracle(O &&o)
+[[nodiscard]] std::unique_ptr<basic_oracle> make_basic_oracle(O &&o)
 {
   using oracle_t = std::remove_cvref_t<O>;
-  static_assert(std::is_base_of_v<basic_oracle, oracle_t>);
-  return std::make_unique<oracle_t>(std::forward<O>(o));
-}
 
-template<class O>
-[[nodiscard]] std::unique_ptr<basic_oracle> wrap_oracle(O &&o)
-{
-  using oracle_t = std::remove_cvref_t<O>;
   if constexpr (std::same_as<oracle_t, no_oracle>)
     return nullptr;
   else
-    return to_basic_oracle(std::forward<O>(o));
+  {
+    static_assert(std::derived_from<oracle_t, basic_oracle>);
+    return std::make_unique<oracle_t>(std::forward<O>(o));
+  }
 }
 
 }  // namespace internal
@@ -95,7 +82,12 @@ basic_search<ES, E>::basic_search(problem &p, metric_flags m)
 template<template<class> class ES, Evaluator E>
 auto basic_search<ES, E>::oracle(const individual_t &ind) const
 {
-  return internal::get_oracle(this->eva_.core(), ind);
+  const auto &eva_core(this->eva_.core());
+
+  if constexpr (requires { eva_core.oracle(ind); })
+    return eva_core.oracle(ind);
+  else
+    return no_oracle();
 }
 
 ///
@@ -230,8 +222,24 @@ bool basic_search<ES, E>::is_valid() const
 }
 
 template<Individual P>
-search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
+search<P>::search(problem &p, metric_flags m)
+  : engine_(make_engine(p, m)), prob_(p), classification_(p.classification())
 {
+}
+
+template<Individual P>
+typename search<P>::engine_t search<P>::make_engine(problem &p, metric_flags m)
+{
+  if (p.classification())
+    return engine_t(std::in_place_type<class_search_t>, p, m);
+
+  return engine_t(std::in_place_type<reg_search_t>, p, m);
+}
+
+template<Individual P>
+bool search<P>::problem_type_unchanged() const noexcept
+{
+  return classification_ == prob_.classification();
 }
 
 ///
@@ -244,7 +252,7 @@ search<P>::search(problem &p, metric_flags m) : prob_(p), metrics_(m)
 template<Individual P>
 search<P> &search<P>::stop_source(std::stop_source ss)
 {
-  stop_source_ = ss;
+  std::visit([&](auto &s) { s.stop_source(ss); }, engine_);
   return *this;
 }
 
@@ -264,14 +272,14 @@ search<P> &search<P>::logger(search_log &sl)
 {
   Expects(sl.is_valid());
 
-  search_log_ = &sl;
+  std::visit([&](auto &s) { s.logger(sl); }, engine_);
   return *this;
 }
 
 template<Individual P>
 search<P> &search<P>::messages(bool m) noexcept
 {
-  emit_messages_ = m;
+  std::visit([&](auto &s) { s.messages(m); }, engine_);
   return *this;
 }
 
@@ -288,7 +296,7 @@ search<P> &search<P>::messages(bool m) noexcept
 template<Individual P>
 search<P> &search<P>::tag(const std::string &t)
 {
-  tag_ = t;
+  std::visit([&](auto &s) { s.tag(t); }, engine_);
   return *this;
 }
 
@@ -296,31 +304,9 @@ template<Individual P>
 search_stats<P, typename search<P>::fitness_t> search<P>::run(
   unsigned n, const model_measurements<fitness_t> &threshold)
 {
-  const auto search_scheme(
-    [&]<Evaluator E>(const ultra::refinement_callback_t<evaluator_proxy<E>> &r)
-  {
-    basic_search<alps_es, E> alps(prob_, metrics_);
+  Expects(problem_type_unchanged());
 
-    if (vs_)
-      alps.validation_strategy(*vs_);
-    if (search_log_)
-      alps.logger(*search_log_);
-    alps.after_generation(after_generation_callback_)
-        .messages(emit_messages_)
-        .on_training_new_best(on_training_new_best_callback_)
-        .refinement(r)
-        .stop_source(stop_source_)
-        .tag(tag_);
-
-    return alps.run(n, threshold);
-  });
-
-  if (prob_.classification())
-    return search_scheme.template operator()<class_evaluator_t>(
-      class_refinement_callback_);
-  else
-    return search_scheme.template operator()<reg_evaluator_t>(
-      reg_refinement_callback_);
+  return std::visit([&](auto &s) { return s.run(n, threshold); }, engine_);
 }
 
 ///
@@ -389,15 +375,29 @@ search<P> &search<P>::refinement(F &&f)
 
   auto callback(std::forward<F>(f));
 
-  if constexpr (class_ok)
-    class_refinement_callback_ = callback;
-  else
-    class_refinement_callback_ = {};
+  std::visit(
+    [&](auto &s)
+    {
+      using search_t = std::remove_cvref_t<decltype(s)>;
 
-  if constexpr (reg_ok)
-    reg_refinement_callback_ = callback;
-  else
-    reg_refinement_callback_ = {};
+      if constexpr (std::same_as<search_t, class_search_t>)
+      {
+        if constexpr (class_ok)
+          s.refinement(callback);
+        else
+          s.refinement({});
+      }
+      else
+      {
+        static_assert(std::same_as<search_t, reg_search_t>);
+
+        if constexpr (reg_ok)
+          s.refinement(callback);
+        else
+          s.refinement({});
+      }
+    },
+    engine_);
 
   return *this;
 }
@@ -423,12 +423,11 @@ search<P> &search<P>::refinement(F &&f)
 template<Individual P>
 std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 {
-  if (prob_.classification())
-    return internal::wrap_oracle(
-      internal::get_oracle(class_evaluator_t(prob_.data), prg));
-  else
-    return internal::wrap_oracle(
-      internal::get_oracle(reg_evaluator_t(prob_.data), prg));
+  Expects(problem_type_unchanged());
+
+  return std::visit(
+    [&](const auto &s) { return internal::make_basic_oracle(s.oracle(prg)); },
+    engine_);
 }
 
 ///
@@ -441,7 +440,7 @@ std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
 template<Individual P>
 search<P> &search<P>::after_generation(after_generation_callback_t f)
 {
-  after_generation_callback_ = std::move(f);
+  std::visit([&](auto &s) { s.after_generation(std::move(f)); }, engine_);
   return *this;
 }
 
@@ -455,7 +454,7 @@ search<P> &search<P>::after_generation(after_generation_callback_t f)
 template<Individual P>
 search<P> &search<P>::on_training_new_best(on_training_new_best_callback_t f)
 {
-  on_training_new_best_callback_ = std::move(f);
+  std::visit([&](auto &s) { s.on_training_new_best(std::move(f)); }, engine_);
   return *this;
 }
 
@@ -469,7 +468,10 @@ template<Individual P>
 template<ValidationStrategy V, class... Args>
 search<P> &search<P>::validation_strategy(Args && ...args)
 {
-  vs_ = std::make_unique<V>(std::forward<Args>(args)...);
+  std::visit(
+    [&](auto &s)
+    { s.template validation_strategy<V>(std::forward<Args>(args)...); },
+    engine_);
   return *this;
 }
 
