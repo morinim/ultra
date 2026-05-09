@@ -39,10 +39,11 @@ concept Population =
   && Individual<std::ranges::range_value_t<P>>;
 
 template<class P>
-concept LayeredPopulation = Population<P> && requires(const P &p)
+concept LayeredPopulation = Population<P> && requires(P &p)
 {
   { p.layers() } -> std::integral;
   { p.range_of_layers() } -> std::ranges::range;
+  { p.back() };
 };
 
 template<class P>

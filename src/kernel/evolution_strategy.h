@@ -77,6 +77,9 @@ public:
   ///
   template<Population P> void init(P &) const {}
 
+  template<Population P>
+  [[nodiscard]] P *refinement_subgroup(P &) const noexcept;
+
   /// Perform post-generation maintenance.
   ///
   /// This hook is called once per generation, after all evolutionary steps
@@ -159,6 +162,10 @@ public:
     const evolution_status<individual_t, fitness_t> &) const;
 
   template<Population P> void init(P &) const;
+
+  template<LayeredPopulation P>
+  [[nodiscard]] auto *refinement_subgroup(P &) const noexcept;
+
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
@@ -206,6 +213,9 @@ public:
   using typename de_es::evolution_strategy::individual_t;
 
   de_es(const problem &, E &);
+
+  template<Population P>
+  [[nodiscard]] P *refinement_subgroup(P &) const noexcept { return nullptr; }
 
   template<Population P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,

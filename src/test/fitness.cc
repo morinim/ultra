@@ -10,13 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <sstream>
-#include <vector>
-
 #include "kernel/fitness.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <sstream>
+#include <vector>
 
 TEST_SUITE("FITNESS")
 {
@@ -27,7 +27,13 @@ TEST_CASE("Concepts")
 
   static_assert(Fitness<double>);
   static_assert(Fitness<int>);
-  static_assert(Fitness<fitnd>);
+
+  static_assert(MultiDimFitness<fitnd>);
+  static_assert(MultiDimFitness<std::vector<double>>);
+  static_assert(MultiDimFitness<std::vector<int>>);
+
+  static_assert(!MultiDimFitness<double>);
+  static_assert(!MultiDimFitness<std::vector<std::string>>);
 }
 
 TEST_CASE("Comparison")
@@ -75,24 +81,72 @@ TEST_CASE("Comparison")
           fitnd{std::numeric_limits<fitnd::value_type>::infinity()}));
 }
 
+TEST_CASE("Range interface")
+{
+  using namespace ultra;
+
+  fitnd f{1.0, 2.0, 3.0};
+
+  CHECK(std::ranges::size(f) == 3);
+
+  std::ranges::fill(f, 4.0);
+  CHECK(f == fitnd{4.0, 4.0, 4.0});
+
+  const fitnd cf{1.0, 2.0, 3.0};
+  CHECK(std::accumulate(std::ranges::begin(cf), std::ranges::end(cf), 0.0)
+        == doctest::Approx(6.0));
+}
+
 TEST_CASE("Serialisation")
 {
   using namespace ultra;
 
-  const fitnd f{0.0, 1.0, 2.0,
-                std::numeric_limits<fitnd::value_type>::lowest(),
-                std::numeric_limits<fitnd::value_type>::infinity()};
-
   std::stringstream ss;
 
-  CHECK(save(ss, f));
+  SUBCASE("Round-trip")
+  {
+    const fitnd f{0.0, 1.0, 2.0,
+                  std::numeric_limits<fitnd::value_type>::lowest(),
+                  std::numeric_limits<fitnd::value_type>::infinity()};
 
-  fitnd f2;
-  CHECK(f2.size() == 0);
-  CHECK(load(ss, &f2));
+    CHECK(save(ss, f));
 
-  CHECK(f2.size() == f.size());
-  CHECK(f == f2);
+    fitnd f2;
+    CHECK(f2.size() == 0);
+    CHECK(load(ss, &f2));
+
+    CHECK(f2.size() == f.size());
+    CHECK(f == f2);
+  }
+
+  SUBCASE("Length")
+  {
+    CHECK(save(ss, fitnd{1.0, 2.0, 3.0}));
+    CHECK(ss.str().starts_with("3 "));
+  }
+
+  SUBCASE("Composability")
+  {
+    CHECK(save(ss, fitnd{1.0, 2.0, 3.0}));
+    ss << ' ';
+    CHECK(save(ss, fitnd{4.0, 5.0}));
+
+    fitnd a, b;
+    CHECK(load(ss, &a));
+    CHECK(load(ss, &b));
+
+    CHECK(almost_equal(a, fitnd{1.0, 2.0, 3.0}));
+    CHECK(almost_equal(b, fitnd{4.0, 5.0}));
+  }
+
+  SUBCASE("Failed load doesn't modify destination")
+  {
+    ss.str("3 1 2 invalid");
+
+    fitnd f{9.0, 9.0};
+    CHECK(!load(ss, &f));
+    CHECK(f == fitnd{9.0, 9.0});
+  }
 }
 
 TEST_CASE("Input/Output")
@@ -121,24 +175,43 @@ TEST_CASE("Input/Output")
   {
     const auto val(std::numeric_limits<fitnd::value_type>::lowest());
     const fitnd f{val};
-    ss << f;
 
-    // Value between parentheses.
-    const auto str(ss.str());
-    CHECK(str.front() == '(');
-    CHECK(str.back() == ')');
+    SUBCASE("Value between parentheses")
+    {
+      ss << f;
 
-    fitnd f1;
-    ss >> f1;
-    CHECK(f1.size() == f.size());
-    CHECK(almost_equal(f1, f));
+      const auto str(ss.str());
+      CHECK(str.front() == '(');
+      CHECK(str.back() == ')');
 
-    // Value without parentheses.
-    ss << val;
-    fitnd f2;
-    ss >> f2;
-    CHECK(f2.size() == f.size());
-    CHECK(almost_equal(f2, f));
+      fitnd f1;
+      ss >> f1;
+
+      CHECK(f1.size() == f.size());
+      CHECK(almost_equal(f1, f));
+    }
+
+    SUBCASE("Value without parentheses")
+    {
+      ss << val;
+
+      fitnd f1;
+      ss >> f1;
+
+      CHECK(f1.size() == f.size());
+      CHECK(almost_equal(f1, f));
+    }
+
+    SUBCASE("Invalid input does not modify destination")
+    {
+      ss.str("(1, invalid)");
+
+      fitnd f1(f);
+
+      const bool result(ss >> f1);
+      CHECK(!result);
+      CHECK(f1 == f);
+    }
   }
 }
 
@@ -157,6 +230,7 @@ TEST_CASE("Operators")
   CHECK(x / 2.0 == f1);
 
   CHECK(f1 * 2.0 == f2);
+  CHECK(2.0 * f1 == f2);
 
   x = f1 * fitnd{2.0, 2.0, 2.0};
   CHECK(x == f2);
@@ -197,22 +271,66 @@ TEST_CASE("Distance")
 {
   using namespace ultra;
 
-  fitnd f1{1.0, 2.0, 3.0}, f2{-4.0, -5.0, -6.0};
+  SUBCASE("Scalar")
+  {
+    CHECK(distance(1.0, 4.5) == doctest::Approx(3.5));
+    CHECK(distance(4.5, 1.0) == doctest::Approx(3.5));
 
-  CHECK(distance(f1, f1) == doctest::Approx(0.0));
-  CHECK(distance(f2, f2) == doctest::Approx(0.0));
+    CHECK(distance(1, 4) == doctest::Approx(3.0));
+    CHECK(distance(4, 1) == doctest::Approx(3.0));
 
-  CHECK(distance(f1, f2) == doctest::Approx(distance(f2, f1)));
+    CHECK(distance(std::numeric_limits<int>::lowest(),
+                   std::numeric_limits<int>::max()) > 0.0);
+  }
 
-  fitnd f3{1.0, 1.0, 1.0}, f4{3.0, 2.0, 3.0};
-  const auto d1(distance(f1, f2));
-  const auto d2(distance(f3, f4));
+  SUBCASE("fitnd")
+  {
+    fitnd f1{1.0, 2.0, 3.0}, f2{-4.0, -5.0, -6.0};
 
-  CHECK(distance(combine(f1, f3), combine(f2, f4))
-        == doctest::Approx(d1 + d2));
+    CHECK(distance(f1, f1) == doctest::Approx(0.0));
+    CHECK(distance(f2, f2) == doctest::Approx(0.0));
 
-  CHECK(distance(f1, f3) < distance(f2, f3));
-  CHECK(distance(f1, f4) == doctest::Approx(2.0));
+    CHECK(distance(f1, f2) == doctest::Approx(distance(f2, f1)));
+
+    fitnd f3{1.0, 1.0, 1.0}, f4{3.0, 2.0, 3.0};
+    const auto d1(distance(f1, f2));
+    const auto d2(distance(f3, f4));
+
+    CHECK(distance(combine(f1, f3), combine(f2, f4))
+          == doctest::Approx(d1 + d2));
+
+    CHECK(distance(f1, f3) < distance(f2, f3));
+    CHECK(distance(f1, f4) == doctest::Approx(2.0));
+  }
+
+  SUBCASE("vector")
+  {
+    const std::vector a{1, 2, 3};
+    const std::vector b{3, 2, 1};
+
+    CHECK(ultra::distance(a, b) == doctest::Approx(4.0));
+  }
 }
 
-}  // TEST_SUITE("FITNESS")
+TEST_CASE("Generic multidimensional fitness")
+{
+  using namespace ultra;
+
+  const std::vector<double> f1{3.0, 2.0, 1.0};
+  const std::vector<double> f2{2.0, 2.0, 1.0};
+  const std::vector<double> f3{3.0, 3.0, 0.0};
+
+  CHECK(dominating(f1, f2));
+  CHECK(!dominating(f2, f1));
+
+  CHECK(!dominating(f1, f3));
+  CHECK(!dominating(f3, f1));
+
+  CHECK(ultra::distance(f1, f2) == doctest::Approx(1.0));
+  CHECK(ultra::distance(f1, f3) == doctest::Approx(2.0));
+
+  CHECK(almost_equal(f1, f1));
+  CHECK(!almost_equal(f1, f2));
+}
+
+}  // TEST_SUITE

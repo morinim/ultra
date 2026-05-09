@@ -43,11 +43,15 @@ TEST_CASE_FIXTURE(fixture1, "ALPS search")
         == doctest::Approx(*stats.best_measurements().fitness));
 }
 
-TEST_CASE_FIXTURE(fixture1, "refiner is called")
+TEST_CASE_FIXTURE(fixture1, "refiner is called when appropriate")
 {
   using namespace ultra;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  prob.params.refinement.fraction = 1.0;
+  prob.params.evolution.generations = 1;
+
   search s(prob, eva);
 
   bool called(false);
@@ -63,12 +67,21 @@ TEST_CASE_FIXTURE(fixture1, "refiner is called")
 
   CHECK(&ret == &s);
 
-  prob.params.refinement.fraction = 1.0;
-  prob.params.evolution.generations = 1;
+  SUBCASE("Less than three layers")
+  {
+    prob.params.population.init_subgroups = 2;
+    s.run();
 
-  s.run();
+    CHECK(!called);
+  }
 
-  CHECK(called);
+  SUBCASE("At least three layers")
+  {
+    prob.params.population.init_subgroups = 3;
+    s.run();
+
+    CHECK(called);
+  }
 }
 
 TEST_CASE_FIXTURE(fixture1, "DE backend setter compatibility")

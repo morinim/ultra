@@ -10,8 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <functional>
-
 #include "kernel/fitness.h"
 
 namespace ultra
@@ -31,7 +29,6 @@ namespace ultra
 ///
 fitnd::fitnd(with_size s, value_type v) : vect_(s(), v)
 {
-  Expects(s());
 }
 
 ///
@@ -44,7 +41,7 @@ fitnd::fitnd(values_t v) : vect_(std::move(v))
 ///
 /// \return the size of the fitness vector
 ///
-std::size_t fitnd::size() const
+std::size_t fitnd::size() const noexcept
 {
   return vect_.size();
 }
@@ -78,28 +75,34 @@ fitnd::value_type &fitnd::operator[](std::size_t i)
 /// \return returns an iterator to the first element of the container. If the
 ///         container is empty, the returned iterator will be equal to `end()`
 ///
-fitnd::iterator fitnd::begin()
+fitnd::iterator fitnd::begin() noexcept
 {
-  return std::begin(vect_);
+  return vect_.begin();
 }
 
 ///
 /// \return returns an iterator to the first element of the container. If the
-///         container is empty, the returned iterator will be equal to `end()`
+///         container is empty, the returned iterator will be equal to `cend()`
 ///
-fitnd::const_iterator fitnd::begin() const
+fitnd::const_iterator fitnd::begin() const noexcept
 {
   return vect_.cbegin();
 }
 
 ///
-/// \return returns an iterator to the element following the last element of
-///         the container. This element acts as a placeholder; attempting to
-//          access it results in undefined behavior
+/// \return an iterator to the element following the last element
 ///
-fitnd::const_iterator fitnd::end() const
+fitnd::iterator fitnd::end() noexcept
 {
-  return std::cend(vect_);
+  return vect_.end();
+}
+
+///
+/// \return an iterator to the element following the last element
+///
+fitnd::const_iterator fitnd::end() const noexcept
+{
+  return vect_.cend();
 }
 
 ///
@@ -116,17 +119,17 @@ fitnd::const_iterator fitnd::end() const
 ///
 bool load(std::istream &in, fitnd *f)
 {
-  std::string line;
-  if (!std::getline(in >> std::ws, line))
+  std::size_t n;
+  if (!(in >> n))
     return false;
 
-  std::istringstream line_in(line);
+  fitnd tmp{with_size(n)};
 
-  fitnd tmp;
-  for (fitnd::value_type elem; load_float_from_stream(line_in, &elem);)
-    tmp.vect_.push_back(elem);
+  for (auto &v : tmp)
+    if (!load_float_from_stream(in, &v))
+      return false;
 
-  *f = tmp;
+  *f = std::move(tmp);
   return true;
 }
 
@@ -173,22 +176,47 @@ std::istream &operator>>(std::istream &in, fitnd &f)
 {
   in >> std::ws;
 
-  std::string values;
-
   if (in.peek() == '(')
   {
-    in.get();  // discards the open parenthesis
+    in.get();  // discards '('
 
-    std::getline(in >> std::ws, values, ')');
+    std::string values;
+    if (!std::getline(in >> std::ws, values, ')'))
+    {
+      in.setstate(std::ios::failbit);
+      return in;
+    }
+
     std::ranges::replace(values, ',', ' ');
 
-  }
-  else
-    in >> values;
+    std::istringstream ss(values);
 
-  fitnd tmp;
-  if (std::istringstream ss(values); load(ss, &tmp))
-    f = tmp;
+    fitnd::values_t tmp;
+    for (;;)
+    {
+      ss >> std::ws;
+      if (ss.eof())
+        break;
+
+      fitnd::value_type value;
+      if (!load_float_from_stream(ss, &value))
+      {
+        in.setstate(std::ios::failbit);
+        return in;
+      }
+
+      tmp.push_back(value);
+    }
+
+    f = fitnd(std::move(tmp));
+    return in;
+  }
+
+  fitnd::value_type value;
+  if (load_float_from_stream(in, &value))
+    f = fitnd{value};
+  else
+    in.setstate(std::ios::failbit);
 
   return in;
 }
@@ -199,6 +227,7 @@ std::istream &operator>>(std::istream &in, fitnd &f)
 ///
 fitnd &fitnd::operator+=(const fitnd &f)
 {
+  Expects(size() == f.size());
   std::ranges::transform(*this, f, begin(), std::plus{});
 
   return *this;
@@ -228,6 +257,7 @@ fitnd operator+(fitnd lhs, const fitnd &rhs)
 ///
 fitnd &fitnd::operator-=(const fitnd &f)
 {
+  Expects(size() == f.size());
   std::ranges::transform(*this, f, begin(), std::minus{});
 
   return *this;
@@ -251,6 +281,7 @@ fitnd operator-(fitnd lhs, const fitnd &rhs)
 ///
 fitnd &fitnd::operator*=(const fitnd &f)
 {
+  Expects(size() == f.size());
   std::ranges::transform(*this, f, begin(), std::multiplies{});
 
   return *this;
@@ -274,6 +305,7 @@ fitnd operator*(fitnd lhs, const fitnd &rhs)
 ///
 fitnd &fitnd::operator/=(const fitnd &f)
 {
+  Expects(size() == f.size());
   std::ranges::transform(*this, f, begin(), std::divides{});
 
   return *this;
@@ -317,6 +349,11 @@ fitnd operator*(fitnd f, fitnd::value_type v)
 {
   std::ranges::transform(f, f.begin(), [v](auto fi) { return fi * v; });
   return f;
+}
+
+fitnd operator*(fitnd::value_type v, fitnd f)
+{
+  return f * v;
 }
 
 fitnd operator-(fitnd f)

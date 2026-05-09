@@ -61,7 +61,7 @@ template<MultiDimFitness F>
 ///
 /// `lhs` dominates `rhs` (is a Pareto improvement) if:
 /// - each component of `lhs` is not strictly worst (less) than the
-///   correspondig component of `rhs`;
+///   corresponding component of `rhs`;
 /// - there is at least one component in which `lhs` is better than `rhs`.
 ///
 /// \note
@@ -79,13 +79,18 @@ requires std::is_arithmetic_v<F>
 template<MultiDimFitness F>
 [[nodiscard]] bool dominating(const F &lhs, const F &rhs)
 {
-  bool one_better(lhs.size() && !rhs.size());
+  Expects(std::ranges::size(lhs) == std::ranges::size(rhs));
 
-  const auto n(std::min(lhs.size(), rhs.size()));
-  for (std::size_t i(0); i < n; ++i)
-    if (rhs[i] < lhs[i])
+  bool one_better(false);
+
+  auto it_lhs(std::ranges::begin(lhs));
+  auto it_rhs(std::ranges::begin(rhs));
+  const auto end_lhs(std::ranges::end(lhs));
+
+  for (; it_lhs != end_lhs; ++it_lhs, ++it_rhs)
+    if (*it_rhs < *it_lhs)
       one_better = true;
-    else if (lhs[i] < rhs[i])
+    else if (*it_lhs < *it_rhs)
       return false;
 
   return one_better;
@@ -115,17 +120,28 @@ template<Fitness F>
 requires std::is_arithmetic_v<F>
 [[nodiscard]] double distance(F f1, F f2)
 {
-  return std::fabs(f1 - f2);
+  if constexpr (std::floating_point<F>)
+    return std::fabs(f1 - f2);
+  else
+  {
+    // Compute the absolute difference in the corresponding unsigned type.
+    // This avoids signed overflow, including the lowest()/max() case.
+    // Conversion from signed to unsigned is well-defined modulo 2^N and the
+    // subtraction is then performed in the unsigned domain.
+    using U = std::make_unsigned_t<F>;
+
+    return static_cast<double>(f1 >= f2 ? U(f1) - U(f2) : U(f2) - U(f1));
+  }
 }
 
 template<MultiDimFitness F>
 [[nodiscard]] double distance(const F &f1, const F &f2)
 {
-  Expects(f1.size() == f2.size());
+  Expects(std::ranges::size(f1) == std::ranges::size(f2));
 
   return std::transform_reduce(
-    f1.begin(), f1.end(), f2.begin(), 0.0,
-    std::plus{}, [](auto a, auto b) { return std::fabs(a - b); });
+    std::ranges::begin(f1), std::ranges::end(f1), std::ranges::begin(f2), 0.0,
+    std::plus{}, [](auto a, auto b) { return ultra::distance(a, b); });
 }
 
 ///
@@ -152,20 +168,16 @@ template<std::integral F>
 }
 
 template<MultiDimFitness F>
+requires std::floating_point<std::ranges::range_value_t<F>>
 [[nodiscard]] bool save(std::ostream &out, const F &f)
 {
-  if (auto it(f.begin()); it != f.end())
+  out << std::ranges::size(f);
+
+  for (auto v : f)
   {
-    save_float_to_stream(out, *it);
-
-    while (++it != f.end())
-    {
-      out << ' ';
-      save_float_to_stream(out, *it);
-    }
+    out << ' ';
+    save_float_to_stream(out, v);
   }
-
-  out << '\n';
 
   return out.good();
 }

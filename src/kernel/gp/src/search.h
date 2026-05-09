@@ -18,6 +18,8 @@
 #include "kernel/gp/src/problem.h"
 #include "kernel/search.h"
 
+#include <variant>
+
 namespace ultra::src
 {
 
@@ -51,20 +53,27 @@ public:
   [[nodiscard]] bool is_valid() const override;
 
 protected:
-  // *** Template methods / customization points ***
+  // ---- Template methods / customization points ----
   [[nodiscard]] model_measurements<fitness_t> calculate_metrics(
     const individual_t &) const override;
 
   void tune_parameters() override;
 
 private:
+  template<Individual> friend class search;
+
   [[nodiscard]] problem &prob() const noexcept;
 
-  // *** Private data members ***
+  // ---- Private data members ----
   metric_flags metrics_;  // metrics we have to calculate during the search
 };  // class basic_search
 
-
+///
+/// Thin facade over the concrete classification or regression search engine.
+///
+/// The engine kind is selected at construction time from the problem type.
+/// Configuration calls are forwarded directly to the selected engine.
+///
 template<Individual P>
 class search
 {
@@ -103,27 +112,17 @@ public:
   search &validation_strategy(Args && ...);
 
 private:
-  using class_refinement_callback_t =
-    ultra::refinement_callback_t<evaluator_proxy<class_evaluator_t>>;
-  using reg_refinement_callback_t =
-    ultra::refinement_callback_t<evaluator_proxy<reg_evaluator_t>>;
+  using class_search_t = basic_search<alps_es, class_evaluator_t>;
+  using reg_search_t = basic_search<alps_es, reg_evaluator_t>;
+  using engine_t = std::variant<class_search_t, reg_search_t>;
+
+  [[nodiscard]] static engine_t make_engine(problem &, metric_flags);
+  [[nodiscard]] bool problem_type_unchanged() const noexcept;
 
   // ---- Private data members ----
-  problem &prob_;  // problem we're working on
-  metric_flags metrics_;  // metrics we have to calculate during the search
-
-  std::unique_ptr<ultra::validation_strategy> vs_ {};
-
-  after_generation_callback_t after_generation_callback_ {};
-  on_training_new_best_callback_t on_training_new_best_callback_ {};
-
-  class_refinement_callback_t class_refinement_callback_ {};
-  reg_refinement_callback_t reg_refinement_callback_ {};
-
-  mutable search_log *search_log_ {nullptr};
-  std::stop_source stop_source_ {};
-  std::string tag_ {};
-  bool emit_messages_ {true};
+  engine_t engine_;
+  const problem &prob_;
+  const bool classification_;  // problem type captured at construction time
 };
 
 
