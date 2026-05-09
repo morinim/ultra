@@ -111,6 +111,8 @@ public:
   search(problem &prob, E eva) : basic_search<alps_es, E>(prob, eva) {}
 };
 
+template<Evaluator E> search(problem &, E) -> search<E>;
+
 #include "kernel/search.tcc"
 }  // namespace ultra
 

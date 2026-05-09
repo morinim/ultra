@@ -34,6 +34,8 @@ protected:
   void tune_parameters() override;
 };
 
+template<Evaluator E> search(ultra::problem &, E) -> search<E>;
+
 #include "kernel/ga/search.tcc"
 
 }  // namespace ultra::ga

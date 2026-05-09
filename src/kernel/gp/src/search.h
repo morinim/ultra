@@ -21,6 +21,8 @@
 namespace ultra::src
 {
 
+template<Individual P = gp::individual> class search;
+
 enum class metric_flags : unsigned
 {
   nothing = 0x0000,
@@ -63,7 +65,7 @@ private:
 };  // class basic_search
 
 
-template<Individual P = gp::individual>
+template<Individual P>
 class search
 {
 public:
