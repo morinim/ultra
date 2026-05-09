@@ -90,6 +90,21 @@ private:
   std::chrono::milliseconds delay_ {0};
 };
 
+template<class E> concept ClearableEvaluator = requires(E &eva)
+{
+  { eva.clear() } -> std::same_as<void>;
+};
+
+///
+/// Invalidates cached evaluator state if the evaluator exposes a compatible
+/// `clear()` member function.
+///
+template<class E> void invalidate_cache_if_supported(E &eva)
+{
+  if constexpr (ClearableEvaluator<E>)
+    eva.clear();
+}
+
 #include "kernel/evaluator.tcc"
 
 }  // namespace ultra
