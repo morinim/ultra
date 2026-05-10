@@ -94,22 +94,13 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
 }
 
 ///
-/// Computes a fast (approximate) fitness value for an individual.
+/// Computes a fast fitness value for an individual.
 ///
-/// \param[in] prg the individual to evaluate
-/// \return        a (possibly approximate) fitness value
+/// If the underlying evaluator provides a `fast` member function, that function
+/// is invoked directly. Such results may be approximate and are not cached.
 ///
-/// If the underlying evaluator provides a `fast` member function, that
-/// function is invoked. Otherwise, this function falls back to the standard
-/// evaluator call.
-///
-/// The fast evaluation:
-/// - is not cached;
-/// - may return an approximation of the true fitness;
-/// - is intended for heuristics, pre-filtering or speculative evaluation.
-///
-/// \remark
-/// The approximated ("fast") fitness isn't stored in the cache.
+/// Otherwise, this function falls back to normal proxy evaluation via
+/// `operator()`, which may use the cache.
 ///
 template<Evaluator E>
 evaluator_fitness_t<E> evaluator_proxy<E>::fast(
