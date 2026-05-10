@@ -241,8 +241,17 @@ struct parameters
     /// `2^size` is the number of elements of the cache. `0` disables caching.
     unsigned size {16};
 
-    /// Filename used for persistance of the cache. An empty name is used to
-    /// skip serialization.
+    /// Optional file used to persist evaluator cache entries across searches.
+    ///
+    /// \warning
+    /// Persisted cache entries do not currently contain compatibility
+    /// metadata. The cache file is assumed to belong to the exact same
+    /// evaluation context: same dataset, evaluator semantics, fitness
+    /// type/shape, symbol set, parameters, and binary/library version.
+    ///
+    /// Loading an incompatible cache may reuse stale fitness values. Delete
+    /// the cache file, change its name, or disable cache loading whenever the
+    /// evaluation environment changes.
     std::filesystem::path serialization_file {};
   } cache;
 

@@ -354,6 +354,10 @@ basic_search<ES, E> &basic_search<ES, E>::validation_strategy(
 ///
 /// \return `true` if the object is correctly loaded
 ///
+/// \remark
+/// This restores only the proxy cache, not the complete evaluator state.
+/// Cache files are trusted to be compatible with the current problem.
+///
 template<template<class> class ES, Evaluator E>
 bool basic_search<ES, E>::load()
 {
