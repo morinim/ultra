@@ -209,12 +209,13 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
             << test_set.size() << ')';
 }
 
-void holdout_validation::training_setup(unsigned)
+evaluation_context holdout_validation::training_setup(unsigned) noexcept
 {
   prob_.data.select(dataset_t::training);
+  return evaluation_context::unchanged;
 }
 
-bool holdout_validation::validation_setup(unsigned)
+bool holdout_validation::validation_setup(unsigned) noexcept
 {
   prob_.data.select(dataset_t::validation);
   return true;

@@ -10,6 +10,8 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/evaluation_context.h"
+
 #include <concepts>
 #include <memory>
 
@@ -32,7 +34,7 @@ public:
   ///
   /// \note
   /// Called at the beginning of the evolution (one time per run).
-  virtual void training_setup(unsigned /* run */) = 0;
+  [[nodiscard]] virtual evaluation_context training_setup(unsigned /*run*/) = 0;
 
   /// Changes the training environment during evolution.
   ///
@@ -41,7 +43,7 @@ public:
   /// \note
   /// Called at the beginning of every generation (multiple times per run).
   ///
-  virtual bool shake(unsigned /* generation */) = 0;
+  [[nodiscard]] virtual evaluation_context shake(unsigned /*generation*/) = 0;
 
   /// Prepares the data structures / environment needed for validation
   ///
@@ -50,7 +52,7 @@ public:
   ///
   /// \note
   /// Called at the end of the evolution (one time per run).
-  virtual bool validation_setup(unsigned /* run */) = 0;
+  virtual bool validation_setup(unsigned /*run*/) = 0;
 
   [[nodiscard]] virtual std::unique_ptr<validation_strategy> clone() const = 0;
 };
@@ -66,9 +68,12 @@ public:
 class as_is_validation final : public validation_strategy
 {
 public:
-  void training_setup(unsigned) noexcept override {}
-  bool shake(unsigned) noexcept override { return false; }
-  bool validation_setup(unsigned) noexcept override { return false; }
+  [[nodiscard]] evaluation_context training_setup(unsigned) noexcept override
+  { return evaluation_context::unchanged; }
+  [[nodiscard]] evaluation_context shake(unsigned) noexcept override
+  { return evaluation_context::unchanged; }
+  [[nodiscard]] bool validation_setup(unsigned) noexcept override
+  { return false; }
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override
   {

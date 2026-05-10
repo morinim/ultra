@@ -39,7 +39,7 @@ using refinement_callback_t =
     evaluator_individual_t<E> &, const E &,
     const parameters::refinement_parameters &)>;
 
-using shake_function_callback_t = std::function<bool(unsigned)>;
+using shake_function_callback_t = std::function<evaluation_context(unsigned)>;
 
 }  // namespace ultra
 

@@ -13,15 +13,16 @@
 #if !defined(ULTRA_EVALUATOR_H)
 #define      ULTRA_EVALUATOR_H
 
-#include <functional>
-#include <thread>
-
+#include "kernel/evaluation_context.h"
 #include "kernel/individual.h"
 #include "kernel/fitness.h"
 #include "kernel/random.h"
 
 #include "utility/log.h"
 #include "utility/misc.h"
+
+#include <functional>
+#include <thread>
 
 namespace ultra
 {
@@ -89,21 +90,6 @@ private:
 
   std::chrono::milliseconds delay_ {0};
 };
-
-template<class E> concept ClearableEvaluator = requires(E &eva)
-{
-  { eva.clear() } -> std::same_as<void>;
-};
-
-///
-/// Invalidates cached evaluator state if the evaluator exposes a compatible
-/// `clear()` member function.
-///
-template<class E> void invalidate_cache_if_supported(E &eva)
-{
-  if constexpr (ClearableEvaluator<E>)
-    eva.clear();
-}
 
 #include "kernel/evaluator.tcc"
 

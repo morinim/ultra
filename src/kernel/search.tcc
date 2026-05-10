@@ -260,7 +260,8 @@ basic_search<ES, E>::run(unsigned n,
 
   for (unsigned r(0); r < n && !stop_source_.stop_requested(); ++r)
   {
-    vs_->training_setup(r);
+    if (vs_->training_setup(r) == evaluation_context::changed)
+      invalidate_cache_if_supported(eva_);
 
     evolution evo(prob_, eva_);
     if (search_log_)

@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "kernel/evolution.h"
 #include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
@@ -22,6 +19,9 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
 
 TEST_SUITE("EVOLUTION")
 {
@@ -57,7 +57,7 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
                      {
                        CHECK(gen == i);
                        ++i;
-                       return true;
+                       return evaluation_context::changed;
                      });
 
   evo.run<std_es>();
@@ -80,4 +80,4 @@ TEST_CASE_FIXTURE(fixture4, "DE evolution")
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 }
 
-}  // TEST_SUITE("EVOLUTION")
+}  // TEST_SUITE

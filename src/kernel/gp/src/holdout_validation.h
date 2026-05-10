@@ -66,12 +66,14 @@ public:
 
   explicit holdout_validation(src::problem &, params = {});
 
-  void training_setup(unsigned) override;
+  [[nodiscard]] evaluation_context training_setup(unsigned) noexcept override;
 
-  // Holdout validation uses a single, fixed split
-  bool shake(unsigned) override { return false; }
+  // Holdout validation uses a single, fixed split, so selecting the training
+  // dataset doesn't change the evaluation context across runs.
+  [[nodiscard]] evaluation_context shake(unsigned) noexcept override
+  { return evaluation_context::unchanged; }
 
-  bool validation_setup(unsigned) override;
+  bool validation_setup(unsigned) noexcept override;
 
   [[nodiscard]] std::unique_ptr<validation_strategy> clone() const override;
 

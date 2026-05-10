@@ -421,7 +421,7 @@ summary<typename evolution<E>::individual_t,
 
   for (bool stop(false); !stop; ++sum_.generation)
   {
-    if (shake_ && shake_(sum_.generation))
+    if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
