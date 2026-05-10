@@ -22,14 +22,18 @@
 ///
 /// \param[in] eva the underlying ("real") evaluator
 /// \param[in] ts  cache size expressed as a bit width; the cache contains
-///                `2^ts` elements
+///                `2^ts` elements. A value of zero disables caching
 ///
 template<Evaluator E>
 evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
                                                           cache_(ts)
 {
   static_assert(!std::derived_from<E, evaluator_proxy>);
-  Expects(ts);
+
+  if (!ts)
+  {
+    ultraWARNING << "Evaluator proxy cache is disabled";
+  }
 }
 
 ///
