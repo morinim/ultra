@@ -118,7 +118,7 @@ evaluator_fitness_t<E> evaluator_proxy<E>::fast(
   if constexpr (requires { eva_.fast(prg); })
     return eva_.fast(prg);
 
-  return eva_(prg);
+  return operator()(prg);
 }
 
 ///
