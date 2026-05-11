@@ -46,31 +46,37 @@ template<Fitness F, std::size_t LOCK_GROUP_SIZE = 128>
 class cache
 {
 public:
+  // ---- Constructors ----
   cache() = default;  // empty cache
   explicit cache(bitwidth);
 
-  void resize(bitwidth);
+  // ---- Capacity ----
   [[nodiscard]] bitwidth bits() const;
 
-  void clear();
+  // ---- Modifiers ----
+  void resize(bitwidth);
+  void clear() noexcept;
   void clear(const hash_t &);
-
   void insert(const hash_t &, const F &);
 
+  // ---- Misc ----
   [[nodiscard]] std::optional<F> find(const hash_t &) const;
 
   [[nodiscard]] bool is_valid() const;
 
-  // Serialization.
+  // ---- Serialization ----
   bool load(std::istream &);
   bool save(std::ostream &) const;
 
 private:
-  // Private support methods.
+  static constexpr bitwidth max_cache_bitwidth {30}; // about 1 billion slots
+
+  // ---- Private support methods ----
   [[nodiscard]] std::size_t index(const hash_t &) const noexcept;
   [[nodiscard]] std::size_t lock_index(std::size_t) const noexcept;
+  [[nodiscard]] static std::size_t table_size(bitwidth);
 
-  // Private data members.
+  // ---- Private data members ----
   struct slot
   {
     /// This is used as primary key for access to the table.

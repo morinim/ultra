@@ -53,7 +53,7 @@ public:
   bool load_cache(std::istream &) const;
   bool save_cache(std::ostream &) const;
 
-  void clear() const;
+  void clear() const noexcept;
   void clear(const hash_t &) const;
 
   [[nodiscard]] evaluator_fitness_t<E> operator()(

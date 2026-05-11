@@ -181,7 +181,7 @@ bool evaluator_proxy<E>::save(std::ostream &out) const
 /// empty.
 ///
 template<Evaluator E>
-void evaluator_proxy<E>::clear() const
+void evaluator_proxy<E>::clear() const noexcept
 {
   cache_.clear();
 }

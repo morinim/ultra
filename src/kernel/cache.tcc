@@ -17,6 +17,9 @@
 #if !defined(ULTRA_CACHE_TCC)
 #define      ULTRA_CACHE_TCC
 
+namespace internal
+{
+
 ///
 /// Fast ceiling integer division.
 ///
@@ -24,7 +27,7 @@
 /// \param[in] y divisor
 /// \return      ceiling of the quotient
 ///
-inline std::size_t div_ceil(std::size_t x, std::size_t y)
+[[nodiscard]] inline std::size_t div_ceil(std::size_t x, std::size_t y)
 {
   // Most common architecture's divide instruction also includes remainder in
   // its result so this really needs only one division and would be very fast.
@@ -33,17 +36,29 @@ inline std::size_t div_ceil(std::size_t x, std::size_t y)
   // `(x + y - 1) / y` is an alternative (but could overflow).
 }
 
+}  // namespace internal
+
+template<Fitness F, std::size_t LOCK_GROUP_SIZE>
+std::size_t cache<F, LOCK_GROUP_SIZE>::table_size(bitwidth n)
+{
+  Expects(n <= max_cache_bitwidth);
+  return 1uz << n;
+}
+
 ///
 /// Creates a new, not empty, hash table.
 ///
-/// \param[in] n `2^n` is the number of elements of the table
+/// \param[in] n `2^n` is the number of elements of the table. A value of zero
+///              creates a valid disabled cache object. Operations requiring
+///              table indexing are still guarded and are expected to be
+///              bypassed by callers
 ///
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 cache<F, LOCK_GROUP_SIZE>::cache(bitwidth n)
-  : table_(1ull << n), locks_(div_ceil(table_.size(), LOCK_GROUP_SIZE)),
-    k_mask((1ull << n) - 1)
+  : table_(table_size(n)),
+    locks_(internal::div_ceil(table_.size(), LOCK_GROUP_SIZE)),
+    k_mask(table_.size() - 1)
 {
-  Expects(n);
   Ensures(is_valid());
 }
 
@@ -59,12 +74,10 @@ cache<F, LOCK_GROUP_SIZE>::cache(bitwidth n)
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 void cache<F, LOCK_GROUP_SIZE>::resize(bitwidth n)
 {
-  Expects(n);
-
-  const std::size_t nelem(1ull << n);
+  const std::size_t nelem(table_size(n));
 
   table_ = decltype(table_)(nelem);
-  locks_ = decltype(locks_)(div_ceil(nelem, LOCK_GROUP_SIZE));
+  locks_ = decltype(locks_)(internal::div_ceil(nelem, LOCK_GROUP_SIZE));
   k_mask = nelem - 1;
 
   Ensures(is_valid());
@@ -77,7 +90,7 @@ void cache<F, LOCK_GROUP_SIZE>::resize(bitwidth n)
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 std::size_t cache<F, LOCK_GROUP_SIZE>::index(const hash_t &h) const noexcept
 {
-  Expects(k_mask);
+  Expects(bits());
   return h.data[0] & k_mask;
 }
 
@@ -94,8 +107,7 @@ cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
 }
 
 ///
-/// Clears the content and the statistical informations of the table.
-///
+/// Invalidates all cached entries without changing the allocated size.
 ///
 /// \warning
 /// Not concurrency-safe.
@@ -103,11 +115,8 @@ cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
 /// \note
 /// Allocated size isn't changed.
 ///
-/// \warning
-/// Not concurrency-safe.
-///
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
-void cache<F, LOCK_GROUP_SIZE>::clear()
+void cache<F, LOCK_GROUP_SIZE>::clear() noexcept
 {
   ++seal_;
 }
