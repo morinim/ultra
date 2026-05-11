@@ -43,6 +43,18 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
 }
 
+struct clear_counting_evaluator
+{
+  using individual_t = ultra::gp::individual;
+  using fitness_t = double;
+
+  std::shared_ptr<unsigned> clear_count {std::make_shared<unsigned>(0)};
+
+  [[nodiscard]] double operator()(const individual_t &) const { return 0.0; }
+
+  void clear() const noexcept { ++*clear_count; }
+};
+
 TEST_CASE_FIXTURE(fixture1, "Shake function")
 {
   using namespace ultra;
@@ -50,17 +62,54 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
   prob.params.population.individuals    = 30;
   prob.params.population.init_subgroups =  4;
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+  SUBCASE("callback is called with the expected generation number")
+  {
+    test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
-  evolution evo(prob, eva);
-  evo.shake_function([i = 0](unsigned gen) mutable
-                     {
-                       CHECK(gen == i);
-                       ++i;
-                       return evaluation_context::changed;
-                     });
+    evolution evo(prob, eva);
+    evo.shake_function([i = 0](unsigned gen) mutable
+    {
+      CHECK(gen == i);
+      ++i;
+      return evaluation_context::changed;
+    });
 
-  evo.run<std_es>();
+    evo.run<std_es>();
+  }
+
+  SUBCASE("shake invalidates evaluator cache when context changes")
+  {
+    prob.params.evolution.generations = 3;
+
+    clear_counting_evaluator eva;
+
+    evolution evo(prob, eva);
+    evo.shake_function([](unsigned)
+    {
+      return evaluation_context::changed;
+    });
+
+    evo.run<std_es>();
+
+    CHECK(*eva.clear_count >= 3);
+  }
+
+  SUBCASE("shake doesn't invalidate evaluator cache when context is unchanged")
+  {
+    prob.params.evolution.generations = 3;
+
+    clear_counting_evaluator eva;
+
+    evolution evo(prob, eva);
+    evo.shake_function([](unsigned)
+    {
+      return evaluation_context::unchanged;
+    });
+
+    evo.run<std_es>();
+
+    CHECK(*eva.clear_count == 0);
+  }
 }
 
 TEST_CASE_FIXTURE(fixture4, "DE evolution")
