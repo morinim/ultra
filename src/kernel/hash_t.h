@@ -83,6 +83,9 @@ std::ostream &operator<<(std::ostream &, hash_t);
 namespace internal
 {
 
+// For MurmurHash3 x64 128-bit, the block size is 16 bytes, i.e. 128 bits.
+inline constexpr std::size_t murmurhash3_block_size {16};
+
 static constexpr std::uint64_t c1 {0x87c37b91114253d5};
 static constexpr std::uint64_t c2 {0x4cf5ad432745937f};
 
@@ -226,7 +229,7 @@ public:
 
 private:
   template<std::integral T> [[nodiscard]] static T get_block(
-    const T *, std::size_t) noexcept;
+    const std::byte *, std::size_t) noexcept;
 };
 
 ///
@@ -240,38 +243,40 @@ private:
 inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
                                    std::uint32_t seed) noexcept
 {
-  const auto n_blocks(len / 16);  // block size is 128bit
+  const auto n_blocks(len / internal::murmurhash3_block_size);
 
   // Body.
-  const auto *blocks(reinterpret_cast<const std::uint64_t *>(data));
+  const auto *bytes(reinterpret_cast<const std::byte *>(data));
+
   hash_t h(seed, seed);
 
   for (std::size_t i(0); i < n_blocks; ++i)
   {
-    std::uint64_t k1(get_block(blocks, i * 2 + 0));
-    std::uint64_t k2(get_block(blocks, i * 2 + 1));
+    const auto offset(i * internal::murmurhash3_block_size);
+
+    const auto k1(get_block<std::uint64_t>(bytes, offset));
+    const auto k2(get_block<std::uint64_t>(bytes, offset + sizeof(k1)));
 
     internal::process_block(h, k1, k2);
   }
 
   // Tail.
-  internal::process_tail(
-    h,
-    reinterpret_cast<const std::byte *>(data) + n_blocks * 16, len & 15);
-
+  const auto tail_offset(n_blocks * internal::murmurhash3_block_size);
+  internal::process_tail(h, bytes + tail_offset,
+                         len % internal::murmurhash3_block_size);
   internal::finalize(h, len);
 
   return h;
 }
 
 template<std::integral T>
-inline T murmurhash3::get_block(const T *p, std::size_t i) noexcept
+inline T murmurhash3::get_block(const std::byte *p, std::size_t offset) noexcept
 {
-  // The reason we do a memcpy() instead of simply returning `p[i]` is because
-  // doing it this way avoids violations of the strict aliasing rule.
+  // Use memcpy() to load potentially unaligned bytes without violating
+  // strict-aliasing rules.
 
   T tmp;
-  std::memcpy(&tmp, p + i, sizeof(T));
+  std::memcpy(&tmp, p + offset, sizeof(T));
   return tmp;
 }
 
@@ -298,7 +303,7 @@ private:
 
 private:
   hash_t h_;
-  std::array<std::byte, 16> tail_ {};
+  std::array<std::byte, internal::murmurhash3_block_size> tail_ {};
   std::size_t tail_size_ {0};
   std::size_t total_len_ {0};
 };  // class murmurhash3_sink
@@ -329,13 +334,15 @@ inline void murmurhash3_sink::write(std::span<const std::byte> bytes) noexcept
   // Fill tail if needed.
   if (tail_size_)
   {
-    const auto n(std::min<std::size_t>(16 - tail_size_, bytes.size()));
+    const auto n(std::min<std::size_t>(
+                   internal::murmurhash3_block_size - tail_size_,
+                   bytes.size()));
 
     std::memcpy(tail_.data() + tail_size_, bytes.data(), n);
     tail_size_ += n;
     bytes = bytes.subspan(n);
 
-    if (tail_size_ == 16)
+    if (tail_size_ == internal::murmurhash3_block_size)
     {
       process_block(tail_.data());
       tail_size_ = 0;
@@ -343,10 +350,10 @@ inline void murmurhash3_sink::write(std::span<const std::byte> bytes) noexcept
   }
 
   // Process full blocks.
-  while (bytes.size() >= 16)
+  while (bytes.size() >= internal::murmurhash3_block_size)
   {
     process_block(bytes.data());
-    bytes = bytes.subspan(16);
+    bytes = bytes.subspan(internal::murmurhash3_block_size);
   }
 
   // Store remaining bytes as tail.
