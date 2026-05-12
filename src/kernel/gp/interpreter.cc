@@ -126,7 +126,7 @@ value_t interpreter::fetch_arg(std::size_t i) const
   const gene &g(current_gene());
 
   assert(i < g.func->arity());
-  if (const auto arg(g.args[i]); arg.index() == d_address)
+  if (const auto &arg(g.args[i]); arg.index() == d_address)
   {
     auto &elem(cache_(g.locus_of_argument(i)));
 
@@ -177,7 +177,7 @@ value_t interpreter::fetch_opaque_arg(std::size_t i) const
   const gene &g(current_gene());
 
   assert(i < g.func->arity());
-  const auto arg(g.args[i]);
+  const auto &arg(g.args[i]);
   switch (arg.index())
   {
   case d_address:
