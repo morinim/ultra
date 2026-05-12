@@ -10,16 +10,15 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <numbers>
-
 #include "kernel/gp/interpreter.h"
 
 #include "test/fixture1.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <array>
+#include <numbers>
 
 TEST_SUITE("INTERPRETER")
 {
@@ -28,9 +27,25 @@ TEST_CASE_FIXTURE(fixture1, "Run")
 {
   using namespace ultra;
 
+  auto &rz(static_cast<Z *>(z)->val);
+
+  const auto repeat_with_various_z([&](auto check)
+  {
+    constexpr std::array samples =
+    {
+      -1000000.0, -1.0, 0.0, 1.0, 1000000.0
+    };
+
+    for (auto v : samples)
+    {
+      rz = v;
+      check();
+    }
+  });
+
   SUBCASE("Abs")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_abs, {x->instance()}}    // [0] ABS $X
       });
@@ -41,9 +56,9 @@ TEST_CASE_FIXTURE(fixture1, "Run")
 
   SUBCASE("Add")
   {
-    gp::individual i(
+    const gp::individual i(
       {
-        {f_add, {x->instance(), y->instance()}}    // [0] ABS $X, $Y
+        {f_add, {x->instance(), y->instance()}}    // [0] ADD $X, $Y
       });
 
     const auto ret(run(i));
@@ -52,43 +67,35 @@ TEST_CASE_FIXTURE(fixture1, "Run")
 
   SUBCASE("Aq")
   {
-    gp::individual i(
+    const gp::individual i(
       {
-        {f_aq, {z, c1->instance()}}    // [0] ABS Z(), $C1
+        {f_aq, {z, c1->instance()}}    // [0] AQ Z(), $C1
       });
 
-    for (unsigned j(0); j < 100; ++j)
+    repeat_with_various_z([&]
     {
-      auto &rz(static_cast<Z *>(z)->val);
-
-      rz = random::between(-1000000.0, 1000000.0);
       const auto ret(run(i));
-
       CHECK(real::base(ret) == doctest::Approx(rz / std::numbers::sqrt2));
-    }
+    });
   }
 
   SUBCASE("Div")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_div, {z, 1.0}}    // [0] DIV Z(), $1.0
       });
 
-    for (unsigned j(0); j < 100; ++j)
+    repeat_with_various_z([&]
     {
-      auto &rz(static_cast<Z *>(z)->val);
-
-      rz = random::between(-1000000.0, 1000000.0);
       const auto ret(run(i));
-
       CHECK(real::base(ret) == doctest::Approx(rz));
-    }
+    });
   }
 
   SUBCASE("Idiv")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_idiv, {x->instance(), 0.0}}    // [0] IDIV $X, $0.0
       });
@@ -99,26 +106,22 @@ TEST_CASE_FIXTURE(fixture1, "Run")
 
   SUBCASE("Ifz")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_sub, {z, z}},           // [0] SUB Z(), Z()
-        {f_ifz, {z, z, 0_addr}}    // [0] IFZ Z(), Z(), [0]
+        {f_ifz, {z, z, 0_addr}}    // [1] IFZ Z(), Z(), [0]
       });
 
-    for (unsigned j(0); j < 100; ++j)
+    repeat_with_various_z([&]
     {
-      auto &rz(static_cast<Z *>(z)->val);
-
-      rz = random::between(-1000000.0, 1000000.0);
       const auto ret(run(i));
-
       CHECK(real::base(ret) == doctest::Approx(0.0));
-    }
+    });
   }
 
   SUBCASE("Sqrt")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_sqrt, {-1.0}}    // [0] SQRT $-1.0
       });
@@ -129,36 +132,94 @@ TEST_CASE_FIXTURE(fixture1, "Run")
 
   SUBCASE("Mix 1")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_add, {3.0, 2.0}},       // [0] ADD $3.0, $2.0
         {f_add, {0_addr, 1.0}},    // [1] ADD [0], $1.0
         {f_sub, {1_addr, 0_addr}}  // [2] SUB [1], [0]
       });
 
-    auto ret(run(i));
+    const auto ret(run(i));
     CHECK(real::base(ret) == doctest::Approx(1.0));
   }
 
   SUBCASE("Mix 2")
   {
-    gp::individual i(
+    const gp::individual i(
       {
         {f_mul, {z, 2.0}},         // [0] MUL Z(), $2.0
         {f_add, {z, z}},           // [1] ADD Z(), Z()
         {f_sub, {1_addr, 0_addr}}  // [2] SUB [1], [0]
       });
 
-    for (unsigned j(0); j < 100; ++j)
+    repeat_with_various_z([&]
     {
-      auto &rz(static_cast<Z *>(z)->val);
-
-      rz = random::between(-1000000.0, 1000000.0);
       const auto ret(run(i));
-
       CHECK(real::base(ret) == doctest::Approx(0.0));
+    });
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Interpreter cache")
+{
+  using namespace ultra;
+
+  auto &rz(static_cast<Z *>(z)->val);
+
+  const gp::individual i(
+    {
+      {f_add, {z, z}},           // [0] ADD Z(), Z()
+      {f_add, {0_addr, 0_addr}}  // [1] ADD [0], [0]
+    });
+
+  interpreter intr(i);
+
+  SUBCASE("Repeated run invalidates cached values")
+  {
+    rz = 1.0;
+    CHECK(real::base(intr.run()) == doctest::Approx(4.0));
+
+    rz = 2.0;
+    CHECK(real::base(intr.run()) == doctest::Approx(8.0));
+
+    rz = -3.0;
+    CHECK(real::base(intr.run()) == doctest::Approx(-12.0));
+  }
+
+  SUBCASE("Repeated run survives cache stamp wraparound")
+  {
+    for (unsigned j(0); j < 300; ++j)
+    {
+      rz = static_cast<double>(j);
+      const auto ret(intr.run());
+      CHECK(real::base(ret) == doctest::Approx(4.0 * rz));
     }
   }
 }
 
-}  // TEST_SUITE("INTERPRETER")
+TEST_CASE_FIXTURE(fixture1, "Rebind compatible individual")
+{
+  using namespace ultra;
+
+  const gp::individual i1(
+  {
+    {f_add, {1.0, 2.0}},
+    {f_add, {0_addr, 0_addr}}
+  });
+
+  const gp::individual i2(
+  {
+    {f_mul, {3.0, 4.0}},
+    {f_add, {0_addr, 0_addr}}
+  });
+
+  interpreter intr(i1);
+
+  CHECK(real::base(intr.run()) == doctest::Approx(6.0));
+
+  intr.rebind(i2);
+
+  CHECK(real::base(intr.run()) == doctest::Approx(24.0));
+}
+
+}  // TEST_SUITE
