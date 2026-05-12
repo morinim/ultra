@@ -135,7 +135,7 @@ void collection::insert(const w_symbol &ws)
 
   if (is_terminal(ws))
     terminals.insert(ws);
-  else  // function
+  else if (is_function(ws))
     functions.insert(ws);
 }
 
@@ -156,27 +156,28 @@ bool collection::is_valid() const
   if (!std::ranges::all_of(terminals, internal::is_terminal))
     return false;
 
+  std::size_t others(0);
   for (const auto &s : all)
-  {
     if (is_terminal(s))
     {
-      if (std::ranges::find(terminals, s) == terminals.end())
+      if (!std::ranges::contains(terminals, s))
       {
         ultraERROR << name_ << ": terminal " << s.sym->name()
                    << " badly stored";
         return false;
       }
     }
-    else  // function
+    else if (is_function(s))
     {
-      if (std::ranges::find(functions, s) == functions.end())
+      if (!std::ranges::contains(functions, s))
       {
         ultraERROR << name_ << ": function " << s.sym->name()
                    << " badly stored";
         return false;
       }
     }
-  }
+    else
+      ++others;
 
   const auto ssize(all.size());
 
@@ -204,7 +205,7 @@ bool collection::is_valid() const
   // Since we don't want to enforce a particular insertion order (i.e.
   // terminals before functions), we cannot perform the check here.
 
-  return ssize == functions.size() + terminals.size();
+  return ssize == functions.size() + terminals.size() + others;
 }
 
 }  // namespace internal
@@ -500,7 +501,7 @@ bool symbol_set::is_valid() const
     return false;
   }
 
-  return true;
+  return std::ranges::all_of(views_, [](const auto &v) {return v.is_valid();});
 }
 
 ///

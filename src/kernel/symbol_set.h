@@ -45,8 +45,6 @@ struct w_symbol
   weight_t weight;
 };
 
-[[nodiscard]] bool is_terminal(const w_symbol &);
-[[nodiscard]] bool is_function(const w_symbol &);
 
 class sum_container
 {
@@ -77,6 +75,7 @@ private:
   std::string name_;
 };
 
+
 // A collection is a structured-view on `symbols_` or on a subset of
 // `symbols_` (e.g. only on symbols of a specific category).
 class collection
@@ -97,6 +96,7 @@ private:
 };
 
 }  // namespace internal
+
 
 ///
 /// A container for the symbols used by the engine.
