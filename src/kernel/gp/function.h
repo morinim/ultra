@@ -123,6 +123,8 @@ public:
   /// \remark
   /// This operator is equivalent to calling `fetch_arg(i)`.
   [[nodiscard]] value_t operator[](std::size_t i) const { return fetch_arg(i); }
+
+  virtual ~params() = default;
 };
 
 }  // namespace ultra
