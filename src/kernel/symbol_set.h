@@ -135,7 +135,7 @@ public:
     symbol::category_t = symbol::default_category) const noexcept;
   [[nodiscard]] std::size_t variables(
     symbol::category_t = symbol::default_category) const noexcept;
-  template<class S> [[nodiscard]] std::size_t count_if(
+  template<Symbol S> [[nodiscard]] std::size_t count_if(
     symbol::category_t = symbol::default_category) const noexcept;
 
   // ---- Lookup / symbol access ----
@@ -182,7 +182,7 @@ private:
 /// \param[in] c a category
 /// \return      number of symbols of type `S` in category `c`
 ///
-template<class S>
+template<Symbol S>
 std::size_t symbol_set::count_if(symbol::category_t c) const noexcept
 {
   if (c >= categories())
@@ -191,9 +191,12 @@ std::size_t symbol_set::count_if(symbol::category_t c) const noexcept
   if constexpr (std::derived_from<S, function>)
     return std::ranges::count_if(
       views_[c].functions, [](const auto &ws) { return is<S>(ws.sym); });
-  else
+  else if constexpr (std::derived_from<S, terminal>)
     return std::ranges::count_if(
       views_[c].terminals, [](const auto &ws) { return is<S>(ws.sym); });
+  else
+    return std::ranges::count_if(
+      views_[c].all, [](const auto &ws) { return is<S>(ws.sym); });
 }
 
 ///
