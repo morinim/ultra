@@ -79,10 +79,11 @@ private:
 
   const gp::individual *prg_;
 
-  struct elem_ {value_t value; bool valid;};
+  struct elem_ { value_t value; std::uint8_t stamp {0}; };
   mutable matrix<elem_> cache_;
 
   mutable locus ip_ {};  // instruction pointer
+  std::uint8_t stamp_ {0};
 };
 
 extern value_t run(const gp::individual &);

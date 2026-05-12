@@ -64,8 +64,8 @@ interpreter::interpreter(const gp::individual &ind)
 ///
 void interpreter::rebind(const gp::individual &ind) noexcept
 {
-  Ensures(cache_.rows() == ind.size());
-  Ensures(cache_.cols() == ind.categories());
+  Expects(cache_.rows() == ind.size());
+  Expects(cache_.cols() == ind.categories());
 
   prg_ = &ind;
 }
@@ -76,7 +76,7 @@ void interpreter::rebind(const gp::individual &ind) noexcept
 /// \param[in] l locus identifying the gene from which execution starts
 /// \return      the value produced by evaluating the individual
 ///
-/// This function initialises the interpreter state, clears any cached values,
+/// This function initialises the interpreter state, invalidates cached values,
 /// sets the instruction pointer to the specified locus and evaluates the gene
 /// located there.
 ///
@@ -85,8 +85,14 @@ value_t interpreter::run(const locus &l)
   Expects(l.index < prg_->size());
   Expects(l.category < prg_->categories());
 
-  for (auto &e : cache_)
-    e.valid = false;
+  if (++stamp_ == 0)  [[unlikely]]
+  {
+    // Invalidate all cache entries after stamp wraparound.
+    for (auto &e : cache_)
+      e.stamp = 0;
+
+    stamp_ = 1;
+  }
 
   ip_ = l;
 
@@ -109,10 +115,11 @@ value_t interpreter::run()
 /// \param[in] i i-th argument of the current gene
 /// \return      the required value
 ///
-/// We use a cache to avoid recalculating the same value during the interpreter
+/// We use a cache to avoid recalculating the same value during interpreter
 /// execution.
-/// This means that side effects are not evaluated to date: WE ASSUME
-/// REFERENTIAL TRANSPARENCY for all the expressions.
+///
+/// This assumes referential transparency. Side-effecting expressions must
+/// therefore be evaluated through `fetch_opaque_arg`.
 ///
 /// This function may internally delegate to `fetch_opaque_arg` when caching
 /// is not applicable.
@@ -130,10 +137,10 @@ value_t interpreter::fetch_arg(std::size_t i) const
   {
     auto &elem(cache_(g.locus_of_argument(i)));
 
-    if (!elem.valid)
+    if (elem.stamp != stamp_)
     {
       elem.value = fetch_opaque_arg(i);
-      elem.valid = true;
+      elem.stamp = stamp_;
     }
 #if !defined(NDEBUG)
     else  // cache not empty... checking if the cached value is right
@@ -142,7 +149,7 @@ value_t interpreter::fetch_arg(std::size_t i) const
     }
 #endif
 
-    Ensures(elem.valid);
+    Ensures(elem.stamp == stamp_);
     return elem.value;
   }
 
@@ -162,7 +169,7 @@ value_t interpreter::fetch_arg(std::size_t i) const
 /// whose value must always be recomputed.
 ///
 /// ### Behaviour by argument type
-/// - *address**: evaluates the referenced gene by temporarily moving the
+/// - **address**: evaluates the referenced gene by temporarily moving the
 ///   instruction pointer to the target locus;
 /// - **nullary symbol**: directly evaluates the symbol;
 /// - **variable**: evaluates the variable in the current execution context;
