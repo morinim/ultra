@@ -10,8 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <numbers>
-
 #include "kernel/symbol_set.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/primitive/string.h"
@@ -19,6 +17,8 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <numbers>
 
 TEST_SUITE("SYMBOL SET")
 {
@@ -106,6 +106,27 @@ TEST_CASE("Constructor / Insertion")
     CHECK(ss.decode("FADD"));
     CHECK(ss.decode("SIFE"));
     CHECK(ss.decode("REAL"));
+  }
+
+  SUBCASE("Other symbol kinds")
+  {
+    const auto *metadata(ss.insert(std::make_unique<symbol>("META")));
+    ss.insert<real::number>();
+
+    REQUIRE(metadata);
+    CHECK(ss.categories() == 1);
+
+    CHECK(ss.functions() == 0);
+    CHECK(ss.terminals() == 1);
+
+    CHECK(ss.count_if<symbol>() == 2);
+    CHECK(ss.count_if<function>() == 0);
+    CHECK(ss.count_if<terminal>() == 1);
+    CHECK(ss.count_if<real::number>() == 1);
+
+    CHECK(ss.decode("META") == metadata);
+    CHECK(ss.enough_terminals());
+    CHECK(ss.is_valid());
   }
 }
 
@@ -288,4 +309,4 @@ TEST_CASE("Distribution")
   }
 }
 
-}  // TEST_SUITE("FUNCTION")
+}
