@@ -208,6 +208,20 @@ inline void process_tail(hash_t &h,
   }
 }
 
+template<std::unsigned_integral T>
+[[nodiscard]] T load_unaligned(const std::byte *p) noexcept
+{
+  // Loads using the host byte order. This is well-defined, but hash values are
+  // not guaranteed to be identical across endian architectures.
+  //
+  // Use memcpy() to load potentially unaligned bytes without violating
+  // strict-aliasing rules.
+
+  T tmp;
+  std::memcpy(&tmp, p, sizeof(T));
+  return tmp;
+}
+
 }  // namespace internal
 
 ///
@@ -226,10 +240,6 @@ class murmurhash3
 public:
   [[nodiscard]] static hash_t hash128(const void *const, std::size_t,
                                       std::uint32_t = 1973) noexcept;
-
-private:
-  template<std::integral T> [[nodiscard]] static T get_block(
-    const std::byte *, std::size_t) noexcept;
 };
 
 ///
@@ -250,12 +260,13 @@ inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
 
   hash_t h(seed, seed);
 
+  using internal::load_unaligned;
   for (std::size_t i(0); i < n_blocks; ++i)
   {
     const auto offset(i * internal::murmurhash3_block_size);
 
-    const auto k1(get_block<std::uint64_t>(bytes, offset));
-    const auto k2(get_block<std::uint64_t>(bytes, offset + sizeof(k1)));
+    const auto k1(load_unaligned<std::uint64_t>(bytes + offset));
+    const auto k2(load_unaligned<std::uint64_t>(bytes + offset + sizeof(k1)));
 
     internal::process_block(h, k1, k2);
   }
@@ -267,17 +278,6 @@ inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
   internal::finalize(h, len);
 
   return h;
-}
-
-template<std::integral T>
-inline T murmurhash3::get_block(const std::byte *p, std::size_t offset) noexcept
-{
-  // Use memcpy() to load potentially unaligned bytes without violating
-  // strict-aliasing rules.
-
-  T tmp;
-  std::memcpy(&tmp, p + offset, sizeof(T));
-  return tmp;
 }
 
 ///
@@ -366,9 +366,8 @@ inline void murmurhash3_sink::write(std::span<const std::byte> bytes) noexcept
 
 inline void murmurhash3_sink::process_block(const std::byte *data) noexcept
 {
-  std::uint64_t k1, k2;
-  std::memcpy(&k1, data +          0, sizeof(k1));
-  std::memcpy(&k2, data + sizeof(k1), sizeof(k2));
+  const auto k1(internal::load_unaligned<std::uint64_t>(data));
+  const auto k2(internal::load_unaligned<std::uint64_t>(data + sizeof(k1)));
 
   internal::process_block(h_, k1, k2);
 }
@@ -399,13 +398,15 @@ using hash_sink = murmurhash3_sink;
 ///
 template <class T>
 requires (std::integral<T> || std::floating_point<T>)
-[[nodiscard]] std::span<const std::byte, sizeof(T)> bytes_view(const T &t)
+[[nodiscard]] std::span<const std::byte, sizeof(T)>
+bytes_view(const T &t) noexcept
 {
   return std::span<const std::byte, sizeof(T)>{
     reinterpret_cast<const std::byte *>(std::addressof(t)), sizeof(T)};
 }
 
-[[nodiscard]] std::span<const std::byte> bytes_view(const std::string &);
+[[nodiscard]] std::span<const std::byte>
+bytes_view(const std::string &) noexcept;
 
 }  // namespace ultra
 

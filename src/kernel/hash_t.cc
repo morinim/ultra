@@ -60,7 +60,7 @@ std::ostream &operator<<(std::ostream &o, hash_t h)
 /// \param[in] s a string
 /// \return      the string content viewed as a raw sequence of bytes
 ///
-std::span<const std::byte> bytes_view(const std::string &s)
+std::span<const std::byte> bytes_view(const std::string &s) noexcept
 {
   return {reinterpret_cast<const std::byte *>(s.data()), s.length()};
 }
