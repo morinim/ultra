@@ -10,11 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <thread>
-
 #include "kernel/evolution_summary.h"
 #include "kernel/gp/individual.h"
 
@@ -24,6 +19,11 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <thread>
 
 TEST_SUITE("EVOLUTION SUMMARY")
 {
@@ -53,6 +53,35 @@ TEST_CASE_FIXTURE(fixture1, "update_if_better")
   CHECK(s.best().ind == si2.ind);
   CHECK(almost_equal(s.best().fit, si2.fit));
   CHECK(s.last_improvement() == 2);
+}
+
+TEST_CASE_FIXTURE(fixture1, "stagnation")
+{
+  using namespace ultra;
+
+  summary<gp::individual, fitnd> s;
+
+  CHECK(s.last_improvement() == 0);
+  CHECK(s.stagnation() == 0);
+
+  s.generation = 3;
+  CHECK(s.stagnation() == 3);
+
+  const scored_individual si1(gp::individual(prob), fitnd{1.0, 2.0});
+  CHECK(s.update_if_better(si1));
+
+  CHECK(s.last_improvement() == 3);
+  CHECK(s.stagnation() == 0);
+
+  s.generation = 7;
+  CHECK(s.last_improvement() == 3);
+  CHECK(s.stagnation() == 4);
+
+  const scored_individual si2(gp::individual(prob), fitnd{2.0, 3.0});
+  CHECK(s.update_if_better(si2));
+
+  CHECK(s.last_improvement() == 7);
+  CHECK(s.stagnation() == 0);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Concurrency")
@@ -151,4 +180,4 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
   }
 }
 
-}  // TEST_SUITE("EVOLUTION SUMMARY")
+}  // TEST_SUITE
