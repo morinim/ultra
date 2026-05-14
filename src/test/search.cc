@@ -96,4 +96,62 @@ TEST_CASE_FIXTURE(fixture1, "DE backend setter compatibility")
   CHECK(&s.refinement(de::numerical_refinement_backend()) == &s);
 }
 
+TEST_CASE_FIXTURE(fixture1, "refinement is skipped before stagnation threshold")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+
+  prob.params.population.init_subgroups = 3;
+  prob.params.evolution.generations = 5;
+  prob.params.refinement.fraction = 1.0;
+  prob.params.refinement.stagnation_threshold = 10;
+  prob.params.refinement.cooldown = 0;
+
+  search s(prob, eva);
+
+  bool called(false);
+
+  s.refinement(
+    [&](gp::individual &, const auto &,
+        const parameters::refinement_parameters &)
+    {
+      called = true;
+      return std::optional<evaluator_fitness_t<decltype(eva)>> {};
+    });
+
+  s.run();
+
+  CHECK(!called);
+}
+
+TEST_CASE_FIXTURE(fixture1, "refinement starts after stagnation threshold")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+
+  prob.params.population.init_subgroups = 3;
+  prob.params.evolution.generations = 3;
+  prob.params.refinement.fraction = 1.0;
+  prob.params.refinement.stagnation_threshold = 2;
+  prob.params.refinement.cooldown = 0;
+
+  search s(prob, eva);
+
+  bool called(false);
+
+  s.refinement(
+    [&](gp::individual &, const auto &,
+        const parameters::refinement_parameters &)
+    {
+      called = true;
+      return std::optional<evaluator_fitness_t<decltype(eva)>> {};
+    });
+
+  s.run();
+
+  CHECK(called);
+}
+
 }  // TEST_SUITE

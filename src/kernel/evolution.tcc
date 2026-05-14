@@ -46,6 +46,37 @@ struct print_status
   }
 };
 
+class refinement_schedule
+{
+public:
+  explicit refinement_schedule(const parameters::refinement_parameters &rp)
+    : rp_(rp)
+  {
+  }
+
+  [[nodiscard]] bool ready(unsigned stagnation) const noexcept
+  {
+    return cooldown_left_ == 0 && stagnation >= rp_.stagnation_threshold;
+  }
+
+  void after_refinement_attempt(bool performed) noexcept
+  {
+    if (performed)
+      cooldown_left_ = rp_.cooldown;
+  }
+
+  void tick() noexcept
+  {
+    if (cooldown_left_)
+      --cooldown_left_;
+  }
+
+private:
+  const parameters::refinement_parameters &rp_;
+
+  unsigned cooldown_left_ {};
+};
+
 }  // namespace internal
 
 ///
@@ -410,10 +441,9 @@ summary<typename evolution<E>::individual_t,
   scored_individual previous_best(sum_.best());
 
   internal::print_status ps;
+  internal::refinement_schedule ref_sched(params.refinement);
 
   std::stop_source source;
-
-  unsigned cooldown(0);
 
   // Asynchronous population update: each newly generated offspring can replace
   // an individual of the current population (aka steady state population).
@@ -503,17 +533,17 @@ summary<typename evolution<E>::individual_t,
 
     if (refinement_callback_)
     {
-      if (sum_.stagnation() >= params.refinement.stagnation_threshold
-          && !cooldown)
+      if (ref_sched.ready(sum_.stagnation()))
       {
+        bool performed(false);
+
         if (auto *ref_pop = strategy.refinement_subgroup(pop_))
-        {
-          if (perform_refinement(*ref_pop, ps))
-            cooldown = params.refinement.cooldown;
-        }
+          performed = perform_refinement(*ref_pop, ps);
+
+        ref_sched.after_refinement_attempt(performed);
       }
-      else if (cooldown > 0)
-        --cooldown;
+      else
+        ref_sched.tick();
     }
 
     sum_.az = analyzer(pop_, eva_);
