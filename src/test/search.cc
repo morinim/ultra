@@ -19,6 +19,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <iostream>
 
@@ -129,11 +130,22 @@ TEST_CASE_FIXTURE(fixture1, "refinement starts after stagnation threshold")
 {
   using namespace ultra;
 
-  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+  std::atomic<std::int64_t> sequence(0);
 
+  // Deliberately order-dependent evaluator: each direct evaluator call
+  // receives a lower fitness than previous calls. This prevents later
+  // generations from producing a new best once the earliest/highest observed
+  // value has been recorded.
+  const auto eva([&](const gp::individual &)
+  {
+    return -static_cast<double>(
+      sequence.fetch_add(1, std::memory_order_relaxed) + 1);
+  });
+
+  prob.params.cache.size = 0;
   prob.params.population.init_subgroups = 3;
-  prob.params.evolution.generations = 3;
-  prob.params.refinement.fraction = 1.0;
+  prob.params.evolution.generations = 5;
+  prob.params.refinement.fraction = 0.1;
   prob.params.refinement.stagnation_threshold = 2;
   prob.params.refinement.cooldown = 0;
 
