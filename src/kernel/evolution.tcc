@@ -330,7 +330,7 @@ auto evolution<E>::refinement_tournament(const P &ref_pop)
                     ? params.refinement.tournament_size
                     : params.evolution.tournament_size);
   assert(t_size > 0);
-  assert(rounds <= parameters::evolution_parameters::max_tournament_size);
+  assert(t_size <= parameters::evolution_parameters::max_tournament_size);
 
   auto best_coord(random::coord(ref_pop));
   auto best_fit(eva_(ref_pop[best_coord]));
