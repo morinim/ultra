@@ -50,6 +50,8 @@ TEST_CASE_FIXTURE(fixture1, "refiner is called when appropriate")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   prob.params.refinement.fraction = 1.0;
+  prob.params.refinement.stagnation_threshold = 0;
+  prob.params.refinement.cooldown = 0;
   prob.params.evolution.generations = 1;
 
   search s(prob, eva);

@@ -47,6 +47,7 @@ public:
   bool update_if_better(scored_individual<I, F>);
   [[nodiscard]] scored_individual<I, F> best() const;
   [[nodiscard]] unsigned last_improvement() const;
+  [[nodiscard]] unsigned stagnation() const;
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &, const problem &);

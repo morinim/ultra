@@ -109,8 +109,11 @@ private:
   enum class message {status, summary};
 
   // ---- Private methods ----
-  template<Population P> void perform_refinement(P &, internal::print_status &);
+  template<Population P> [[nodiscard]] bool perform_refinement(
+    P &, internal::print_status &);
   void print(message, internal::print_status &) const;
+  template<Population P> [[nodiscard]] auto refinement_tournament(const P &);
+
   [[nodiscard]] bool stop_condition() const;
 
   // ---- Data members ----

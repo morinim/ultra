@@ -277,37 +277,71 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 }
 
 ///
-/// Performs refinement on a subset of the population.
+/// Selects a candidate individual for refinement by tournament selection.
 ///
-/// \param[in] ps console print-related data
+/// \param[in] ref_pop  population subgroup from which the refinement candidate
+///                     is selected
+/// \return             coordinate of the selected individual
 ///
-/// A fraction of individuals (controlled by `refinement_fraction`) is selected
-/// and refined via local optimisation.
+/// A number of random individuals are sampled from the refinement population
+/// and evaluated. The coordinate of the individual with the best fitness is
+/// returned.
 ///
-/// Individuals are sampled randomly (with possible repetitions) from the
-/// population.
+/// This biases numerical refinement towards promising individuals while still
+/// preserving a stochastic component in the choice of candidates.
 ///
 template<Evaluator E>
 template<Population P>
-void evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
+auto evolution<E>::refinement_tournament(const P &ref_pop)
+{
+  const auto t_size(pop_.problem().params.evolution.tournament_size);
+  Expects(t_size > 0);
+
+  auto best_coord(random::coord(ref_pop));
+  auto best_fit(eva_(ref_pop[best_coord]));
+
+  for (std::size_t i(1); i < t_size; ++i)
+  {
+    const auto c(random::coord(ref_pop));
+    const auto fit(eva_(ref_pop[c]));
+
+    if (fit > best_fit)
+    {
+      best_coord = c;
+      best_fit = fit;
+    }
+  }
+
+  return best_coord;
+}
+
+///
+/// Performs refinement on a subset of the population.
+///
+/// \param[in] ps console print-related data
+/// \return       `true` if at least one refinement backend invocation occurred
+///
+/// A fraction-derived number of refinement attempts is performed. Each
+/// attempt selects a candidate by tournament-biased sampling from the
+/// refinement population. Selection is with replacement, so the same
+/// individual may be refined more than once.
+///
+template<Evaluator E>
+template<Population P>
+bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 {
   if (!ref_pop.size())
-    return;
+    return false;
 
   const auto refinement_fraction(pop_.problem().params.refinement.fraction);
   Expects(in_0_1(refinement_fraction));
 
   if (issmall(refinement_fraction))
-    return;
+    return false;
 
   const auto base_n(
     static_cast<std::size_t>(refinement_fraction * ref_pop.size()));
   const std::size_t n(std::max(base_n, 1uz));
-
-  using ref_pop_t = std::remove_cvref_t<decltype(ref_pop)>;
-  std::vector<typename ref_pop_t::coord> coords(n);
-
-  std::ranges::generate(coords, [&] { return random::coord(ref_pop); });
 
   const refiner optimiser(pop_.problem(), false);
 
@@ -315,9 +349,9 @@ void evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
   ps.to_be_refined.store(n, std::memory_order_relaxed);
   ps.refined.store(0, std::memory_order_relaxed);
 
-  for (auto c : coords)
+  for (std::size_t i(0); i < n; ++i)
   {
-    auto &ind(ref_pop[c]);
+    auto &ind(ref_pop[refinement_tournament(ref_pop)]);
     print(message::status, ps);
 
     if (const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
@@ -330,6 +364,8 @@ void evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
     ps.refined.fetch_add(1, std::memory_order_relaxed);
   }
+
+  return true;
 }
 
 ///
@@ -360,7 +396,9 @@ summary<typename evolution<E>::individual_t,
 {
   Expects(sum_.generation == 0);
 
-  if (pop_.problem().params.needs_init())
+  const auto &params(pop_.problem().params);
+
+  if (params.needs_init())
     throw std::logic_error("Parameters still contain auto-tune values. "
                            "Call parameters::init() (or use src::search) "
                            "before evolution::run().");
@@ -374,6 +412,8 @@ summary<typename evolution<E>::individual_t,
   internal::print_status ps;
 
   std::stop_source source;
+
+  unsigned cooldown(0);
 
   // Asynchronous population update: each newly generated offspring can replace
   // an individual of the current population (aka steady state population).
@@ -462,8 +502,19 @@ summary<typename evolution<E>::individual_t,
     print_and_update_if_better(sum_.best());
 
     if (refinement_callback_)
-      if (auto *ref_pop = strategy.refinement_subgroup(pop_))
-        perform_refinement(*ref_pop, ps);
+    {
+      if (sum_.stagnation() >= params.refinement.stagnation_threshold
+          && !cooldown)
+      {
+        if (auto *ref_pop = strategy.refinement_subgroup(pop_))
+        {
+          if (perform_refinement(*ref_pop, ps))
+            cooldown = params.refinement.cooldown;
+        }
+      }
+      else if (cooldown > 0)
+        --cooldown;
+    }
 
     sum_.az = analyzer(pop_, eva_);
     if (search_log_)

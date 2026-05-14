@@ -114,6 +114,12 @@ bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
   return improved;
 }
 
+template<Individual I, Fitness F>
+unsigned summary<I, F>::stagnation() const
+{
+  return generation - last_improvement();
+}
+
 ///
 /// \return best scored individul found so far
 ///

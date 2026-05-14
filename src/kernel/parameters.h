@@ -221,15 +221,26 @@ struct parameters
 
     /// Fraction of individuals to be refined.
     ///
-    /// Controls how many individuals are selected (per generation) for local
-    /// refinement.
+    /// Controls how many refinement attempts are performed when local
+    /// refinement is triggered.
     ///
     /// The value is interpreted as a fraction in the range `[0, 1]`:
     /// - `0.0` disables refinement;
-    /// - `1.0` applies refinement to the entire population;
-    /// - intermediate values select a proportion of individuals (typically
-    ///   via random sampling).
+    /// - `1.0` performs as many refinement attempts as there are individuals
+    ///   in the refinement population;
+    /// - intermediate values perform a proportional number of refinement
+    ///   attempts.
+    ///
+    /// Candidate selection is strategy-dependent and may select the same
+    /// individual more than once.
     double fraction {0.01};
+
+    /// Number of generations without improvement before refinement is
+    /// attempted.
+    unsigned stagnation_threshold {10};
+
+    /// Number of generations to wait after a refinement attempt.
+    unsigned cooldown {5};
 
     /// If `true`, print progress / summary messages from the refinement
     /// engine.
