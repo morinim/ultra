@@ -194,6 +194,12 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
+  if (refinement.tournament_size > evolution.max_tournament_size)
+  {
+    ultraERROR << "`refinement.tournament_size` out of range";
+    return false;
+  }
+
   if (population.min_individuals == 1)
   {
     ultraERROR << "At least 2 individuals for layer";

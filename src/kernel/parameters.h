@@ -231,8 +231,9 @@ struct parameters
     /// - intermediate values perform a proportional number of refinement
     ///   attempts.
     ///
-    /// Candidate selection is strategy-dependent and may select the same
-    /// individual more than once.
+    /// The evolution strategy selects the refinement subgroup. Candidate
+    /// selection within that subgroup is with replacement, so the same
+    /// individual may be refined more than once.
     double fraction {0.01};
 
     /// Number of generations without improvement before refinement is
@@ -241,6 +242,28 @@ struct parameters
 
     /// Number of generations to wait after a refinement attempt.
     unsigned cooldown {5};
+
+    /// Tournament size used to select candidates for refinement.
+    ///
+    /// Controls the selection pressure applied when choosing which individual
+    /// from the refinement population should be passed to the local optimiser.
+    ///
+    /// A value of `1` makes candidate selection uniformly random. Larger
+    /// values increasingly bias refinement towards individuals with better
+    /// fitness.
+    /// A value of `0` reuses `evolution.tournament_size`.
+    ///
+    /// This parameter is intentionally separate from
+    /// `evolution.tournament_size`: the pressure used to select parents during
+    /// evolution and the pressure used to select individuals for numerical
+    /// refinement need not be the same.
+    ///
+    /// \remark
+    /// Each tournament participant is evaluated before the refinement backend
+    /// is invoked. Large values may therefore increase runtime, and should be
+    /// used carefully with evaluators that are expensive, stateful, or have
+    /// observable side effects.
+    unsigned tournament_size {0};
 
     /// If `true`, print progress / summary messages from the refinement
     /// engine.

@@ -325,8 +325,12 @@ template<Evaluator E>
 template<Population P>
 auto evolution<E>::refinement_tournament(const P &ref_pop)
 {
-  const auto t_size(pop_.problem().params.evolution.tournament_size);
-  Expects(t_size > 0);
+  const auto &params(pop_.problem().params);
+  const auto t_size(params.refinement.tournament_size
+                    ? params.refinement.tournament_size
+                    : params.evolution.tournament_size);
+  assert(t_size > 0);
+  assert(rounds <= parameters::evolution_parameters::max_tournament_size);
 
   auto best_coord(random::coord(ref_pop));
   auto best_fit(eva_(ref_pop[best_coord]));
