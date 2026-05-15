@@ -240,28 +240,27 @@ struct parameters
 
     /// Tournament size used to select candidates for refinement.
     ///
-    /// Controls the selection pressure applied when choosing which individual
-    /// from the refinement population should be passed to the local optimiser.
-    ///
-    /// A value of `1` makes candidate selection uniformly random. Larger
-    /// values increasingly bias refinement towards individuals with better
-    /// fitness.
-    /// A value of `0` reuses `evolution.tournament_size`.
-    ///
-    /// This parameter is intentionally separate from
-    /// `evolution.tournament_size`: the pressure used to select parents during
-    /// evolution and the pressure used to select individuals for numerical
-    /// refinement need not be the same.
+    /// A value of `1` selects candidates uniformly at random. Larger values
+    /// increasingly favour fitter individuals. A value of `0` reuses
+    /// `evolution.tournament_size`.
     ///
     /// \remark
-    /// Each tournament participant is evaluated before the refinement backend
-    /// is invoked. Large values may therefore increase runtime, and should be
-    /// used carefully with evaluators that are expensive, stateful, or have
-    /// observable side effects.
+    /// This is separate from `evolution.tournament_size` because refinement
+    /// and parent selection may need different selection pressures.
+    ///
+    /// \remark
+    /// Tournament participants are evaluated before refinement. Large values
+    /// may therefore increase runtime, especially with expensive or stateful
+    /// evaluators.
     unsigned tournament_size {0};
 
-    /// If `true`, print progress / summary messages from the refinement
-    /// engine.
+    /// If `true`, allow refinement backends to print progress and summary
+    /// messages.
+    ///
+    /// \remark
+    /// Evolution-driven refinement disables backend messages because progress
+    /// reporting is handled by the outer evolution loop, avoiding interleaved
+    /// output during parallel refinement.
     bool messages {true};
   } refinement;
 
