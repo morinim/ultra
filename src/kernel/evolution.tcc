@@ -395,12 +395,15 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
   };
 
   std::vector<refinement_candidate> candidates;
+  candidates.reserve(n);
+
+  std::set<typename P::coord> seen;
 
   for (std::size_t i(0); i < n; ++i)
   {
     const auto [coord, fit] = refinement_tournament(ref_pop);
 
-    if (!std::ranges::contains(candidates, coord, &refinement_candidate::coord))
+    if (seen.insert(coord).second)
       candidates.push_back({coord, {ref_pop[coord], fit}, {}});
   }
 
@@ -419,6 +422,8 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
     pool.execute(
       [&, i]
       {
+        // Suppress backend output here: the evolution loop reports refinement
+        // progress and multiple backend instances may run concurrently.
         refiner optimiser(pop_.problem(), false);
 
         auto ind(candidates[i].initial.ind);
