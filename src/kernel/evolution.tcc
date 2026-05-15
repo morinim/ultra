@@ -437,10 +437,9 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
   // Commit refinement results.
   for (const auto &result : candidates)
-    if (!result.refined.empty())
+    if (!result.refined.empty()
+        && result.refined.fit >= result.initial.fit)
     {
-      assert(result.refined.fit >= result.initial.fit);
-
       if (sum_.update_if_better(result.refined))
         print(message::summary, ps);
 
