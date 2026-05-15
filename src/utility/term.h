@@ -11,6 +11,7 @@
  */
 
 #include <csignal>
+#include <string_view>
 
 #if !defined(ULTRA_CONSOLE_H)
 #define      ULTRA_CONSOLE_H
@@ -28,6 +29,7 @@ public:
   ~term();
 
   [[nodiscard]] bool user_stop() const;
+  void status_line(std::string_view, std::size_t = 70);
 
 private:
   static void reset();

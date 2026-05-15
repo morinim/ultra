@@ -39,9 +39,20 @@ auto std::formatter<ultra::log::level>::format(ultra::log::level l,
 namespace ultra
 {
 
+namespace internal
+{
+
+[[nodiscard]] std::mutex &console_mutex() noexcept
+{
+  static std::mutex m;
+  return m;
+}
+
+}
+
 log::level log::reporting_level {log::lINFO};
 std::unique_ptr<std::ostream> log::stream_ {nullptr};
-std::mutex log::emit_mutex_;
+std::mutex log::stream_mutex_;
 thread_local std::ostringstream log::tls_buffer_;
 
 
@@ -74,19 +85,23 @@ log::~log()
   const auto message(tls_buffer_.str());
   const auto now(std::chrono::system_clock::now());
 
-  std::lock_guard lock(emit_mutex_);
-
-  if (stream_)  // `stream_`, if available, gets all the messages
   {
-    // Append '\n' without forcing a flush (avoid `std::endl`).
-    (*stream_) << std::format("{:%F %T}\t{}\t{}", now, level_, message)
-               << '\n';
+    std::lock_guard lock(stream_mutex_);
+
+    if (stream_)  // `stream_`, if available, gets all the messages
+    {
+      // Append '\n' without forcing a flush (avoid `std::endl`).
+      (*stream_) << std::format("{:%F %T}\t{}\t{}", now, level_, message)
+                 << '\n';
+    }
   }
 
   if (level_ >= reporting_level)  // `stdout` is selective
   {
+    std::lock_guard lock(internal::console_mutex());
+
     // Clear the line using a width specifier and a carriage return.
-    std::print("\r{:60}\r", "");
+    std::print("\r{:70}\r", "");
 
     // Print the tag if necessary.
     if (level_ != lSTDOUT && level_ != lPAROUT)
@@ -99,11 +114,9 @@ log::~log()
 
 void log::flush()
 {
+  std::lock_guard lock(stream_mutex_);
   if (stream_)
-  {
-    std::lock_guard lock(emit_mutex_);
     stream_->flush();
-  }
 }
 
 ///
@@ -143,7 +156,7 @@ std::filesystem::path log::setup_stream(const std::string &base)
 
   if (auto new_stream(std::make_unique<std::ofstream>(fp)); *new_stream)
   {
-    std::lock_guard lock(emit_mutex_);
+    std::lock_guard lock(stream_mutex_);
     stream_ = std::move(new_stream);
     return fp;
   }

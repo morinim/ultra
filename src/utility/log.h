@@ -88,7 +88,7 @@ private:
   static thread_local std::ostringstream tls_buffer_;
 
   static std::unique_ptr<std::ostream> stream_;  // long term log stream
-  static std::mutex emit_mutex_;                 // protects the final emission
+  static std::mutex stream_mutex_;  // protects `stream_` writes
 
   level level_ {lSTDOUT};  // current log level
 };

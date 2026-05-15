@@ -13,6 +13,9 @@
 #include "utility/term.h"
 #include "utility/log.h"
 
+#include <cstdio>
+#include <print>
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 // The `windows.h` header file (or more correctly, `windef.h` that it includes
 // in turn) has macros for `min` and `max` that are interfering with
@@ -102,6 +105,11 @@ void term_raw_mode(bool) {}
 namespace ultra
 {
 
+namespace internal
+{
+[[nodiscard]] std::mutex &console_mutex() noexcept;
+}
+
 term console {};
 
 ///
@@ -154,6 +162,14 @@ bool term::user_stop() const
   }
 
   return stop;
+}
+
+void term::status_line(std::string_view line, std::size_t width)
+{
+  std::lock_guard lock(internal::console_mutex());
+
+  std::print("{0:<{1}}\r", line, width);
+  std::fflush(stdout);
 }
 
 ///
