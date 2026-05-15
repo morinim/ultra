@@ -33,6 +33,11 @@ template<Individual I, Fitness F>
 using on_new_best_callback_t =
   std::function<void (const scored_individual<I, F> &)>;
 
+/// Refinement backend callback.
+///
+/// When refinement is performed in parallel, this callback may be invoked
+/// concurrently for distinct candidate individuals. Implementations must be
+/// thread-safe and must synchronize access to shared state they capture.
 template<Evaluator E>
 using refinement_callback_t =
   std::function<std::optional<evaluator_fitness_t<E>>(

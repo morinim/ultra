@@ -173,12 +173,16 @@ void evolution<E>::print(message m, internal::print_status &ps) const
       }
     }
 
+    std::string line;
     if (log::reporting_level == log::lPAROUT)
     {
-      static const std::string_view chrs("|/-\\");
+      static constexpr std::string_view chrs("|/-\\");
 
-      std::cout << tags << chrs[elapsed.count() % chrs.size()] << ' '
-                << str_phase << ' ' << perc;
+      line = std::format("{}{} {} {}",
+                         tags,
+                         chrs[elapsed.count() % chrs.size()],
+                         str_phase,
+                         perc);
     }
     else if (log::reporting_level <= log::lSTDOUT)
     {
@@ -186,8 +190,11 @@ void evolution<E>::print(message m, internal::print_status &ps) const
         std::max(std::chrono::duration_cast<std::chrono::seconds>(elapsed),
                  1s).count());
 
-      std::cout << lexical_cast<std::string>(elapsed) << "  gen "
-                << sum_.generation << ' ' << str_phase << ' ' << perc;
+      line = std::format("{}  gen {} {} {}",
+                         lexical_cast<std::string>(elapsed),
+                         sum_.generation,
+                         str_phase,
+                         perc);
 
       if (sum_.generation)
       {
@@ -195,11 +202,11 @@ void evolution<E>::print(message m, internal::print_status &ps) const
         if (gph > 2.0)
           gph = std::floor(gph);
 
-        std::cout << "  [" << pop_.layers() << "x " << gph << "gph]";
+        line += std::format("  [{}x {}gph]", pop_.layers(), gph);
       }
     }
 
-    std::cout << "                            \r" << std::flush;
+    console.status_line(line);
   }
 
   if (ps.run_phase == internal::phase::evolution)
@@ -312,7 +319,8 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 ///
 /// \param[in] ref_pop  population subgroup from which the refinement candidate
 ///                     is selected
-/// \return             coordinate of the selected individual
+/// \return             coordinate of the selected individual and its
+///                     tournament fitness
 ///
 /// A number of random individuals are sampled from the refinement population
 /// and evaluated. The coordinate of the individual with the best fitness is
@@ -347,7 +355,7 @@ auto evolution<E>::refinement_tournament(const P &ref_pop)
     }
   }
 
-  return best_coord;
+  return std::pair{best_coord, best_fit};
 }
 
 ///
@@ -356,10 +364,10 @@ auto evolution<E>::refinement_tournament(const P &ref_pop)
 /// \param[in] ps console print-related data
 /// \return       `true` if at least one refinement backend invocation occurred
 ///
-/// A fraction-derived number of refinement attempts is performed. Each
-/// attempt selects a candidate by tournament-biased sampling from the
-/// refinement population. Selection is with replacement, so the same
-/// individual may be refined more than once.
+/// Performs a fraction-derived number of tournament draws, then discards
+/// duplicate coordinates before refinement. Therefore each selected individual
+/// is refined at most once per phase, and the number of backend invocations
+/// may be lower than the draw count.
 ///
 template<Evaluator E>
 template<Population P>
@@ -374,31 +382,70 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
   if (issmall(refinement_fraction))
     return false;
 
+  // ********* Select refinement candidates *********
   const auto base_n(
     static_cast<std::size_t>(refinement_fraction * ref_pop.size()));
   const std::size_t n(std::max(base_n, 1uz));
 
-  const refiner optimiser(pop_.problem(), false);
+  struct refinement_candidate
+  {
+    typename P::coord coord;
+    scored_individual<individual_t, fitness_t> initial;
+    scored_individual<individual_t, fitness_t> refined;
+  };
 
-  ps.run_phase = internal::phase::refinement;
-  ps.to_be_refined.store(n, std::memory_order_relaxed);
-  ps.refined.store(0, std::memory_order_relaxed);
+  std::vector<refinement_candidate> candidates;
 
   for (std::size_t i(0); i < n; ++i)
   {
-    auto &ind(ref_pop[refinement_tournament(ref_pop)]);
-    print(message::status, ps);
+    const auto [coord, fit] = refinement_tournament(ref_pop);
 
-    if (const auto fit(optimiser.optimise(ind, eva_, refinement_callback_));
-        fit)
-    {
-      const scored_individual si(ind, *fit);
-      if (sum_.update_if_better(si))
-        print(message::summary, ps);
-    }
-
-    ps.refined.fetch_add(1, std::memory_order_relaxed);
+    if (!std::ranges::contains(candidates, coord, &refinement_candidate::coord))
+      candidates.push_back({coord, {ref_pop[coord], fit}, {}});
   }
+
+  if (candidates.empty())
+    return false;
+
+  // ********* Refine candidates in parallel *********
+  ps.run_phase = internal::phase::refinement;
+  ps.to_be_refined.store(static_cast<unsigned>(candidates.size()),
+                         std::memory_order_relaxed);
+  ps.refined.store(0, std::memory_order_relaxed);
+
+  ultra::thread_pool pool;
+
+  for (std::size_t i(0); i < candidates.size(); ++i)
+    pool.execute(
+      [&, i]
+      {
+        refiner optimiser(pop_.problem(), false);
+
+        auto ind(candidates[i].initial.ind);
+
+        const auto fit(
+          optimiser.optimise(ind, eva_, refinement_callback_));
+
+        if (fit)
+          candidates[i].refined = scored_individual(ind, *fit);
+
+        ps.refined.fetch_add(1, std::memory_order_relaxed);
+        print(message::status, ps);
+      });
+
+  pool.wait();
+
+  // Commit refinement results.
+  for (const auto &result : candidates)
+    if (!result.refined.empty())
+    {
+      assert(result.refined.fit >= result.initial.fit);
+
+      if (sum_.update_if_better(result.refined))
+        print(message::summary, ps);
+
+      ref_pop[result.coord] = result.refined.ind;
+    }
 
   return true;
 }

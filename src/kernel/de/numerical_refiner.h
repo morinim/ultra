@@ -62,6 +62,7 @@ struct numerical_refinement_backend
     }
 
     problem de_prob(ranges);
+    de_prob.params.population.init_subgroups = 1;
     de_prob.params.population.individuals = params.de.individuals;
     de_prob.params.evolution.generations  = params.de.generations;
 

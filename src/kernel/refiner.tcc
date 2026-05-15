@@ -22,6 +22,11 @@
 ///
 /// `backend` receives `(ind, eva, params)` and is expected to update `ind`.
 ///
+/// \warning
+/// Parallel refinement may evaluate multiple candidate individuals
+/// concurrently. Evaluators used must therefore support concurrent invocations
+/// or provide their own synchronisation.
+///
 template<Evaluator E, class Backend>
 std::optional<evaluator_fitness_t<E>> refiner::optimise(
   evaluator_individual_t<E> &ind, const E &eva, Backend &&backend) const

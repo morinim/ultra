@@ -18,6 +18,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <atomic>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -161,7 +162,7 @@ TEST_CASE("Refinement callback dispatches by problem type")
 
     src::search s(prob);
 
-    bool called(false);
+    std::atomic_bool called(false);
     s.refinement([&called]<Evaluator E>(
                    gp::individual &, const E &,
                    const parameters::refinement_parameters &)
@@ -198,7 +199,7 @@ TEST_CASE("Refinement callback dispatches by problem type")
 
     src::search s(prob);
 
-    bool called(false);
+    std::atomic_bool called(false);
     s.refinement([&called]<Evaluator E>(
                    gp::individual &, const E &,
                    const parameters::refinement_parameters &)

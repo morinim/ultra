@@ -219,21 +219,16 @@ struct parameters
       std::size_t generations {20};
     } de;
 
-    /// Fraction of individuals to be refined.
+    /// Fraction of refinement tournament draws.
     ///
-    /// Controls how many refinement attempts are performed when local
-    /// refinement is triggered.
+    /// Determines how many tournament draws are performed from the refinement
+    /// population. The value is in the range `[0, 1]`: `0.0` disables
+    /// refinement, while `1.0` performs one draw per individual in the
+    /// refinement population.
     ///
-    /// The value is interpreted as a fraction in the range `[0, 1]`:
-    /// - `0.0` disables refinement;
-    /// - `1.0` performs as many refinement attempts as there are individuals
-    ///   in the refinement population;
-    /// - intermediate values perform a proportional number of refinement
-    ///   attempts.
-    ///
-    /// The evolution strategy selects the refinement subgroup. Candidate
-    /// selection within that subgroup is with replacement, so the same
-    /// individual may be refined more than once.
+    /// Draws are with replacement, but duplicate coordinates are discarded
+    /// before refinement, so each individual is refined at most once per
+    /// refinement phase.
     double fraction {0.01};
 
     /// Number of generations without improvement before refinement is

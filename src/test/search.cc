@@ -57,7 +57,7 @@ TEST_CASE_FIXTURE(fixture1, "refiner is called when appropriate")
 
   search s(prob, eva);
 
-  bool called(false);
+  std::atomic_bool called(false);
 
   auto &ret(
     s.refinement(
@@ -111,7 +111,7 @@ TEST_CASE_FIXTURE(fixture1, "refinement is skipped before stagnation threshold")
 
   search s(prob, eva);
 
-  bool called(false);
+  std::atomic_bool called(false);
 
   s.refinement(
     [&](gp::individual &, const auto &,
@@ -151,7 +151,7 @@ TEST_CASE_FIXTURE(fixture1, "refinement starts after stagnation threshold")
 
   search s(prob, eva);
 
-  bool called(false);
+  std::atomic_bool called(false);
 
   s.refinement(
     [&](gp::individual &, const auto &,
