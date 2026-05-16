@@ -20,8 +20,10 @@
 #include "third_party/doctest/doctest.h"
 
 #include <atomic>
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 
 TEST_SUITE("search")
 {
@@ -95,6 +97,74 @@ TEST_CASE_FIXTURE(fixture1, "DE backend setter compatibility")
   search s(prob, eva);
 
   CHECK(&s.refinement(de::numerical_refinement_backend()) == &s);
+}
+
+TEST_CASE_FIXTURE(fixture1, "refinement backend controls replacement")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::fixed);
+
+  // Use `std_es` so this test observes the refinement contract directly.
+  // ALPS may erase or reorganize layers after refinement and before the
+  // `after_generation` callback, hiding an accepted replacement.
+  using search_t = basic_search<std_es, decltype(eva)>;
+
+  prob.params.population.individuals = 30;
+  prob.params.refinement.fraction = 1.0;
+  prob.params.refinement.stagnation_threshold = 0;
+  prob.params.refinement.cooldown = 0;
+  prob.params.evolution.generations = 1;
+
+  constexpr individual::age_t marker_age(1000000);
+
+  const auto run_refinement([&](bool accept)
+  {
+    search_t s(prob, eva);
+
+    std::atomic_bool called(false);
+    bool accepted_candidate_found(false);
+
+    s.refinement(
+      [&, accept](gp::individual &ind, const auto &,
+                  const parameters::refinement_parameters &)
+      -> std::optional<double>
+      {
+        called = true;
+        ind.inc_age(marker_age);
+
+        if (accept)
+          return -std::numeric_limits<double>::infinity();
+
+        return {};
+      });
+
+    s.after_generation(
+      [&](const auto &pop, const auto &)
+      {
+        accepted_candidate_found =
+          std::ranges::any_of(pop,
+                              [](const auto &ind)
+                              {
+                                return ind.age() >= marker_age;
+                              });
+      });
+
+    s.run();
+
+    CHECK(called);
+    CHECK(accepted_candidate_found == accept);
+  });
+
+  SUBCASE("`nullopt` leaves the population unchanged")
+  {
+    run_refinement(false);
+  }
+
+  SUBCASE("returned fitness accepts the backend result")
+  {
+    run_refinement(true);
+  }
 }
 
 TEST_CASE_FIXTURE(fixture1, "refinement is skipped before stagnation threshold")

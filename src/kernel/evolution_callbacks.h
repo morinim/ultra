@@ -35,6 +35,10 @@ using on_new_best_callback_t =
 
 /// Refinement backend callback.
 ///
+/// Backends are responsible for deciding whether a refined individual should
+/// replace the original one (return `std::nullopt` to leave the population
+/// unchanged).
+///
 /// When refinement is performed in parallel, this callback may be invoked
 /// concurrently for distinct candidate individuals. Implementations must be
 /// thread-safe and must synchronize access to shared state they capture.

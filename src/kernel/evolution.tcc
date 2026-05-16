@@ -319,8 +319,7 @@ evolution<E> &evolution<E>::stop_source(std::stop_source ss)
 ///
 /// \param[in] ref_pop  population subgroup from which the refinement candidate
 ///                     is selected
-/// \return             coordinate of the selected individual and its
-///                     tournament fitness
+/// \return             coordinate of the selected individual
 ///
 /// A number of random individuals are sampled from the refinement population
 /// and evaluated. The coordinate of the individual with the best fitness is
@@ -355,7 +354,7 @@ auto evolution<E>::refinement_tournament(const P &ref_pop)
     }
   }
 
-  return std::pair{best_coord, best_fit};
+  return best_coord;
 }
 
 ///
@@ -390,7 +389,7 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
   struct refinement_candidate
   {
     typename P::coord coord;
-    scored_individual<individual_t, fitness_t> initial;
+    individual_t initial;
     scored_individual<individual_t, fitness_t> refined;
   };
 
@@ -401,10 +400,10 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
   for (std::size_t i(0); i < n; ++i)
   {
-    const auto [coord, fit] = refinement_tournament(ref_pop);
+    const auto coord(refinement_tournament(ref_pop));
 
     if (seen.insert(coord).second)
-      candidates.push_back({coord, {ref_pop[coord], fit}, {}});
+      candidates.push_back({coord, ref_pop[coord], {}});
   }
 
   if (candidates.empty())
@@ -426,7 +425,7 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
         // progress and multiple backend instances may run concurrently.
         refiner optimiser(pop_.problem(), false);
 
-        auto ind(candidates[i].initial.ind);
+        auto ind(candidates[i].initial);
 
         const auto fit(
           optimiser.optimise(ind, eva_, refinement_callback_));
@@ -442,8 +441,7 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
   // Commit refinement results.
   for (const auto &result : candidates)
-    if (!result.refined.empty()
-        && result.refined.fit >= result.initial.fit)
+    if (!result.refined.empty())
     {
       if (sum_.update_if_better(result.refined))
         print(message::summary, ps);

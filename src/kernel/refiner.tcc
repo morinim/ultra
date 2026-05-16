@@ -21,6 +21,8 @@
 /// Applies a refinement backend to `ind`.
 ///
 /// `backend` receives `(ind, eva, params)` and is expected to update `ind`.
+/// An engaged return value means that `ind` is an accepted replacement and
+/// contains the returned fitness; `std::nullopt` means no replacement.
 ///
 /// \warning
 /// Parallel refinement may evaluate multiple candidate individuals
