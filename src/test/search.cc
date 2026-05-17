@@ -144,7 +144,7 @@ TEST_CASE_FIXTURE(fixture1, "refinement backend controls replacement")
       {
         accepted_candidate_found =
           std::ranges::any_of(pop,
-                              [](const auto &ind)
+                              [marker_age](const auto &ind)
                               {
                                 return ind.age() >= marker_age;
                               });
