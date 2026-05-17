@@ -116,9 +116,10 @@ TEST_CASE_FIXTURE(fixture1, "refinement backend controls replacement")
   prob.params.refinement.cooldown = 0;
   prob.params.evolution.generations = 1;
 
-  constexpr individual::age_t marker_age(1000000);
+  // Static storage avoids nested lambda capture issues on MSVC.
+  static constexpr individual::age_t marker_age(1000000);
 
-  const auto run_refinement([&, marker_age](bool accept)
+  const auto run_refinement([&](bool accept)
   {
     search_t s(prob, eva);
 
@@ -144,7 +145,7 @@ TEST_CASE_FIXTURE(fixture1, "refinement backend controls replacement")
       {
         accepted_candidate_found =
           std::ranges::any_of(pop,
-                              [marker_age](const auto &ind)
+                              [](const auto &ind)
                               {
                                 return ind.age() >= marker_age;
                               });
