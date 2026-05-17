@@ -23,6 +23,17 @@ namespace ultra
 {
 
 ///
+/// Returns the number of hardware threads available to the process.
+///
+/// The value is clamped to at least one because
+/// `std::thread::hardware_concurrency()` may return zero.
+///
+std::size_t hardware_threads() noexcept
+{
+  return std::max<std::size_t>(1, std::thread::hardware_concurrency());
+}
+
+///
 /// Checks whether a value lies in the closed interval `[0, 1]`.
 ///
 /// \param[in] x value to test

@@ -95,6 +95,9 @@ public:
 
   [[nodiscard]] const problem &get_problem() const noexcept { return prob_; }
 
+  template<Population P>
+  [[nodiscard]] std::size_t max_parallelism(const P &) const noexcept;
+
 protected:
   evolution_strategy(const problem &, E &);
 
@@ -168,6 +171,9 @@ public:
 
   template<Population P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
+
+  template<Population P>
+  [[nodiscard]] std::size_t max_parallelism(const P &) const noexcept;
 
   static parameters shape(parameters);
 

@@ -415,7 +415,7 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
                          std::memory_order_relaxed);
   ps.refined.store(0, std::memory_order_relaxed);
 
-  ultra::thread_pool pool;
+  ultra::thread_pool pool(std::min(candidates.size(), hardware_threads()));
 
   for (std::size_t i(0); i < candidates.size(); ++i)
     pool.execute(
@@ -540,16 +540,19 @@ summary<typename evolution<E>::individual_t,
 
   bool use_sleep(false);
 
-  ultra::thread_pool pool;
+  const std::size_t workers(strategy.max_parallelism(pop_));
+  assert(workers);
+
+  ultra::thread_pool pool(workers);
 
   for (bool stop(false); !stop; ++sum_.generation)
   {
+    ps.new_generation();
+
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
-
-    ps.new_generation();
 
     const auto subpops(pop_.range_of_layers());
     for (auto l(subpops.begin()); l != subpops.end(); ++l)

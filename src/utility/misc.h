@@ -234,6 +234,7 @@ private:
 // Functions
 // *******************************************************************
 
+[[nodiscard]] std::size_t hardware_threads() noexcept;
 [[nodiscard]] bool in_0_1(double) noexcept;
 [[nodiscard]] bool is_integer(std::string_view);
 [[nodiscard]] bool is_number(std::string_view);

@@ -69,6 +69,27 @@ P *evolution_strategy<E>::refinement_subgroup(P &pop) const noexcept
 }
 
 ///
+/// Returns the maximum useful parallelism for this strategy.
+///
+/// \param[in] pop population being evolved
+/// \return        maximum number of worker threads useful for this strategy
+///
+/// The default strategy assumes that the population topology is stable during
+/// the run. For layered populations, each layer can be evolved independently,
+/// so the useful worker count is the current number of layers. Non-layered
+/// populations have a single scheduling unit.
+///
+template<Evaluator E>
+template<Population P>
+std::size_t evolution_strategy<E>::max_parallelism(const P &pop) const noexcept
+{
+  if constexpr (LayeredPopulation<P>)
+    return pop.layers();
+
+  return 1;
+}
+
+///
 /// Performs post-generation bookkeeping.
 ///
 /// \tparam P population type
@@ -214,6 +235,23 @@ template<LayeredPopulation P>
 auto *alps_es<E>::refinement_subgroup(P &pop) const noexcept
 {
   return pop.layers() < 3 ? nullptr : &pop.back();
+}
+
+///
+/// Returns the maximum useful parallelism for ALPS.
+///
+/// \return maximum number of worker threads useful for ALPS
+///
+/// ALPS can add or remove layers at generation boundaries. Therefore the
+/// initial number of layers is not a stable upper bound for the whole run.
+/// Returning the hardware concurrency lets the evolution driver keep enough
+/// workers available for layers introduced later during evolution.
+///
+template<Evaluator E>
+template<Population P>
+std::size_t alps_es<E>::max_parallelism(const P &) const noexcept
+{
+  return hardware_threads();
 }
 
 ///
