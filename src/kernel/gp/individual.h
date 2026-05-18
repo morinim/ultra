@@ -75,7 +75,7 @@ public:
   [[nodiscard]] locus::index_t size() const noexcept;
 
   // ---- Element access ----
-  [[nodiscard]] const gene &operator[](const locus &) const;
+  [[nodiscard]] const gene &operator[](const locus &) const noexcept;
   [[nodiscard]] locus start() const noexcept;
 
   // ---- Recombination operators ----

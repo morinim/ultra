@@ -18,7 +18,7 @@
 namespace ultra
 {
 
-const gene &interpreter::current_gene() const
+const gene &interpreter::current_gene() const noexcept
 {
   return (*prg_)[ip_];
 }

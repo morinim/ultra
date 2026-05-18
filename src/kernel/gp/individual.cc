@@ -237,7 +237,7 @@ hash_t individual::hash() const
 /// \param[in] l locus of a `gene`
 /// \return      the `l`-th gene of `this` individual
 ///
-const gene &individual::operator[](const locus &l) const
+const gene &individual::operator[](const locus &l) const noexcept
 {
   return genome_(l);
 }

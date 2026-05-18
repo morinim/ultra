@@ -75,7 +75,7 @@ public:
   [[nodiscard]] const gp::individual &program() const noexcept;
 
 private:
-  [[nodiscard]] const gene &current_gene() const;
+  [[nodiscard]] const gene &current_gene() const noexcept;
 
   const gp::individual *prg_;
 
