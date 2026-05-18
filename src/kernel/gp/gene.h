@@ -67,10 +67,11 @@ struct gene
 
   gene(const function *, const arg_pack &);
 
-  [[nodiscard]] locus locus_of_argument(std::size_t) const;
-  [[nodiscard]] locus locus_of_argument(const arg_pack::value_type &) const;
+  [[nodiscard]] locus locus_of_argument(std::size_t) const noexcept;
+  [[nodiscard]] locus locus_of_argument(
+    const arg_pack::value_type &) const noexcept;
 
-  [[nodiscard]] symbol::category_t category() const;
+  [[nodiscard]] symbol::category_t category() const noexcept;
 
   /// Equality comparison.
   ///

@@ -54,7 +54,7 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
 /// The returned locus uses the category required by the function for the
 /// `i`-th argument.
 ///
-locus gene::locus_of_argument(std::size_t i) const
+locus gene::locus_of_argument(std::size_t i) const noexcept
 {
   Expects(i < func->arity());
   Expects(std::holds_alternative<D_ADDRESS>(args[i]));
@@ -76,7 +76,7 @@ locus gene::locus_of_argument(std::size_t i) const
 /// The argument position is inferred from the argument list in order to
 /// recover the correct category.
 ///
-locus gene::locus_of_argument(const arg_pack::value_type &a) const
+locus gene::locus_of_argument(const arg_pack::value_type &a) const noexcept
 {
   Expects(std::holds_alternative<D_ADDRESS>(a));
 
@@ -93,7 +93,7 @@ locus gene::locus_of_argument(const arg_pack::value_type &a) const
 ///
 /// \pre `func != nullptr`
 ///
-symbol::category_t gene::category() const
+symbol::category_t gene::category() const noexcept
 {
   Expects(func);
   return func->category();
