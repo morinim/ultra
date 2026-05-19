@@ -108,7 +108,7 @@ std::size_t evolution_strategy<E>::max_parallelism(const P &pop) const noexcept
 ///  - reset layers that are both stagnant and converged.
 ///
 ///  A layer is reset when (`and` of the points):
-///  - `generation - last_improvement > max_stuck_gen`;
+///  - `stagnation() > max_stuck_gen`;
 ///  - the fitness variance of the layer is approximately zero.
 ///
 /// \note Layer reset preserves the number of layers.
@@ -125,17 +125,12 @@ void evolution_strategy<E>::after_generation(
   pop.inc_age();
 
   for (const auto layers(pop.range_of_layers()); auto &layer : layers)
-  {
-    // Pay attention to `params.max_stuck_gen`: it's often a large number and
-    // can cause overflow. E.g.
-    // `sum.generation > sum.last_improvement + params.max_stuck_gen`
-    if (sum.generation - sum.last_improvement() > params.evolution.max_stuck_gen
+    if (sum.stagnation() > params.evolution.max_stuck_gen
         && issmall(sum.az.fit_dist(layer).variance()))
     {
       layer.reset(pop.problem());
       ultraINFO << "Resetting layer " << layer.uid();
     }
-  }
 }
 
 ///
