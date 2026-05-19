@@ -17,6 +17,9 @@
 #include "utility/log.h"
 #include "utility/misc.h"
 
+#include <expected>
+#include <vector>
+
 namespace ultra::gp
 {
 
@@ -419,6 +422,79 @@ void individual::apply_decision_vector(const decision_vector &v)
 
 namespace internal
 {
+
+/// Result of relocating a dependency-closed exon graph.
+struct relocation_result
+{
+  /// New locus of the relocated root gene.
+  locus root;
+
+  /// First destination index after the relocated row range.
+  locus::index_t next_index;
+};
+
+/// Recoverable relocation failures.
+enum class relocation_error
+{
+  /// The destination matrix has too few rows for the active source rows.
+  insufficient_rows
+};
+
+using relocation_result_t = std::expected<relocation_result, relocation_error>;
+
+///
+/// Copies the active graph of `from` into `to`, compacting active rows.
+///
+/// \return the relocated root locus and the first unused row index
+///
+/// Active rows are relocated into the consecutive range starting at
+/// `first_index`. Active loci keep their original categories and address
+/// arguments are rewritten to point at the corresponding relocated rows.
+///
+[[nodiscard]] relocation_result_t relocate_exons(const individual &from,
+                                                 locus::index_t first_index,
+                                                 matrix<gene> &to)
+{
+  Expects(!from.empty());
+  Expects(from.categories() <= to.cols());
+
+  std::vector<locus> active_loci;
+  std::set<locus::index_t> active_indices;
+
+  const auto exons(from.cexons());
+  for (auto it(exons.begin()); it != exons.end(); ++it)
+  {
+    active_loci.push_back(it.locus());
+    active_indices.insert(it.locus().index);
+  }
+
+  if (first_index + active_indices.size() > to.rows())
+    return std::unexpected(relocation_error::insufficient_rows);
+
+  std::vector<locus::index_t> new_index_of(from.size(), locus::npos().index);
+
+  auto dst_index(first_index);
+  for (const auto src_index : active_indices)
+    new_index_of[src_index] = dst_index++;
+
+  for (const auto &src_locus : active_loci)
+  {
+    const locus dst_locus(new_index_of[src_locus.index], src_locus.category);
+
+    gene g(from[src_locus]);
+
+    for (auto &arg : g.args)
+      if (std::holds_alternative<D_ADDRESS>(arg))
+        arg = static_cast<D_ADDRESS>(
+          new_index_of[g.locus_of_argument(arg).index]);
+
+    to(dst_locus) = std::move(g);
+  }
+
+  return relocation_result{
+    {new_index_of[from.start().index], from.start().category},
+    dst_index};
+}
 
 ///
 /// Internal implementation of GP crossover.

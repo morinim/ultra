@@ -19,10 +19,30 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <expected>
 #include <future>
 #include <latch>
 #include <set>
 #include <sstream>
+
+
+namespace ultra::gp::internal
+{
+
+struct relocation_result
+{
+  locus root;
+  locus::index_t next_index;
+};
+
+enum class relocation_error { insufficient_rows };
+
+using relocation_result_t = std::expected<relocation_result, relocation_error>;
+
+[[nodiscard]] relocation_result_t relocate_exons(
+  const individual &, locus::index_t, matrix<gene> &);
+}  // namespace ultra::gp::internal
+
 
 TEST_SUITE("gp::individual")
 {
@@ -689,15 +709,15 @@ TEST_CASE_FIXTURE(fixture1, "Decision vector")
     CHECK(dv.values[1] == doctest::Approx(3.0));
     CHECK(dv.values[2] == doctest::Approx(2.0));
 
-    CHECK(dv.coords[0].coord.loc == locus{1, 0});
+    CHECK(dv.coords[0].coord.loc == locus(1, 0));
     CHECK(dv.coords[0].coord.arg_index == 1);
     CHECK(dv.coords[0].kind == pk::integer);
 
-    CHECK(dv.coords[1].coord.loc == locus{0, 0});
+    CHECK(dv.coords[1].coord.loc == locus(0, 0));
     CHECK(dv.coords[1].coord.arg_index == 0);
     CHECK(dv.coords[1].kind == pk::real);
 
-    CHECK(dv.coords[2].coord.loc == locus{0, 0});
+    CHECK(dv.coords[2].coord.loc == locus(0, 0));
     CHECK(dv.coords[2].coord.arg_index == 1);
     CHECK(dv.coords[2].kind == pk::real);
   }
@@ -801,6 +821,184 @@ TEST_CASE_FIXTURE(fixture1, "Decision vector")
     ind.apply_decision_vector(dv);
 
     CHECK(ind.signature() != old_sig);
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Relocate exons")
+{
+  using namespace ultra;
+
+  SUBCASE("Hand-crafted individual")
+  {
+    const gp::individual from(
+      {
+        {f_add, {7.0, 9.0}},       // [0] intron
+        {f_add, {3.0, 2.0}},       // [1] active
+        {f_add, {4.0, 5.0}},       // [2] intron
+        {f_add, {1_addr, 1.0}},    // [3] active
+        {f_sub, {3_addr, 1_addr}}  // [4] active
+      });
+
+    matrix<gene> to(6, from.categories());
+
+    const auto r(gp::internal::relocate_exons(from, 2, to));
+    REQUIRE(r.has_value());
+
+    CHECK(r->root == locus(4, symbol::default_category));
+    CHECK(r->next_index == 5);
+
+    CHECK(to(2, 0).func == f_add);
+    CHECK(to(2, 0).args == gene::arg_pack{3.0, 2.0});
+
+    CHECK(to(3, 0).func == f_add);
+    CHECK(to(3, 0).args == gene::arg_pack{2_addr, 1.0});
+
+    CHECK(to(4, 0).func == f_sub);
+    CHECK(to(4, 0).args == gene::arg_pack{3_addr, 2_addr});
+  }
+
+  SUBCASE("Can relocate at index zero")
+  {
+    const gp::individual from(
+      {
+        {f_add, {7.0, 9.0}},       // [0] intron
+        {f_add, {3.0, 2.0}},       // [1] active
+        {f_add, {4.0, 5.0}},       // [2] intron
+        {f_add, {1_addr, 1.0}},    // [3] active
+        {f_sub, {3_addr, 1_addr}}  // [4] active
+      });
+
+    matrix<gene> to(5, from.categories());
+
+    const auto r(gp::internal::relocate_exons(from, 0, to));
+    REQUIRE(r.has_value());
+
+    CHECK(r->root == locus(2, symbol::default_category));
+    CHECK(r->next_index == 3);
+
+    CHECK(to(0, 0).args == gene::arg_pack{3.0, 2.0});
+    CHECK(to(1, 0).args == gene::arg_pack{0_addr, 1.0});
+    CHECK(to(2, 0).args == gene::arg_pack{1_addr, 0_addr});
+  }
+
+  SUBCASE("Reports insufficient rows")
+  {
+    const gp::individual from(
+      {
+        {f_add, {7.0, 9.0}},       // [0] intron
+        {f_add, {3.0, 2.0}},       // [1] active
+        {f_add, {4.0, 5.0}},       // [2] intron
+        {f_add, {1_addr, 1.0}},    // [3] active
+        {f_sub, {3_addr, 1_addr}}  // [4] active
+      });
+
+    matrix<gene> to(4, from.categories());
+    const auto r(gp::internal::relocate_exons(from, 2, to));
+
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == gp::internal::relocation_error::insufficient_rows);
+
+    for (const auto &g : to)
+      CHECK(!g.func);
+  }
+}
+
+TEST_CASE_FIXTURE(fixture3, "Relocate exons multicategory")
+{
+  using namespace ultra;
+
+  const D_STRING h("hello");
+  const D_STRING w("world");
+  const D_STRING sm(":-)");
+
+  const gp::individual from(
+    {
+      {s_ife, {h, w, sm, h}},       // [0,1] active
+      {f_add, {7.0, 9.0}},          // [1,0] intron
+      {s_ife, {0_addr, w, sm, h}},  // [2,1] active
+      {f_len, {2_addr}},            // [3,0] active
+      {f_add, {3_addr, 1.0}}        // [4,0] active root
+    });
+
+  matrix<gene> to(from.size(), from.categories());
+
+  const auto r(gp::internal::relocate_exons(from, 0, to));
+  REQUIRE(r.has_value());
+
+  CHECK(r->root == locus(3, symbol::default_category));
+  CHECK(r->next_index == 4);
+
+  CHECK(to(0, 1).func == s_ife);
+  CHECK(to(0, 1).args == gene::arg_pack{h, w, sm, h});
+
+  CHECK(to(1, 1).func == s_ife);
+  CHECK(to(1, 1).args == gene::arg_pack{0_addr, w, sm, h});
+
+  CHECK(to(2, 0).func == f_len);
+  CHECK(to(2, 0).args == gene::arg_pack{1_addr});
+
+  CHECK(to(3, 0).func == f_add);
+  CHECK(to(3, 0).args == gene::arg_pack{2_addr, 1.0});
+}
+
+// This test deliberately doesn't compute the expected relocation. It only
+// says: "whatever relocation did, the copied graph is reachable, bounded,
+// non-empty and acyclic".
+TEST_CASE_FIXTURE(fixture3, "Relocate exons preserves valid dependency graph")
+{
+  using namespace ultra;
+
+  for (unsigned k(0); k < 200; ++k)
+  {
+    const gp::individual from(prob);
+
+    std::set<locus::index_t> original_active_rows;
+    for (auto it(from.cexons().begin()); it != from.cexons().end(); ++it)
+      original_active_rows.insert(it.locus().index);
+
+    const locus::index_t first_index(1);
+    matrix<gene> to(from.size() + first_index, from.categories());
+
+    const auto r(gp::internal::relocate_exons(from, first_index, to));
+    REQUIRE(r.has_value());
+
+    CHECK(r->root.index < r->next_index);
+    CHECK(r->root.index >= first_index);
+    CHECK(r->next_index == first_index + original_active_rows.size());
+
+    std::set<locus> reached;
+    std::vector<locus> pending{r->root};
+
+    while (!pending.empty())
+    {
+      const auto l(pending.back());
+      pending.pop_back();
+
+      if (!reached.insert(l).second)
+        continue;
+
+      CHECK(l.index >= first_index);
+      CHECK(l.index < r->next_index);
+      CHECK(l.category < to.cols());
+
+      const auto &g(to(l));
+      REQUIRE(g.func);
+      CHECK(g.is_valid());
+      CHECK(g.category() == l.category);
+
+      for (const auto &arg : g.args)
+        if (std::holds_alternative<D_ADDRESS>(arg))
+        {
+          const auto al(g.locus_of_argument(arg));
+
+          CHECK(al.index >= first_index);
+          CHECK(al.index < l.index);
+          CHECK(al.category < to.cols());
+          CHECK(to(al).func);
+
+          pending.push_back(al);
+        }
+    }
   }
 }
 

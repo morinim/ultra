@@ -129,8 +129,8 @@ private:
 [[nodiscard]] individual crossover(const problem &,
                                    const individual &, const individual &);
 [[nodiscard]] unsigned distance(const individual &, const individual &);
-[[nodiscard]] locus random_locus(const individual &);
 [[nodiscard]] decision_vector extract_decision_vector(const individual &);
+[[nodiscard]] locus random_locus(const individual &);
 
 }  // namespace ultra::gp
 
