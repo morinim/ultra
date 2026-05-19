@@ -13,7 +13,6 @@
 #if !defined(ULTRA_MATRIX_H)
 #define      ULTRA_MATRIX_H
 
-#include "kernel/gp/locus.h"
 #include "utility/assert.h"
 
 #include <algorithm>

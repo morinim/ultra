@@ -94,9 +94,9 @@ template<class S>
 typename matrix<T>::const_reference matrix<T>::operator()(
   const S &s) const noexcept
 {
-  const auto & [r, c] = s;
+  const auto &[r, c] = s;
 
-  return data_[index(r, c)];
+  return operator()(r, c);
 }
 
 ///
@@ -107,11 +107,11 @@ template<class T>
 template<class S>
 typename matrix<T>::reference matrix<T>::operator()(const S &s) noexcept
 {
-  const auto & [r, c] = s;
+  const auto &[r, c] = s;
 
   // DO NOT CHANGE THE RETURN TYPE TO `T` (the method won't work when
   // `T` == `bool`)
-  return data_[index(r, c)];
+  return operator()(r, c);
 }
 
 ///
