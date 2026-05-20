@@ -610,7 +610,7 @@ void crossover_engine::tree(context &ctx) const
 {
   auto crossover_ = [&](this auto &self, const locus &l) -> void
   {
-    copy_gene(ctx, l);
+    this->copy_gene(ctx, l);
 
     for (const auto &al : ctx.from[l].args)
       if (std::holds_alternative<D_ADDRESS>(al))
