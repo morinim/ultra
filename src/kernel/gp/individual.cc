@@ -608,9 +608,9 @@ void crossover_engine::uniform(context &ctx) const
 /// entire functional subexpression is preserved.
 void crossover_engine::tree(context &ctx) const
 {
-  auto crossover_ = [&](this auto &self, const locus &l) -> void
+  auto crossover_ = [&, engine = this](this auto &self, const locus &l) -> void
   {
-    this->copy_gene(ctx, l);
+    engine->copy_gene(ctx, l);
 
     for (const auto &al : ctx.from[l].args)
       if (std::holds_alternative<D_ADDRESS>(al))
