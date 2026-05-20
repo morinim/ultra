@@ -60,7 +60,7 @@ jobs:
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++"
+            cc: "clang-21", cxx: "clang++-21"
           }
         - {
             name: "Intel Ubuntu CLANG Release",
@@ -68,7 +68,7 @@ jobs:
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++"
+            cc: "clang-21", cxx: "clang++-21"
           }
         - {
             name: "Intel Ubuntu CLANG TSan",
@@ -76,7 +76,7 @@ jobs:
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++",
+            cc: "clang-21", cxx: "clang++-21",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
         - {
@@ -146,6 +146,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Clang 21
+        if: ${{ contains(matrix.config.name, 'CLANG') }}
+        shell: bash
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang-21 lld-21
+
+      - name: Clang diagnostics
+        if: ${{ contains(matrix.config.name, 'CLANG') }}
+        shell: bash
+        run: |
+          $CXX --version
+          $CXX -v -std=c++23 -x c++ -E - </dev/null
+          echo | $CXX -std=c++23 -dM -E -x c++ -include version - \
+            | grep -E '__GLIBCXX__|_LIBCPP_VERSION|__cpp_lib_expected' || true
 
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
