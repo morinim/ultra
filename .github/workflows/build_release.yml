@@ -35,7 +35,6 @@ jobs:
             build_type: "Debug",
             os: ubuntu-24.04-arm,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
         - {
@@ -43,7 +42,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-24.04-arm,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
         - {
@@ -51,7 +49,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-24.04-arm,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
@@ -60,7 +57,6 @@ jobs:
             build_type: "Release",
             os: windows-11-arm,
             shell: powershell,
-            generator: default,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -68,7 +64,6 @@ jobs:
             build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
         - {
@@ -76,7 +71,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
         - {
@@ -84,7 +78,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "clang-21", cxx: "clang++-21",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
@@ -93,7 +86,6 @@ jobs:
             build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
         - {
@@ -101,7 +93,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
         - {
@@ -109,7 +100,6 @@ jobs:
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
-            generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
@@ -126,7 +116,6 @@ jobs:
             build_type: "Debug",
             os: windows-latest,
             shell: powershell,
-            generator: default,
             cc: "cl", cxx: "cl"
           }
         - {
@@ -134,13 +123,11 @@ jobs:
             build_type: "Release",
             os: windows-latest,
             shell: powershell,
-            generator: default,
             cc: "cl", cxx: "cl"
           }
         #- {
         #    name: "macOS GCC ",
         #    os: macos-latest,
-        #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
 
@@ -165,15 +152,15 @@ jobs:
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-21 lld-21
+          sudo apt-get install -y --no-install-recommends clang-21 lld-21 libclang-rt-21-dev
 
       - name: Configure CMake (default generator)
-        if: ${{matrix.config.generator == 'default'}}
+        if: ${{!matrix.config.generator}}
         working-directory: ${{github.workspace}}
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_options || ''}} -B build/ src/
 
       - name: Configure CMake (specific generator)
-        if: ${{matrix.config.generator != 'default'}}
+        if: ${{matrix.config.generator}}
         working-directory: ${{github.workspace}}
         run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_options || ''}} -B build/ src/
 
@@ -182,10 +169,10 @@ jobs:
         run: cmake --build build/ --config ${{matrix.config.build_type}} --verbose
 
       - name: Test (ctest)
-        if: ${{matrix.config.generator == 'default'}}
+        if: ${{!matrix.config.generator}}
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       - name: Test (skip)
-        if: ${{matrix.config.generator != 'default'}}
+        if: ${{matrix.config.generator == 'MinGW Makefiles'}}
         run: echo "CTest skipped due to issues between doctest and MinGW"
