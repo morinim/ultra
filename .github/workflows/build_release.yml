@@ -54,28 +54,31 @@ jobs:
             cc: "cl", cxx: "cl"
           }
         - {
-            name: "Intel Ubuntu CLANG Debug",
+            name: "Intel Ubuntu CLANG libc++ Debug",
             build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++"
+            cc: "clang", cxx: "clang++",
+            cmake_options: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++"
           }
         - {
-            name: "Intel Ubuntu CLANG Release",
+            name: "Intel Ubuntu CLANG libc++ Release",
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++"
+            cc: "clang", cxx: "clang++",
+            cmake_options: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++"
           }
         - {
-            name: "Intel Ubuntu CLANG TSan",
+            name: "Intel Ubuntu CLANG libc++ TSan",
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang -fsanitize=thread", cxx: "clang++ -fsanitize=thread"
+            cc: "clang", cxx: "clang++",
+            cmake_options: "-DCMAKE_CXX_FLAGS='-stdlib=libc++ -fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-stdlib=libc++ -fsanitize=thread'"
           }
         - {
             name: "Intel Ubuntu GCC Debug",
@@ -144,15 +147,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install libc++
+        if: ${{ contains(matrix.config.name, 'libc++') }}
+        run: sudo apt-get update && sudo apt-get install -y libc++-dev libc++abi-dev
+
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
         working-directory: ${{github.workspace}}
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{ matrix.config.cmake_options }} -B build/ src/
 
       - name: Configure CMake (specific generator)
         if: ${{matrix.config.generator != 'default'}}
         working-directory: ${{github.workspace}}
-        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -B build/ src/
+        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{ matrix.config.cmake_options }} -B build/ src/
 
       - name: Build
         working-directory: ${{github.workspace}}
