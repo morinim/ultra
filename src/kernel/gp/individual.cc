@@ -595,16 +595,9 @@ void crossover_engine::two_points(context &ctx) const
 /// many parse trees are at least partially structurally similar.
 void crossover_engine::uniform(context &ctx) const
 {
-  // NOTE: we are intentionally using `std::transform` instead of
-  // `std::ranges::transform`. As of Clang 18.1.3, using ranges here
-  // triggers a known Internal Compiler Error (ICE) in the frontend:
-  // "error: cannot compile this l-value expression yet".
-  // Do not refactor to ranges until CI confirms Clang stability for
-  // nested lambda expressions in this context.
-  std::transform(ctx.from.begin(), ctx.from.end(), ctx.to.genome_.begin(),
-                 ctx.to.genome_.begin(),
-                 [](const auto &g1, const auto &g2)
-                 { return random::boolean() ? g1 : g2; });
+  std::ranges::transform(ctx.from, ctx.to.genome_, ctx.to.genome_.begin(),
+                         [](const auto &g1, const auto &g2)
+                         { return random::boolean() ? g1 : g2; });
 }
 
 /// Tree crossover.
