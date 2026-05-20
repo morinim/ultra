@@ -20,6 +20,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace ultra
 {
@@ -137,9 +138,32 @@ private:
 }  // namespace ultra
 
 template<>
-struct std::formatter<ultra::log::level> : std::formatter<std::string_view>
+struct std::formatter<ultra::log::level, char>
+  : std::formatter<std::string_view, char>
 {
-  [[nodiscard]] auto format(ultra::log::level, format_context &) const;
+  template<class FormatContext>
+  [[nodiscard]] auto format(ultra::log::level l, FormatContext &ctx) const
+  {
+    std::string_view name;
+
+    switch (l)
+    {
+    case ultra::log::lDEBUG:   name =   "DEBUG"; break;
+    case ultra::log::lINFO:    name =    "INFO"; break;
+    case ultra::log::lWARNING: name = "WARNING"; break;
+    case ultra::log::lERROR:   name =   "ERROR"; break;
+    case ultra::log::lFATAL:   name =   "FATAL"; break;
+
+    case ultra::log::lSTDOUT:
+    case ultra::log::lPAROUT:
+    case ultra::log::lOFF:
+      break;
+    }
+
+    return std::formatter<std::string_view, char>::format(name, ctx);
+  }
 };
+
+static_assert(std::formattable<ultra::log::level, char>);
 
 #endif  // include guard

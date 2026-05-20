@@ -16,25 +16,6 @@
 #include <chrono>
 #include <fstream>
 #include <print>
-#include <string_view>
-
-auto std::formatter<ultra::log::level>::format(ultra::log::level l,
-                                               format_context &ctx) const
-{
-  std::string_view name("");
-
-  switch (l)
-  {
-  case ultra::log::lDEBUG:   name =   "DEBUG"; break;
-  case ultra::log::lINFO:    name =    "INFO"; break;
-  case ultra::log::lWARNING: name = "WARNING"; break;
-  case ultra::log::lERROR:   name =   "ERROR"; break;
-  case ultra::log::lFATAL:   name =   "FATAL"; break;
-  default:  break;  // explicitly do nothing for lSTDOUT/lPAROUT
-  }
-
-  return std::formatter<std::string_view>::format(name, ctx);
-}
 
 namespace ultra
 {
