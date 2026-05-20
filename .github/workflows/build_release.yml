@@ -43,7 +43,8 @@ jobs:
             os: ubuntu-24.04-arm,
             shell: bash,
             generator: default,
-            cc: "gcc-14 -fsanitize=thread", cxx: "g++-14 -fsanitize=thread"
+            cc: "gcc-14", cxx: "g++-14",
+            cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
         - {
             name: "ARM Windows MSVC Release",
@@ -54,31 +55,29 @@ jobs:
             cc: "cl", cxx: "cl"
           }
         - {
-            name: "Intel Ubuntu CLANG libc++ Debug",
+            name: "Intel Ubuntu CLANG Debug",
             build_type: "Debug",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "clang", cxx: "clang++",
-            cmake_options: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++"
+            cc: "clang", cxx: "clang++"
           }
         - {
-            name: "Intel Ubuntu CLANG libc++ Release",
+            name: "Intel Ubuntu CLANG Release",
+            build_type: "Release",
+            os: ubuntu-latest,
+            shell: bash,
+            generator: default,
+            cc: "clang", cxx: "clang++"
+          }
+        - {
+            name: "Intel Ubuntu CLANG TSan",
             build_type: "Release",
             os: ubuntu-latest,
             shell: bash,
             generator: default,
             cc: "clang", cxx: "clang++",
-            cmake_options: "-DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++"
-          }
-        - {
-            name: "Intel Ubuntu CLANG libc++ TSan",
-            build_type: "Release",
-            os: ubuntu-latest,
-            shell: bash,
-            generator: default,
-            cc: "clang", cxx: "clang++",
-            cmake_options: "-DCMAKE_CXX_FLAGS='-stdlib=libc++ -fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-stdlib=libc++ -fsanitize=thread'"
+            cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
         - {
             name: "Intel Ubuntu GCC Debug",
@@ -102,7 +101,8 @@ jobs:
             os: ubuntu-latest,
             shell: bash,
             generator: default,
-            cc: "gcc-14 -fsanitize=thread", cxx: "g++-14 -fsanitize=thread"
+            cc: "gcc-14", cxx: "g++-14",
+            cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
           }
         - {
             name: "Intel Windows MINGW Release",
@@ -146,10 +146,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install libc++
-        if: ${{ contains(matrix.config.name, 'libc++') }}
-        run: sudo apt-get update && sudo apt-get install -y libc++-dev libc++abi-dev
 
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
