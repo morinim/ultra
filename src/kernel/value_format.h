@@ -49,7 +49,7 @@ inline auto format_quoted(std::format_context &ctx, std::string_view s)
 
 
 template<>
-struct std::formatter<ultra::value_t>
+struct std::formatter<ultra::value_t, char>
 {
   constexpr auto parse(std::format_parse_context &ctx)
   {

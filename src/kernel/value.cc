@@ -17,6 +17,8 @@
 
 #include <iostream>
 
+static_assert(std::formattable<ultra::value_t, char>);
+
 namespace ultra
 {
 
