@@ -34,6 +34,7 @@ jobs:
             name: "ARM Ubuntu GCC Debug",
             build_type: "Debug",
             os: ubuntu-24.04-arm,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -41,6 +42,7 @@ jobs:
             name: "ARM Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-24.04-arm,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -48,6 +50,7 @@ jobs:
             name: "ARM Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-24.04-arm,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -56,6 +59,7 @@ jobs:
             name: "ARM Windows MSVC Release",
             build_type: "Release",
             os: windows-11-arm,
+            shell: powershell,
             generator: default,
             cc: "cl", cxx: "cl"
           }
@@ -63,6 +67,7 @@ jobs:
             name: "Intel Ubuntu CLANG Debug",
             build_type: "Debug",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
@@ -70,6 +75,7 @@ jobs:
             name: "Intel Ubuntu CLANG Release",
             build_type: "Release",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
@@ -77,6 +83,7 @@ jobs:
             name: "Intel Ubuntu CLANG TSan",
             build_type: "Release",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -85,6 +92,7 @@ jobs:
             name: "Intel Ubuntu GCC Debug",
             build_type: "Debug",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -92,6 +100,7 @@ jobs:
             name: "Intel Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -99,6 +108,7 @@ jobs:
             name: "Intel Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-latest,
+            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -107,6 +117,7 @@ jobs:
             name: "Intel Windows MINGW Release",
             build_type: "Release",
             os: windows-latest,
+            shell: cmd,
             generator: "MinGW Makefiles",
             cc: "gcc", cxx: "g++"
           }
@@ -114,6 +125,7 @@ jobs:
             name: "Intel Windows MSVC Debug",
             build_type: "Debug",
             os: windows-latest,
+            shell: powershell,
             generator: default,
             cc: "cl", cxx: "cl"
           }
@@ -121,6 +133,7 @@ jobs:
             name: "Intel Windows MSVC Release",
             build_type: "Release",
             os: windows-latest,
+            shell: powershell,
             generator: default,
             cc: "cl", cxx: "cl"
           }
@@ -131,6 +144,10 @@ jobs:
         #    cc: "gcc", cxx: "g++"
         #  }
 
+    defaults:
+      run:
+        shell: ${{matrix.config.shell}}
+
     env:
       CC: ${{matrix.config.cc}}
       CXX: ${{matrix.config.cxx}}
@@ -140,6 +157,7 @@ jobs:
 
       - name: Install Clang 21
         if: ${{runner.os == 'Linux' && contains(matrix.config.name, 'CLANG')}}
+        shell: bash
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
@@ -150,7 +168,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang-21 lld-21
 
       - name: Configure CMake (default generator)
-        if: ${{matrix.config.generator == 'default' && runner.os != 'Windows'}}
+        if: ${{matrix.config.generator == 'default'}}
         working-directory: ${{github.workspace}}
         run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_options || ''}} -B build/ src/
 
