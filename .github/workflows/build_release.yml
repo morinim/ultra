@@ -152,7 +152,7 @@ jobs:
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-21 lld-21 libclang-rt-21-dev
+          sudo apt-get install -y clang-21 lld-21
 
       - name: Configure CMake (default generator)
         if: ${{!matrix.config.generator}}
@@ -166,7 +166,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}
-        run: cmake --build build/ --config ${{matrix.config.build_type}} --verbose
+        run: cmake --build build/ --config ${{matrix.config.build_type}}
 
       - name: Test (ctest)
         if: ${{!matrix.config.generator}}
