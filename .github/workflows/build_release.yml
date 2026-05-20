@@ -3,14 +3,23 @@ name: Build and test all platforms
 permissions:
   contents: read
 
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+
 on:
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - .gitignore
+
   push:
     branches:
       - main
     paths-ignore:
       - '**.md'
       - .gitignore
+
   workflow_dispatch:
 
 jobs:
@@ -25,7 +34,6 @@ jobs:
             name: "ARM Ubuntu GCC Debug",
             build_type: "Debug",
             os: ubuntu-24.04-arm,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -33,7 +41,6 @@ jobs:
             name: "ARM Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-24.04-arm,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -41,7 +48,6 @@ jobs:
             name: "ARM Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-24.04-arm,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -58,7 +64,6 @@ jobs:
             name: "Intel Ubuntu CLANG Debug",
             build_type: "Debug",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
@@ -66,7 +71,6 @@ jobs:
             name: "Intel Ubuntu CLANG Release",
             build_type: "Release",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21"
           }
@@ -74,7 +78,6 @@ jobs:
             name: "Intel Ubuntu CLANG TSan",
             build_type: "Release",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "clang-21", cxx: "clang++-21",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -83,7 +86,6 @@ jobs:
             name: "Intel Ubuntu GCC Debug",
             build_type: "Debug",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -91,7 +93,6 @@ jobs:
             name: "Intel Ubuntu GCC Release",
             build_type: "Release",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14"
           }
@@ -99,7 +100,6 @@ jobs:
             name: "Intel Ubuntu GCC TSan",
             build_type: "Release",
             os: ubuntu-latest,
-            shell: bash,
             generator: default,
             cc: "gcc-14", cxx: "g++-14",
             cmake_options: "-DCMAKE_CXX_FLAGS='-fsanitize=thread' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=thread'"
@@ -131,24 +131,19 @@ jobs:
         #- {
         #    name: "macOS GCC ",
         #    os: macos-latest,
-        #    shell: bash,
         #    generator: default,
         #    cc: "gcc", cxx: "g++"
         #  }
-
-    defaults:
-      run:
-        shell: ${{matrix.config.shell}}
 
     env:
       CC: ${{matrix.config.cc}}
       CXX: ${{matrix.config.cxx}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Clang 21
-        if: ${{ contains(matrix.config.name, 'CLANG') }}
+        if: ${{runner.os == 'Linux' && contains(matrix.config.name, 'CLANG')}}
         shell: bash
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
@@ -157,36 +152,32 @@ jobs:
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y clang-21 lld-21
-
-      - name: Clang diagnostics
-        if: ${{ contains(matrix.config.name, 'CLANG') }}
-        shell: bash
-        run: |
-          $CXX --version
-          $CXX -v -std=c++23 -x c++ -E - </dev/null
-          echo | $CXX -std=c++23 -dM -E -x c++ -include version - \
-            | grep -E '__GLIBCXX__|_LIBCPP_VERSION|__cpp_lib_expected' || true
+          sudo apt-get install -y --no-install-recommends clang-21 lld-21
 
       - name: Configure CMake (default generator)
         if: ${{matrix.config.generator == 'default'}}
+        shell: ${{matrix.config.shell || 'bash'}}
         working-directory: ${{github.workspace}}
-        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{ matrix.config.cmake_options }} -B build/ src/
+        run: cmake -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_options || ''}} -B build/ src/
 
       - name: Configure CMake (specific generator)
         if: ${{matrix.config.generator != 'default'}}
+        shell: ${{matrix.config.shell || 'bash'}}
         working-directory: ${{github.workspace}}
-        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{ matrix.config.cmake_options }} -B build/ src/
+        run: cmake -G"${{matrix.config.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_options || ''}} -B build/ src/
 
       - name: Build
+        shell: ${{matrix.config.shell || 'bash'}}
         working-directory: ${{github.workspace}}
         run: cmake --build build/ --config ${{matrix.config.build_type}} --verbose
 
       - name: Test (ctest)
         if: ${{matrix.config.generator == 'default'}}
+        shell: ${{matrix.config.shell || 'bash'}}
         working-directory: ${{github.workspace}}/build/test
         run: ctest --output-on-failure -C ${{matrix.config.build_type}}
 
       - name: Test (skip)
         if: ${{matrix.config.generator != 'default'}}
+        shell: ${{matrix.config.shell || 'bash'}}
         run: echo "CTest skipped due to issues between doctest and MinGW"
