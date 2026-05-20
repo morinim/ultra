@@ -608,21 +608,16 @@ void crossover_engine::uniform(context &ctx) const
 /// entire functional subexpression is preserved.
 void crossover_engine::tree(context &ctx) const
 {
-  // FIXME: reverted to a standard lambda capture.
-  // Although fixed in Clang 21, Clang 18.x (current CI/LTS baseline)
-  // suffers from an Internal Compiler Error (ICE) when combining deducing
-  // `this` with nested l-value member access:
-  // "error: cannot compile this l-value expression yet"
-  auto crossover_ = [&](const locus &l, const auto &self) -> void
+  auto crossover_ = [&](this auto &self, const locus &l) -> void
   {
     copy_gene(ctx, l);
 
     for (const auto &al : ctx.from[l].args)
       if (std::holds_alternative<D_ADDRESS>(al))
-        self(ctx.from[l].locus_of_argument(al), self);
+        self(ctx.from[l].locus_of_argument(al));
   };
 
-  crossover_(random_locus(ctx.from), crossover_);
+  crossover_(random_locus(ctx.from));
 }
 
 /// Dispatches to the crossover operator selected by the donor parent.
@@ -1093,11 +1088,8 @@ void print_gene(std::ostream &s, const ultra::gp::individual &prg,
 void print_language(std::ostream &s, ultra::symbol::format fmt,
                     const ultra::gp::individual &prg)
 {
-  // NOTE: keep recursion in C++20-compatible form (explicit `self` parameter
-  // passed as first argument). GitHub's current clang toolchain used by CI
-  // doesn't fully support "deducing this" lambdas yet.
   const auto language_ =
-    [&](auto &&self, const ultra::gene &g) -> std::string
+    [&](this auto &&self, const ultra::gene &g) -> std::string
     {
       std::vector<std::string> args;
       args.reserve(g.func->arity());
@@ -1110,12 +1102,12 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
           args.push_back(ss.str());
         }
         else
-          args.push_back(self(self, prg[g.locus_of_argument(i)]));
+          args.push_back(self(prg[g.locus_of_argument(i)]));
 
       return format_call(g.func->to_string(fmt), args);
     };
 
-  std::string out(language_(language_, prg[prg.start()]));
+  std::string out(language_(prg[prg.start()]));
   if (out.length() > 2 && out.front() == '(' && out.back() == ')')
     out = out.substr(1, out.length() - 2);
 
@@ -1124,8 +1116,7 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
 
 void print_in_line(std::ostream &s, const ultra::gp::individual &prg)
 {
-  // NOTE: avoid "deducing this" here for compatibility with CI clang.
-  const auto in_line_ = [&](auto &&self, ultra::locus l) -> void
+  const auto in_line_ = [&](this auto &&self, ultra::locus l) -> void
   {
     const auto &g(prg[l]);
 
@@ -1137,10 +1128,10 @@ void print_in_line(std::ostream &s, const ultra::gp::individual &prg)
       if (a.index() != ultra::d_address)
         s << ' ' << a;
       else
-        self(self, g.locus_of_argument(a));
+        self(g.locus_of_argument(a));
   };
 
-  in_line_(in_line_, prg.start());
+  in_line_(prg.start());
 }
 
 void print_dump(std::ostream &s, const ultra::gp::individual &prg)
@@ -1227,8 +1218,7 @@ void print_list(std::ostream &s, const ultra::gp::individual &prg)
 
 void print_tree(std::ostream &s, const ultra::gp::individual &prg)
 {
-  // NOTE: avoid "deducing this" here for compatibility with CI clang.
-  const auto tree_ = [&](auto &&self, const ultra::gene &curr,
+  const auto tree_ = [&](this auto &&self, const ultra::gene &curr,
                          unsigned indent) -> void
   {
     s << std::string(indent, ' ') << curr.func->name() << '\n';
@@ -1239,7 +1229,7 @@ void print_tree(std::ostream &s, const ultra::gp::individual &prg)
       switch (curr.args[i].index())
       {
       case ultra::d_address:
-        self(self, prg[curr.locus_of_argument(i)], indent);
+        self(prg[curr.locus_of_argument(i)], indent);
         break;
 
       default:
@@ -1250,7 +1240,7 @@ void print_tree(std::ostream &s, const ultra::gp::individual &prg)
       }
   };
 
-  tree_(tree_, prg[prg.start()], 0);
+  tree_(prg[prg.start()], 0);
 }
 
 }  // namespace
