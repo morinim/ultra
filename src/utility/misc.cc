@@ -99,6 +99,45 @@ bool is_integer(std::string_view sv)
   return ec == std::errc() && ptr == last;
 }
 
+namespace
+{
+
+template<class T>
+concept FromCharsParsable = requires(const char *first, const char *last,
+                                     T &value)
+{
+  { std::from_chars(first, last, value) }
+    -> std::same_as<std::from_chars_result>;
+};
+
+template<FromCharsParsable T>
+[[nodiscard]] bool parse_finite_number(std::string_view sv)
+{
+  T value;
+  const auto *first(sv.data());
+  const auto *last(sv.data() + sv.size());
+
+  const auto [ptr, ec] = std::from_chars(first, last, value);
+
+  return ec == std::errc{} && ptr == last && std::isfinite(value);
+}
+
+template<class T> requires (!FromCharsParsable<T>)
+[[nodiscard]] bool parse_finite_number(std::string_view sv)
+{
+  static_assert(std::same_as<T, double>);
+
+  std::istringstream iss{std::string(sv)};
+  iss.imbue(std::locale::classic());
+
+  T value;
+  iss >> value;
+
+  return !iss.fail() && iss.eof() && std::isfinite(value);
+}
+
+}  // namespace
+
 ///
 /// Checks whether a character sequence represents a valid finite number.
 ///
@@ -106,20 +145,15 @@ bool is_integer(std::string_view sv)
 /// \return       `true` if `sv` represents a valid finite number, `false`
 ///               otherwise
 ///
-/// Determines whether the given string represents a valid floating-point
-/// number in base 10. Leading and trailing whitespace is ignored.
+/// Leading and trailing whitespace is ignored, but the whole trimmed input
+/// must be consumed. An optional leading '+' is accepted for consistency with
+/// the other numeric helpers.
 ///
-/// Parsing is performed using `std::from_chars`, making the check fast and
-/// locale-independent. The entire trimmed input must be consumed by the
-/// conversion for the function to return `true`.
-///
-/// By design, `std::from_chars` does not recognise a leading '+' sign outside
-/// of the exponent. This function explicitly extends the accepted grammar to
-/// allow an optional leading '+' for consistency with other numeric helpers.
+/// When available, parsing uses `std::from_chars`; otherwise a fallback parser
+/// is used.
 ///
 /// \note
-/// Leading and trailing whitespace is ignored, but embedded whitespace
-/// (e.g. "1 2.3") is not permitted.
+/// Embedded whitespace, such as `"1 2.3"`, is not permitted.
 ///
 bool is_number(std::string_view sv)
 {
@@ -137,13 +171,7 @@ bool is_number(std::string_view sv)
       return false;
   }
 
-  [[maybe_unused]] double value;
-  const auto *first(sv.data());
-  const auto *last(sv.data() + sv.size());
-
-  const auto [ptr, ec] = std::from_chars(first, last, value);
-
-  return ec == std::errc{} && ptr == last && std::isfinite(value);
+  return parse_finite_number<double>(sv);
 }
 
 ///
