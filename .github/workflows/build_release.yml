@@ -2,7 +2,6 @@ name: Build and test all platforms
 
 permissions:
   contents: read
-  pull-requests: write
 
 on:
   pull_request:
@@ -157,7 +156,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}
-        run: cmake --build build/ --config ${{matrix.config.build_type}}
+        run: cmake --build build/ --config ${{matrix.config.build_type}} --verbose
 
       - name: Test (ctest)
         if: ${{matrix.config.generator == 'default'}}
