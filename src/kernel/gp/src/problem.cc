@@ -366,73 +366,72 @@ void problem::setup_symbols(symbol_init init_flags)
   if (sset.functions())
   {
     ultraWARNING << "Functions already present, initialisation skipped";
-    return;
   }
-
-  if (!has_flag(init_flags, symbol_init::functions))
-    return;
-
-  ultraINFO << "Setting up functions...";
-
-  std::map<symbol::category_t, std::string> symbols;
-  const auto add_symbol([&symbols](symbol *s)
+  else if (has_flag(init_flags, symbol_init::functions))
   {
-    if (s)
-      symbols[s->category()] += " `" + s->name() + "`";
-  });
+    ultraINFO << "Setting up functions...";
 
-  for (const auto used_categories(
-         data[dataset_t::training].columns.used_categories());
-       auto category : used_categories)
-  {
-    const auto domain(
-      data[dataset_t::training].columns.domain_of_category(category));
-
-    switch (domain)
+    std::map<symbol::category_t, std::string> symbols;
+    const auto add_symbol([&symbols](symbol *s)
     {
-    case d_double:
-      add_symbol(insert<real::add>(category));
-      add_symbol(insert<real::div>(
-                   category, function::param_data_types{category, category}));
-      add_symbol(insert<real::ln>(category));
-      add_symbol(insert<real::mul>(
-                   category, function::param_data_types{category, category}));
-      add_symbol(insert<real::sin>(category));
-      add_symbol(insert<real::sub>(category));
-      break;
+      if (s)
+        symbols[s->category()] += " `" + s->name() + "`";
+    });
 
-    case d_int:
-      add_symbol(insert<integer::add>(category));
-      add_symbol(insert<integer::sub>(category));
-      add_symbol(insert<integer::mul>(
-                   category, function::param_data_types{category, category}));
-      add_symbol(insert<integer::div>(
-                   category, function::param_data_types{category, category}));
-      break;
-
-    case d_string:
-      add_symbol(insert<str::ife>(
-                   symbol::default_category,
-                   function::param_data_types{category, category,
-                                              symbol::default_category,
-                                              symbol::default_category}));
-      break;
-
-    default:
-      ultraWARNING << "No predefined functions for domain " << domain
-                   << " (category " << category << ')';
-      break;
-    }
-  }
-
-  for (const auto &[category, names] : symbols)
-    if (!names.empty())
+    for (const auto used_categories(
+           data[dataset_t::training].columns.used_categories());
+         auto category : used_categories)
     {
-      ultraINFO << "Category " << category << " symbols:" << names;
+      const auto domain(
+        data[dataset_t::training].columns.domain_of_category(category));
+
+      switch (domain)
+      {
+      case d_double:
+        add_symbol(insert<real::add>(category));
+        add_symbol(insert<real::div>(
+                     category, function::param_data_types{category, category}));
+        add_symbol(insert<real::ln>(category));
+        add_symbol(insert<real::mul>(
+                     category, function::param_data_types{category, category}));
+        add_symbol(insert<real::sin>(category));
+        add_symbol(insert<real::sub>(category));
+        break;
+
+      case d_int:
+        add_symbol(insert<integer::add>(category));
+        add_symbol(insert<integer::sub>(category));
+        add_symbol(insert<integer::mul>(
+                     category, function::param_data_types{category, category}));
+        add_symbol(insert<integer::div>(
+                     category, function::param_data_types{category, category}));
+        break;
+
+      case d_string:
+        add_symbol(insert<str::ife>(
+                     symbol::default_category,
+                     function::param_data_types{category, category,
+                                                symbol::default_category,
+                                                symbol::default_category}));
+        break;
+
+      default:
+        ultraWARNING << "No predefined functions for domain " << domain
+                     << " (category " << category << ')';
+        break;
+      }
     }
 
-  ultraINFO << "...functions ready";
-  ultraINFO << "...symbol set ready";
+    for (const auto &[category, names] : symbols)
+      if (!names.empty())
+      {
+        ultraINFO << "Category " << category << " symbols:" << names;
+      }
+
+    ultraINFO << "...functions ready";
+  }
+
+  ultraINFO << "...symbol set setup complete";
 }
 
 ///
