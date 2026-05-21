@@ -115,7 +115,7 @@ TEST_CASE("Symbolic regression - multiple variables")
   prob.insert<real::sub>();
   prob.insert<real::mul>();
   prob.insert<real::ln>();
-  CHECK(prob.ready());
+  CHECK(prob.ready().has_value());
 
   // Searching.
   src::search s(prob);

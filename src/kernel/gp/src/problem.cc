@@ -172,19 +172,46 @@ problem::problem(ultra::problem &&base, dataframe d)
 }
 
 ///
-/// \return `true` if the problem is ready to start an evolutionary run
+/// Checks whether the problem can be used to start an evolutionary run.
+///
+/// \return success if the problem is ready, otherwise the first detected
+///         reason it is not ready
 ///
 /// A problem is considered ready when:
 /// - a non-empty training dataset is available;
 /// - the symbol set contains a sufficient number of terminals.
+/// - the symbol set contains functions.
+/// - each category used by the training data has at least one terminal.
 ///
-/// \remark
-/// This check verifies readiness for evolution while `is_valid()` checks
-/// full internal consistency.
-///
-bool problem::ready() const
+std::expected<void, problem::readiness_error> problem::ready() const
 {
-  return data[dataset_t::training].size() && sset.enough_terminals();
+  if (!params.is_valid(false))
+    return std::unexpected(readiness_error::invalid_problem);
+
+  for (auto i : std::vector{dataset_t::training, dataset_t::validation,
+                            dataset_t::test})
+    if (!data[i].is_valid())
+      return std::unexpected(readiness_error::invalid_problem);
+
+  const auto &training(data[dataset_t::training]);
+
+  if (training.empty())
+    return std::unexpected(readiness_error::empty_training_set);
+
+  if (!sset.enough_terminals())
+    return std::unexpected(readiness_error::insufficient_terminals);
+
+  if (!sset.is_valid())
+    return std::unexpected(readiness_error::invalid_problem);
+
+  if (!sset.functions())
+    return std::unexpected(readiness_error::missing_functions);
+
+  for (auto category : training.columns.used_categories())
+    if (!sset.terminals(category))
+      return std::unexpected(readiness_error::missing_category_terminals);
+
+  return {};
 }
 
 ///

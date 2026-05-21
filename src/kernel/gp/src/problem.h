@@ -17,6 +17,7 @@
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/multi_dataset.h"
 
+#include <expected>
 #include <filesystem>
 #include <string>
 
@@ -62,6 +63,16 @@ namespace ultra::src
 class problem : public ultra::problem
 {
 public:
+  // ---- Member types ----
+  enum class readiness_error
+  {
+    invalid_problem,             /// Internal consistency check failed.
+    empty_training_set,          /// No examples available for training.
+    insufficient_terminals,      /// Not enough terminals to build individuals.
+    missing_functions,           /// No functions available for evolution.
+    missing_category_terminals   /// A used category has no terminals.
+  };
+
   // ---- Constructors ----
   /// New empty instance of src_problem.
   ///
@@ -86,7 +97,7 @@ public:
   [[nodiscard]] std::size_t classes() const noexcept;
   [[nodiscard]] std::size_t variables() const noexcept;
 
-  [[nodiscard]] bool ready() const;
+  [[nodiscard]] std::expected<void, readiness_error> ready() const;
 
   // ---- Misc ----
   void setup_symbols(symbol_init = symbol_init::all);

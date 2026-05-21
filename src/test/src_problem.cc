@@ -10,7 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-
 #include "test/debug_datasets.h"
 
 #include "kernel/gp/src/problem.h"
@@ -137,7 +136,9 @@ TEST_CASE("setup_terminals")
 
     src::problem p(duplicated_value, src::dataframe::params().header());
 
-    CHECK(p.ready());
+    const auto ready(p.ready());
+    REQUIRE(!ready);
+    CHECK(ready.error() == src::problem::readiness_error::missing_functions);
 
     // Exactly two attribute terminals: "red" and "blue"
     CHECK(p.sset.categories() == 2);
@@ -205,6 +206,57 @@ TEST_CASE("disabled symbol initialization")
   CHECK(disabled.is_valid());
   CHECK(disabled.sset.terminals() == 0);
   CHECK(disabled.sset.functions() == 0);
+
+  const auto ready(disabled.ready());
+  REQUIRE(!ready);
+  CHECK(ready.error() == src::problem::readiness_error::missing_functions);
+}
+
+TEST_CASE("readiness diagnostics")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  SUBCASE("empty default problem")
+  {
+    src::problem p;
+
+    const auto ready(p.ready());
+    REQUIRE(!ready);
+    CHECK(ready.error() == src::problem::readiness_error::empty_training_set);
+  }
+
+  SUBCASE("missing functions")
+  {
+    std::istringstream wine(debug::wine);
+    src::problem p(wine, src::dataframe::params());
+
+    const auto ready(p.ready());
+    REQUIRE(!ready);
+    CHECK(ready.error() == src::problem::readiness_error::missing_functions);
+  }
+
+  SUBCASE("insufficient terminals")
+  {
+    std::istringstream wine(debug::wine);
+    src::problem p(src::dataframe(wine), symbol_init::disabled);
+
+    p.insert<real::add>();
+
+    const auto ready(p.ready());
+    REQUIRE(!ready);
+    CHECK(ready.error()
+          == src::problem::readiness_error::insufficient_terminals);
+  }
+
+  SUBCASE("complete symbol set")
+  {
+    std::istringstream wine(debug::wine);
+    src::problem p(wine, src::dataframe::params());
+    p.setup_symbols();
+
+    CHECK(p.ready().has_value());
+  }
 }
 
 TEST_CASE("construct from moved base problem")
