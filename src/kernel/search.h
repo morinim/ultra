@@ -46,6 +46,11 @@ public:
   // ---- Constructor ----
   basic_search(problem &, E);
 
+  // basic_search is directly instantiable. The virtual destructor only
+  // protects against accidental base-pointer deletion; polymorphic
+  // ownership is discouraged.
+  virtual ~basic_search() = default;
+
   // ---- Run ----
   search_stats<individual_t, fitness_t> run(
     unsigned = 1, const model_measurements<fitness_t> & = {});
