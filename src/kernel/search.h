@@ -21,6 +21,15 @@
 #include "kernel/search_stats.h"
 #include "kernel/validation_strategy.h"
 
+#include <algorithm>
+#include <fstream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <stop_token>
+#include <utility>
+#include <vector>
+
 namespace ultra
 {
 
@@ -113,7 +122,10 @@ template<Evaluator E>
 class search : public basic_search<alps_es, E>
 {
 public:
-  search(problem &prob, E eva) : basic_search<alps_es, E>(prob, eva) {}
+  search(problem &prob, E eva)
+    : basic_search<alps_es, E>(prob, std::move(eva))
+  {
+  }
 };
 
 template<Evaluator E> search(problem &, E) -> search<E>;

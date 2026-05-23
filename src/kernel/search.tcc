@@ -18,14 +18,14 @@
 #define      ULTRA_SEARCH_TCC
 
 ///
-/// \param[in] prob the problem we're working on. The lifetime of `prob` must
-///                 exceed lifetime of `this` class
-/// \param[in] eva  evaluator used during evolution. Must be copyable and
-///                 could be used to build a proxy evaluator.
+/// \param[in] prob the problem we're working on. The lifetime of `prob`
+///                 must exceed lifetime of `this` class
+/// \param[in] eva  evaluator used during evolution to build the evaluator
+///                 proxy
 ///
 template<template<class> class ES, Evaluator E>
 basic_search<ES, E>::basic_search(problem &prob, E eva)
-  : eva_(eva, prob.params.cache.size), prob_(prob)
+  : eva_(std::move(eva), prob.params.cache.size), prob_(prob)
 {
   Ensures(is_valid());
 }
