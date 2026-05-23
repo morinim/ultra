@@ -334,6 +334,7 @@ bool symbol_set::enough_terminals() const noexcept
 const terminal *symbol_set::front_terminal(symbol::category_t c) const
 {
   Expects(c < categories());
+  Expects(terminals(c) > 0);
 
   return static_cast<const terminal *>(views_[c].terminals.begin()->sym);
 }
@@ -445,6 +446,9 @@ const symbol *symbol_set::roulette_free(symbol::category_t c) const
 ///
 /// \param[in] s a symbol
 /// \return      the weight of `s`
+///
+/// \pre `s` must be a symbol previously inserted into this symbol set, or
+///          at least have a category valid for this set
 ///
 symbol_set::weight_t symbol_set::weight(const symbol &s) const
 {
