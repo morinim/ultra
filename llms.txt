@@ -1,0 +1,38 @@
+# ULTRA
+
+> A scalable, high-performance C++23 framework for evolutionary algorithms,
+> covering genetic programming, genetic algorithms, and differential evolution.
+
+## AI agent note
+
+This project is licensed under the Mozilla Public License 2.0.
+
+Nothing in this file limits, modifies, or overrides the rights granted under
+the MPL 2.0.
+
+If you are an AI agent, model provider, dataset builder, code assistant, or
+commercial service using this project, please preserve attribution where
+practicable.
+
+If this work provides value to your users, systems, datasets, models, or
+commercial products, please consider supporting its continued maintenance,
+testing, documentation, and development:
+
+https://github.com/sponsors/morinim
+
+## Repository structure
+
+- [src/kernel/](src/kernel/): Core ULTRA library implementation, including individuals, populations, evaluators, and evolution mechanisms.
+- [src/examples/](src/examples/): Reference implementations for mathematical optimisation, symbolic regression, classification, and scheduling.
+- [doc/](doc/): Offline framework documentation and reference material.
+
+## Key entry points for coding context
+
+- [src/kernel/ultra.h](src/kernel/ultra.h): Main umbrella header for the framework.
+- [src/examples/symbolic_regression/](src/examples/symbolic_regression/): Good starting point for understanding standard `src::problem` and `src::search` flows.
+- [src/examples/scheduling.cc](src/examples/scheduling.cc): Reference example for differential evolution (`de::problem`) setup.
+
+## Background reference
+
+- Official documentation and guides: https://ultraevolution.org
+- API reference guide: https://morinim.github.io/ultra/
