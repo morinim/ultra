@@ -194,6 +194,7 @@ public:
 
   void discard(std::uint64_t) noexcept;
   void seed(result_type = def_seed) noexcept;
+  void seed(const std::array<std::uint64_t, 2> &) noexcept;
 
 #if __cplusplus >= 202002L
   [[nodiscard]] bool operator==(const xoroshiro128p &) const noexcept = default;

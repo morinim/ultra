@@ -85,9 +85,16 @@ void xoshiro256ss::seed(xoshiro256ss::result_type s) noexcept
 ///
 /// \param[in] s an initial state
 ///
+/// \remark
+/// The all-zero state is invalid for this generator. If `s` is all zero, the
+/// engine is seeded using `def_seed` instead.
+///
 void xoshiro256ss::seed(const std::array<std::uint64_t, 4> &s) noexcept
 {
-  state = s;
+  if (s == std::array<std::uint64_t, 4>{0, 0, 0, 0})
+    seed(def_seed);
+  else
+    state = s;
 }
 
 ///
@@ -110,9 +117,9 @@ void xoshiro256ss::discard(std::uint64_t z) noexcept
 /// \param[in]  e the engine
 /// \return       the modified output stream
 ///
-/// In the output, adjacent numbers are separated by one space characters. If
-/// `o`'s `fmtflags` are not set to `ios_base::dec|ios_base::left`, the
-/// behavior may be undefined.
+/// In the output, adjacent numbers are separated by one space character. The
+/// representation depends on the stream's formatting flags; use `std::dec`
+/// for a portable decimal representation.
 ///
 std::ostream &operator<<(std::ostream &o, const xoshiro256ss &e)
 {
@@ -123,16 +130,20 @@ std::ostream &operator<<(std::ostream &o, const xoshiro256ss &e)
 ///
 /// Reads from the input stream a textual representation of the current state.
 ///
-/// \param[in] i input stream
-/// \param[in] e the engine
-/// \return      the modified input stream
+/// \param[in]     i input stream
+/// \param[in,out] e the engine
+/// \return          the modified input stream
 ///
-/// If `i`'s `fmtflags` are not set to `ios_base::dec`, the behavior may be
-/// undefined.
+/// The input is parsed according to the stream's formatting flags; use
+/// `std::dec` when reading a decimal representation.
 ///
 std::istream &operator>>(std::istream &i, xoshiro256ss &e)
 {
-  return i >> e.state[0] >> e.state[1] >> e.state[2] >> e.state[3];
+  decltype(e.state) temp;
+  if (i >> temp[0] >> temp[1] >> temp[2] >> temp[3])
+    e.seed(temp);
+
+  return i;
 }
 
 ///
@@ -152,9 +163,26 @@ void xoroshiro128p::seed(xoroshiro128p::result_type s) noexcept
 }
 
 ///
+/// Seeds the engine with a specific state.
+///
+/// \param[in] s an initial state
+///
+/// \remark
+/// The all-zero state is invalid for this generator. If `s` is all zero, the
+/// engine is seeded using `def_seed` instead.
+///
+void xoroshiro128p::seed(const std::array<std::uint64_t, 2> &s) noexcept
+{
+  if (s == std::array<std::uint64_t, 2>{0, 0})
+    seed(def_seed);
+  else
+    state = s;
+}
+
+///
 /// Advances the internal state of the engine.
 ///
-/// \param[in] z magnitute in the change of the internal state
+/// \param[in] z magnitude in the change of the internal state
 ///
 /// By any means equivalent to `z` consecutive calls of `operator()`.
 ///
@@ -171,9 +199,9 @@ void xoroshiro128p::discard(std::uint64_t z) noexcept
 /// \param[in]  e the engine
 /// \return       the modified output stream
 ///
-/// In the output, adjacent numbers are separated by one space characters. If
-/// `o`'s `fmtflags` are not set to `ios_base::dec|ios_base::left`, the
-/// behavior may be undefined.
+/// In the output, adjacent numbers are separated by one space character. The
+/// representation depends on the stream's formatting flags; use `std::dec`
+/// for a portable decimal representation.
 ///
 std::ostream &operator<<(std::ostream &o, const xoroshiro128p &e)
 {
@@ -183,16 +211,20 @@ std::ostream &operator<<(std::ostream &o, const xoroshiro128p &e)
 ///
 /// Reads from the input stream a textual representation of the current state.
 ///
-/// \param[in] i input stream
-/// \param[in] e the engine
-/// \return      the modified input stream
+/// \param[in]     i input stream
+/// \param[in,out] e the engine
+/// \return          the modified input stream
 ///
-/// If `i`'s `fmtflags` are not set to `ios_base::dec`, the behavior may be
-/// undefined.
+/// The input is parsed according to the stream's formatting flags; use
+/// `std::dec` when reading a decimal representation.
 ///
 std::istream &operator>>(std::istream &i, xoroshiro128p &e)
 {
-  return i >> e.state[0] >> e.state[1];
+  decltype(e.state) temp;
+  if (i >> temp[0] >> temp[1])
+    e.seed(temp);
+
+  return i;
 }
 
 }  // namespace vigna
