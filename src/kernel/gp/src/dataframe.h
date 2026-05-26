@@ -142,8 +142,8 @@ public:
   src::columns_info columns {};
 
 private:
-  template<std::ranges::range R> bool read_record(
-    R, std::optional<std::size_t>, bool);
+  template<DataframeRow R> bool read_record(R, std::optional<std::size_t>,
+                                            bool);
 
   template<std::ranges::range R>
   [[nodiscard]] example to_example(const R &) const;

@@ -20,80 +20,139 @@
 namespace internal
 {
 
-///
-/// Normalises a row by moving the designated output column to the front.
-///
-/// \tparam R a `DataframeRow` type
-///
-/// \param[in] raw the original rowthe output column
-/// \param[in] n   optional output column index
-/// \returns       a range whose first element represents the output column.
-///                The returned range may be a lazy view or an owning
-///                container, depending on library support.
-///
-/// \pre If `n` is provided, it must be a valid index into `raw`
-///
-/// Given a row and an optional output column index, this helper returns a
-/// range where the output column is logically moved to the front.
-///
-/// If no output index is provided, a surrogate empty element is inserted at
-/// the front, and all original elements are treated as input columns.
-///
-/// When available, a lazy concatenation view is used; otherwise, a
-/// materialised container is returned.
-///
-template<DataframeRow R>
-[[nodiscard]] auto output_column_first(const R &raw,
-                                       std::optional<std::size_t> n)
+[[nodiscard]] constexpr std::size_t normalised_column_count(
+    std::size_t raw_count, std::optional<std::size_t> output_index) noexcept
 {
-  using VT = std::ranges::range_value_t<R>;
-
-#if defined(__cpp_lib_ranges_concat)  // lazy view
-  if (n)
-  {
-    assert(*n < static_cast<std::size_t>(std::ranges::distance(raw)));
-
-    return raw
-           | std::views::drop(*n) | std::views::take(1)
-           | std::views::concat(raw | std::views::take(*n))
-           | std::views::concat(raw | std::views::drop(*n + 1));
-  }
-
-  // When the output index is missing, all the columns are treated as input
-  // columns (this is obtained adding a surrogate, empty output column).
-
-  // Empty surrogate column + original row.
-  return std::views::single(VT()) | std::views::concat(raw);
-#else  // eager container
-  R r(raw);
-
-  if (n)
-  {
-    assert(*n < static_cast<std::size_t>(std::ranges::distance(raw)));
-
-    // `ranges::rotate` has better efficiency on common implementations with
-    // `bidirectional_iterator` or (better) `random_access_iterator`.
-    // Implementations (e.g. MSVC STL) may enable vectorization when the
-    // iterator type models `contiguous_iterator` and swapping its value type
-    // calls neither non-trivial special member function nor ADL-found swap.
-    if (*n > 0)
-      std::rotate(r.begin(),
-                  std::next(r.begin(), *n),
-                  std::next(r.begin(), *n + 1));
-  }
-  else
-  {
-    // When the output index is missing, all the columns are treated as input
-    // columns (this is obtained adding a surrogate, empty output column).
-    if constexpr (std::same_as<VT, std::string>)
-      r.insert(r.begin(), "");
-    else
-      r.insert(r.begin(), D_VOID());
-  }
-
-  return r;
-#endif
+  return raw_count + (output_index ? 0 : 1);
 }
+
+[[nodiscard]] constexpr std::optional<std::size_t> raw_column_index(
+  std::size_t idx, std::optional<std::size_t> output_index) noexcept
+{
+  if (!output_index)
+    return idx == 0 ? std::nullopt : std::optional<std::size_t>(idx - 1);
+
+  if (idx == 0)
+    return *output_index;
+
+  return idx <= *output_index ? idx - 1 : idx;
+}
+
+template<DataframeRow R>
+class normalised_row_view
+{
+public:
+  using value_type = std::ranges::range_value_t<R>;
+
+  normalised_row_view(const R &r, std::optional<std::size_t> output_index)
+    : r_(&r), output_index_(output_index),
+      logical_size_(normalised_column_count(std::ranges::distance(r),
+                                            output_index))
+  {
+    Expects(!output_index_ || *output_index_ < std::ranges::distance(r));
+  }
+
+  [[nodiscard]] std::size_t size() const noexcept { return logical_size_; }
+
+  class iterator
+  {
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = normalised_row_view::value_type;
+    using iterator_concept = std::forward_iterator_tag;
+    using iterator_category = std::forward_iterator_tag;
+
+    iterator() = default;
+
+    iterator(const normalised_row_view *view, std::size_t pos)
+      : view_(view), pos_(pos)
+    {
+      refresh_raw_index();
+
+      if (raw_idx_)
+      {
+        it_ = std::ranges::begin(*view_->r_);
+        std::advance(it_, *raw_idx_);
+      }
+    }
+
+    [[nodiscard]] const value_type &operator*() const
+    {
+      if (!raw_idx_)
+        return view_->empty_;
+
+      return *it_;
+    }
+
+    iterator &operator++()
+    {
+      const auto previous_raw_idx(raw_idx_);
+
+      ++pos_;
+
+      if (pos_ >= view_->logical_size_)
+      {
+        raw_idx_.reset();
+        return *this;
+      }
+
+      refresh_raw_index();
+
+      if (!raw_idx_)
+        return *this;
+
+      if (previous_raw_idx && *raw_idx_ == *previous_raw_idx + 1)
+        ++it_;
+      else
+      {
+        it_ = std::ranges::begin(*view_->r_);
+        std::advance(it_, *raw_idx_);
+      }
+
+      return *this;
+    }
+
+    iterator operator++(int)
+    {
+      auto old(*this);
+      ++*this;
+      return old;
+    }
+
+    [[nodiscard]] bool operator==(const iterator &other) const noexcept
+    {
+      return view_ == other.view_ && pos_ == other.pos_;
+    }
+
+  private:
+    void refresh_raw_index()
+    {
+      raw_idx_ = pos_ < view_->logical_size_
+                 ? view_->raw_column(pos_)
+                 : std::nullopt;
+    }
+
+    const normalised_row_view *view_ {};
+    std::size_t pos_ {};
+    std::optional<std::size_t> raw_idx_ {};
+    std::ranges::iterator_t<const R> it_ {};
+  };
+
+  [[nodiscard]] iterator begin() const { return iterator(this, 0); }
+  [[nodiscard]] iterator end() const { return iterator(this, logical_size_); }
+
+private:
+  [[nodiscard]] std::optional<std::size_t> raw_column(
+    std::size_t pos) const noexcept
+  {
+    return raw_column_index(pos, output_index_);
+  }
+
+  const R *r_;
+  std::optional<std::size_t> output_index_;
+  std::size_t logical_size_;
+  const value_type empty_ {};
+};
 
 }  // namespace internal
 
@@ -118,115 +177,114 @@ template<DataframeRow R>
 /// To limit computational cost, domain inference is performed on a bounded
 /// prefix of the input rows.
 ///
-/// \note
-/// Rows with insufficient length for a given column index are ignored for that
-/// column during domain inference.
+/// \remark
+/// Rows whose normalised width differs from the header are ignored during
+/// domain inference.
 ///
 template<DataframeMatrix R>
 void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
 {
   using VT = std::ranges::range_value_t<std::ranges::range_value_t<R>>;
 
-  Expects(!exs.empty());
-  Expects(exs.front().size());
+  Expects(!std::ranges::empty(exs));
+  Expects(std::ranges::size(*std::ranges::begin(exs)));
 
-  cols_.clear();
-
-  // Lazily reorders each row so that the output column is first. Also limits
-  // the analysis to a subset of the available rows.
-  constexpr std::size_t max_domain_samples {1000};
-  const auto normalised_rows(
-    exs | std::views::take(max_domain_samples)
-    | std::views::transform([&output_index](const auto &r)
-      {
-        return internal::output_column_first(r, output_index);
-      }));
+  constexpr std::size_t max_domain_samples(1000);
 
   // Set up column headers (first row must contain the headers).
-  const auto &header_row(*normalised_rows.begin());
+  const internal::normalised_row_view header_row(*std::ranges::begin(exs),
+                                                 output_index);
 
-  cols_.reserve(std::ranges::distance(header_row));
+  cols_.clear();
+  cols_.reserve(header_row.size());
 
-  std::ranges::transform(
-    header_row, std::back_inserter(cols_),
-    [this](const auto &name)
+  for (const auto &name : header_row)
+    if constexpr (std::same_as<VT, std::string>)
+      cols_.emplace_back(*this, trim(name));
+    else
+      cols_.emplace_back(*this, trim(lexical_cast<std::string>(name)));
+
+  const auto update_domain([this](std::size_t idx, const auto &value)
+  {
+    switch (cols_[idx].domain())
     {
+    case d_void:
       if constexpr (std::same_as<VT, std::string>)
-        return column_info(*this, trim(name));
-      else
-        return column_info(*this, trim(lexical_cast<std::string>(name)));
-    });
-
-  // Domain inference.
-  for (std::size_t idx(0); idx < size(); ++idx)
-    for (const auto &row : normalised_rows | std::views::drop(1))
-    {
-      if (row.size() <= idx)
-        continue;
-
-      const auto &value(*std::next(row.begin(), idx));
-
-      // Sets the domain associated to a column.
-      switch (cols_[idx].domain())
       {
-      case d_void:
-        if constexpr (std::same_as<VT, std::string>)
-        {
-          if (is_integer(value))
-            cols_[idx].domain(d_int);
-          else if (is_number(value))
-            cols_[idx].domain(d_double);
-          else if (value != "")
-            cols_[idx].domain(d_string);
-        }
-        else
-        {
-          if (basic_data_type(value))
-            cols_[idx].domain(static_cast<domain_t>(value.index()));
-        }
-        break;
+        if (is_integer(value))
+          cols_[idx].domain(d_int);
+        else if (is_number(value))
+          cols_[idx].domain(d_double);
+        else if (value != "")
+          cols_[idx].domain(d_string);
+      }
+      else
+      {
+        if (basic_data_type(value))
+          cols_[idx].domain(static_cast<domain_t>(value.index()));
+      }
+      break;
 
-      case d_int:
-        if constexpr (std::same_as<VT, std::string>)
-        {
-          if (is_integer(value))
-            continue;
-        }
-        else
-        {
-          if (value.index() == d_int)
-            continue;
-        }
+    case d_int:
+      if constexpr (std::same_as<VT, std::string>)
+      {
+        if (is_integer(value))
+          return;
+      }
+      else
+      {
+        if (value.index() == d_int)
+          return;
+      }
 
-        cols_[idx].domain(d_double);
-        [[fallthrough]];
+      cols_[idx].domain(d_double);
+      [[fallthrough]];
 
-      case d_double:
-        if constexpr (std::same_as<VT, std::string>)
-        {
-          if (is_number(value))
-            continue;
-        }
-        else
-        {
-          if (numerical_data_type(value))
-            continue;
-        }
-        [[fallthrough]];
+    case d_double:
+      if constexpr (std::same_as<VT, std::string>)
+      {
+        if (is_number(value))
+          return;
+      }
+      else
+      {
+        if (numerical_data_type(value))
+          return;
+      }
+      [[fallthrough]];
 
-      default:
-        if constexpr (std::same_as<VT, std::string>)
-        {
-          if (!value.empty())
-            cols_[idx].domain(d_string);
-        }
-        else
-        {
-          if (value.index() == d_string)
-            cols_[idx].domain(d_string);
-        }
+    default:
+      if constexpr (std::same_as<VT, std::string>)
+      {
+        if (!value.empty())
+          cols_[idx].domain(d_string);
+      }
+      else
+      {
+        if (value.index() == d_string)
+          cols_[idx].domain(d_string);
       }
     }
+  });
+
+  // Domain inference.
+  for (const auto sample_rows(exs | std::views::take(max_domain_samples)
+                                  | std::views::drop(1));
+       const auto &row : sample_rows)
+  {
+    if (output_index
+        && *output_index >=
+           static_cast<std::size_t>(std::ranges::distance(row)))
+      continue;
+
+    if (const internal::normalised_row_view normalised(row, output_index);
+        normalised.size() == size())
+      for (std::size_t idx(0); const auto &value : normalised)
+      {
+        update_domain(idx, value);
+        ++idx;
+      }
+  }
 
   settle_task_t();
 }

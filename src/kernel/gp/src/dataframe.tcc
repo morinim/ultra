@@ -51,7 +51,7 @@ void inplace_trim(T &v)
 template<std::ranges::range R>
 example dataframe::to_example(const R &r) const
 {
-  Expects(r.size());
+  Expects(!std::ranges::empty(r));
   Expects(static_cast<std::size_t>(std::ranges::distance(r)) == columns.size());
 
   example ret;
@@ -88,26 +88,34 @@ example dataframe::to_example(const R &r) const
 ///                         features?
 /// \return                 `true` for a correctly converted/imported record
 ///
-template<std::ranges::range R>
+template<DataframeRow R>
 bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
                             bool add_instance)
 {
-  Expects(!r.empty());
-  Expects(
-    !output_index
-    || *output_index < static_cast<std::size_t>(std::ranges::distance(r)));
+  Expects(!std::ranges::empty(r));
 
-  r = internal::output_column_first(r, output_index);
+  const std::size_t row_size(std::ranges::distance(r));
 
-  // Skip lines with wrong number of columns.
-  if (static_cast<std::size_t>(std::ranges::distance(r)) != columns.size())
+  if (output_index && *output_index >= row_size)
   {
     ultraWARNING << "Malformed example " << size()
                  <<  " skipped (wrong column count)";
     return false;
   }
 
-  push_back(to_example(r), add_instance);
+  const auto logical_size(
+    internal::normalised_column_count(row_size, output_index));
+
+  if (logical_size != columns.size())
+  {
+    ultraWARNING << "Malformed example " << size()
+                 <<  " skipped (wrong column count)";
+    return false;
+  }
+
+  const internal::normalised_row_view normalised(r, output_index);
+
+  push_back(to_example(normalised), add_instance);
   return true;
 }
 
@@ -130,17 +138,17 @@ std::size_t dataframe::read(const R &container, params p)
 
   clear();
 
-  if (container.size() > 1)
-  {
-    if (p.output_index == params::index::back)
-      p.output_index = container.front().size() - 1;
-
-    columns.build(container, p.output_index);
-  }
-  else
+  if (std::ranges::size(container) <= 1)
     return 0;
 
-  for (auto it(std::next(container.cbegin())); it != container.end(); ++it)
+  auto first(std::ranges::begin(container));
+
+  if (p.output_index == params::index::back)
+    p.output_index = std::ranges::size(*first) - 1;
+
+  columns.build(container, p.output_index);
+
+  for (auto it(std::next(first)); it != std::ranges::end(container); ++it)
     read_record(*it, p.output_index, true);
 
   if (!is_valid())
