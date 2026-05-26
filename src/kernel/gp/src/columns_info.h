@@ -17,9 +17,11 @@
 #include "kernel/value.h"
 #include "utility/misc.h"
 
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <vector>

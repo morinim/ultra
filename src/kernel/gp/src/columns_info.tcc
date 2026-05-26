@@ -174,8 +174,8 @@ private:
 /// corresponding column is treated as the output and is normalised to appear
 /// first during analysis.
 ///
-/// To limit computational cost, domain inference is performed on a bounded
-/// prefix of the input rows.
+/// Domain inference is performed on a bounded reservoir sample of valid input
+/// rows.
 ///
 /// \remark
 /// Rows whose normalised width differs from the header are ignored during
@@ -189,9 +189,7 @@ void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
   Expects(!std::ranges::empty(exs));
   Expects(std::ranges::size(*std::ranges::begin(exs)));
 
-  constexpr std::size_t max_domain_samples(1000);
-
-  // Set up column headers (first row must contain the headers).
+  // ---- Set up column headers (first row must contain the headers) ----
   const internal::normalised_row_view header_row(*std::ranges::begin(exs),
                                                  output_index);
 
@@ -267,23 +265,49 @@ void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
     }
   });
 
-  // Domain inference.
-  for (const auto sample_rows(exs | std::views::take(max_domain_samples)
-                                  | std::views::drop(1));
-       const auto &row : sample_rows)
+  // ---- Domain inference ----
+  constexpr std::size_t max_domain_samples(1000);
+
+  // Reservoir-sample valid rows so malformed records do not consume the
+  // inference budget and row storage stays bounded.
+  std::vector<std::ranges::range_value_t<R>> sample_rows;
+  sample_rows.reserve(max_domain_samples);
+
+  std::minstd_rand rng(0);
+  std::size_t valid_rows(0);
+
+  for (const auto &row : exs | std::views::drop(1))
   {
     if (output_index
-        && *output_index >=
-           static_cast<std::size_t>(std::ranges::distance(row)))
+        && *output_index >= static_cast<std::size_t>(std::ranges::distance(row)))
       continue;
 
     if (const internal::normalised_row_view normalised(row, output_index);
-        normalised.size() == size())
-      for (std::size_t idx(0); const auto &value : normalised)
-      {
-        update_domain(idx, value);
-        ++idx;
-      }
+        normalised.size() != size())
+      continue;
+
+    ++valid_rows;
+
+    if (sample_rows.size() < max_domain_samples)
+      sample_rows.push_back(row);
+    else
+    {
+      std::uniform_int_distribution<std::size_t> dist(0, valid_rows - 1);
+
+      if (const auto idx(dist(rng)); idx < max_domain_samples)
+        sample_rows[idx] = row;
+    }
+  }
+
+  for (const auto &row : sample_rows)
+  {
+    const internal::normalised_row_view normalised(row, output_index);
+
+    for (std::size_t idx(0); const auto &value : normalised)
+    {
+      update_domain(idx, value);
+      ++idx;
+    }
   }
 
   settle_task_t();
