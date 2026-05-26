@@ -204,6 +204,17 @@ void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
 
   const auto update_domain([this](std::size_t idx, const auto &value)
   {
+    if constexpr (std::same_as<VT, std::string>)
+    {
+      if (trim(value).empty())
+        return;
+    }
+    else
+    {
+      if (!has_value(value))
+        return;
+    }
+
     switch (cols_[idx].domain())
     {
     case d_void:
@@ -213,7 +224,7 @@ void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
           cols_[idx].domain(d_int);
         else if (is_number(value))
           cols_[idx].domain(d_double);
-        else if (value != "")
+        else
           cols_[idx].domain(d_string);
       }
       else
@@ -253,15 +264,9 @@ void columns_info::build(const R &exs, std::optional<std::size_t> output_index)
 
     default:
       if constexpr (std::same_as<VT, std::string>)
-      {
-        if (!value.empty())
-          cols_[idx].domain(d_string);
-      }
-      else
-      {
-        if (value.index() == d_string)
-          cols_[idx].domain(d_string);
-      }
+        cols_[idx].domain(d_string);
+      else if (value.index() == d_string)
+        cols_[idx].domain(d_string);
     }
   });
 

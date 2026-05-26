@@ -63,7 +63,7 @@ enum class task_t {classification, regression, unsupervised};
 /// A DataframeRow models one logical record of a dataframe. It must:
 /// - be a `forward_range` (multi-pass iteration is required);
 /// - be a `sized_range` (the number of columns must be known);
-/// - be copy constructible (rows may be copied during inference);
+/// - be copyable (rows may be copied during inference);
 /// - expose values of type `value_t` or `std::string`.
 ///
 /// This concept deliberately does not require random access, allowing
@@ -73,7 +73,7 @@ template<class R>
 concept DataframeRow =
   std::ranges::forward_range<R>
   && std::ranges::sized_range<R>
-  && std::copy_constructible<R>
+  && std::copyable<R>
   && (std::same_as<std::ranges::range_value_t<R>, value_t>
       || std::same_as<std::ranges::range_value_t<R>, std::string>);
 
