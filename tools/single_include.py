@@ -57,12 +57,16 @@ class GenSingleInclude(object):
     def resolve_include(self, cur_dir, include_name):
         if os.path.isabs(include_name):
             return include_name
-        elif cur_dir and os.path.exists(os.path.join(cur_dir, include_name)):
-            return os.path.abspath(os.path.join(cur_dir, include_name))
-        elif os.path.exists(os.path.join(self.args.src_include_dir, include_name)):
-            return os.path.abspath(os.path.join(self.args.src_include_dir, include_name))
-        else:
-            return None
+        search_dirs = []
+        if cur_dir:
+            search_dirs.append(cur_dir)
+        search_dirs.append(self.args.src_include_dir)
+        search_dirs.append(os.path.join(self.args.src_include_dir, "third_party"))
+        for search_dir in search_dirs:
+            include_path = os.path.join(search_dir, include_name)
+            if os.path.exists(include_path):
+                return os.path.abspath(include_path)
+        return None
 
     # See https://stackoverflow.com/a/241506/3235496
     def comment_remover(self, text):
@@ -89,7 +93,15 @@ class GenSingleInclude(object):
 
     def cpp(self, dst_file, cur_include_dir, src_include):
         src_i = self.resolve_include(cur_include_dir, src_include)
-        if src_i and src_i not in self.parsed:
+        if not src_i:
+            search_dirs = [self.args.src_include_dir,
+                           os.path.join(self.args.src_include_dir, "third_party")]
+            if cur_include_dir:
+                search_dirs.insert(0, cur_include_dir)
+            raise FileNotFoundError(
+                f'cannot resolve include "{src_include}" '
+                f'(searched: {", ".join(search_dirs)})')
+        if src_i not in self.parsed:
             self.parsed.add(src_i)
             with open(src_i, "r", encoding="UTF8") as raw_src_file:
                 src_file = self.comment_remover(raw_src_file.read())
