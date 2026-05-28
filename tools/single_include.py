@@ -7,7 +7,7 @@
 # Original file:
 # https://github.com/bfgroup/Lyra/blob/develop/tools/gen_single_include.py
 #
-# Adapted by Manlio Morini for use in Ultra.
+# Adapted by Manlio Morini for use in ULTRA.
 
 import argparse
 import os.path
@@ -56,7 +56,9 @@ class GenSingleInclude(object):
 
     def resolve_include(self, cur_dir, include_name):
         if os.path.isabs(include_name):
-            return include_name
+            if os.path.isfile(include_name):
+                return os.path.realpath(include_name)
+            return None
         search_dirs = []
         if cur_dir:
             search_dirs.append(cur_dir)
@@ -64,8 +66,8 @@ class GenSingleInclude(object):
         search_dirs.append(os.path.join(self.args.src_include_dir, "third_party"))
         for search_dir in search_dirs:
             include_path = os.path.join(search_dir, include_name)
-            if os.path.exists(include_path):
-                return os.path.abspath(include_path)
+            if os.path.isfile(include_path):
+                return os.path.realpath(include_path)
         return None
 
     # See https://stackoverflow.com/a/241506/3235496
@@ -91,16 +93,21 @@ class GenSingleInclude(object):
         )
         return re.sub(pattern, replacer, text)
 
-    def cpp(self, dst_file, cur_include_dir, src_include):
+    def cpp(self, dst_file, cur_include_dir, src_include, include_chain=None):
+        if include_chain is None:
+            include_chain = []
         src_i = self.resolve_include(cur_include_dir, src_include)
         if not src_i:
             search_dirs = [self.args.src_include_dir,
                            os.path.join(self.args.src_include_dir, "third_party")]
             if cur_include_dir:
                 search_dirs.insert(0, cur_include_dir)
+            chain = " -> ".join(
+                f'"{include}"' for include in include_chain + [src_include])
             raise FileNotFoundError(
                 f'cannot resolve include "{src_include}" '
-                f'(searched: {", ".join(search_dirs)})')
+                f'(included from: {chain}; '
+                f'searched: {", ".join(search_dirs)})')
         if src_i not in self.parsed:
             self.parsed.add(src_i)
             with open(src_i, "r", encoding="UTF8") as raw_src_file:
@@ -111,7 +118,7 @@ class GenSingleInclude(object):
                     src_n = None
                     if pp_match:
                         src_n = self.cpp(dst_file, os.path.dirname(
-                            src_i), pp_match.group(1))
+                            src_i), pp_match.group(1), include_chain + [src_i])
                     if not src_n:
                         dst_file.write(line + os.linesep)
         return src_i
