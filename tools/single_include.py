@@ -27,9 +27,9 @@ class GenSingleInclude(object):
         # The original r.e. was `r'''#\s*include\s+["<]([^">]+)[">]\s*'''`
         self.pp_re = re.compile(r'''#\s*include\s+["]([^">]+)["]\s*''')
         parser = argparse.ArgumentParser()
-        parser.add_argument('--src-include-dir')
-        parser.add_argument('--src-include')
-        parser.add_argument('--dst-include')
+        parser.add_argument('--src-include-dir', required=True)
+        parser.add_argument('--src-include', required=True)
+        parser.add_argument('--dst-include', required=True)
         self.args = parser.parse_args()
         if not os.path.isabs(self.args.src_include_dir):
             self.args.src_include_dir = os.path.abspath(
