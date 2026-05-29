@@ -55,6 +55,11 @@ public:
   /// Implementations must not throw exceptions and should be side-effect
   /// free to preserve referential transparency during program evaluation.
   [[nodiscard]] virtual value_t instance() const = 0;
+
+  [[nodiscard]] std::string to_string(format = c_format) const override
+  {
+    return name();
+  }
 };
 
 /// Constraint for types modelling a GP terminal.

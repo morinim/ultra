@@ -35,7 +35,7 @@ public:
   [[nodiscard]] virtual value_t eval() const = 0;
   [[nodiscard]] value_t instance() const final { return this; }
 
-  [[nodiscard]] std::string to_string(format = c_format) const
+  [[nodiscard]] std::string to_string(format = c_format) const override
   { return name() + "()"; }
 };
 

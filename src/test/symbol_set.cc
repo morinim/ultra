@@ -110,7 +110,18 @@ TEST_CASE("Constructor / Insertion")
 
   SUBCASE("Other symbol kinds")
   {
-    const auto *metadata(ss.insert(std::make_unique<symbol>("META")));
+    class metadata_symbol final : public ultra::symbol
+    {
+    public:
+      using ultra::symbol::symbol;
+
+      [[nodiscard]] std::string to_string(format = c_format) const override
+      {
+        return name();
+      }
+    };
+
+    const auto *metadata(ss.insert(std::make_unique<metadata_symbol>("META")));
     ss.insert<real::number>();
 
     REQUIRE(metadata);

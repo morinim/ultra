@@ -82,6 +82,8 @@ public:
   [[nodiscard]] opcode_t opcode() const noexcept;
   [[nodiscard]] const std::string &name() const noexcept;
 
+  [[nodiscard]] virtual std::string to_string(format = c_format) const = 0;
+
   // ---- Modifiers ----
   void category(category_t) noexcept;
 

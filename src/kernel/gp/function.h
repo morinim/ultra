@@ -81,7 +81,7 @@ public:
   /// The base implementation produces a generic functional notation
   /// (e.g. `ADD({0},{1})`). Derived classes may override this method to
   /// support alternative syntaxes or formatting conventions.
-  [[nodiscard]] virtual std::string to_string(format = c_format) const;
+  [[nodiscard]] virtual std::string to_string(format = c_format) const override;
 
   [[nodiscard]] bool is_valid() const override;
 

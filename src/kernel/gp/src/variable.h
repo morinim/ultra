@@ -38,9 +38,6 @@ public:
 
   [[nodiscard]] value_t instance() const final { return this; }
 
-  [[nodiscard]] std::string to_string(format = c_format) const
-  { return name(); }
-
 private:
   std::size_t var_;
 };
