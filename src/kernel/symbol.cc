@@ -34,7 +34,7 @@ symbol::symbol(const std::string &name, category_t c)
   // may be created concurrently, each adding their own `symbol`s in parallel.
   static std::atomic<opcode_t> opc_count_(0);
 
-  opcode_ = opc_count_++;
+  opcode_ = opc_count_.fetch_add(1, std::memory_order_relaxed);
 
   Ensures(is_valid());
 }
@@ -73,7 +73,7 @@ void symbol::category(category_t c) noexcept
 
 ///
 /// Returns the category of the symbol.
-////
+///
 /// \return category associated with the symbol
 ///
 symbol::category_t symbol::category() const noexcept

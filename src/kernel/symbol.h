@@ -13,10 +13,10 @@
 #if !defined(ULTRA_SYMBOL_H)
 #define      ULTRA_SYMBOL_H
 
+#include "utility/assert.h"
+
 #include <limits>
 #include <string>
-
-#include "utility/assert.h"
 
 namespace ultra
 {

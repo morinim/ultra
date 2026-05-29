@@ -44,12 +44,12 @@ public:
 
   /// Produce the runtime value of the terminal.
   ///
+  /// \return the value associated with this terminal
+  ///
   /// This function returns the value represented by the terminal when the
   /// program is evaluated. The returned value may depend on the evaluation
   /// context (e.g. the current input vector), but does not depend on any
   /// child expressions.
-  ///
-  /// \return the value associated with this terminal
   ///
   /// \note
   /// Implementations must not throw exceptions and should be side-effect
