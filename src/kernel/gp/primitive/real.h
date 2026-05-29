@@ -19,6 +19,8 @@
 #include "kernel/terminal.h"
 #include "utility/misc.h"
 
+#include <cmath>
+#include <limits>
 #include <string>
 
 namespace ultra::real
@@ -197,7 +199,8 @@ public:
     switch (f)
     {
     case cpp_format:     return "({0}/std::sqrt(1.0+std::pow({1},2.0)))";
-    default:             return           "({0}/sqrt(1.0+pow({1},2.0)))";
+    case python_format:  return "({0}/math.sqrt(1.0+math.pow({1},2.0)))";
+    default:             return "({0}/sqrt(1.0+pow({1},2.0)))";
     }
   }
 
@@ -231,6 +234,7 @@ public:
     switch (f)
     {
     case cpp_format:     return "std::cos({0})";
+    case python_format:  return "math.cos({0})";
     default:             return      "cos({0})";
     }
   }
@@ -385,7 +389,7 @@ public:
       return "(std::fabs({0}-{1})<2*std::numeric_limits<double>::epsilon() ? "
              "{2} : {3})";
     case python_format:
-      return "({2} if isclose({0}, {1}) else {3})";
+      return "({2} if math.isclose({0}, {1}) else {3})";
     default:
       return "(fabs({0}-{1}) < 2*DBL_EPSILON ? {2} : {3})";
     }
@@ -541,8 +545,9 @@ public:
   {
     switch (f)
     {
-    case cpp_format:  return "std::log({0})";
-    default:          return      "log({0})";
+    case cpp_format:     return "std::log({0})";
+    case python_format:  return "math.log({0})";
+    default:             return      "log({0})";
     }
   }
 
@@ -725,6 +730,7 @@ public:
     switch (f)
     {
     case cpp_format:     return "std::sin({0})";
+    case python_format:  return "math.sin({0})";
     default:             return      "sin({0})";
     }
   }
@@ -753,6 +759,7 @@ public:
     switch (f)
     {
     case cpp_format:     return "std::sqrt({0})";
+    case python_format:  return "math.sqrt({0})";
     default:             return      "sqrt({0})";
     }
   }
