@@ -71,8 +71,6 @@ void group_stat<I, F>::add(const I &ind, const F &f)
 template<Individual I, Fitness F>
 void group_stat<I, F>::merge(group_stat gs)
 {
-  group_stat<I, F> ret;
-
   age.merge(gs.age);
   fitness.merge(gs.fitness);
   length.merge(gs.length);
@@ -326,10 +324,16 @@ bool analyzer<I, F>::is_valid() const
     if (g.age.max() > ad.max())
       return false;
 
-    if (g.fitness.min() < fd.min())
-      return false;
-    if (g.fitness.max() > fd.max())
-      return false;
+    if (!g.fitness.empty())
+    {
+      if (fd.empty())
+        return false;
+
+      if (g.fitness.min() < fd.min())
+        return false;
+      if (g.fitness.max() > fd.max())
+        return false;
+    }
 
     if (g.length.min() < ld.min())
       return false;
