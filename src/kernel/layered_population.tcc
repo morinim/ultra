@@ -255,7 +255,7 @@ void layered_population<I>::add_layer()
   const auto nl(layers());
 #endif
 
-  layers_.emplace(layers_.begin(), *prob_);
+  layers_.emplace(layers_.begin(), problem());
 
 #if !defined(NDEBUG)
   Ensures(layers() == nl + 1);
@@ -396,7 +396,7 @@ bool layered_population<I>::load(std::istream &in)
   if (!(in >> n_layers) || !n_layers)
     return false;
 
-  layered_population<I> lp(*prob_, false);
+  layered_population<I> lp(problem(), false);
 
   for (std::size_t l(0); l < n_layers; ++l)
   {
