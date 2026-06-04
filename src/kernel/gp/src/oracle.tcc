@@ -678,18 +678,11 @@ class_oracle_adaptor<O>::class_oracle_adaptor(O oracle,
 /// \param[in] x input example
 /// \return      numeric representation of the predicted class
 ///
-/// If the underlying predictor models `RichClassificationPredictor`, its
-/// callable interface is used directly. Otherwise, the predicted class label
-/// obtained via `tag()` is returned.
-///
 template<ClassificationPredictor O>
 value_t class_oracle_adaptor<O>::operator()(
   const std::vector<value_t> &x) const
 {
-  if constexpr (RichClassificationPredictor<O>)
-    return oracle_(x);
-  else
-    return static_cast<D_INT>(tag(x).label);
+  return static_cast<D_INT>(tag(x).label);
 }
 
 ///

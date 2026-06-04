@@ -302,10 +302,8 @@ private:
 /// wherever a `basic_oracle` is required, without inheritance or dynamic
 /// polymorphism.
 ///
-/// The wrapped predictor must satisfy `ClassificationPredictor`. If it also
-/// satisfies `RichClassificationPredictor`, its callable interface is used
-/// directly to implement `operator()`. Otherwise, the numeric output is derived
-/// from `tag()` by returning the predicted class label.
+/// The wrapped predictor must satisfy `ClassificationPredictor`; the numeric output
+/// is derived from `tag()` by returning the predicted class label.
 ///
 /// \note
 /// The adaptor is intentionally non-serializable.

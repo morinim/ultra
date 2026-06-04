@@ -43,12 +43,6 @@ struct class_bad
   std::size_t tag(const std::vector<value_t> &) const;
 };
 
-struct rich_class_ok
-{
-  value_t operator()(const std::vector<value_t> &) const;
-  classification_result tag(const std::vector<value_t> &) const;
-};
-
 }  // namespace
 
 TEST_SUITE("predictor concepts")
@@ -61,10 +55,6 @@ TEST_CASE("dummy")
 
   static_assert(ultra::src::ClassificationPredictor<class_ok>);
   static_assert(!ultra::src::ClassificationPredictor<class_bad>);
-
-  static_assert(ultra::src::ClassificationPredictor<rich_class_ok>);
-  static_assert(ultra::src::RichClassificationPredictor<rich_class_ok>);
-  static_assert(!ultra::src::RichClassificationPredictor<class_ok>);
 
   CHECK(true);
 }

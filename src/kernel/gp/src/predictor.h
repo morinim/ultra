@@ -43,28 +43,6 @@ template<class P> concept ClassificationPredictor = requires(
   { p.tag(x) } -> std::same_as<classification_result>;
 };
 
-///
-/// A classification predictor that also provides a direct numeric output.
-///
-/// In addition to satisfying `ClassificationPredictor`, a
-/// `RichClassificationPredictor` exposes a callable interface returning a
-/// `value_t`. This allows retrieving a numeric representation of the
-/// prediction (typically the class index) without going through `tag()`.
-///
-/// This concept is useful for adaptors and generic code that can take
-/// advantage of a more efficient or direct prediction path when available.
-///
-/// \note
-/// If a predictor does not model this concept, the numeric output can still
-/// be obtained via `tag()` by converting the predicted label.
-///
-template<class O> concept RichClassificationPredictor =
-  ClassificationPredictor<O>
-  && requires(const O &o, const std::vector<value_t> &x)
-{
-  { o(x) } -> std::same_as<value_t>;
-};
-
 }  // namespace ultra::src
 
 #endif  // include guard
