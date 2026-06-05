@@ -32,7 +32,7 @@ void distribution<T>::clear()
 template<ArithmeticFloatingType T>
 bool distribution<T>::empty() const noexcept
 {
-  return size_ == 0;
+  return size() == 0;
 }
 
 ///
@@ -231,19 +231,23 @@ T distribution<T>::standard_deviation() const
 template<ArithmeticFloatingType T>
 bool distribution<T>::save(std::ostream &out) const
 {
-  SAVE_FLAGS(out);
+  out << size() << '\n';
 
-  out << size() << '\n'
-      << std::scientific
-      << std::setprecision(std::numeric_limits<T>::digits10 + 1)
-      << mean() << '\n'
-      << min() << '\n'
-      << max() << '\n'
-      << m2_ << '\n';
+  if (size())
+  {
+    SAVE_FLAGS(out);
 
-  out << seen().size() << '\n';
-  for (const auto &elem : seen())
-    out << elem.first << ' ' << elem.second << '\n';
+    out << std::scientific
+        << std::setprecision(std::numeric_limits<T>::digits10 + 1)
+        << mean() << '\n'
+        << min() << '\n'
+        << max() << '\n'
+        << m2_ << '\n';
+
+    out << seen().size() << '\n';
+    for (const auto &elem : seen())
+      out << elem.first << ' ' << elem.second << '\n';
+  }
 
   return out.good();
 }
@@ -260,36 +264,38 @@ bool distribution<T>::save(std::ostream &out) const
 template<ArithmeticFloatingType T>
 bool distribution<T>::load(std::istream &in)
 {
-  SAVE_FLAGS(in);
+  distribution<T> temp;
 
-  decltype(size_) c;
-  if (!(in >> c))
+  if (!(in >> temp.size_))
     return false;
+
+  if (!temp.size_)
+  {
+    clear();
+    return true;
+  }
+
+  SAVE_FLAGS(in);
 
   in >> std::scientific
      >> std::setprecision(std::numeric_limits<T>::digits10 + 1);
 
-  decltype(mean_) m;
-  if (!(in >> m))
+  if (!(in >> temp.mean_))
     return false;
 
-  decltype(min_) mn;
-  if (!(in >> mn))
+  if (!(in >> temp.min_))
     return false;
 
-  decltype(max_) mx;
-  if (!(in >> mx))
+  if (!(in >> temp.max_))
     return false;
 
-  decltype(m2_) m2__;
-  if (!(in >> m2__))
+  if (!(in >> temp.m2_))
     return false;
 
   typename decltype(seen_)::size_type n;
   if (!(in >> n))
     return false;
 
-  decltype(seen_) s;
   for (decltype(n) i(0); i < n; ++i)
   {
     typename decltype(seen_)::key_type key;
@@ -297,16 +303,13 @@ bool distribution<T>::load(std::istream &in)
     if (!(in >> key >> val))
       return false;
 
-    s[key] = val;
+    temp.seen_[key] = val;
   }
 
-  size_ = c;
-  mean_ = m;
-  min_ = mn;
-  max_ = mx;
-  m2_ = m2__;
-  seen_ = s;
+  if (!temp.is_valid())
+    return false;
 
+  *this = std::move(temp);
   return true;
 }
 
@@ -316,45 +319,65 @@ bool distribution<T>::load(std::istream &in)
 template<ArithmeticFloatingType T>
 bool distribution<T>::is_valid() const
 {
+  if (!size())
+  {
+    distribution<T> empty_dist;
+
+    return seen_ == empty_dist.seen_ && issmall(m2_ - empty_dist.m2_)
+           && issmall(m2_comp_ - empty_dist.m2_comp_)
+           && issmall(mean_ - empty_dist.mean_)
+           && issmall(mean_comp_ - empty_dist.mean_comp_)
+           && issmall(max_ - empty_dist.max_) && issmall(min_ - empty_dist.min_);
+  }
+
   // This way, for "regular" types we'll use `std::infinite` / `std::isnan`
   // ("taken in" by the using statement), while for our types the overload
   // will prevail due to Koenig lookup (http://www.gotw.ca/gotw/030.htm).
   using std::isfinite;
   using std::isnan;
 
-  if (size() && isfinite(min()) && isfinite(mean()) && min() > mean())
+  if (isfinite(min()) && isfinite(mean()) && min() > mean())
   {
     ultraERROR << "Distribution: min=" << min() << " > mean=" << mean();
     return false;
   }
 
-  if (size() && isfinite(max()) && isfinite(mean()) && max() < mean())
+  if (isfinite(max()) && isfinite(mean()) && max() < mean())
   {
     ultraERROR << "Distribution: max=" << max() << " < mean=" << mean();
     return false;
   }
 
-  if (size() && (isnan(variance()) || !isnonnegative(variance())))
+  if (isnan(variance()) || !isnonnegative(variance()))
   {
     ultraERROR << "Distribution: negative variance";
     return false;
   }
 
-#ifndef NDEBUG
-  if (size() > 0)
+  std::size_t total(0);
+  for (const auto values(seen_ | std::views::values); auto v : values)
   {
-    std::size_t total(0);
-    for (const auto &[_, v] : seen_)
-      total += v;
-
-    if (total != size())
+    if (!v)
     {
-      ultraERROR << "Seen histogram total " << total
-                 << " does not match distribution size " << size_;
+      ultraERROR << "Seen histogram contains zero-count bin";
       return false;
     }
+
+    if (v > std::numeric_limits<std::size_t>::max() - total)
+    {
+      ultraERROR << "Seen histogram total overflow";
+      return false;
+    }
+
+    total += v;
   }
-#endif
+
+  if (total != size())
+  {
+    ultraERROR << "Seen histogram total " << total
+               << " does not match distribution size " << size_;
+    return false;
+  }
 
   return true;
 }

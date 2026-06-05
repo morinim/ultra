@@ -17,9 +17,12 @@
 #include "utility/log.h"
 #include "utility/misc.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <iosfwd>
 #include <map>
+#include <ranges>
 
 namespace ultra
 {
