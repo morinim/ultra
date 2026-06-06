@@ -10,13 +10,13 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <numbers>
-
 #include "kernel/distribution.h"
 #include "kernel/random.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <numbers>
 
 TEST_SUITE("DISTRIBUTION")
 {
@@ -153,7 +153,7 @@ TEST_CASE("Merge")
       const auto elem(random::between(-1000.0, 1000.0));
       d.add(elem);
 
-      if (cycles < 500)
+      if (random::boolean())
         d1.add(elem);
       else
         d2.add(elem);
@@ -161,6 +161,9 @@ TEST_CASE("Merge")
 
     CHECK(d1.min() >= -1000.0);
     CHECK(d1.max() < 1000.0);
+
+    CHECK(d2.min() >= -1000.0);
+    CHECK(d2.max() < 1000.0);
 
     d1.merge(std::move(d2));
 
@@ -201,4 +204,4 @@ TEST_CASE("Serialization")
   CHECK(d.seen() == d1.seen());
 }
 
-}  // TEST_SUITE("FUNCTION")
+}  // TEST_SUITE
