@@ -90,6 +90,42 @@ TEST_CASE("Base")
   CHECK(e2 < d.entropy());
 }
 
+TEST_CASE("Empty state")
+{
+  using namespace ultra;
+
+  distribution<double> d;
+
+  CHECK(d.empty());
+  CHECK(d.size() == 0);
+  CHECK(d.seen().empty());
+  CHECK(d.entropy() == doctest::Approx(0.0));
+  CHECK(d.is_valid());
+
+  d.add(1.0);
+  d.add(2.0);
+  d.clear();
+
+  CHECK(d.empty());
+  CHECK(d.size() == 0);
+  CHECK(d.seen().empty());
+  CHECK(d.entropy() == doctest::Approx(0.0));
+  CHECK(d.is_valid());
+
+  std::stringstream s;
+  CHECK(d.save(s));
+
+  distribution<double> loaded;
+  loaded.add(42.0);
+
+  CHECK(loaded.load(s));
+  CHECK(loaded.empty());
+  CHECK(loaded.size() == 0);
+  CHECK(loaded.seen().empty());
+  CHECK(loaded.entropy() == doctest::Approx(0.0));
+  CHECK(loaded.is_valid());
+}
+
 TEST_CASE("Merge")
 {
   using namespace ultra;
@@ -153,7 +189,7 @@ TEST_CASE("Merge")
       const auto elem(random::between(-1000.0, 1000.0));
       d.add(elem);
 
-      if (cycle % 2)
+      if (cycles % 2)
         d1.add(elem);
       else
         d2.add(elem);
