@@ -2,7 +2,7 @@
  *  \file
  *  \remark This file is part of ULTRA.
  *
- *  \copyright Copyright (C) 2023 EOS di Manlio Morini.
+ *  \copyright Copyright (C) 2024 EOS di Manlio Morini.
  *
  *  \license
  *  This Source Code Form is subject to the terms of the Mozilla Public
@@ -10,13 +10,16 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <numbers>
-
 #include "kernel/random.h"
 #include "kernel/distribution.h"
+#include "kernel/interval.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "third_party/doctest/doctest.h"
+
+#include <list>
+#include <numbers>
+#include <vector>
 
 TEST_SUITE("RANDOM")
 {
@@ -37,14 +40,25 @@ template<std::invocable F, class T> void check_f(F f, T min, T sup)
     d.add(num);
   }
 
-  const double expected_mean(std::midpoint(min, sup));
-  CHECK(expected_mean * 0.97 <= d.mean());
-  CHECK(d.mean() <= expected_mean * 1.03);
+  constexpr double margin(0.03);
+
+  const double low_bound(min < 0 ? (1.0 + margin) : (1.0 - margin));
+  const double upp_bound(sup < 0 ? (1.0 - margin) : (1.0 + margin));
+
+  const double expected_mean(min + (sup - min) / 2);
+  CHECK(expected_mean * low_bound <= d.mean());
+  CHECK(d.mean() <= expected_mean * upp_bound);
 }
 
 TEST_CASE("Between")
 {
   using namespace ultra;
+
+  SUBCASE("Enum")
+  {
+    enum {en1, en2, en3, en4, en5, en_sup};
+    check_f([&] { return random::between(en1, en_sup); }, en1, en_sup);
+  }
 
   SUBCASE("Floating point")
   {
@@ -54,14 +68,38 @@ TEST_CASE("Between")
 
   SUBCASE("Integer")
   {
-    const int min(0), sup(128);
-    check_f([&] { return random::between(min, sup); }, min, sup);
-  }
+    SUBCASE("Positive")
+    {
+      const int min(0), sup(128);
+      check_f([&] { return random::between(min, sup); }, min, sup);
+    }
 
-  SUBCASE("Sup")
+    SUBCASE("Negative")
+    {
+      const int min(-128), sup(-1);
+      check_f([&] { return random::between(min, sup); }, min, sup);
+    }
+
+    // One-value ranges.
+    CHECK(random::between(0, 1) == 0);
+    CHECK(random::between(-1, 0) == -1);
+  }
+}
+
+TEST_CASE("Sup")
+{
+  using namespace ultra;
+
+  SUBCASE("Double")
   {
     const double sup(4096.0);
     check_f([&] { return random::sup(sup); }, 0.0, sup);
+  }
+
+  SUBCASE("Integer")
+  {
+    const int sup(4096);
+    check_f([&] { return random::sup(sup); }, 0, sup);
   }
 }
 
@@ -69,30 +107,66 @@ TEST_CASE("Element")
 {
   using namespace ultra;
 
+  constexpr double margin(0.03);
+
   distribution<double> d;
 
-  const std::vector<double> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  SUBCASE("Interval")
+  {
+    const interval in(1.0, 9.0);
 
-  for (unsigned i(0); i < n; ++i)
-    d.add(random::element(v));
+    for (unsigned i(0); i < n; ++i)
+      d.add(random::element(in));
+  }
 
-  CHECK(5.0 * 0.97 <= d.mean());
-  CHECK(d.mean() <= 5.0 * 1.03);
+  SUBCASE("List")
+  {
+    std::list<double> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    for (unsigned i(0); i < n; ++i)
+      d.add(random::element(v));
+  }
+
+  SUBCASE("Vector")
+  {
+    // The list wasn't `const`, so the vector is.
+    const std::vector<double> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    for (unsigned i(0); i < n; ++i)
+      d.add(random::element(v));
+  }
+
+  CHECK(5.0 * (1.0 - margin) <= d.mean());
+  CHECK(d.mean() <= 5.0 * (1.0 + margin));
 }
 
 TEST_CASE("Boolean")
 {
   using namespace ultra;
 
+  constexpr double margin(0.04);
+
   distribution<double> d;
 
-  const std::vector<double> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  SUBCASE("Fair coin")
+  {
+    for (unsigned i(0); i < n; ++i)
+      d.add(random::boolean());
 
-  for (unsigned i(0); i < n; ++i)
-    d.add(random::boolean());
+    CHECK(0.5 * (1.0 - margin) <= d.mean());
+    CHECK(d.mean() <= 0.5 * (1.0 + margin));
+  }
 
-  CHECK(0.5 * 0.97 <= d.mean());
-  CHECK(d.mean() <= 0.5 * 1.03);
+  SUBCASE("Probability")
+  {
+    constexpr double p(0.25);
+
+    for (unsigned i(0); i < n; ++i)
+      d.add(random::boolean(p));
+
+    CHECK(p * (1.0 - margin) <= d.mean());
+    CHECK(d.mean() <= p * (1.0 + margin));
+  }
 }
 
 TEST_CASE("Ephemeral")
@@ -194,7 +268,7 @@ TEST_CASE("Ring")
   }
 }
 
-}  // TEST_SUITE("RANDOM")
+}  // TEST_SUITE
 
 
 int main(int argc, char** argv)
