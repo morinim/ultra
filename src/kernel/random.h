@@ -191,8 +191,8 @@ template<std::ranges::sized_range C>
   private:
     using word_t = random::engine_t::result_type;
 
-    word_t cache_;
-    unsigned bits_left_ {0};
+    word_t cache_ {random::engine()()};
+    unsigned bits_left_ {std::numeric_limits<word_t>::digits};
   };
 
   thread_local thread_local_coin_flip coin_flip;
