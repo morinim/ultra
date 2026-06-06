@@ -153,7 +153,7 @@ TEST_CASE("Merge")
       const auto elem(random::between(-1000.0, 1000.0));
       d.add(elem);
 
-      if (random::boolean())
+      if (cycle % 2)
         d1.add(elem);
       else
         d2.add(elem);
@@ -197,10 +197,10 @@ TEST_CASE("Serialization")
   decltype(d) d1;
   CHECK(d1.load(s));
 
-  CHECK(rif_min == doctest::Approx(d.min()));
-  CHECK(rif_max == doctest::Approx(d.max()));
-  CHECK(rif_mean == doctest::Approx(d.mean()));
-  CHECK(rif_variance == doctest::Approx(d.variance()));
+  CHECK(rif_min == doctest::Approx(d1.min()));
+  CHECK(rif_max == doctest::Approx(d1.max()));
+  CHECK(rif_mean == doctest::Approx(d1.mean()));
+  CHECK(rif_variance == doctest::Approx(d1.variance()));
   CHECK(d.seen() == d1.seen());
 }
 
