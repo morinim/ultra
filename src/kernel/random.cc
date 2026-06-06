@@ -14,7 +14,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <type_traits>
 
 namespace
 {
@@ -135,7 +134,7 @@ void randomize()
   // Bounded entropy interval used to re-base the process seed counter.
   // Large enough to avoid trivial values, small enough to avoid edge cases.
   constexpr seed_t lo(1000), hi(10000000);
-  std::uniform_int_distribution<seed_t> dist(lo, hi);
+  std::uniform_int_distribution dist(lo, hi);
 
   const seed_t entropy(static_cast<seed_t>(dist(gen)));
 
@@ -151,7 +150,7 @@ void randomize()
     // Prefer rebasing to entropy, but never move the counter backwards if we
     // can avoid it (helps preserve uniqueness for subsequently created
     // engines).
-    seed_t desired = entropy;
+    seed_t desired(entropy);
 
     if (desired <= cur)
       desired = cur + 1;  // well-defined due to unsigned contract

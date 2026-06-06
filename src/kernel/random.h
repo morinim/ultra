@@ -151,12 +151,52 @@ template<std::ranges::sized_range C>
 /// \note
 /// `bool` values are produced according to the Bernoulli distribution.
 ///
-[[nodiscard]] inline bool boolean(double p = 0.5)
+[[nodiscard]] inline bool boolean(double p)
 {
   Expects(in_0_1(p));
 
   std::bernoulli_distribution d(p);
   return d(engine());
+}
+
+///
+/// \return `true` or `false` with equal probability
+///
+/// \note
+/// This overload is the fast path for unbiased coin flips. It caches one PRNG
+/// result per thread and consumes it one bit at a time, avoiding the overhead
+/// of constructing a Bernoulli distribution for every call.
+///
+[[nodiscard]] inline bool boolean()
+{
+  // Fast path for fair coin flips: cache one PRNG result and consume it one
+  // bit at a time, amortising one engine call across all bits in
+  // `engine_t::result_type`.
+  class thread_local_coin_flip
+  {
+  public:
+    [[nodiscard]] bool operator()()
+    {
+      if (!bits_left_)  [[unlikely]]
+      {
+        cache_ = random::engine()();
+        bits_left_ = std::numeric_limits<word_t>::digits;
+      }
+
+      const bool result((cache_ >> (bits_left_ - 1)) & 1u);
+      --bits_left_;
+      return result;
+    }
+
+  private:
+    using word_t = random::engine_t::result_type;
+
+    word_t cache_;
+    unsigned bits_left_ {0};
+  };
+
+  thread_local thread_local_coin_flip coin_flip;
+  return coin_flip();
 }
 
 ///
