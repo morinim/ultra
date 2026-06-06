@@ -130,6 +130,8 @@ TEST_CASE("Merge")
 {
   using namespace ultra;
 
+  ultra::random::engine().seed(1973u);
+
   SUBCASE("Same distribution")
   {
     const std::vector<std::pair<double, unsigned>> elems =
@@ -208,7 +210,7 @@ TEST_CASE("Merge")
     CHECK(d.max() == doctest::Approx(d1.max()));
     CHECK(d.size() == d1.size());
     CHECK(d.variance() == doctest::Approx(d1.variance()));
-    CHECK(d.seen() == d1.seen())
+    CHECK(d.seen() == d1.seen());
   }
 
   SUBCASE("Empty distribution")
@@ -219,7 +221,6 @@ TEST_CASE("Merge")
     {
       const auto elem(random::between(-1000.0, 1000.0));
       d.add(elem);
-
       d1.add(elem);
     }
 
@@ -232,7 +233,7 @@ TEST_CASE("Merge")
       CHECK(d.max() == doctest::Approx(d1.max()));
       CHECK(d.size() == d1.size());
       CHECK(d.variance() == doctest::Approx(d1.variance()));
-      CHECK(d.seen() == d1.seen())
+      CHECK(d.seen() == d1.seen());
     }
 
     SUBCASE("Empty - merge - non empty")
@@ -244,7 +245,7 @@ TEST_CASE("Merge")
       CHECK(d.max() == doctest::Approx(empty.max()));
       CHECK(d.size() == empty.size());
       CHECK(d.variance() == doctest::Approx(empty.variance()));
-      CHECK(d.seen() == empty.seen())
+      CHECK(d.seen() == empty.seen());
     }
   }
 }
@@ -253,6 +254,8 @@ TEST_CASE("Serialization")
 {
   using namespace ultra;
   distribution<double> d;
+
+  ultra::random::engine().seed(1973u);
 
   for (unsigned i(0); i < 10000; ++i)
     d.add(random::sup(10.0));
