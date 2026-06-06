@@ -208,6 +208,44 @@ TEST_CASE("Merge")
     CHECK(d.max() == doctest::Approx(d1.max()));
     CHECK(d.size() == d1.size());
     CHECK(d.variance() == doctest::Approx(d1.variance()));
+    CHECK(d.seen() == d1.seen())
+  }
+
+  SUBCASE("Empty distribution")
+  {
+    distribution<double> d, d1, empty;
+
+    for (unsigned cycles(100); cycles; --cycles)
+    {
+      const auto elem(random::between(-1000.0, 1000.0));
+      d.add(elem);
+
+      d1.add(elem);
+    }
+
+    SUBCASE("Non empty - merge - empty")
+    {
+      d1.merge(empty);
+
+      CHECK(d.mean() == doctest::Approx(d1.mean()));
+      CHECK(d.min() == doctest::Approx(d1.min()));
+      CHECK(d.max() == doctest::Approx(d1.max()));
+      CHECK(d.size() == d1.size());
+      CHECK(d.variance() == doctest::Approx(d1.variance()));
+      CHECK(d.seen() == d1.seen())
+    }
+
+    SUBCASE("Empty - merge - non empty")
+    {
+      empty.merge(d1);
+
+      CHECK(d.mean() == doctest::Approx(empty.mean()));
+      CHECK(d.min() == doctest::Approx(empty.min()));
+      CHECK(d.max() == doctest::Approx(empty.max()));
+      CHECK(d.size() == empty.size());
+      CHECK(d.variance() == doctest::Approx(empty.variance()));
+      CHECK(d.seen() == empty.seen())
+    }
   }
 }
 
