@@ -98,8 +98,8 @@ public:
   [[nodiscard]] double operator()(const P &) const;
   [[nodiscard]] double fast(const P &) const;
 
-  [[nodiscard]] auto oracle(const P &) const
-    requires internal::has_regression_oracle_v<F, P>;
+  [[nodiscard]] auto predictor(const P &) const
+    requires internal::has_regression_predictor_v<F, P>;
 
 private:
   static constexpr std::ptrdiff_t fast_min_examples = 100;
@@ -329,7 +329,7 @@ public:
   explicit gaussian_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
-  [[nodiscard]] auto oracle(const P &) const;
+  [[nodiscard]] auto predictor(const P &) const;
 };
 
 ///
@@ -347,19 +347,19 @@ public:
   explicit binary_evaluator(multi_dataset<dataframe> &);
 
   [[nodiscard]] double operator()(const P &) const;
-  [[nodiscard]] auto oracle(const P &) const;
+  [[nodiscard]] auto predictor(const P &) const;
 };
 
 namespace internal
 {
 template<Individual P>
-struct has_regression_oracle<mae_error_functor<P>, P> : std::true_type {};
+struct has_regression_predictor<mae_error_functor<P>, P> : std::true_type {};
 
 template<Individual P>
-struct has_regression_oracle<rmae_error_functor<P>, P> : std::true_type {};
+struct has_regression_predictor<rmae_error_functor<P>, P> : std::true_type {};
 
 template<Individual P>
-struct has_regression_oracle<mse_error_functor<P>, P> : std::true_type {};
+struct has_regression_predictor<mse_error_functor<P>, P> : std::true_type {};
 }  // namespace internal
 
 #include "kernel/gp/src/evaluator.tcc"

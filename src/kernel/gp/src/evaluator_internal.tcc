@@ -42,17 +42,17 @@ template<class D>
 using dataset_example_t = typename dataset_example_impl<D>::type;
 
 
-/// Trait indicating whether a functor can expose a regression oracle through
-/// `aggregate_evaluator::oracle()`.
+/// Trait indicating whether a functor can expose a regression predictor through
+/// `aggregate_evaluator::predictor()`.
 ///
 /// This trait is used to selectively enable the
-/// `aggregate_evaluator::oracle()` member function only for functors whose
-/// semantics are compatible with `reg_oracle`.
-template<class F, class P> struct has_regression_oracle : std::false_type {};
+/// `aggregate_evaluator::predictor()` member function only for functors whose
+/// semantics are compatible with regression predictors.
+template<class F, class P> struct has_regression_predictor : std::false_type {};
 
-/// Convenience variable template for `has_regression_oracle`.
-template<class F, class P> inline constexpr bool has_regression_oracle_v =
-  has_regression_oracle<F, P>::value;
+/// Convenience variable template for `has_regression_predictor`.
+template<class F, class P> inline constexpr bool has_regression_predictor_v =
+  has_regression_predictor<F, P>::value;
 
 }  // namespace internal
 

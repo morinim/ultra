@@ -94,21 +94,21 @@ double aggregate_evaluator<P, F, D, A, M>::fast(const P &prg) const
 }
 
 ///
-/// Builds a regression oracle associated with a program.
+/// Builds a regression predictor associated with a program.
 ///
-/// \param[in] prg program to transform into an oracle
-/// \return        oracle object associated with `prg`
+/// \param[in] prg program to transform into a predictor
+/// \return        predictor object associated with `prg`
 ///
 /// \remark
 /// This member function is conditionally enabled only when the functor `F`
 /// used by the evaluator is known to support regression semantics (as
-/// indicated by `has_regression_oracle<F, P>`). It is not available for
+/// indicated by `has_regression_predictor<F, P>`). It is not available for
 /// classification or generic score-based evaluators.
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
-auto aggregate_evaluator<P, F, D, A, M>::oracle(const P &prg) const
-  requires internal::has_regression_oracle_v<F, P>
+auto aggregate_evaluator<P, F, D, A, M>::predictor(const P &prg) const
+  requires internal::has_regression_predictor_v<F, P>
 {
   return reg_oracle<P>(prg);
 }
@@ -353,7 +353,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 /// \return        oracle object associated with `prg`
 ///
 template<Individual P>
-auto gaussian_evaluator<P>::oracle(const P &prg) const
+auto gaussian_evaluator<P>::predictor(const P &prg) const
 {
   return gaussian_oracle<P>(prg, this->data());
 }
@@ -400,7 +400,7 @@ double binary_evaluator<P>::operator()(const P &prg) const
 /// \return        oracle object associated with `prg`
 ///
 template<Individual P>
-auto binary_evaluator<P>::oracle(const P &prg) const
+auto binary_evaluator<P>::predictor(const P &prg) const
 {
   return binary_oracle<P>(prg, this->data());
 }

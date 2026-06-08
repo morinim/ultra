@@ -269,10 +269,10 @@ TEST_CASE("fast evaluation matches full evaluation for constant error")
   }
 }
 
-template<class E> concept HasOracle =
+template<class E> concept HasPredictor =
   requires(const E &e, const ultra::gp::individual &i)
 {
-  e.oracle(i);
+  e.predictor(i);
 };
 
 TEST_CASE("aggregate evaluator oracle availability")
@@ -284,10 +284,10 @@ TEST_CASE("aggregate evaluator oracle availability")
   using mse_t = src::mse_evaluator<gp::individual>;
   using count_t = src::count_error_evaluator<gp::individual>;
 
-  CHECK(HasOracle<mae_t>);
-  CHECK(HasOracle<rmae_t>);
-  CHECK(HasOracle<mse_t>);
-  CHECK_FALSE(HasOracle<count_t>);
+  CHECK(HasPredictor<mae_t>);
+  CHECK(HasPredictor<rmae_t>);
+  CHECK(HasPredictor<mse_t>);
+  CHECK_FALSE(HasPredictor<count_t>);
 }
 
 TEST_CASE("EvaluationDataset concept")

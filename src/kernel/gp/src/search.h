@@ -48,7 +48,7 @@ public:
 
   explicit basic_search(problem &, metric_flags = metric_flags::accuracy);
 
-  [[nodiscard]] auto oracle(const individual_t &) const;
+  [[nodiscard]] auto predictor(const individual_t &) const;
 
   [[nodiscard]] bool is_valid() const override;
 
@@ -97,7 +97,7 @@ public:
   search_stats<P, fitness_t> run(unsigned = 1,
                                  const model_measurements<fitness_t> & = {});
 
-  [[nodiscard]] std::unique_ptr<basic_oracle> oracle(const P &) const;
+  [[nodiscard]] std::unique_ptr<basic_oracle> predictor(const P &) const;
 
   // ---- Hooks ----
   search &after_generation(after_generation_callback_t);

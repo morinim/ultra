@@ -17,29 +17,31 @@
 #if !defined(ULTRA_SRC_SEARCH_TCC)
 #define      ULTRA_SRC_SEARCH_TCC
 
-/// Sentinel type representing the absence of an oracle.
+/// Sentinel type representing the absence of a predictor.
 ///
 /// This type is produced when the active evaluator does not provide an
-/// `oracle()` method.
-struct no_oracle
+/// `predictor()` method.
+struct no_predictor
 {
 };
 
 namespace internal
 {
 
-template<class O>
-[[nodiscard]] std::unique_ptr<basic_oracle> make_basic_oracle(O &&o)
+template<class P>
+[[nodiscard]] std::unique_ptr<basic_oracle> make_basic_oracle(P &&p)
 {
-  using oracle_t = std::remove_cvref_t<O>;
+  using predictor_t = std::remove_cvref_t<P>;
 
-  if constexpr (std::same_as<oracle_t, no_oracle>)
-    return nullptr;
-  else
-  {
-    static_assert(std::derived_from<oracle_t, basic_oracle>);
-    return std::make_unique<oracle_t>(std::forward<O>(o));
-  }
+  if constexpr (std::derived_from<predictor_t, basic_oracle>)
+    return std::make_unique<predictor_t>(std::forward<P>(p));
+  // Check classification predictor before since it's the richer contract.
+  else if constexpr (ClassificationPredictor<predictor_t>)
+    return std::make_unique<class_oracle_adaptor<predictor_t>>(std::forward<P>(p));
+  else if constexpr (RegressionPredictor<predictor_t>)
+    return std::make_unique<reg_oracle_adaptor<predictor_t>>(std::forward<P>(p));
+
+  return nullptr;
 }
 
 }  // namespace internal
@@ -66,28 +68,28 @@ basic_search<ES, E>::basic_search(problem &p, metric_flags m)
 }
 
 ///
-/// Creates an oracle associated with a given individual.
+/// Creates a predictor associated with a given individual.
 ///
-/// \param[in] ind individual used as building block for the oracle
-/// \return        the evaluator-specific oracle, or `no_oracle` if the active
+/// \param[in] ind individual used as building block for the predictor
+/// \return        the evaluator-specific predictor, or `no_predictor` if the active
 ///                evaluator does not provide one
 ///
 /// The returned object depends on the evaluator used during training:
-/// - if the evaluator exposes an `oracle()` method, its result is forwarded;
-/// - otherwise, a `no_oracle` sentinel is returned.
+/// - if the evaluator exposes a `predictor()` method, its result is forwarded;
+/// - otherwise, a `no_predictor` sentinel is returned.
 ///
-/// This function is always well-formed: lack of oracle support is handled at
-/// compile time via the `no_oracle` fallback rather than via runtime errors.
+/// This function is always well-formed: lack of predictor support is handled at
+/// compile time via the `no_predictor` fallback rather than via runtime errors.
 ///
 template<template<class> class ES, Evaluator E>
-auto basic_search<ES, E>::oracle(const individual_t &ind) const
+auto basic_search<ES, E>::predictor(const individual_t &ind) const
 {
   const auto &eva_core(this->eva_.core());
 
-  if constexpr (requires { eva_core.oracle(ind); })
-    return eva_core.oracle(ind);
+  if constexpr (requires { eva_core.predictor(ind); })
+    return eva_core.predictor(ind);
   else
-    return no_oracle();
+    return no_predictor();
 }
 
 ///
@@ -116,12 +118,12 @@ model_measurements<typename basic_search<ES, E>::fitness_t>
 basic_search<ES, E>::calculate_metrics(const individual_t &prg) const
 {
   auto ret(ultra::basic_search<ES, E>::calculate_metrics(prg));
-  const auto prg_oracle(oracle(prg));
+  const auto prg_predictor(predictor(prg));
 
-  if constexpr (ClassificationPredictor<decltype(prg_oracle)>)
+  if constexpr (ClassificationPredictor<decltype(prg_predictor)>)
     if ((metrics_ & metric_flags::accuracy) && prob().classification())
     {
-      ret.accuracy = metrics::accuracy(prg_oracle, prob().data.selected());
+      ret.accuracy = metrics::accuracy(prg_predictor, prob().data.selected());
     }
 
   return ret;
@@ -403,30 +405,28 @@ search<P> &search<P>::refinement(F &&f)
 }
 
 ///
-/// Creates a runtime-polymorphic oracle associated with a given individual.
+/// Creates a runtime-polymorphic predictor associated with a given individual.
 ///
-/// \param[in] prg individual used as building block for the oracle
-/// \return        a dynamically allocated oracle or `nullptr` if the active
+/// \param[in] prg individual used as building block for the predictor
+/// \return        a dynamically allocated predictor or `nullptr` if the active
 ///                evaluator does not provide one
 ///
 /// This function provides a uniform interface over different evaluator types.
-/// If the selected evaluator exposes an `oracle()` method, its result is
+/// If the selected evaluator exposes an `predictor()` method, its result is
 /// wrapped into a `std::unique_ptr<basic_oracle>`. Otherwise `nullptr` is
 /// returned.
 ///
 /// \note
-/// Oracle availability is detected at compile time and mapped to a runtime
+/// Predictor availability is detected at compile time and mapped to a runtime
 /// polymorphic interface.
 ///
-/// \see basic_search::oracle
-///
 template<Individual P>
-std::unique_ptr<basic_oracle> search<P>::oracle(const P &prg) const
+std::unique_ptr<basic_oracle> search<P>::predictor(const P &prg) const
 {
   Expects(problem_type_unchanged());
 
   return std::visit(
-    [&](const auto &s) { return internal::make_basic_oracle(s.oracle(prg)); },
+    [&](const auto &s) { return internal::make_basic_oracle(s.predictor(prg)); },
     engine_);
 }
 

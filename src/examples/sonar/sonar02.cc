@@ -38,9 +38,9 @@ int main()
   const auto result(s.run());
 
   // PREDICTION
-  const auto oracle(s.oracle(result.best_individual()));
+  const auto predictor(s.predictor(result.best_individual()));
   const auto example(random::element(prob.data.selected()));
-  const auto prediction(oracle->tag(example.input));
+  const auto prediction(predictor->tag(example.input));
 
   std::cout << "Correct class: " << src::label(example)
             << "   Prediction: " << prediction.label
@@ -48,11 +48,11 @@ int main()
 
   // SERIALIZATION
   std::stringstream ss;
-  src::serialize::save(ss, oracle);  // save...
+  src::serialize::save(ss, predictor);  // save...
 
   // ... and reload it when needed.
-  const auto oracle2(src::serialize::oracle::load(ss, prob.sset));
-  const auto prediction2(oracle2->tag(example.input));
+  const auto predictor2(src::serialize::oracle::load(ss, prob.sset));
+  const auto prediction2(predictor2->tag(example.input));
   std::cout << "   Prediction: " << prediction2.label
             << "   Sureness: " << prediction2.sureness << '\n';
 

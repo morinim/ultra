@@ -64,10 +64,10 @@ TEST_CASE("Symbolic regression - single variable")
   src::search s(prob);
   const auto result(s.run(8));
 
-  const auto holder(s.oracle(result.best_individual()));
-  const auto &oracle(*holder);
+  const auto holder(s.predictor(result.best_individual()));
+  const auto &predictor(*holder);
 
-  REQUIRE(oracle.is_valid());
+  REQUIRE(predictor.is_valid());
 
   const std::vector<std::pair<double, double>> test =
   {
@@ -80,7 +80,7 @@ TEST_CASE("Symbolic regression - single variable")
 
   for (const auto &[out, in] : test)
   {
-    const auto v(oracle({in}));
+    const auto v(predictor({in}));
     REQUIRE(has_value(v));
     CHECK(std::get<D_DOUBLE>(v) == doctest::Approx(out).epsilon(1e-4));
   }
@@ -121,10 +121,10 @@ TEST_CASE("Symbolic regression - multiple variables")
   src::search s(prob);
   const auto result(s.run(8));
 
-  const auto holder(s.oracle(result.best_individual()));
-  const auto &oracle(*holder);
+  const auto holder(s.predictor(result.best_individual()));
+  const auto &predictor(*holder);
 
-  REQUIRE(oracle.is_valid());
+  REQUIRE(predictor.is_valid());
 
   const std::vector<std::pair<double, std::vector<value_t>>> test =
   {
@@ -137,7 +137,7 @@ TEST_CASE("Symbolic regression - multiple variables")
 
   for (const auto &[out, in] : test)
   {
-    const auto v(oracle(in));
+    const auto v(predictor(in));
     REQUIRE(has_value(v));
     CHECK(std::get<D_DOUBLE>(v) == doctest::Approx(out).epsilon(1e-4));
   }
