@@ -545,7 +545,7 @@ summary<typename evolution<E>::individual_t,
 
   ultra::thread_pool pool(workers);
 
-  for (bool stop(false); !stop; ++sum_.generation)
+  for (bool stop(false); !stop; stop = stop_condition())
   {
     ps.new_generation();
 
@@ -609,6 +609,8 @@ summary<typename evolution<E>::individual_t,
     strategy.after_generation(pop_, sum_);  // strategy-specific bookkeeping
     if (after_generation_callback_)
       after_generation_callback_(pop_, sum_);
+
+    ++sum_.generation;
   }
 
   sum_.elapsed = ps.from_start.elapsed();
