@@ -597,6 +597,13 @@ summary<typename evolution<E>::individual_t,
           performed = perform_refinement(*ref_pop, ps);
 
         ref_sched.after_refinement_attempt(performed);
+
+        if (performed)
+        {
+          // `performed` only means refinement ran. It may still have updated and
+          // reported `sum_`, so refresh the local progress cache.
+          previous_best = sum_.best();
+        }
       }
       else
         ref_sched.tick();
