@@ -80,7 +80,10 @@ bool parameters::needs_init() const noexcept
     || evolution.tournament_size == 0
     || !in_0_1(evolution.elitism)
     || !in_0_1(evolution.p_cross)
-    || !in_0_1(evolution.p_mutation);
+    || !in_0_1(evolution.p_mutation)
+    || alps.age_gap == 0
+    || alps.max_layers == 0
+    || alps.p_main_layer < 0.0;
 }
 
 ///
@@ -96,13 +99,19 @@ bool parameters::is_valid(bool force_defined) const
   {
     if (!alps.age_gap)
     {
-      ultraERROR << "Undefined `age_gap` parameter";
+      ultraERROR << "Undefined `alps.age_gap` parameter";
+      return false;
+    }
+
+    if (!alps.max_layers)
+    {
+      ultraERROR << "Undefined `alps.max_layers` parameter";
       return false;
     }
 
     if (!in_0_1(alps.p_main_layer))
     {
-      ultraERROR << "Undefined `p_main_layer` parameter";
+      ultraERROR << "Undefined `alps.p_main_layer` parameter";
       return false;
     }
 
@@ -187,6 +196,12 @@ bool parameters::is_valid(bool force_defined) const
 
   // When `force_defined == false`, probabilities outside `[0,1]` are allowed
   // because they represent the auto-tune/undefined sentinel state.
+
+  if (alps.max_layers == 1)
+  {
+    ultraERROR << "ALPS require at least two layers";
+    return false;
+  }
 
   if (evolution.tournament_size > evolution.max_tournament_size)
   {

@@ -271,7 +271,9 @@ void alps_es<E>::after_generation(P &pop,
                                   const summary<individual_t, fitness_t> &sum)
 {
   Expects(&pop.problem() == &this->get_problem());
+
   const auto &params(pop.problem().params);
+  Expects(params.alps.max_layers > 1);
 
   pop.inc_age();
 
@@ -357,9 +359,15 @@ void alps_es<E>::after_generation(P &pop,
 template<Evaluator E>
 parameters alps_es<E>::shape(parameters params)
 {
+  if (!params.alps.age_gap)
+    params.alps.age_gap = 20;
+
   if (!params.alps.max_layers)
     params.alps.max_layers =
       std::max<unsigned>(2, std::thread::hardware_concurrency());
+
+  if (params.alps.p_main_layer < 0.0)
+    params.alps.p_main_layer = 0.75;
 
   return params;
 }
