@@ -545,7 +545,7 @@ summary<typename evolution<E>::individual_t,
 
   ultra::thread_pool pool(workers);
 
-  for (bool stop(false); !stop; stop = stop_condition())
+  for (bool stop(false); !stop; stop = stop || stop_condition())
   {
     ps.new_generation();
 
@@ -573,8 +573,9 @@ summary<typename evolution<E>::individual_t,
           print(message::status, ps);
       }
 
-      if (!stop && (stop = stop_condition()))
+      if (!stop && stop_condition()) [[unlikely]]
       {
+        stop = true;
         source.request_stop();
         ultraDEBUG << "Sending closing message to tasks";
       }
