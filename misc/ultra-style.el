@@ -19,7 +19,7 @@
    (c-offsets-alist . ((innamespace . [0]))))) ; suppress namespace indentation
 
 (defun ultra-c++-mode-hook ()
-  (c-set-style "ultra-style"))        ; use my-style defined above
+  (c-set-style "ultra-style"))        ; use ultra-style defined above
 
 (add-hook 'c++-mode-hook #'ultra-c++-mode-hook)
 
@@ -38,20 +38,21 @@
 
 (defun ultra-contract-matcher (limit)
   "Font-lock matcher for contract expressions with balanced parentheses."
-  (when (re-search-forward
-         (rx symbol-start (or "assert" "Expects" "Ensures") "(")
-         limit t)
-    (let* ((kw-start (match-beginning 0))
-           (open-paren (1- (point)))
-           (close-paren (ignore-errors (scan-sexps open-paren 1))))
-      (when close-paren
-        ;; Match 0: whole wrapper (keyword + parentheses)
-        ;; Match 1: body inside parentheses
-        (set-match-data
-         (list
-          kw-start close-paren          ; 0: whole wrapper
-          (1+ open-paren) (1- close-paren))) ; 1: body only
-        t))))
+  (catch 'matched
+    (while (re-search-forward
+            (rx symbol-start (or "assert" "Expects" "Ensures") "(")
+            limit t)
+      (let* ((kw-start (match-beginning 0))
+             (open-paren (1- (point)))
+             (close-paren (ignore-errors (scan-sexps open-paren 1))))
+        (when (and close-paren (<= close-paren limit))
+          ;; Match 0: whole wrapper (keyword + parentheses)
+          ;; Match 1: body inside parentheses
+          (set-match-data
+           (list
+            kw-start close-paren          ; 0: whole wrapper
+            (1+ open-paren) (1- close-paren))) ; 1: body only
+          (throw 'matched t))))))
 
 (defconst ultra-contract-font-lock-keywords
   '((ultra-contract-matcher
