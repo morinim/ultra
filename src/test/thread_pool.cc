@@ -339,7 +339,8 @@ TEST_CASE("Ensure task exception doesn't kill worker thread")
     auto throw_future(pool.submit(throw_task, 1));
     auto no_throw_future(pool.submit(regular_task, 2));
 
-    CHECK_THROWS(throw_future.get());
+    [[maybe_unused]] int dummy;
+    CHECK_THROWS(dummy = throw_future.get());
     CHECK(no_throw_future.get() == 4);
 
     // Do similar check for tasks without return.
