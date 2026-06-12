@@ -51,8 +51,8 @@ struct decision_vector
   };
 
   decision_vector() = default;
-  decision_vector(std::vector<double> values, std::vector<coordinate> coords)
-    : values(std::move(values)), coords(std::move(coords))
+  decision_vector(std::vector<double> vs, std::vector<coordinate> cs)
+    : values(std::move(vs)), coords(std::move(cs))
   {}
 
   std::vector<double> values {};
