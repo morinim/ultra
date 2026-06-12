@@ -20,7 +20,7 @@
                 "CMAKE_EXE_LINKER_FLAGS": "$env{COMPILER_LINK_FLAGS} $env{SANITISER_FLAGS}",
                 "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s",
                 "OTHER_FLAGS": "-pipe;-march=native;$env{COMPILER_OTHER_FLAGS};$env{SANITISER_FLAGS}",
-                "WARN_FLAGS": "-Wall;-Wextra;-Wpedantic;-Wformat=2;-Wshadow;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wextra-semi;-Wrange-loop-analysis;-Wmove;-Wdeprecated-copy;$env{COMPILER_WARN_FLAGS}"
+                "WARN_FLAGS": "-Wall;-Wextra;-Wpedantic;-Wformat=2;-Wshadow;-Wmissing-include-dirs;-Wundef;-Winvalid-pch;-Wdouble-promotion;-Wfloat-equal;-Wcast-qual;-Wcast-align;-Wpacked;-Wredundant-decls;-Wmissing-field-initializers;-Wdisabled-optimization;-Wctor-dtor-privacy;-Woverloaded-virtual;-Wsuggest-override;-Wextra-semi;-Wdeprecated-copy;$env{COMPILER_WARN_FLAGS}"
             }
         },
         {
