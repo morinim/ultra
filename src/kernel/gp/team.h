@@ -20,11 +20,6 @@
 
 #include <algorithm>
 
-namespace ultra::out
-{
-print_format_t print_format_flag(std::ostream &);
-}
-
 namespace ultra::gp
 {
 
