@@ -538,8 +538,6 @@ summary<typename evolution<E>::individual_t,
   ultraDEBUG << "Calling evolution_strategy init method";
   strategy.init(pop_);  // strategy-specific customisation point
 
-  bool use_sleep(false);
-
   const std::size_t workers(strategy.max_parallelism(pop_));
   assert(workers);
 
@@ -561,15 +559,10 @@ summary<typename evolution<E>::individual_t,
 
     ultraDEBUG << "Tasks running";
 
-    // Poll the pool state while performing progress reporting and
-    // stop-condition handling. All tasks have already been submitted;
-    // no new tasks will be enqueued during this loop.
-    while (pool.has_pending_tasks())
+    while (!pool.wait_for(10ms))
     {
       if (ps.from_last_msg.elapsed() > 2s)
       {
-        use_sleep = true;
-
         if (!print_and_update_if_better(sum_.best()))
           print(message::status, ps);
       }
@@ -580,14 +573,12 @@ summary<typename evolution<E>::individual_t,
         source.request_stop();
         ultraDEBUG << "Sending closing message to tasks";
       }
-
-      if (use_sleep)
-        std::this_thread::sleep_for(5ms);
-      else
-        std::this_thread::yield();
     }
 
     print_and_update_if_better(sum_.best());
+
+    if (stop)
+      break;
 
     if (refinement_callback_)
     {
