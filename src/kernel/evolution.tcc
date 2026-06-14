@@ -545,7 +545,8 @@ summary<typename evolution<E>::individual_t,
 
   ultra::thread_pool pool(workers);
 
-  for (bool stop(false); !stop; stop = stop || stop_condition())
+  bool stop(false);
+  while (!stop && !stop_condition())
   {
     ps.new_generation();
 
