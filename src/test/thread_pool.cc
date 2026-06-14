@@ -12,14 +12,14 @@
 
 #include "utility/thread_pool.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "third_party/doctest/doctest.h"
+
 #include <array>
 #include <chrono>
 #include <latch>
 #include <numeric>
 #include <random>
-
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "third_party/doctest/doctest.h"
 
 using namespace std::chrono_literals;
 
@@ -31,7 +31,7 @@ TEST_CASE("Number of threads")
   SUBCASE("Default")
   {
     ultra::thread_pool pool;
-    CHECK(pool.capacity() == std::thread::hardware_concurrency());
+    CHECK(pool.capacity() == std::max(1u, std::thread::hardware_concurrency()));
   }
 
   SUBCASE("hardware_concurrency == 0")
@@ -576,6 +576,99 @@ TEST_CASE("Ensure wait() can be called multiple times on the same pool")
   CHECK(all_correct_count);
 }
 
+TEST_CASE("Ensure wait_for() reports completion state")
+{
+  SUBCASE("with no tasks")
+  {
+    ultra::thread_pool pool(2);
+    CHECK(pool.wait_for(0ms));
+  }
+
+  SUBCASE("with running task before timeout")
+  {
+    ultra::thread_pool pool(1);
+    std::latch started(1);
+    std::latch release(1);
+
+    pool.execute([&]
+    {
+      started.count_down();
+      release.wait();
+    });
+
+    started.wait();
+
+    CHECK(!pool.wait_for(0ms));
+
+    release.count_down();
+    pool.wait();
+    CHECK(pool.wait_for(0ms));
+  }
+
+  SUBCASE("with completed tasks")
+  {
+    ultra::thread_pool pool(2);
+    std::atomic<unsigned> counter(0);
+
+    for (unsigned i(0); i < 8; ++i)
+      pool.execute([&counter] { ++counter; });
+
+    pool.wait();
+
+    CHECK(pool.wait_for(0ms));
+    CHECK(counter == 8);
+  }
+}
+
+TEST_CASE("Ensure wait_for() waits for queued and running tasks")
+{
+  ultra::thread_pool pool(2);
+
+  std::latch running(2);
+  std::latch release(1);
+  std::atomic<unsigned> counter(0);
+
+  for (unsigned i(0); i < 2; ++i)
+    pool.execute([&]
+    {
+      running.count_down();
+      release.wait();
+      ++counter;
+    });
+
+  for (unsigned i(0); i < 2; ++i)
+    pool.execute([&counter] { ++counter; });
+
+  running.wait();
+
+  CHECK(!pool.wait_for(0ms));
+  CHECK(counter == 0);
+
+  release.count_down();
+
+  pool.wait();
+  CHECK(pool.wait_for(0ms));
+  CHECK(counter == 4);
+}
+
+TEST_CASE("Ensure wait_for() can be called multiple times on the same pool")
+{
+  ultra::thread_pool pool(2);
+
+  for (unsigned batch(0); batch < 4; ++batch)
+  {
+    std::atomic<unsigned> counter(0);
+
+    for (unsigned i(0); i < 16; ++i)
+      pool.execute([&counter] { ++counter; });
+
+    pool.wait();
+
+    CHECK(pool.wait_for(0ms));
+    CHECK(counter == 16);
+  }
+}
+
 TEST_CASE("Thread pool destruction doesn't hang")
 {
   for (unsigned n(100); n; --n)
@@ -601,4 +694,4 @@ TEST_CASE("Thread pool destruction doesn't hang")
   }
 }
 
-}  // TEST_SUITE("thread_pool")
+}  // TEST_SUITE

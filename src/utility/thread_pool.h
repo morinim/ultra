@@ -260,6 +260,28 @@ public:
     cv_finished_.wait(lock, [this]{ return task_counter_ == 0; });
   }
 
+  /// Blocks until all tasks have completed or the timeout expires.
+  ///
+  /// \param[in] timeout maximum time to wait
+  /// \return            `true` if all queued and running tasks completed before the
+  ///                    timeout; `false` otherwise
+  ///
+  /// This function waits until the thread pool has no queued or running tasks,
+  /// using the same completion condition as `wait()`.
+  ///
+  /// \note
+  /// The return value is based on the pool completion predicate, not merely on a
+  /// condition-variable notification. Spurious wakeups are handled internally.
+  ///
+  /// \see wait()
+  template<class Rep, class Period>
+  [[nodiscard]] bool wait_for(const std::chrono::duration<Rep, Period> &timeout)
+  {
+    std::unique_lock lock(task_counter_mutex_);
+    return cv_finished_.wait_for(lock, timeout,
+                                 [this]{ return task_counter_ == 0; });
+  }
+
   /// Initiates the termination process.
   ///
   /// Shutdown prevents new submissions and signals worker threads to exit once
