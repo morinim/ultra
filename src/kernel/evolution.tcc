@@ -198,11 +198,9 @@ void evolution<E>::print(message m, internal::print_status &ps) const
 
       if (sum_.generation)
       {
-        double gph(3600.0 * sum_.generation / seconds);
-        if (gph > 2.0)
-          gph = std::floor(gph);
-
-        line += std::format("  [{}x {}gph]", pop_.layers(), gph);
+        const double gph(3600.0 * sum_.generation / seconds);
+        line += std::format("  [{0}x {1:.{2}f}gph]",
+                            pop_.layers(), gph, gph > 2.0 ? 0 : 1);
       }
     }
 
