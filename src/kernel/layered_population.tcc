@@ -26,24 +26,25 @@ template<LayeredPopulation P>
   Expects(p.layers());
   Expects(p.size());
 
-  const auto n_layers(p.layers());
-
   // With multiple layers we cannot be sure that every layer has the same
   // number of individuals. So the simple (and fast) solution:
   //
-  //     return random::sup(n_layers);
+  //     return random::sup(p.layers());
   //
   // isn't appropriate.
 
-  std::vector<double> weights(n_layers);
-  std::ranges::transform(p.range_of_layers(), weights.begin(),
-                         [](const auto &layer)
-                         {
-                           return static_cast<double>(layer.size());
-                         });
+  auto idx(random::sup(p.size()));
 
-  std::discrete_distribution<std::size_t> dd(weights.begin(), weights.end());
-  return dd(random::engine());
+  for (std::size_t layer(0); const auto &l : p.range_of_layers())
+  {
+    if (idx < l.size())
+      return layer;
+
+    idx -= l.size();
+    ++layer;
+  }
+
+  return p.layers() - 1;
 }
 
 }  // namespace internal
