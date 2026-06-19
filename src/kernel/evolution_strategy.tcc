@@ -384,6 +384,7 @@ std_es<E>::std_es(const problem &prob, E &eva)
 ///
 /// \tparam P population type
 ///
+/// \param[in] pop             the population
 /// \param[in] iter            iterator to the active layer
 /// \param[in] starting_status evolutionary status snapshot
 /// \return                    a callable performing one evolutionary step
@@ -398,7 +399,7 @@ std_es<E>::std_es(const problem &prob, E &eva)
 template<Evaluator E>
 template<Population P>
 auto std_es<E>::operations(
-  P &, typename P::layer_iter iter,
+  [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(this->valid_layer(pop, iter));
