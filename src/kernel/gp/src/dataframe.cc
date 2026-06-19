@@ -19,6 +19,7 @@
 #include "tinyxml2/tinyxml2.h"
 
 #include <algorithm>
+#include <sstream>
 
 namespace
 {
@@ -31,16 +32,6 @@ namespace
 [[nodiscard]] bool looks_like_xml(std::istream &input)
 {
   const auto original_pos(input.tellg());  // save current stream position
-
-  // When reading a dataset from a non-seekable stream (such as standard input
-  // `std::cin` in Unix pipelines or sockets) `seekg` fails.
-  if (original_pos == std::istream::pos_type(-1))
-  {
-    input >> std::ws;  // this is safe
-    if (!input)
-      return false;
-    return input.peek() == '<';
-  }
 
   constexpr std::streamsize max_probe {4096};
   std::string buffer(max_probe, '\0');
@@ -640,6 +631,16 @@ std::size_t dataframe::read(const std::filesystem::path &fn)
 
 std::size_t dataframe::read(std::istream &from, params p)
 {
+  // Non-seekable streams (like std::cin, pipes, or sockets) do not support
+  // seekoff/seekpos, which are required by pocket_csv to sniff dialects and
+  // parse. We buffer the stream into a seekable stringstream first.
+  if (from.tellg() == std::istream::pos_type(-1))
+  {
+    std::stringstream ss;
+    ss << from.rdbuf();
+    return read(ss, p);
+  }
+
   if (looks_like_xml(from))
     return read_xrff(from, p);
   else
