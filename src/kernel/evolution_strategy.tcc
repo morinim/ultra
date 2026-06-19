@@ -328,9 +328,7 @@ void alps_es<E>::after_generation(P &pop,
   // Code executed every `age_gap` interval.
   if (sum.generation && sum.generation % params.alps.age_gap == 0)
   {
-    if (const auto n_layers(pop.layers());
-        n_layers < params.alps.max_layers
-        || sum.az.age_dist(pop.back()).mean() > params.alps.max_age(n_layers))
+    if (pop.layers() < params.alps.max_layers)
     {
       ultraDEBUG << "ALPS: adding layer";
       pop.add_layer();
@@ -386,7 +384,6 @@ std_es<E>::std_es(const problem &prob, E &eva)
 ///
 /// \tparam P population type
 ///
-/// \param[in] pop             the population
 /// \param[in] iter            iterator to the active layer
 /// \param[in] starting_status evolutionary status snapshot
 /// \return                    a callable performing one evolutionary step
@@ -401,7 +398,7 @@ std_es<E>::std_es(const problem &prob, E &eva)
 template<Evaluator E>
 template<Population P>
 auto std_es<E>::operations(
-  [[maybe_unused]] P &pop, typename P::layer_iter iter,
+  P &, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(this->valid_layer(pop, iter));
