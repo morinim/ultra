@@ -91,6 +91,11 @@ public:
   ///
   /// This design ensures that the class remains safely copyable and movable,
   /// while keeping interpreter management strictly local to this method.
+  ///
+  /// /warning
+  /// Concurrent calls to run() are not thread-safe. This is usually acceptable:
+  /// individuals are evaluated in parallel by giving each worker its own oracle or
+  /// by partitioning the population.
   template<class ...Args> [[nodiscard]] value_t run(Args && ...args) const
   {
     if (int_) [[likely]]
