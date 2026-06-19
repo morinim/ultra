@@ -32,6 +32,16 @@ namespace
 {
   const auto original_pos(input.tellg());  // save current stream position
 
+  // When reading a dataset from a non-seekable stream (such as standard input
+  // `std::cin` in Unix pipelines or sockets) `seekg` fails.
+  if (original_pos == std::istream::pos_type(-1))
+  {
+    input >> std::ws;  // this is safe
+    if (!input)
+      return false;
+    return input.peek() == '<';
+  }
+
   constexpr std::streamsize max_probe {4096};
   std::string buffer(max_probe, '\0');
 

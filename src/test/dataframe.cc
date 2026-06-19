@@ -227,6 +227,40 @@ TEST_CASE("Filtering")
     CHECK(10 * d.size() <= 11 * half);
     CHECK(9 * half <= 10 * d.size());
   }
+
+  SUBCASE("Non-seekable stream reading")
+  {
+    class non_seekable_streambuf : public std::streambuf
+    {
+    public:
+      non_seekable_streambuf(const std::string &data) : data_(data)
+      {
+        setg(data_.data(), data_.data(), data_.data() + data_.size());
+      }
+
+    protected:
+      pos_type seekoff(off_type, std::ios_base::seekdir,
+                       std::ios_base::openmode) override
+      {
+        return pos_type(off_type(-1));
+      }
+
+      pos_type seekpos(pos_type, std::ios_base::openmode) override
+      {
+        return pos_type(off_type(-1));
+      }
+
+    private:
+      std::string data_;
+    };
+
+    non_seekable_streambuf buf(random_csv);
+    std::istream stream(&buf);
+
+    dataframe d;
+    CHECK(d.read(stream));
+    CHECK(d.size() == LINES);
+  }
 }
 
 TEST_CASE("load_csv headers")
