@@ -26,6 +26,19 @@
 TEST_SUITE("EVOLUTION")
 {
 
+TEST_CASE_FIXTURE(fixture1, "Uninitialised parameters")
+{
+  using namespace ultra;
+
+  prob.params.slp.code_length = 0;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  evolution evo(prob, eva);
+
+  CHECK_THROWS_AS(evo.run<std_es>(), std::logic_error);
+}
+
 TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 {
   using namespace ultra;
