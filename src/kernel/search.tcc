@@ -190,53 +190,70 @@ basic_search<ES, E> &basic_search<ES, E>::on_training_new_best(
 ///
 /// Tries to tune search parameters for the current problem.
 ///
+/// General scheme:
+/// - honour user specified parameters;
+/// - try to derive meaningful values when possible (directly here or via
+///   `ES<E>::shape()`);
+/// - fall back to very general values from `parameters::init()`.
+///
 template<template<class> class ES, Evaluator E>
 void basic_search<ES, E>::tune_parameters()
 {
+  auto &params(prob_.params);
+
   // The `shape` function modifies the default parameters with
   // strategy-specific values.
   const auto dflt(ES<E>::shape(parameters().init()));
-  const auto constrained(prob_.params);
+  assert(!dflt.needs_init());
+
+  // User specified values are constraints.
+  const auto constrained(params);
+
+  if (!constrained.alps.age_gap)
+    params.alps.age_gap = dflt.alps.age_gap;
+  if (!constrained.alps.max_layers)
+    params.alps.max_layers = dflt.alps.max_layers;
+  if (!in_0_1(constrained.alps.p_main_layer))
+    params.alps.p_main_layer = dflt.alps.p_main_layer;
 
   if (!constrained.slp.code_length)
-    prob_.params.slp.code_length = dflt.slp.code_length;
+    params.slp.code_length = dflt.slp.code_length;
 
-  if (constrained.evolution.elitism < 0.0)
-    prob_.params.evolution.elitism = dflt.evolution.elitism;
+  if (!in_0_1(constrained.evolution.elitism))
+    params.evolution.elitism = dflt.evolution.elitism;
 
-  if (constrained.evolution.p_mutation < 0.0)
-    prob_.params.evolution.p_mutation = dflt.evolution.p_mutation;
+  if (!in_0_1(constrained.evolution.p_mutation))
+    params.evolution.p_mutation = dflt.evolution.p_mutation;
 
-  if (constrained.evolution.p_cross < 0.0)
-    prob_.params.evolution.p_cross = dflt.evolution.p_cross;
+  if (!in_0_1(constrained.evolution.p_cross))
+    params.evolution.p_cross = dflt.evolution.p_cross;
 
   if (!constrained.evolution.brood_recombination)
-    prob_.params.evolution.brood_recombination =
-      dflt.evolution.brood_recombination;
+    params.evolution.brood_recombination = dflt.evolution.brood_recombination;
 
   if (!constrained.population.init_subgroups)
-    prob_.params.population.init_subgroups = dflt.population.init_subgroups;
+    params.population.init_subgroups = dflt.population.init_subgroups;
 
   if (!constrained.population.individuals)
-    prob_.params.population.individuals = dflt.population.individuals;
+    params.population.individuals = dflt.population.individuals;
 
   if (!constrained.population.min_individuals)
-    prob_.params.population.min_individuals = dflt.population.min_individuals;
+    params.population.min_individuals = dflt.population.min_individuals;
 
   if (!constrained.evolution.tournament_size)
-    prob_.params.evolution.tournament_size = dflt.evolution.tournament_size;
+    params.evolution.tournament_size = dflt.evolution.tournament_size;
 
   if (!constrained.evolution.mate_zone)
-    prob_.params.evolution.mate_zone =
-      std::max<std::size_t>(prob_.params.population.individuals / 5, 4);
+    params.evolution.mate_zone =
+      std::max<std::size_t>(params.population.individuals / 5, 4);
 
   if (!constrained.evolution.generations)
-    prob_.params.evolution.generations = dflt.evolution.generations;
+    params.evolution.generations = dflt.evolution.generations;
 
   if (!constrained.evolution.max_stuck_gen)
-    prob_.params.evolution.max_stuck_gen = dflt.evolution.max_stuck_gen;
+    params.evolution.max_stuck_gen = dflt.evolution.max_stuck_gen;
 
-  Ensures(prob_.params.is_valid(true));
+  Ensures(params.is_valid(true));
 }
 
 ///

@@ -205,6 +205,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
   alps_es alps(prob, eva);
+
   alps.init(pop);
 
   CHECK(std::ranges::all_of(

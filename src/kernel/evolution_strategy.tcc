@@ -343,29 +343,24 @@ void alps_es<E>::after_generation(P &pop,
 }
 
 ///
-/// Shapes parameters for ALPS evolution.
+/// Returns strategy defaults derived from an initialised parameter profile.
 ///
 /// \param[out] params generic evolution parameters
 /// \return            parameters adjusted for ALPS
 ///
-/// Adjusts generic parameters to values suitable for ALPS.
+/// Transforms a fully initialised default profile into strategy-specific defaults.
 ///
-/// If `params.alps.max_layers` is `0`, it is treated as an automatic
-/// setting and replaced with a value derived from the system hardware
-/// concurrency, with a minimum of `2` (required by ALPS).
+/// \remark
+/// This function builds a default profile for the strategy. It does not merge those
+/// defaults with user constraints; `search::tune_parameters()` performs that merge.
 ///
 template<Evaluator E>
 parameters alps_es<E>::shape(parameters params)
 {
-  if (!params.alps.age_gap)
-    params.alps.age_gap = 20;
-
-  if (!params.alps.max_layers)
-    params.alps.max_layers =
-      std::max<unsigned>(2, std::thread::hardware_concurrency());
-
-  if (params.alps.p_main_layer < 0.0)
-    params.alps.p_main_layer = 0.75;
+  params.alps.age_gap = 20;
+  params.alps.max_layers =
+    std::max<unsigned>(2, std::thread::hardware_concurrency());
+  params.alps.p_main_layer = 0.75;
 
   return params;
 }

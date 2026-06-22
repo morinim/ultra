@@ -14,7 +14,6 @@
 #define      ULTRA_FIXTURE1_H
 
 #include "kernel/problem.h"
-
 #include "kernel/gp/primitive/real.h"
 
 // Useful for single category tests.
@@ -34,7 +33,8 @@ struct fixture1
 
   fixture1()
   {
-    prob.params.init().slp.code_length = 32;
+    prob.params.init();
+    prob.params.slp.code_length = 32;
   }
 
   ultra::problem prob {};

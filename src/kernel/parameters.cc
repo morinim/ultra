@@ -36,6 +36,13 @@ namespace ultra
 ///
 parameters &parameters::init()
 {
+  if (!alps.age_gap)
+    alps.age_gap = 20;
+  if (!alps.max_layers)
+    alps.max_layers = 128;
+  if (!in_0_1(alps.p_main_layer))
+    alps.p_main_layer = 0.75;
+
   if (!slp.code_length)
     slp.code_length = 100;
 
@@ -83,7 +90,7 @@ bool parameters::needs_init() const noexcept
     || !in_0_1(evolution.p_mutation)
     || alps.age_gap == 0
     || alps.max_layers == 0
-    || alps.p_main_layer < 0.0;
+    || !in_0_1(alps.p_main_layer);
 }
 
 ///

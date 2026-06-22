@@ -54,6 +54,13 @@ namespace ultra
 /// Implementations should avoid performing expensive operations in
 /// constructors; initialisation should be deferred to `init()`.
 ///
+/// \remark
+/// This is a low-level strategy interface. It does not tune or complete
+/// `problem::params` before using them. Callers that invoke strategies directly
+/// must ensure the parameters are already valid for that strategy. The usual public
+/// entry point is `search`, which fills generic defaults, applies strategy defaults,
+/// and preserves user-specified values before running evolution.
+///
 template<Evaluator E>
 class evolution_strategy
 {

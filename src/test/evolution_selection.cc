@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "kernel/evolution_selection.h"
 #include "kernel/distribution.h"
 #include "kernel/layered_population.h"
@@ -25,6 +22,9 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
 
 TEST_SUITE("EVOLUTION SELECTION")
 {
@@ -337,4 +337,4 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   CHECK(dist.mean() <= avg + delta);
 }
 
-}  // TEST_SUITE("EVOLUTION SELECTION")
+}  // TEST_SUITE

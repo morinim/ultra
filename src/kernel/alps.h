@@ -166,16 +166,16 @@ struct parameters
   /// layer is restarted.
   ///
   /// \note A value of 0 means undefined (auto-tune).
-  unsigned age_gap {20};
+  unsigned age_gap {0};
 
   /// Maximum number of layers an ALPS layered population can grow to.
-  std::size_t max_layers {8};
+  std::size_t max_layers {0};
 
   /// The probability that a parent will be extracted from the main layer.
   ///
   /// \note
   /// A negative value means auto-tune.
-  double p_main_layer {0.75};
+  double p_main_layer {-1.0};
 };
 
 template<LayeredPopulation P>

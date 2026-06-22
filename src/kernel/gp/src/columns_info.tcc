@@ -46,10 +46,9 @@ public:
 
   normalised_row_view(const R &r, std::optional<std::size_t> output_index)
     : r_(&r), output_index_(output_index),
-      logical_size_(normalised_column_count(std::ranges::distance(r),
-                                            output_index))
+      logical_size_(normalised_column_count(std::ranges::size(r), output_index))
   {
-    Expects(!output_index_ || *output_index_ < std::ranges::distance(r));
+    Expects(!output_index_ || *output_index_ < std::ranges::size(r));
   }
 
   [[nodiscard]] std::size_t size() const noexcept { return logical_size_; }
