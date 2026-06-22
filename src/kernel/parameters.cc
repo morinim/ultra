@@ -210,6 +210,14 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
+  if (alps.max_layers && population.init_subgroups
+      && alps.max_layers < population.init_subgroups)
+  {
+    ultraERROR << "`alps.max_layers` must be greater than or equal to "
+               << "`population.init_subgroups`";
+    return false;
+  }
+
   if (evolution.tournament_size > evolution.max_tournament_size)
   {
     ultraERROR << "`evolution.tournament_size` out of range";
