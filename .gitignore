@@ -48,4 +48,5 @@ doc/ultra.wiki/
 doc/doxygen/html/
 
 # Personal files
+/.dir-locals.el
 .dir-locals-2.el
