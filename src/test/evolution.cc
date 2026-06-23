@@ -30,7 +30,7 @@ TEST_CASE_FIXTURE(fixture1, "Uninitialised parameters")
 {
   using namespace ultra;
 
-  prob.params.slp.code_length = 0;
+  prob.params.evolution.generations = 0;
 
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
 
