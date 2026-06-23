@@ -16,6 +16,8 @@
 #include "utility/assert.h"
 
 #include <algorithm>
+#include <ostream>
+#include <vector>
 
 namespace ultra
 {
