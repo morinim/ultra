@@ -67,11 +67,12 @@ Follow these instructions when working in the ULTRA repository.
 - Run tests through CTest from the build directory when relevant.
 - For significant changes, consider GCC/Clang presets and sanitizer presets.
 - Static analysis workflow documented by the repo uses `scan-build`.
+- Use `build/compile_commands.json` for C++ checks; run `clang-tidy -p build <file>`, never without the compilation database.
 
 ## Contribution Hygiene
 
 - Keep diffs small and logically coherent.
-- Do not mix formatting churn with behavior changes.
+- Do not mix formatting churn with behaviour changes.
 - Do not put contributor names in code.
 - Commit summaries use prefixes such as `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, and `test`.
 - Commit summary lines use imperative mood and do not end with a period.
