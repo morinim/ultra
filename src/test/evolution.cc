@@ -125,6 +125,34 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "After generation callback")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals    = 30;
+  prob.params.population.init_subgroups =  4;
+  prob.params.evolution.generations     =  3;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  evolution evo(prob, eva);
+
+  unsigned call_count {0};
+
+  evo.after_generation([&](const auto &pop, const auto &sum)
+  {
+    CHECK(sum.generation == call_count);
+    CHECK(pop.is_valid());
+    CHECK(pop.layers() == 4);
+    ++call_count;
+  });
+
+  const auto sum(evo.run<std_es>());
+
+  CHECK(call_count == 3);
+  CHECK(sum.generation == 3);
+}
+
 TEST_CASE_FIXTURE(fixture4, "DE evolution")
 {
   using namespace ultra;
