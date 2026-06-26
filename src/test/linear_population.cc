@@ -18,9 +18,12 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <map>
+#include <mutex>
 #include <sstream>
+#include <thread>
 
 TEST_SUITE("LINEAR POPULATION")
 {
@@ -163,6 +166,70 @@ TEST_CASE_FIXTURE(fixture1, "Allowed")
   CHECK(pop.size() == prob.params.population.individuals);
   pop.allowed(0);
   CHECK(pop.size() == prob.params.population.min_individuals);
+}
+
+// Tests the thread safety of linear_population::safe_size() by concurrently
+// reading the population size while another thread performs synchronized
+// insertions, modifications, and removals.
+TEST_CASE_FIXTURE(fixture1, "Concurrent safe_size safety")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 100;
+  linear_population<gp::individual> pop(prob);
+
+  // Clear the auto-filled population to start from a clean state.
+  pop.clear();
+
+  // Seed the population to a half-full state.
+  const gp::individual ind(prob);
+
+  const auto half(prob.params.population.individuals / 2);
+  for (std::size_t i(0); i < half; ++i)
+    pop.push_back(ind);
+
+  std::atomic<bool> running(true);
+
+  // Reader thread: continuously checks `safe_size()`.
+  std::jthread reader_thread([&pop, &running]
+  {
+    while (running)
+      CHECK(pop.safe_size() <= pop.allowed());
+  });
+
+  // Modifier thread: simulates updates under the population's mutex.
+  std::jthread modifier_thread([&pop, &running, &ind]
+  {
+    unsigned iterations(5000);
+    while (iterations-- > 0)
+    {
+      {  // 1. Simulate insertion
+        std::lock_guard lock(pop.mutex());
+        if (pop.size() < pop.allowed())
+          pop.push_back(ind);
+      }
+      std::this_thread::yield();
+
+      {  // 2. Simulate displacement/mutation
+        std::lock_guard lock(pop.mutex());
+        if (pop.size() > 0)
+        {
+          const auto c(random::coord(pop));
+          pop[c] = ind;
+        }
+      }
+      std::this_thread::yield();
+
+      {  // 3. Simulate removal
+        std::lock_guard lock(pop.mutex());
+        if (!pop.empty())
+          pop.pop_back();
+      }
+      std::this_thread::yield();
+    }
+
+    running = false;
+  });
 }
 
 }  // TEST_SUITE
