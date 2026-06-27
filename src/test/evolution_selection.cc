@@ -254,6 +254,51 @@ TEST_CASE_FIXTURE(fixture1, "ALPS p_main_layer")
   }
 }
 
+// The primary layer contains fit but over-age individuals.
+// The secondary layer contains weaker individuals within its age limit.
+// ALPS must rank the young candidate first, regardless of fitness.
+TEST_CASE_FIXTURE(fixture1, "ALPS age precedence")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals    = 10;
+  prob.params.population.init_subgroups =  2;
+  prob.params.evolution.tournament_size =  2;
+  prob.params.alps.p_main_layer         =  0.0;
+
+  layered_population<gp::individual> pop(prob);
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  gp::individual weak(prob);
+  gp::individual strong(prob);
+
+  while (almost_equal(eva(strong), eva(weak)))
+    strong = gp::individual(prob);
+
+  if (eva(strong) < eva(weak))
+    std::swap(strong, weak);
+
+  strong.inc_age();
+  pop.layer(1).max_age(0);
+
+  for (auto &prg : pop.layer(1))
+    prg = strong;
+
+  for (auto &prg : pop.layer(0))
+    prg = weak;
+
+  const auto &cpop(pop);
+  selection::alps select(eva, prob.params);
+  const auto ln(std::next(cpop.range_of_layers().begin()));
+
+  const auto parents(select(alps::selection_layers(cpop, ln)));
+
+  CHECK(parents[0].signature() == weak.signature());
+  CHECK(parents[0].age() <= pop.layer(0).max_age());
+  CHECK(parents[1].signature() == strong.signature());
+  CHECK(parents[1].age() > pop.layer(1).max_age());
+}
+
 TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
 {
   using namespace ultra;
