@@ -23,6 +23,47 @@
 #include <cstdlib>
 #include <iostream>
 
+namespace ultra
+{
+
+class colliding_individual final : public individual
+{
+public:
+  explicit colliding_individual(std::uint64_t signature = 1)
+  {
+    signature_ = hash_t(signature);
+  }
+
+  [[nodiscard]] bool empty() const noexcept { return false; }
+
+  void mutation(const problem &)
+  {
+    ++mutations;
+    signature_ = hash_t(mutations + 1);
+  }
+
+  unsigned mutations {0};
+
+private:
+  [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override
+  {
+    return false;
+  }
+
+  [[nodiscard]] bool save_impl(std::ostream &) const override { return false; }
+  [[nodiscard]] hash_t hash() const override { return signature_; }
+  void print_impl(std::ostream &, out::print_format_t) const override {}
+};
+
+[[nodiscard]] colliding_individual crossover(
+  const problem &, const colliding_individual &parent,
+  const colliding_individual &)
+{
+  return parent;
+}
+
+}  // namespace ultra
+
 struct increasing_evaluator
 {
   using individual_t = ultra::gp::individual;
@@ -34,6 +75,14 @@ struct increasing_evaluator
   }
 
   mutable std::vector<individual_t> evaluated;
+};
+
+struct colliding_evaluator
+{
+  [[nodiscard]] double operator()(const ultra::colliding_individual &) const
+  {
+    return 0.0;
+  }
 };
 
 TEST_SUITE("EVOLUTION RECOMBINATION")
@@ -114,6 +163,34 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     REQUIRE(increasing_eva.evaluated.size() == brood_size);
     CHECK(off == increasing_eva.evaluated.back());
+  }
+
+  SUBCASE("Mutation avoids both parent signatures")
+  {
+    prob.params.evolution.p_cross = 1.0;
+    prob.params.evolution.p_mutation = 1.0;
+
+    colliding_evaluator colliding_eva;
+    recombination::base colliding_recombine(colliding_eva, prob);
+
+    // Parent signatures are 1 and 2.
+    const std::vector colliding_parents =
+    {
+      colliding_individual(1), colliding_individual(2)
+    };
+
+    // - Crossover returns the first parent, so the offspring initially has
+    //   signature 1.
+    // - The first mutation changes its signature to 2, which still matches the
+    //   second parent.
+    // - The second mutation changes it to 3, which matches neither parent.
+    const auto off(colliding_recombine(colliding_parents));
+
+    // The assertions directly exercises the while loop that prevents offspring
+    // retaining either parent's signature.
+    CHECK(off.mutations == 2);
+    CHECK(off.signature() != colliding_parents[0].signature());
+    CHECK(off.signature() != colliding_parents[1].signature());
   }
 }
 
