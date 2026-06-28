@@ -60,14 +60,18 @@ base<E>::operator()(const R &parents) const
 
         if (this->prob_.params.evolution.p_mutation > 0.0)
         {
+          constexpr unsigned max_attempts(64);
+
           // This could be an original contribution of Vita (now ported to
           // Ultra) but it's hard to be sure.
           // It remembers of the hereditary repulsion constraint (I guess you
           // could call it signature repulsion) and seems to:
           // - maintain diversity during the exploration phase;
           // - optimize the exploitation phase.
-          while (p1.signature() == ret.signature()
-                 || p2.signature() == ret.signature())
+          for (unsigned i(0);
+               i < max_attempts && (ret.signature() == p1.signature()
+                                    || ret.signature() == p2.signature());
+               ++i)
             ret.mutation(this->prob_);
         }
 
