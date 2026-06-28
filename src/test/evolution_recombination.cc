@@ -20,13 +20,32 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <concepts>
 #include <cstdlib>
 #include <iostream>
 
 namespace ultra
 {
 
-class colliding_individual final : public individual
+class base_testing_individual : public individual
+{
+public:
+  [[nodiscard]] bool empty() const noexcept { return false; }
+
+  unsigned mutations {0};
+
+private:
+  [[nodiscard]] hash_t hash() const override { return signature_; }
+
+  [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override
+  {
+    return false;
+  }
+  [[nodiscard]] bool save_impl(std::ostream &) const override { return false; }
+  void print_impl(std::ostream &, out::print_format_t) const override {}
+};
+
+class colliding_individual final : public base_testing_individual
 {
 public:
   explicit colliding_individual(std::uint64_t signature = 1)
@@ -34,30 +53,25 @@ public:
     signature_ = hash_t(signature);
   }
 
-  [[nodiscard]] bool empty() const noexcept { return false; }
-
   void mutation(const problem &)
   {
     ++mutations;
     signature_ = hash_t(mutations + 1);
   }
-
-  unsigned mutations {0};
-
-private:
-  [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override
-  {
-    return false;
-  }
-
-  [[nodiscard]] bool save_impl(std::ostream &) const override { return false; }
-  [[nodiscard]] hash_t hash() const override { return signature_; }
-  void print_impl(std::ostream &, out::print_format_t) const override {}
 };
 
-[[nodiscard]] colliding_individual crossover(
-  const problem &, const colliding_individual &parent,
-  const colliding_individual &)
+class mutation_only_individual final : public base_testing_individual
+{
+public:
+  explicit mutation_only_individual(unsigned p = 0) : parent(p) {}
+
+  void mutation(const problem &) { ++mutations; }
+
+  unsigned parent;
+};
+
+template<std::derived_from<base_testing_individual> I>
+[[nodiscard]] I crossover(const problem &, const I &parent, const I &)
 {
   return parent;
 }
@@ -80,6 +94,15 @@ struct increasing_evaluator
 struct colliding_evaluator
 {
   [[nodiscard]] double operator()(const ultra::colliding_individual &) const
+  {
+    return 0.0;
+  }
+};
+
+struct mutation_only_evaluator
+{
+  [[nodiscard]] double operator()(
+    const ultra::mutation_only_individual &) const
   {
     return 0.0;
   }
@@ -128,6 +151,36 @@ TEST_CASE_FIXTURE(fixture1, "Base")
       CHECK(off.is_valid());
       CHECK(off == same_parents[0]);
     }
+  }
+
+  // The test disables crossover, forces mutation, then generates multiple
+  // offspring. It verifies each offspring is mutated exactly once and confirms
+  // both parents are selected as mutation sources.
+  SUBCASE("Mutation only")
+  {
+    prob.params.evolution.p_cross = 0.0;
+    prob.params.evolution.p_mutation = 1.0;
+
+    mutation_only_evaluator mutation_only_eva;
+    recombination::base mutation_only_recombine(mutation_only_eva, prob);
+    const std::vector mutation_only_parents =
+    {
+      mutation_only_individual(1), mutation_only_individual(2)
+    };
+    bool selected_first(false);
+    bool selected_second(false);
+
+    for (unsigned i(0); i < 100; ++i)
+    {
+      const auto off(mutation_only_recombine(mutation_only_parents));
+
+      CHECK(off.mutations == 1);
+      selected_first |= off.parent == 1;
+      selected_second |= off.parent == 2;
+    }
+
+    CHECK(selected_first);
+    CHECK(selected_second);
   }
 
   SUBCASE("Standard")
