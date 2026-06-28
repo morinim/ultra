@@ -10,9 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include <cstdlib>
-#include <iostream>
-
 #include "kernel/evolution_recombination.h"
 #include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
@@ -22,6 +19,22 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
+
+struct increasing_evaluator
+{
+  using individual_t = ultra::gp::individual;
+
+  [[nodiscard]] double operator()(const individual_t &ind) const
+  {
+    evaluated.push_back(ind);
+    return static_cast<double>(evaluated.size());
+  }
+
+  mutable std::vector<individual_t> evaluated;
+};
 
 TEST_SUITE("EVOLUTION RECOMBINATION")
 {
@@ -84,6 +97,23 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     CHECK(static_cast<double>(distinct) / N
           > prob.params.evolution.p_cross - 0.1);
+  }
+
+  SUBCASE("Brood recombination")
+  {
+    constexpr unsigned brood_size(5);
+
+    prob.params.evolution.p_cross = 1.0;
+    prob.params.evolution.p_mutation = 0.0;
+    prob.params.evolution.brood_recombination = brood_size;
+
+    increasing_evaluator increasing_eva;
+    recombination::base brood_recombine(increasing_eva, prob);
+
+    const auto off(brood_recombine(parents));
+
+    REQUIRE(increasing_eva.evaluated.size() == brood_size);
+    CHECK(off == increasing_eva.evaluated.back());
   }
 }
 
@@ -150,4 +180,4 @@ TEST_CASE_FIXTURE(fixture4, "DE")
   }
 }
 
-}  // TEST_SUITE("EVOLUTION RECOMBINATION")
+}  // TEST_SUITE
