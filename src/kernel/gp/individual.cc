@@ -727,21 +727,30 @@ individual crossover(const problem &p,
 unsigned individual::mutation(const problem &prb)
 {
   const double pgm(prb.params.evolution.p_mutation);
-  Expects(0.0 <= pgm && pgm <= 1.0);
+  Expects(in_0_1(pgm));
 
   unsigned n(0);
 
-  const auto re(exons());
-  for (auto i(re.begin()); i != re.end(); ++i)  // mutation affects only exons
+  const auto frontier(exons());
+
+  auto gen_i(frontier.begin());
+  while (gen_i != frontier.end())
+  {
+    // When mutation modifies a gene, the iterator discovers dependencies from
+    // the mutated gene, so a structural mutation can skip exons active at entry
+    // and visit newly activated introns instead. We advance the iterator before
+    // mutating to ensure mutation applies to the original exon set.
+    auto snap_i(gen_i++);
+
     if (random::boolean(pgm))
     {
-      const auto idx(i.locus().index);
+      const auto idx(snap_i.locus().index);
 
-      if (const auto pos(random::sup(i->args.size() + 1));
-          pos == i->args.size())
+      if (const auto pos(random::sup(snap_i->args.size() + 1));
+          pos == snap_i->args.size())
       {
         gene g;
-        g.func = prb.sset.roulette_function(i->category());
+        g.func = prb.sset.roulette_function(snap_i->category());
         g.args.reserve(g.func->arity());
 
         std::ranges::transform(
@@ -751,16 +760,17 @@ unsigned individual::mutation(const problem &prb)
             return prb.sset.roulette_terminal(idx, c);
           });
 
-        *i = g;
+        *snap_i = g;
       }
       else  // input parameter
       {
-        const auto c(i->func->param_category(pos));
-        i->args[pos] = prb.sset.roulette_terminal(idx, c);
+        const auto c(snap_i->func->param_category(pos));
+        snap_i->args[pos] = prb.sset.roulette_terminal(idx, c);
       }
 
       ++n;
     }
+  }
 
   if (n)
     signature_ = hash();
