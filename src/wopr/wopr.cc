@@ -1193,9 +1193,9 @@ void render_elite()
                              fit[k],
                              offset_upward);
           }
-      }
 
-      ImGui::PopStyleColor();
+        ImGui::PopStyleColor();
+      }
 
       ImPlot::EndPlot();
     }
