@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Doxygen
         run: sudo apt-get install doxygen graphviz -y
@@ -32,12 +32,18 @@ jobs:
       - name: Generate Doxygen Documentation
         working-directory: ./doc/doxygen/
         run: doxygen ultra
-     
+
+      - name: Archive documentation
+        run: tar --dereference --hard-dereference --directory doc/doxygen/html -cvf "$RUNNER_TEMP/artifact.tar" .
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
-          # Upload entire repository
-          path: 'doc/doxygen/html'
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
