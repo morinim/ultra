@@ -716,6 +716,50 @@ individual crossover(const problem &p,
 }
 
 ///
+/// Calculates the importance of genes contributing to selected loci.
+///
+/// \param[in] loci loci from which dependency analysis starts
+/// \return         a matrix containing the importance of every gene
+///
+/// \pre every locus must belong to this individual
+///
+/// Importance is the number of dependency paths from the selected loci to
+/// each gene. Counts saturate at the maximum value of `unsigned`.
+///
+matrix<unsigned> individual::analyse_importance(
+  const std::vector<locus> &loci) const
+{
+  matrix<unsigned> importance(size(), categories(), 0u);
+
+  for (const auto loc : loci)
+    importance(loc) = 1;
+
+  for (auto i(size()); i-- > 0;)
+    for (auto c(categories()); c-- > 0;)
+    {
+      const locus current(i, c);
+
+      if (const auto current_importance(importance(current)); current_importance)
+      {
+        constexpr auto limit(std::numeric_limits<unsigned>::max());
+
+        for (const gene &g((*this)[current]); const auto &arg : g.args)
+          if (std::holds_alternative<D_ADDRESS>(arg))
+          {
+            const auto dependency(g.locus_of_argument(arg));
+
+            auto &value(importance(dependency));
+
+            value = current_importance > limit - value
+                    ? limit : value + current_importance;
+          }
+      }
+    }
+
+  return importance;
+}
+
+///
 /// A new individual is created mutating `this`.
 ///
 /// \param[in] prb the current problem

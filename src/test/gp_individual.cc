@@ -25,7 +25,6 @@
 #include <set>
 #include <sstream>
 
-
 namespace ultra::gp::internal
 {
 
@@ -354,6 +353,31 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
       CHECK(perc > prob.params.evolution.p_mutation * 100.0 - 5.0);
       CHECK(perc < prob.params.evolution.p_mutation * 100.0 + 5.0);
     }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Importance analysis")
+{
+  using namespace ultra;
+
+  SUBCASE("Shared dependencies and multiple roots")
+  {
+    const gp::individual ind(
+      {
+        {f_add, {1.0, 2.0}},          // [0]
+        {f_add, {0_addr, 3.0}},       // [1] -> [0]
+        {f_add, {0_addr, 1_addr}},    // [2] -> [0], [1]
+        {f_add, {1_addr, 2_addr}},    // [3] -> [1], [2]
+        {f_add, {4.0, 5.0}}           // [4] unrelated
+      });
+
+    const auto importance(ind.analyse_importance({{2, 0}, {3, 0}}));
+
+    CHECK(importance(0, 0) == 5);
+    CHECK(importance(1, 0) == 3);
+    CHECK(importance(2, 0) == 2);
+    CHECK(importance(3, 0) == 1);
+    CHECK(importance(4, 0) == 0);
   }
 }
 

@@ -86,6 +86,9 @@ public:
 
   [[nodiscard]] crossover_t active_crossover_type() const noexcept;
 
+  [[nodiscard]] matrix<unsigned> analyse_importance(
+    const std::vector<locus> &) const;
+
   // ---- Iterators ----
   using const_exon_iterator = internal::basic_exon_iterator<true>;
   using exon_iterator = internal::basic_exon_iterator<false>;
