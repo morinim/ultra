@@ -55,7 +55,7 @@ public:
   void modify(F &&);
 
   // ---- Recombination operators ----
-  unsigned mutation(const problem &);
+  unsigned mutation(const problem &, double = 1.0);
   friend individual crossover(const problem &,
                               const individual &, const individual &);
 

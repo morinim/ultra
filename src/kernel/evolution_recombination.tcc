@@ -47,7 +47,7 @@ base<E>::operator()(const R &parents) const
   const auto brood_recombination(
     this->prob_.params.evolution.brood_recombination);
 
-  Expects(0.0 <= p_cross && p_cross <= 1.0);
+  Expects(in_0_1(p_cross));
   Expects(brood_recombination);
   Expects(parents.size() >= 2);
 
@@ -60,7 +60,7 @@ base<E>::operator()(const R &parents) const
 
         if (this->prob_.params.evolution.p_mutation > 0.0)
         {
-          constexpr unsigned max_attempts(64);
+          constexpr unsigned max_attempts(32);
 
           // This could be an original contribution of Vita (now ported to
           // Ultra) but it's hard to be sure.
@@ -72,7 +72,7 @@ base<E>::operator()(const R &parents) const
                i < max_attempts && (ret.signature() == p1.signature()
                                     || ret.signature() == p2.signature());
                ++i)
-            ret.mutation(this->prob_);
+            ret.mutation(this->prob_, static_cast<double>(i + 1));
         }
 
         return ret;

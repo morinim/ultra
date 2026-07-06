@@ -762,16 +762,21 @@ matrix<unsigned> individual::analyse_importance(
 ///
 /// A new individual is created mutating `this`.
 ///
-/// \param[in] prb the current problem
-/// \return        number of mutations performed
+/// \param[in] prb         the current problem
+/// \param[in] temperature mutation intensity (`1.0` preserves the configured
+///                        probability)
+/// \return                number of mutations performed
 ///
 /// \note
 /// External parameters: `evolution.p_mutation`
 ///
-unsigned individual::mutation(const problem &prb)
+unsigned individual::mutation(const problem &prb, double temperature)
 {
-  const double pgm(prb.params.evolution.p_mutation);
-  Expects(in_0_1(pgm));
+  Expects(in_0_1(prb.params.evolution.p_mutation));
+  Expects(temperature >= 0.0);
+
+  const double pgm(
+    1.0 - std::pow(1.0 - prb.params.evolution.p_mutation, temperature));
 
   unsigned n(0);
 

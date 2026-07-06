@@ -57,23 +57,25 @@ team<I>::team(std::vector<I> v) : individuals_(std::move(v))
 /// Mutates the individuals in `this` team and returns the number of mutations
 /// performed.
 ///
-/// \param[in] prb current problem
-/// \return        number of mutations performed
+/// \param[in] prb         current problem
+/// \param[in] temperature mutation intensity (`1.0` preserves the configured
+///                        probability)
+/// \return                number of mutations performed
 ///
 /// \note
 /// External parameters: `evolution.p_mutation`
 ///
 template<Individual I>
-unsigned team<I>::mutation(const problem &prb)
+unsigned team<I>::mutation(const problem &prb, double temperature)
 {
-  //const auto nm(random::element(individuals_).mutation(prb));
+  //const auto nm(random::element(individuals_).mutation(prb, temperature));
   //if (nm)
   //  signature_.clear();
   //return nm;
 
   unsigned nm(0);
   for (auto &i : individuals_)
-    nm += i.mutation(prb);
+    nm += i.mutation(prb, temperature);
 
   if (nm)
     signature_.clear();

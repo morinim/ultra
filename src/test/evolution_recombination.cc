@@ -53,7 +53,7 @@ public:
     signature_ = hash_t(signature);
   }
 
-  void mutation(const problem &)
+  void mutation(const problem &, double = 1.0)
   {
     ++mutations;
     signature_ = hash_t(mutations + 1);
@@ -65,7 +65,7 @@ class mutation_only_individual final : public base_testing_individual
 public:
   explicit mutation_only_individual(unsigned p = 0) : parent(p) {}
 
-  void mutation(const problem &) { ++mutations; }
+  void mutation(const problem &, double = 1.0) { ++mutations; }
 
   unsigned parent;
 };

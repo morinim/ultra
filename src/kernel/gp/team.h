@@ -76,7 +76,7 @@ public:
   explicit team(std::vector<I>);
 
   // ---- Recombination operators ----
-  unsigned mutation(const problem &);
+  unsigned mutation(const problem &, double = 1.0);
   template<Individual U> friend team<U> crossover(const problem &,
                                                   const team<U> &,
                                                   const team<U> &);
