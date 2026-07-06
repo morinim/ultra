@@ -303,6 +303,58 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "ALPS shrinks converged layers")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 16;
+  prob.params.population.init_subgroups = 3;
+  prob.params.population.min_individuals = 2;
+
+  layered_population<gp::individual> pop(prob);
+  test_evaluator<gp::individual> eva(test_evaluator_type::age);
+  alps_es alps(prob, eva);
+
+  for (unsigned age(0); auto &layer : pop.range_of_layers())
+  {
+    const gp::individual clone(prob);
+    std::ranges::fill(layer, clone);
+
+    for (auto &prg : layer)
+      prg.inc_age(age);
+
+    age += 10;
+  }
+
+  summary<gp::individual, double> sum;
+
+  const auto update([&]
+  {
+    sum.az = analyzer(pop, eva);
+    alps.after_generation(pop, sum);
+  });
+
+  update();
+  CHECK(pop.front().allowed() == 16);
+  CHECK(pop.layer(1).allowed() == 8);
+  CHECK(pop.layer(2).allowed() == 8);
+
+  update();
+  CHECK(pop.front().allowed() == 16);
+  CHECK(pop.layer(1).allowed() == 4);
+  CHECK(pop.layer(2).allowed() == 4);
+
+  update();
+  CHECK(pop.front().allowed() == 16);
+  CHECK(pop.layer(1).allowed() == prob.params.population.min_individuals);
+  CHECK(pop.layer(2).allowed() == prob.params.population.min_individuals);
+
+  update();
+  CHECK(pop.front().allowed() == 16);
+  CHECK(pop.layer(1).allowed() == prob.params.population.min_individuals);
+  CHECK(pop.layer(2).allowed() == prob.params.population.min_individuals);
+}
+
 TEST_CASE_FIXTURE(fixture1, "Standard strategy")
 {
   using namespace ultra;
