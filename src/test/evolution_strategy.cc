@@ -552,6 +552,18 @@ TEST_CASE_FIXTURE(fixture1, "ALPS refinement depends on the number of layers")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "Standard refinement returns the whole population")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+  std_es strategy(prob, eva);
+
+  layered_population<gp::individual> pop(prob);
+
+  CHECK(strategy.refinement_subgroup(pop) == &pop);
+}
+
 TEST_CASE("DE disables generic refinement")
 {
   using namespace ultra;
