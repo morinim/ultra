@@ -20,11 +20,11 @@
 #include "test/fixture1.h"
 #include "test/fixture4.h"
 
-#include <cstdlib>
-#include <iostream>
-
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
+
+#include <cstdlib>
+#include <iostream>
 
 TEST_SUITE("EVOLUTION STRATEGY")
 {
@@ -208,6 +208,17 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
   alps.init(pop);
 
+  const auto check_max_ages([&]
+  {
+    for (std::size_t l(0); const auto &layer : pop.range_of_layers())
+    {
+      CHECK(layer.max_age() == prob.params.alps.max_age(l, pop.layers()));
+      ++l;
+    }
+  });
+
+  check_max_ages();
+
   CHECK(std::ranges::all_of(
           pop, [](const auto &prg) { return prg.age() == 0; }));
 
@@ -248,6 +259,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
                               }));
 
     CHECK(pop.layers() == prob.params.population.init_subgroups - 1);
+    check_max_ages();
   }
 
   SUBCASE("Converged layer")
@@ -280,18 +292,21 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
       alps.after_generation(pop, sum);
 
       CHECK(pop.layers() == prob.params.population.init_subgroups + i);
+      check_max_ages();
 
       for (std::size_t l(0); l < backup_pop.layers(); ++l)
         CHECK(std::ranges::equal(pop.layer(l + i), backup_pop.layer(l)));
     }
 
     CHECK(pop.layers() == prob.params.alps.max_layers);
+    check_max_ages();
 
     backup_pop = pop;
 
     sum.generation += prob.params.alps.age_gap;
     sum.az = analyzer(pop, eva);
     alps.after_generation(pop, sum);
+    check_max_ages();
 
     CHECK(pop.layers() == prob.params.alps.max_layers);
 

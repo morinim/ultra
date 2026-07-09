@@ -278,16 +278,20 @@ void alps_es<E>::after_generation(P &pop,
   pop.inc_age();
 
   const auto layers(pop.range_of_layers());
+  bool layer_structure_changed(false);
 
   if (pop.layers() > 1)
   {
-    for (auto layer(std::next(layers.begin())); layer != layers.end();)
+    auto layer(std::next(layers.begin()));
+
+    while (layer != layers.end())
     {
       if (almost_equal(sum.az.fit_dist(*std::prev(layer)).mean(),
                        sum.az.fit_dist(*layer).mean()))
       {
         ultraDEBUG << "ALPS: erasing layer UID=" << layer->uid();
         layer = pop.erase(layer);
+        layer_structure_changed = true;
       }
       else
       {
@@ -308,16 +312,13 @@ void alps_es<E>::after_generation(P &pop,
             layer->allowed(new_allowed);
           }
         }
-        else
+        else if (layer->allowed() < params.population.individuals)
         {
-          if (layer->allowed() < params.population.individuals)
-          {
-            ultraDEBUG << "ALPS: restoring allowed individuals of layer UID="
-                       << layer->uid() << " to "
-                       << params.population.individuals;
+          ultraDEBUG << "ALPS: restoring allowed individuals of layer UID="
+                     << layer->uid() << " to "
+                     << params.population.individuals;
 
-            layer->allowed(params.population.individuals);
-          }
+          layer->allowed(params.population.individuals);
         }
 
         ++layer;
@@ -332,6 +333,7 @@ void alps_es<E>::after_generation(P &pop,
     {
       ultraDEBUG << "ALPS: adding layer";
       pop.add_layer();
+      layer_structure_changed = true;
     }
     else
     {
@@ -340,6 +342,9 @@ void alps_es<E>::after_generation(P &pop,
       pop.init(pop.front());
     }
   }
+
+  if (layer_structure_changed)
+    alps::set_age(pop);
 }
 
 ///
