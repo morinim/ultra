@@ -13,6 +13,7 @@ import argparse
 import datetime
 import os
 import re
+import subprocess
 import sys
 from typing import Callable, Optional
 
@@ -36,6 +37,42 @@ def make_version(parts: list[str]) -> str:
 
     die("Invalid version format (use either: version OR major minor patch)")
     return ""  # unreachable
+
+
+def parse_version(v_str: str) -> Optional[tuple[int, int, int]]:
+    regex = r"^[vV]?\s*0*(\d+)\s*\.\s*0*(\d+)\s*\.\s*0*(\d+)\s*$"
+    m = re.match(regex, v_str)
+    if m:
+        return int(m.group(1)), int(m.group(2)), int(m.group(3))
+    return None
+
+
+def check_version(new_version: str, repo_dir: str) -> None:
+    new_v_tuple = parse_version(new_version)
+    if new_v_tuple is None:
+        return
+
+    try:
+        res = subprocess.run(["git", "tag"], cwd=repo_dir,
+                             capture_output=True, text=True, check=True)
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        print(f"Warning: could not run 'git tag' to check version: {e}", file=sys.stderr)
+        return
+
+    tags = res.stdout.splitlines()
+    version_tags = []
+    for tag in tags:
+        v_tuple = parse_version(tag.strip())
+        if v_tuple is not None:
+            version_tags.append(v_tuple)
+
+    if not version_tags:
+        return
+
+    latest_version = max(version_tags)
+    if new_v_tuple <= latest_version:
+        latest_version_str = f"{latest_version[0]}.{latest_version[1]}.{latest_version[2]}"
+        die(f"Error: Proposed version {new_version} is not greater than the latest tagged version {latest_version_str}.")
 
 
 def file_process(path: str, rule: Callable[[str, str], Optional[str]],
@@ -106,6 +143,7 @@ def main() -> None:
     version = make_version(args.version)
 
     dirname = os.path.dirname(__file__)
+    check_version(version, os.path.join(dirname, ".."))
 
     # file_process(os.path.join(dirname, "../NEWS.md"), changelog_rule,
     #              version)
