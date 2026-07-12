@@ -168,9 +168,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
     for (std::size_t i(0); i < ts; ++i)
     {
       const auto c(random::coord(pop));
-      const auto &cur(pop[c]);
 
-      candidates.push_back({c, cur});
+      candidates.push_back({c, pop[c]});
     }
 
     return pop.max_age();
@@ -205,7 +204,7 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
   }
   else if (incoming_age > max_age && worst_age <= max_age)  // age rule
   {
-    // Incoming is too old but worst is still valid.
+    // Incoming is too old and worst is still valid.
     replace_worst = false;
   }
   else
@@ -217,15 +216,15 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
   // ---- Commit (exclusive) ----
   if (replace_worst)
   {
-    std::lock_guard lock(pop.mutex());
-
     const auto coord(candidates[worst_idx].coord);
+
+    std::lock_guard lock(pop.mutex());
 
     if (const bool changed(pop[coord] != candidates[worst_idx].ind); changed)
     {
       // In ALPS, every non-final layer is owned by a single thread, so a
-      // snapshot/commit mismatch there should never happen and indicates a
-      // logic error. The final layer is different: multiple lower layers may
+      // snapshot/commit mismatch should never happen and indicates a logic
+      // error. The final layer is different: multiple lower layers may
       // concurrently promote individuals into it, so the sampled resident may
       // legitimately change before commit.
       if (pops.has_secondary())
