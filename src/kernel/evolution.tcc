@@ -156,7 +156,7 @@ void evolution<E>::print(message m, internal::print_status &ps) const
         const auto completed(
           ps.completed_evolve_calls.load(std::memory_order_relaxed));
 
-        perc = std::to_string(100u * completed / planned) + "%";
+        perc = std::to_string(std::uintmax_t(100) * completed / planned) + "%";
       }
     }
     else
@@ -169,7 +169,7 @@ void evolution<E>::print(message m, internal::print_status &ps) const
         const auto refined(
           ps.refined.load(std::memory_order_relaxed));
 
-        perc = std::to_string(100u * refined / to_be_refined) + "%";
+        perc = std::to_string(std::uintmax_t(100) * refined / to_be_refined)+"%";
       }
     }
 
