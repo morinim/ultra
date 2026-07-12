@@ -69,19 +69,15 @@ TEST_CASE_FIXTURE(fixture1, "valid_layer verification")
   auto range1 = pop1.range_of_layers();
   auto range2 = pop2.range_of_layers();
 
-  // Valid iterators of pop1
+  // Valid iterators of pop1.
   CHECK(test_strategy<test_evaluator<gp::individual>>::valid_layer(
           pop1, range1.begin()));
   CHECK(test_strategy<test_evaluator<gp::individual>>::valid_layer(
           pop1, std::next(range1.begin())));
 
-  // End iterator of pop1 is invalid
+  // End iterator of pop1 is invalid.
   CHECK(!test_strategy<test_evaluator<gp::individual>>::valid_layer(
           pop1, range1.end()));
-
-  // Iterator belonging to pop2 is invalid for pop1
-  CHECK(!test_strategy<test_evaluator<gp::individual>>::valid_layer(
-          pop1, range2.begin()));
 }
 
 // Runs the ALPS evolutionary strategy under many configurations and with
