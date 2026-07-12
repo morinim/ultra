@@ -108,7 +108,7 @@ public:
 protected:
   evolution_strategy(const problem &, E &);
 
-  template<Population P>
+  template<LayeredPopulation P>
   [[nodiscard]] static bool valid_layer(P &, typename P::layer_iter);
 
   E &eva_;
@@ -167,19 +167,19 @@ public:
 
   alps_es(const problem &, E &);
 
-  template<Population P> [[nodiscard]] auto operations(
+  template<LayeredPopulation P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 
-  template<Population P> void init(P &) const;
+  template<LayeredPopulation P> void init(P &) const;
 
   template<LayeredPopulation P>
   [[nodiscard]] auto *refinement_subgroup(P &) const noexcept;
 
-  template<Population P> void after_generation(
+  template<LayeredPopulation P> void after_generation(
     P &, const summary<individual_t, fitness_t> &);
 
-  template<Population P>
+  template<LayeredPopulation P>
   [[nodiscard]] std::size_t max_parallelism(const P &) const noexcept;
 
   static parameters shape(parameters);
@@ -202,7 +202,9 @@ public:
 
   std_es(const problem &, E &);
 
-  template<Population P> [[nodiscard]] auto operations(
+  template<SizedRandomAccessPopulation P> [[nodiscard]] auto operations(
+    P &, const evolution_status<individual_t, fitness_t> &) const;
+  template<LayeredPopulation P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 
@@ -230,7 +232,10 @@ public:
   template<Population P>
   [[nodiscard]] P *refinement_subgroup(P &) const noexcept { return nullptr; }
 
-  template<Population P> [[nodiscard]] auto operations(
+  template<SizedRandomAccessPopulation P> [[nodiscard]] auto operations(
+    P &, const evolution_status<individual_t, fitness_t> &) const;
+
+  template<LayeredPopulation P> [[nodiscard]] auto operations(
     P &, typename P::layer_iter,
     const evolution_status<individual_t, fitness_t> &) const;
 

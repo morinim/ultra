@@ -38,7 +38,7 @@ evolution_strategy<E>::evolution_strategy(const problem &prob, E &eva)
 }
 
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 bool evolution_strategy<E>::valid_layer(P &pop, typename P::layer_iter iter)
 {
   return pop.layers() && iterator_of(iter, pop.range_of_layers());
@@ -118,19 +118,22 @@ template<Population P>
 void evolution_strategy<E>::after_generation(
   P &pop, const summary<individual_t, fitness_t> &sum)
 {
-  Expects(&pop.problem() == &this->get_problem());
-  const auto &params(pop.problem().params);
-  Expects(params.evolution.max_stuck_gen);
-
   pop.inc_age();
 
-  for (const auto layers(pop.range_of_layers()); auto &layer : layers)
-    if (sum.stagnation() > params.evolution.max_stuck_gen
-        && issmall(sum.az.fit_dist(layer).variance()))
-    {
-      layer.reset(pop.problem());
-      ultraINFO << "Resetting layer " << layer.uid();
-    }
+  if constexpr (LayeredPopulation<P>)
+  {
+    assert(&pop.problem() == &this->get_problem());
+    const auto &params(pop.problem().params);
+    assert(params.evolution.max_stuck_gen);
+
+    for (const auto layers(pop.range_of_layers()); auto &layer : layers)
+      if (sum.stagnation() > params.evolution.max_stuck_gen
+          && issmall(sum.az.fit_dist(layer).variance()))
+      {
+        layer.reset(pop.problem());
+        ultraINFO << "Resetting layer " << layer.uid();
+      }
+  }
 }
 
 ///
@@ -175,7 +178,7 @@ alps_es<E>::alps_es(const problem &prob, E &eva)
 /// \note Executing the callable mutates the population.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 auto alps_es<E>::operations(
   P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
@@ -207,7 +210,7 @@ auto alps_es<E>::operations(
 /// ALPS rules.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 void alps_es<E>::init(P &pop) const
 {
   alps::set_age(pop);
@@ -243,7 +246,7 @@ auto *alps_es<E>::refinement_subgroup(P &pop) const noexcept
 /// workers available for layers introduced later during evolution.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 std::size_t alps_es<E>::max_parallelism(const P &) const noexcept
 {
   return hardware_threads();
@@ -266,7 +269,7 @@ std::size_t alps_es<E>::max_parallelism(const P &) const noexcept
 /// \remark Structural changes occur only at generation boundaries.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 void alps_es<E>::after_generation(P &pop,
                                   const summary<individual_t, fitness_t> &sum)
 {
@@ -385,7 +388,6 @@ std_es<E>::std_es(const problem &prob, E &eva)
 /// \tparam P population type
 ///
 /// \param[in] pop             the population
-/// \param[in] iter            iterator to the active layer
 /// \param[in] starting_status evolutionary status snapshot
 /// \return                    a callable performing one evolutionary step
 ///
@@ -394,25 +396,46 @@ std_es<E>::std_es(const problem &prob, E &eva)
 /// - recombination;
 /// - replacement within the same layer.
 ///
+template<Evaluator E>
+template<SizedRandomAccessPopulation P>
+auto std_es<E>::operations(
+  P &pop,
+  const evolution_status<individual_t, fitness_t> &starting_status) const
+{
+  return
+    [this, &p = pop, status = starting_status]() mutable
+    {
+      Ensures(!p.empty());
+
+      const auto parents(this->select_(p));
+      const auto offspring(this->recombine_(parents));
+      this->replace_(p, offspring, status);
+    };
+}
+
+///
+/// Assembles a standard evolutionary step for a layered population.
+///
+/// \tparam P population type
+///
+/// \param[in] pop             the population
+/// \param[in] iter            iterator to the active layer
+/// \param[in] starting_status evolutionary status snapshot
+/// \return                    a callable performing one evolutionary step
+///
+/// \see operations() for linear populations.
+///
 /// \note No cross-layer interaction occurs.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 auto std_es<E>::operations(
   [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(this->valid_layer(pop, iter));
 
-  return
-    [this, &pop_layer = *iter, status = starting_status]() mutable
-    {
-      Ensures(!pop_layer.empty());
-
-      const auto parents(this->select_(pop_layer));
-      const auto offspring(this->recombine_(parents));
-      this->replace_(pop_layer, offspring, status);
-    };
+  return operations(*iter, starting_status);
 }
 
 template<Evaluator E>
@@ -429,7 +452,6 @@ de_es<E>::de_es(const problem &prob, E &eva)
 /// \tparam P population type
 ///
 /// \param[in] pop             the population
-/// \param[in] iter            iterator to the active layer
 /// \param[in] starting_status evolutionary status snapshot
 /// \return                    a callable performing one DE step
 ///
@@ -438,25 +460,46 @@ de_es<E>::de_es(const problem &prob, E &eva)
 /// - recombination generates a trial vector;
 /// - replacement compares the trial against the target.
 ///
+template<Evaluator E>
+template<SizedRandomAccessPopulation P>
+auto de_es<E>::operations(
+  [[maybe_unused]] P &pop,
+  const evolution_status<individual_t, fitness_t> &starting_status) const
+{
+  return
+    [this, &p = pop, status = starting_status]() mutable
+    {
+      Ensures(!p.empty());
+
+      const auto selected(this->select_(p));
+      const auto offspring(this->recombine_(selected));
+      this->replace_(selected.target, offspring, status);
+    };
+}
+
+///
+/// Assembles a differential evolution step for a layered population.
+///
+/// \tparam P population type
+///
+/// \param[in] pop             the population
+/// \param[in] iter            iterator to the active layer
+/// \param[in] starting_status evolutionary status snapshot
+/// \return                    a callable performing one DE step
+///
+/// \see operations() for linear populations.
+///
 /// \note Replacement is performed on the selected target only.
 ///
 template<Evaluator E>
-template<Population P>
+template<LayeredPopulation P>
 auto de_es<E>::operations(
   [[maybe_unused]] P &pop, typename P::layer_iter iter,
   const evolution_status<individual_t, fitness_t> &starting_status) const
 {
   Expects(this->valid_layer(pop, iter));
 
-  return
-    [this, &pop_layer = *iter, status = starting_status]() mutable
-    {
-      Ensures(!pop_layer.empty());
-
-      const auto selected(this->select_(pop_layer));
-      const auto offspring(this->recombine_(selected));
-      this->replace_(selected.target, offspring, status);
-    };
+  return operations(*iter, starting_status);
 }
 
 #endif  // include guard
