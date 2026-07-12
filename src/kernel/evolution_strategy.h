@@ -72,7 +72,7 @@ public:
   /// Sets strategy-specific parameters.
   /// The default implementation doesn't change the user-specified parameters.
   /// Some evolution strategies force parameters to specific values.
-  static parameters shape(const parameters &params) { return params; }
+  [[nodiscard]] static parameters shape(const parameters &p) { return p; }
 
   /// Initialises the strategy before the first generation.
   ///
@@ -182,7 +182,7 @@ public:
   template<LayeredPopulation P>
   [[nodiscard]] std::size_t max_parallelism(const P &) const noexcept;
 
-  static parameters shape(parameters);
+  [[nodiscard]] static parameters shape(parameters);
 
 private:
   const selection::alps<E>     select_;
@@ -229,8 +229,7 @@ public:
 
   de_es(const problem &, E &);
 
-  template<Population P>
-  [[nodiscard]] P *refinement_subgroup(P &) const noexcept { return nullptr; }
+  template<Population P> P *refinement_subgroup(P &) const noexcept = delete;
 
   template<SizedRandomAccessPopulation P> [[nodiscard]] auto operations(
     P &, const evolution_status<individual_t, fitness_t> &) const;
@@ -258,8 +257,7 @@ private:
 /// and concrete strategy classes derived from it, such as `alps_es<E>`,
 /// `std_es<E>`, and `de_es<E>`.
 ///
-template<class T>
-concept Strategy =
+template<class T> concept Strategy =
   requires
   {
     typename std::remove_cvref_t<T>::evaluator_type;
@@ -268,6 +266,18 @@ concept Strategy =
   && std::derived_from<
        std::remove_cvref_t<T>,
        evolution_strategy<typename std::remove_cvref_t<T>::evaluator_type>>;
+
+template<class ES, class P> concept RefinementStrategy =
+  Strategy<ES>
+  && Population<P>
+  && requires(const std::remove_reference_t<ES> &strategy, P &pop)
+     {
+       requires Population<
+         std::remove_pointer_t<decltype(strategy.refinement_subgroup(pop))>>;
+
+       { strategy.refinement_subgroup(pop) } -> std::convertible_to<
+         std::remove_pointer_t<decltype(strategy.refinement_subgroup(pop))> *>;
+     };
 
 #include "kernel/evolution_strategy.tcc"
 }  // namespace ultra

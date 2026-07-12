@@ -29,13 +29,25 @@
 TEST_SUITE("EVOLUTION STRATEGY")
 {
 
-TEST_CASE_FIXTURE(fixture1, "Strategy concept")
+TEST_CASE("Strategy concept")
 {
   using namespace ultra;
 
   CHECK(Strategy<alps_es<test_evaluator<gp::individual>>>);
   CHECK(Strategy<std_es<test_evaluator<gp::individual>>>);
   CHECK(!Strategy<int>);
+}
+
+TEST_CASE("Refinement strategy concept")
+{
+  using namespace ultra;
+
+  CHECK(RefinementStrategy<alps_es<test_evaluator<gp::individual>>,
+                           layered_population<gp::individual>>);
+  CHECK(RefinementStrategy<std_es<test_evaluator<gp::individual>>,
+                           linear_population<gp::individual>>);
+  CHECK(!RefinementStrategy<de_es<test_evaluator<gp::individual>>,
+                            linear_population<de::individual>>);
 }
 
 // Runs the ALPS evolutionary strategy under many configurations and with
@@ -577,22 +589,6 @@ TEST_CASE_FIXTURE(fixture1, "Standard refinement returns the whole population")
   layered_population<gp::individual> pop(prob);
 
   CHECK(strategy.refinement_subgroup(pop) == &pop);
-}
-
-TEST_CASE("DE disables generic refinement")
-{
-  using namespace ultra;
-
-  auto dummy_eva = [](de::individual) { return 0.0; };
-
-  de::problem prob;
-  prob.params.population.init_subgroups = 4;
-
-  de_es strategy(prob, dummy_eva);
-
-  linear_population<de::individual> pop(prob);
-
-  CHECK(strategy.refinement_subgroup(pop) == nullptr);
 }
 
 }  // TEST_SUITE

@@ -578,26 +578,29 @@ summary<typename evolution<E>::individual_t,
     if (stop)
       break;
 
-    if (refinement_callback_)
+    if constexpr (RefinementStrategy<ES<E>, decltype(pop_)>)
     {
-      if (ref_sched.ready(sum_.stagnation()))
+      if (refinement_callback_)
       {
-        bool performed(false);
-
-        if (auto *ref_pop = strategy.refinement_subgroup(pop_))
-          performed = perform_refinement(*ref_pop, ps);
-
-        ref_sched.after_refinement_attempt(performed);
-
-        if (performed)
+        if (ref_sched.ready(sum_.stagnation()))
         {
-          // `performed` only means refinement ran. It may still have updated and
-          // reported `sum_`, so refresh the local progress cache.
-          previous_best = sum_.best();
+          bool performed(false);
+
+          if (auto *ref_pop = strategy.refinement_subgroup(pop_))
+            performed = perform_refinement(*ref_pop, ps);
+
+          ref_sched.after_refinement_attempt(performed);
+
+          if (performed)
+          {
+            // `performed` only means refinement ran. It may still have updated and
+            // reported `sum_`, so refresh the local progress cache.
+            previous_best = sum_.best();
+          }
         }
+        else
+          ref_sched.tick();
       }
-      else
-        ref_sched.tick();
     }
 
     sum_.az = analyzer(pop_, eva_);
