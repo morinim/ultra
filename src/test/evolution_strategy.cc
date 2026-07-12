@@ -50,6 +50,40 @@ TEST_CASE("Refinement strategy concept")
                             linear_population<de::individual>>);
 }
 
+template<ultra::Evaluator E>
+struct test_strategy : public ultra::evolution_strategy<E>
+{
+  using ultra::evolution_strategy<E>::valid_layer;
+};
+
+TEST_CASE_FIXTURE(fixture1, "valid_layer verification")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 10;
+  prob.params.population.init_subgroups = 3;
+
+  layered_population<gp::individual> pop1(prob);
+  layered_population<gp::individual> pop2(prob);
+
+  auto range1 = pop1.range_of_layers();
+  auto range2 = pop2.range_of_layers();
+
+  // Valid iterators of pop1
+  CHECK(test_strategy<test_evaluator<gp::individual>>::valid_layer(
+          pop1, range1.begin()));
+  CHECK(test_strategy<test_evaluator<gp::individual>>::valid_layer(
+          pop1, std::next(range1.begin())));
+
+  // End iterator of pop1 is invalid
+  CHECK(!test_strategy<test_evaluator<gp::individual>>::valid_layer(
+          pop1, range1.end()));
+
+  // Iterator belonging to pop2 is invalid for pop1
+  CHECK(!test_strategy<test_evaluator<gp::individual>>::valid_layer(
+          pop1, range2.begin()));
+}
+
 // Runs the ALPS evolutionary strategy under many configurations and with
 // concurrent evolution across layers. The test checks that the population
 // remains valid, the summary best is internally consistent, and that any
