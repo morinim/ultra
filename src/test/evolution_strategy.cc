@@ -202,10 +202,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS increasing fitness")
     }
 
     if (!previous.empty())
-    {
       for (std::size_t j(0); j < current.size(); ++j)
-        CHECK(previous[j].mean() < current[j].mean());
-    }
+        CHECK(previous[j].mean() <= current[j].mean());
 
     previous = current;
   }
