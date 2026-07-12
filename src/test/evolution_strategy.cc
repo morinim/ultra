@@ -239,6 +239,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
 
   prob.params.population.individuals    = 100;
   prob.params.population.init_subgroups =   5;
+  prob.params.alps.max_layers           =   8;
 
   CHECK(prob.params.population.min_individuals > 0);
 
