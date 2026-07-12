@@ -14,7 +14,9 @@
 #define      ULTRA_THREAD_POOL_H
 
 #include <atomic>
+#include <concepts>
 #include <condition_variable>
+#include <cstddef>
 #include <functional>
 #include <future>
 #include <memory>
@@ -22,6 +24,8 @@
 #include <queue>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace ultra
@@ -302,6 +306,21 @@ public:
   /// Stops all threads and cleans up.
   ///
   /// Signals the threads to stop and notifies all waiting threads.
+  ///
+  /// \warning
+  /// The pool must not be destroyed from one of its own worker threads. In
+  /// particular, a task must not release the final owning reference to its
+  /// pool. Destruction joins the worker threads, and a worker cannot join
+  /// itself.
+  /// An example of problematic code is:
+  /// \code
+  /// auto pool = std::make_shared<ultra::thread_pool>(1);
+  /// pool->execute([pool]() mutable
+  /// {
+  ///   pool.reset();  // potentially destroys the pool on its own worker
+  /// });
+  /// pool.reset();
+  /// \endcode
   ~thread_pool() noexcept
   {
     shutdown();
