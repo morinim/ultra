@@ -67,7 +67,6 @@ TEST_CASE_FIXTURE(fixture1, "valid_layer verification")
   layered_population<gp::individual> pop2(prob);
 
   auto range1 = pop1.range_of_layers();
-  auto range2 = pop2.range_of_layers();
 
   // Valid iterators of pop1.
   CHECK(test_strategy<test_evaluator<gp::individual>>::valid_layer(
@@ -88,8 +87,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS summary and population stay consistent")
 {
   using namespace ultra;
 
+  const auto ts(prob.params.evolution.tournament_size);
+
   for (unsigned rep(0); rep < 10; ++rep)
-    for (unsigned ni(2); ni <= 20; ++ni)
+    for (unsigned ni(std::max(2uz, ts)); ni <= 4 * ts; ++ni)
       for (unsigned nl(2); nl <= 5; ++nl)
       {
         CAPTURE(rep);
