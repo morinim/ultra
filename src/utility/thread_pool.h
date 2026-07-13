@@ -202,17 +202,26 @@ public:
   void execute(F &&f, Args&&... args)
   {
 #if defined(__cpp_lib_move_only_function)
-  enqueue_task(
-    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
-    {
-      std::invoke(fn, std::move(as)...);
-    });
+    enqueue_task(
+      [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
+      {
+        std::invoke(fn, std::move(as)...);
+      });
 #else
-  enqueue_task(
-    [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
+    auto task(
+      [fn = std::forward<F>(f), ... as = std::forward<Args>(args)] mutable
+      {
+        std::invoke(fn, std::move(as)...);
+      });
+
+    if constexpr (std::copy_constructible<decltype(task)>)
+      enqueue_task(std::move(task));
+    else
     {
-      std::invoke(fn, std::move(as)...);
-    });
+      const auto packaged_task(
+        std::make_shared<std::packaged_task<void()>>(std::move(task)));
+      enqueue_task([packaged_task] { (*packaged_task)(); });
+    }
 #endif
   }
 

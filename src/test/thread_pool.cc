@@ -694,4 +694,27 @@ TEST_CASE("Thread pool destruction doesn't hang")
   }
 }
 
+TEST_CASE("Execute supports copyable and move-only tasks")
+{
+  ultra::thread_pool pool(1);
+
+  int copyable_result {};
+  pool.execute([&copyable_result] { copyable_result = 1; });
+
+  int move_only_result {};
+  auto value(std::make_unique<int>(42));
+  pool.execute(
+    [&move_only_result](std::unique_ptr<int> arg)
+    {
+      move_only_result = *arg;
+    },
+    std::move(value));
+
+  pool.wait();
+
+  CHECK(copyable_result == 1);
+  CHECK(move_only_result == 42);
+  CHECK(!value);
+}
+
 }  // TEST_SUITE
