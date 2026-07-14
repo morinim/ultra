@@ -26,11 +26,8 @@ struct print_status
 {
   phase run_phase {phase::evolution};
 
-  std::atomic<unsigned> planned_evolve_calls {0};
-  std::atomic<unsigned> completed_evolve_calls {0};
-
-  std::atomic<unsigned> to_be_refined {0};
-  std::atomic<unsigned> refined {0};
+  std::atomic<unsigned> planned_steps {0};
+  std::atomic<unsigned> completed_steps {0};
 
   timer from_start {};
   timer from_last_msg {};
@@ -39,10 +36,8 @@ struct print_status
   {
     run_phase = phase::evolution;
 
-    planned_evolve_calls.store(0, std::memory_order_relaxed);
-    completed_evolve_calls.store(0, std::memory_order_relaxed);
-    to_be_refined.store(0, std::memory_order_relaxed);
-    refined.store(0, std::memory_order_relaxed);
+    planned_steps.store(0, std::memory_order_relaxed);
+    completed_steps.store(0, std::memory_order_relaxed);
   }
 };
 
@@ -146,31 +141,11 @@ void evolution<E>::print(message m, internal::print_status &ps) const
   {
     std::string perc;
 
-    if (ps.run_phase == internal::phase::evolution)
+    const auto planned(ps.planned_steps.load(std::memory_order_relaxed));
+    if (planned)
     {
-      const auto planned(
-        ps.planned_evolve_calls.load(std::memory_order_relaxed));
-
-      if (planned)
-      {
-        const auto completed(
-          ps.completed_evolve_calls.load(std::memory_order_relaxed));
-
-        perc = std::to_string(std::uintmax_t(100) * completed / planned) + "%";
-      }
-    }
-    else
-    {
-      const auto to_be_refined(
-        ps.to_be_refined.load(std::memory_order_relaxed));
-
-      if (to_be_refined)
-      {
-        const auto refined(
-          ps.refined.load(std::memory_order_relaxed));
-
-        perc = std::to_string(std::uintmax_t(100) * refined / to_be_refined)+"%";
-      }
+      const auto completed(ps.completed_steps.load(std::memory_order_relaxed));
+      perc = std::to_string(std::uintmax_t(100) * completed / planned) + "%";
     }
 
     std::string line;
@@ -409,9 +384,9 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
   // ********* Refine candidates in parallel *********
   ps.run_phase = internal::phase::refinement;
-  ps.to_be_refined.store(static_cast<unsigned>(candidates.size()),
+  ps.planned_steps.store(static_cast<unsigned>(candidates.size()),
                          std::memory_order_relaxed);
-  ps.refined.store(0, std::memory_order_relaxed);
+  ps.completed_steps.store(0, std::memory_order_relaxed);
 
   ultra::thread_pool pool(std::min(candidates.size(), hardware_threads()));
 
@@ -433,7 +408,7 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
         if (fit)
           candidates[i].refined = scored_individual(ind, *fit);
 
-        ps.refined.fetch_add(1, std::memory_order_relaxed);
+        ps.completed_steps.fetch_add(1, std::memory_order_relaxed);
         print(message::status, ps);
       }));
 
@@ -515,13 +490,13 @@ summary<typename evolution<E>::individual_t,
       // individuals in this subpopulation.
       auto cycles(subpop_it->safe_size());
 
-      ps.planned_evolve_calls.fetch_add(cycles, std::memory_order_relaxed);
+      ps.planned_steps.fetch_add(cycles, std::memory_order_relaxed);
 
       while (cycles--)
         if (!stop_token.stop_requested())
         {
           evolve();
-          ps.completed_evolve_calls.fetch_add(1, std::memory_order_relaxed);
+          ps.completed_steps.fetch_add(1, std::memory_order_relaxed);
         }
     });
 
