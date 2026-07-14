@@ -24,6 +24,8 @@
 #include "utility/timer.h"
 
 #include <atomic>
+#include <future>
+#include <vector>
 
 namespace ultra
 {

@@ -22,6 +22,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 TEST_SUITE("EVOLUTION")
 {
@@ -54,6 +55,30 @@ TEST_CASE_FIXTURE(fixture1, "ALPS evolution")
 
   CHECK(!sum.best().empty());
   CHECK(eva(sum.best().ind) == doctest::Approx(sum.best().fit));
+}
+
+struct throwing_evaluator
+{
+  using individual_t = ultra::gp::individual;
+  using fitness_t = double;
+
+  [[nodiscard]] double operator()(const individual_t &) const
+  {
+    throw std::runtime_error("Evaluation failed");
+  }
+};
+
+TEST_CASE_FIXTURE(fixture1, "Evolution propagates task exceptions")
+{
+  using namespace ultra;
+
+  prob.params.population.individuals = 30;
+
+  throwing_evaluator eva;
+  evolution evo(prob, eva);
+
+  CHECK_THROWS_WITH_AS(evo.run<std_es>(), "Evaluation failed",
+                       std::runtime_error);
 }
 
 struct clear_counting_evaluator

@@ -415,8 +415,10 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
   ultra::thread_pool pool(std::min(candidates.size(), hardware_threads()));
 
+  std::vector<std::future<void>> tasks;
+
   for (std::size_t i(0); i < candidates.size(); ++i)
-    pool.execute(
+    tasks.push_back(pool.submit(
       [&, i]
       {
         // Suppress backend output here: the evolution loop reports refinement
@@ -433,9 +435,12 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
         ps.refined.fetch_add(1, std::memory_order_relaxed);
         print(message::status, ps);
-      });
+      }));
 
   pool.wait();
+
+  for (auto &task : tasks)
+    task.get();
 
   // Commit refinement results.
   for (const auto &result : candidates)
@@ -549,11 +554,13 @@ summary<typename evolution<E>::individual_t,
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 
-    ultraDEBUG << "Launching tasks for generation " << sum_.generation;
+    std::vector<std::future<void>> tasks;
 
+    ultraDEBUG << "Launching tasks for generation " << sum_.generation;
     const auto subpops(pop_.range_of_layers());
+
     for (auto l(subpops.begin()); l != subpops.end(); ++l)
-      pool.execute(evolve_subpop, l);
+      tasks.push_back(pool.submit(evolve_subpop, l));
 
     ultraDEBUG << "Tasks running";
 
@@ -572,6 +579,11 @@ summary<typename evolution<E>::individual_t,
         ultraDEBUG << "Sending closing message to tasks";
       }
     }
+
+    // Used to propagate possible exceptions from `evolve_subpop` (instead of
+    // being silently discarded).
+    for (auto &task : tasks)
+      task.get();
 
     print_and_update_if_better(sum_.best());
 
