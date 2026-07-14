@@ -28,6 +28,8 @@
 #include <utility>
 #include <vector>
 
+#include "utility/assert.h"
+
 namespace ultra
 {
 
@@ -77,6 +79,8 @@ public:
         workers_.emplace_back(
           [this](std::stop_token stop_token)
           {
+            current_pool_ = this;
+
             for (;;)
             {
               task_type task;
@@ -269,6 +273,8 @@ public:
   /// \see has_pending_tasks()
   void wait()
   {
+    Expects(current_pool_ != this);
+
     std::unique_lock lock(task_counter_mutex_);
     cv_finished_.wait(lock, [this]{ return task_counter_ == 0; });
   }
@@ -290,6 +296,8 @@ public:
   template<class Rep, class Period>
   [[nodiscard]] bool wait_for(const std::chrono::duration<Rep, Period> &timeout)
   {
+    Expects(current_pool_ != this);
+
     std::unique_lock lock(task_counter_mutex_);
     return cv_finished_.wait_for(lock, timeout,
                                  [this]{ return task_counter_ == 0; });
@@ -380,6 +388,8 @@ private:
   // data member are being destroyed, no thread will attempt to access a
   // container or mutex that has already been destroyed.
   std::vector<std::jthread> workers_;
+
+  inline static thread_local const thread_pool *current_pool_ {};
 };  // class thread_pool
 
 }  // namespace ultra
