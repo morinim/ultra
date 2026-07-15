@@ -20,12 +20,40 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 
 TEST_SUITE("EVOLUTION")
 {
+
+TEST_CASE("task_group")
+{
+  SUBCASE("wait propagates task exceptions")
+  {
+    ultra::internal::task_group tasks(2);
+
+    tasks.submit([] { throw std::runtime_error("Task failed"); });
+    tasks.submit([] {});
+
+    CHECK_THROWS_WITH_AS(tasks.wait(), "Task failed", std::runtime_error);
+  }
+
+  SUBCASE("timed wait propagates exceptions and remains reusable")
+  {
+    using namespace std::chrono_literals;
+
+    ultra::internal::task_group tasks(1);
+    tasks.submit([] { throw std::runtime_error("Task failed"); });
+
+    CHECK_THROWS_WITH_AS(static_cast<void>(tasks.wait_for(1s)), "Task failed",
+                         std::runtime_error);
+
+    tasks.submit([] {});
+    CHECK(tasks.wait_for(1s));
+  }
+}
 
 TEST_CASE_FIXTURE(fixture1, "Uninitialised parameters")
 {

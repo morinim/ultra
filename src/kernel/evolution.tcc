@@ -72,6 +72,82 @@ private:
   unsigned cooldown_left_ {};
 };
 
+/// Manages a reusable pool and observes the outcome of each submitted task.
+///
+/// A completed batch is both pool-quiescent and cleared of its futures. Any
+/// task exception is propagated only after every future in the batch has been
+/// observed.
+class task_group
+{
+public:
+  /// Constructs a task group with the specified number of workers.
+  ///
+  /// \param[in] workers number of worker threads
+  explicit task_group(std::size_t workers) : pool_(workers)
+  {
+    Expects(workers);
+  }
+
+  /// Submits a void task to the current batch.
+  template<class F, class... Args>
+  requires std::same_as<std::invoke_result_t<F, Args...>, void>
+  void submit(F &&f, Args&&... args)
+  {
+    tasks_.push_back(pool_.submit(std::forward<F>(f),
+                                  std::forward<Args>(args)...));
+  }
+
+  /// Waits for pool quiescence and propagates the first task exception.
+  void wait()
+  {
+    pool_.wait();
+    rethrow_exceptions();
+  }
+
+  /// Waits for pool quiescence or until the timeout expires.
+  ///
+  /// \param[in] timeout maximum time to wait
+  /// \return            `true` if the batch completed; `false` on timeout
+  ///
+  /// A completed batch is observed and cleared before this function returns.
+  /// If one or more tasks failed, the first exception is rethrown instead of
+  /// returning `true`. A timed-out batch remains unchanged.
+  template<class Rep, class Period>
+  [[nodiscard]] bool wait_for(const std::chrono::duration<Rep, Period> &timeout)
+  {
+    if (!pool_.wait_for(timeout))
+      return false;
+
+    rethrow_exceptions();
+    return true;
+  }
+
+private:
+  void rethrow_exceptions()
+  {
+    std::exception_ptr first_exception;
+
+    for (auto &task : tasks_)
+      try
+      {
+        task.get();
+      }
+      catch (...)
+      {
+        if (!first_exception)
+          first_exception = std::current_exception();
+      }
+
+    tasks_.clear();
+
+    if (first_exception)
+      std::rethrow_exception(first_exception);
+  }
+
+  ultra::thread_pool pool_;
+  std::vector<std::future<void>> tasks_ {};
+};
+
 }  // namespace internal
 
 ///
@@ -388,12 +464,10 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
                          std::memory_order_relaxed);
   ps.completed_steps.store(0, std::memory_order_relaxed);
 
-  ultra::thread_pool pool(std::min(candidates.size(), hardware_threads()));
-
-  std::vector<std::future<void>> tasks;
+  internal::task_group tasks(std::min(candidates.size(), hardware_threads()));
 
   for (std::size_t i(0); i < candidates.size(); ++i)
-    tasks.push_back(pool.submit(
+    tasks.submit(
       [&, i]
       {
         // Suppress backend output here: the evolution loop reports refinement
@@ -410,12 +484,9 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
 
         ps.completed_steps.fetch_add(1, std::memory_order_relaxed);
         print(message::status, ps);
-      }));
+      });
 
-  pool.wait();
-
-  for (auto &task : tasks)
-    task.get();
+  tasks.wait();
 
   // Commit refinement results.
   for (const auto &result : candidates)
@@ -516,10 +587,7 @@ summary<typename evolution<E>::individual_t,
   ultraDEBUG << "Calling evolution_strategy init method";
   strategy.init(pop_);  // strategy-specific customisation point
 
-  const std::size_t workers(strategy.max_parallelism(pop_));
-  assert(workers);
-
-  ultra::thread_pool pool(workers);
+  internal::task_group tasks(strategy.max_parallelism(pop_));
 
   while (!source.stop_requested() && !stop_condition())
   {
@@ -528,17 +596,15 @@ summary<typename evolution<E>::individual_t,
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 
-    std::vector<std::future<void>> tasks;
-
     ultraDEBUG << "Launching tasks for generation " << sum_.generation;
     const auto subpops(pop_.range_of_layers());
 
     for (auto l(subpops.begin()); l != subpops.end(); ++l)
-      tasks.push_back(pool.submit(evolve_subpop, l));
+      tasks.submit(evolve_subpop, l);
 
     ultraDEBUG << "Tasks running";
 
-    while (!pool.wait_for(10ms))
+    while (!tasks.wait_for(10ms))
     {
       if (ps.from_last_msg.elapsed() > 2s)
       {
@@ -552,11 +618,6 @@ summary<typename evolution<E>::individual_t,
         ultraDEBUG << "Sending closing message to tasks";
       }
     }
-
-    // Used to propagate possible exceptions from `evolve_subpop` (instead of
-    // being silently discarded).
-    for (auto &task : tasks)
-      task.get();
 
     print_and_update_if_better(sum_.best());
 
