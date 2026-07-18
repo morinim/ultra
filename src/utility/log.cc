@@ -15,7 +15,18 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <memory>
+#include <mutex>
 #include <print>
+
+namespace
+{
+
+std::unique_ptr<std::ostream> stream_ {nullptr};  // long term log stream
+std::mutex stream_mutex_;  // protects `stream_` writes
+
+}  // namespace
+
 
 namespace ultra
 {
@@ -29,25 +40,9 @@ namespace internal
   return m;
 }
 
-}
-
-log::level log::reporting_level {log::lINFO};
-std::unique_ptr<std::ostream> log::stream_ {nullptr};
-std::mutex log::stream_mutex_;
-
-/// Returns whether a level passes the runtime reporting threshold.
-///
-/// This function deliberately does not apply `NDEBUG` filtering. The logging
-/// macros perform that filtering in the consuming translation unit so the
-/// behaviour follows the consumer's build configuration.
-bool log::enabled(level l) noexcept
+void emit(log::level l, std::string message)
 {
-  return l >= reporting_level;
-}
-
-void log::emit(level l, std::string message)
-{
-  l = std::min(lOFF, l);
+  l = std::min(log::lOFF, l);
   const auto now(std::chrono::system_clock::now());
 
   {
@@ -60,7 +55,7 @@ void log::emit(level l, std::string message)
     }
   }
 
-  if (l >= reporting_level)  // `stdout` is selective
+  if (l >= log::reporting_level)  // `stdout` is selective
   {
     std::lock_guard lock(internal::console_mutex());
 
@@ -68,7 +63,7 @@ void log::emit(level l, std::string message)
     std::print("\r{:70}\r", "");
 
     // Print the tag if necessary.
-    if (l != lSTDOUT && l != lPAROUT)
+    if (l != log::level::lSTDOUT && l != log::level::lPAROUT)
       std::print("[{}] ", l);
 
     // Flush for console.
@@ -76,7 +71,14 @@ void log::emit(level l, std::string message)
   }
 }
 
-void log::flush()
+}  // namespace internal
+
+namespace log
+{
+
+level reporting_level {lINFO};
+
+void flush()
 {
   std::lock_guard lock(stream_mutex_);
   if (stream_)
@@ -110,7 +112,7 @@ void log::flush()
 /// This function only affects persistence to the log file. Console output
 /// continues to be controlled by `log::reporting_level`.
 ///
-std::filesystem::path log::setup_stream(const std::string &base)
+std::filesystem::path setup_stream(const std::string &base)
 {
   using namespace std::chrono;
 
@@ -127,5 +129,7 @@ std::filesystem::path log::setup_stream(const std::string &base)
 
   return {};
 }
+
+}  // namespace log
 
 }  // namespace ultra

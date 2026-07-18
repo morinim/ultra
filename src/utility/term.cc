@@ -14,6 +14,7 @@
 #include "utility/log.h"
 
 #include <cstdio>
+#include <mutex>
 #include <print>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32)

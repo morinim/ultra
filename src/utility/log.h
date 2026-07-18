@@ -15,8 +15,6 @@
 
 #include <filesystem>
 #include <format>
-#include <memory>
-#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -25,6 +23,50 @@
 
 namespace ultra
 {
+
+///
+/// A basic console printer with integrated logger.
+///
+/// This API is re-entrant because message construction happens in a local
+/// `std::string` via `std::format`.
+///
+namespace log
+{
+
+/// The log level.
+///
+/// * `lDEBUG`   - Only interesting for developers
+/// * `lINFO`    - I say something but I don't expect you to listen
+/// * `lSTDOUT`  - Standard console output
+/// * `lPAROUT`  - Console with multiple concurrent linked searches
+/// * `lWARNING` - I can continue but please have a look
+/// * `lERROR`   - Something really wrong... but you could be lucky
+/// * `lFATAL`   - The program cannot continue
+/// * `lOFF`     - Disable output
+///
+/// \remarks
+/// The `lDEBUG` log level is available only in non-`NDEBUG` builds.
+enum level {lDEBUG, lINFO, lSTDOUT, lPAROUT, lWARNING, lERROR, lFATAL, lOFF};
+
+/// Current reporting level: messages with a lower level aren't logged /
+/// printed.
+extern level reporting_level;
+
+/// Returns whether a level passes the runtime reporting threshold.
+///
+/// This function deliberately does not apply `NDEBUG` filtering. The logging
+/// macros perform that filtering in the consuming translation unit so the
+/// behaviour follows the consumer's build configuration.
+[[nodiscard]] inline bool enabled(level l) noexcept
+{
+  return l >= reporting_level;
+}
+
+std::filesystem::path setup_stream(const std::string & = "ultra");
+
+void flush();
+
+}  // namespace log
 
 namespace internal
 {
@@ -43,57 +85,20 @@ template<class T>
 [[maybe_unused]] static constexpr bool debug_logging_enabled {true};
 #endif
 
+extern void emit(log::level, std::string);
+
 }  // namespace internal
 
-///
-/// A basic console printer with integrated logger.
-///
-/// This API is re-entrant because message construction happens in a local
-/// `std::string` via `std::format`.
-///
-class log final
+namespace log
 {
-public:
-  /// The log level.
-  ///
-  /// * `lDEBUG`   - Only interesting for developers
-  /// * `lINFO`    - I say something but I don't expect you to listen
-  /// * `lSTDOUT`  - Standard console output
-  /// * `lPAROUT`  - Console with multiple concurrent linked searches
-  /// * `lWARNING` - I can continue but please have a look
-  /// * `lERROR`   - Something really wrong... but you could be lucky
-  /// * `lFATAL`   - The program cannot continue
-  /// * `lOFF`     - Disable output
-  ///
-  /// \remarks
-  /// The `lDEBUG` log level is available only in non-`NDEBUG` builds.
-  enum level {lDEBUG, lINFO, lSTDOUT, lPAROUT, lWARNING, lERROR, lFATAL, lOFF};
 
-  /// Current reporting level: messages with a lower level aren't logged /
-  /// printed.
-  static level reporting_level;
+template<class... Args>
+static void print(level l, std::format_string<Args...> fmt, Args &&... args)
+{
+  internal::emit(l, std::format(fmt, std::forward<Args>(args)...));
+}
 
-  [[nodiscard]] static bool enabled(level) noexcept;
-
-  static std::filesystem::path setup_stream(const std::string & = "ultra");
-
-  static void flush();
-
-  template<class... Args>
-  static void print(level l, std::format_string<Args...> fmt, Args &&... args)
-  {
-    emit(l, std::format(fmt, std::forward<Args>(args)...));
-  }
-
-  log(const log &) = delete;
-  log &operator=(const log &) = delete;
-
-private:
-  static void emit(level, std::string);
-
-  static std::unique_ptr<std::ostream> stream_;  // long term log stream
-  static std::mutex stream_mutex_;  // protects `stream_` writes
-};
+}  // namespace log
 
 ///
 /// A little trick that makes the code, when logging is not necessary, almost
