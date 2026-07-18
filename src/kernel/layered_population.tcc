@@ -441,7 +441,7 @@ bool layered_population<I>::is_valid() const
 
   if (!prob_)
   {
-    ultraERROR << "Undefined `problem`";
+    ultraERROR("Undefined `problem`");
     return false;
   }
 

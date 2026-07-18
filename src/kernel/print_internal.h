@@ -79,7 +79,7 @@ void print_linear(std::ostream &s, const Individual &ind,
     return;
 
   default:
-    ultraWARNING << "Unsupported print format for " << type_name;
+    ultraWARNING("Unsupported print format for {}", type_name);
     print_linear_in_line(s, ind);
   }
 }

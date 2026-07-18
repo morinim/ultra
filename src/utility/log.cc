@@ -34,36 +34,20 @@ namespace internal
 log::level log::reporting_level {log::lINFO};
 std::unique_ptr<std::ostream> log::stream_ {nullptr};
 std::mutex log::stream_mutex_;
-thread_local std::ostringstream log::tls_buffer_;
 
-
+/// Returns whether a level passes the runtime reporting threshold.
 ///
-/// Sets the logging level of a message.
-///
-/// \param[in] l level associated to the streamed message
-///
-/// The following code:
-///
-///     log().get(level) << "Hello " << username;
-///
-/// creates a `log` object with the `level` logging level, fetches its
-/// `std::ostringstream` object, formats and accumulates the user-supplied
-/// data and, finally:
-/// - prints the resulting string on `stdout` f `level >= reporting_level`;
-/// - persists the resulting string into the log file (if specified),
-///   regardless of `reporting_level`.
-///
-std::ostringstream &log::get(level l)
+/// This function deliberately does not apply `NDEBUG` filtering. The logging
+/// macros perform that filtering in the consuming translation unit so the
+/// behaviour follows the consumer's build configuration.
+bool log::enabled(level l) noexcept
 {
-  level_ = std::min(lOFF, l);
-  tls_buffer_.str({});
-  tls_buffer_.clear();
-  return tls_buffer_;
+  return l >= reporting_level;
 }
 
-log::~log()
+void log::emit(level l, std::string message)
 {
-  const auto message(tls_buffer_.str());
+  l = std::min(lOFF, l);
   const auto now(std::chrono::system_clock::now());
 
   {
@@ -72,12 +56,11 @@ log::~log()
     if (stream_)  // `stream_`, if available, gets all the messages
     {
       // Append '\n' without forcing a flush (avoid `std::endl`).
-      (*stream_) << std::format("{:%F %T}\t{}\t{}", now, level_, message)
-                 << '\n';
+      (*stream_) << std::format("{:%F %T}\t{}\t{}", now, l, message) << '\n';
     }
   }
 
-  if (level_ >= reporting_level)  // `stdout` is selective
+  if (l >= reporting_level)  // `stdout` is selective
   {
     std::lock_guard lock(internal::console_mutex());
 
@@ -85,8 +68,8 @@ log::~log()
     std::print("\r{:70}\r", "");
 
     // Print the tag if necessary.
-    if (level_ != lSTDOUT && level_ != lPAROUT)
-      std::print("[{}] ", level_);
+    if (l != lSTDOUT && l != lPAROUT)
+      std::print("[{}] ", l);
 
     // Flush for console.
     std::println("{}", message);

@@ -66,36 +66,36 @@ bool search_log::is_valid() const
 {
   if (base_dir.has_filename())
   {
-    ultraERROR << "Wrong base directory for search logs (contains the file `"
-               << base_dir << "` instead of a directory)";
+    ultraERROR("Wrong base directory for search logs (contains the file `{}"
+                 "` instead of a directory)", base_dir.string());
     return false;
   }
 
   if (!dynamic_file_path.empty() && !dynamic_file_path.has_filename())
   {
-    ultraERROR << "`dynamic_file_path` must specify a file ("
-               << dynamic_file_path << ")";
+    ultraERROR("`dynamic_file_path` must specify a file ({})",
+                 dynamic_file_path.string());
     return false;
   }
 
   if (!population_file_path.empty() && !population_file_path.has_filename())
   {
-    ultraERROR << "`population_file_path` must specify a file ("
-               << population_file_path << ")";
+    ultraERROR("`population_file_path` must specify a file ({})",
+                 population_file_path.string());
     return false;
   }
 
   if (!layers_file_path.empty() && !layers_file_path.has_filename())
   {
-    ultraERROR << "`layers_file_path` must specify a file ("
-               << layers_file_path << ")";
+    ultraERROR("`layers_file_path` must specify a file ({})",
+                 layers_file_path.string());
     return false;
   }
 
   if (!summary_file_path.empty() && !summary_file_path.has_filename())
   {
-    ultraERROR << "`summary_file_path` must specify a file ("
-               << summary_file_path << ")";
+    ultraERROR("`summary_file_path` must specify a file ({})",
+                 summary_file_path.string());
     return false;
   }
 
@@ -113,7 +113,7 @@ bool search_log::open()
     dynamic_file.open(path, std::ios_base::app);
     if (!dynamic_file.is_open())
     {
-      ultraWARNING << "Cannot open dynamic file " << path;
+      ultraWARNING("Cannot open dynamic file {}", path.string());
       return false;
     }
   }
@@ -124,7 +124,7 @@ bool search_log::open()
     population_file.open(path, std::ios_base::app);
     if (!population_file.is_open())
     {
-      ultraWARNING << "Cannot open population file " << path;
+      ultraWARNING("Cannot open population file {}", path.string());
       return false;
     }
   }
@@ -135,7 +135,7 @@ bool search_log::open()
     layers_file.open(path, std::ios_base::app);
     if (!layers_file.is_open())
     {
-      ultraWARNING << "Cannot open layers file " << path;
+      ultraWARNING("Cannot open layers file {}", path.string());
       return false;
     }
   }

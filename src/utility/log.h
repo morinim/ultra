@@ -21,34 +21,35 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace ultra
 {
 
+namespace internal
+{
+
+template<class T>
+[[nodiscard]] std::string streamed(const T &value)
+{
+  std::ostringstream stream;
+  stream << value;
+  return stream.str();
+}
+
+#if defined(NDEBUG)
+[[maybe_unused]] static constexpr bool debug_logging_enabled {false};
+#else
+[[maybe_unused]] static constexpr bool debug_logging_enabled {true};
+#endif
+
+}  // namespace internal
+
 ///
 /// A basic console printer with integrated logger.
 ///
-/// \note
-/// This is derived from the code presented in "Logging in C++" by Petru
-/// Marginean (DDJ Sep 2007)
-///
-/// \warning
-/// **Re-entrancy and nested logging (thread-local buffer)**
-///
-/// Message construction uses a single thread-local `std::ostringstream`
-/// (`log::tls_buffer_`) that is reused for every log emission on the same
-/// thread. This minimises allocations and keeps the "logging disabled" fast
-/// path cheap.
-///
-/// As a consequence, logging is **not re-entrant within the same thread**
-/// during message construction. In particular, avoid code like:
-///
-///     ultraINFO << "x = " << f();
-///
-/// if `f()` (or anything it calls) may itself log using `ultraPRINT` /
-/// `ultraINFO`... the nested log call will reuse and overwrite the same
-/// thread-local buffer, potentially corrupting the outer message (truncation,
-/// interleaving or unexpected contents).
+/// This API is re-entrant because message construction happens in a local
+/// `std::string` via `std::format`.
 ///
 class log final
 {
@@ -72,26 +73,26 @@ public:
   /// printed.
   static level reporting_level;
 
+  [[nodiscard]] static bool enabled(level) noexcept;
+
   static std::filesystem::path setup_stream(const std::string & = "ultra");
 
   static void flush();
 
-  log() = default;
+  template<class... Args>
+  static void print(level l, std::format_string<Args...> fmt, Args &&... args)
+  {
+    emit(l, std::format(fmt, std::forward<Args>(args)...));
+  }
+
   log(const log &) = delete;
   log &operator=(const log &) = delete;
 
-  ~log();
-
-  [[nodiscard]] std::ostringstream &get(level = lSTDOUT);
-
 private:
-  // Thread-local buffer for message construction.
-  static thread_local std::ostringstream tls_buffer_;
+  static void emit(level, std::string);
 
   static std::unique_ptr<std::ostream> stream_;  // long term log stream
   static std::mutex stream_mutex_;  // protects `stream_` writes
-
-  level level_ {lSTDOUT};  // current log level
 };
 
 ///
@@ -108,8 +109,8 @@ private:
 /// efficient. But as always, "macro-itis" can introduce subtle bugs. In this
 /// example:
 ///
-///     ultraPRINT(log::lINFO) << "A number of " << NotifyClients()
-///                            << " were notified.";
+///     ultraPRINT(log::lINFO, "A number of {} were notified.",
+///                NotifyClients());
 ///
 /// the clients will be notified only if the logging level will be `log::lINFO`
 /// and greater.
@@ -118,22 +119,30 @@ private:
 /// When the `NDEBUG` is defined all the debug-level logging is eliminated at
 /// compile time.
 ///
-#if defined(NDEBUG)
-#define ultraPRINT(level) if ((level) == log::lDEBUG);               \
-                          else if ((level) < log::reporting_level);  \
-                          else ultra::log().get(level)
-#else
-#define ultraPRINT(level) if ((level) < log::reporting_level);  \
-                          else ultra::log().get(level)
-#endif
+#define ultraPRINT(level, ...)                                  \
+  do                                                            \
+  {                                                             \
+    const auto ultra_detail_log_level_(level);                  \
+    if ((ultra::internal::debug_logging_enabled                 \
+         || ultra_detail_log_level_ != ultra::log::lDEBUG)      \
+        && ultra::log::enabled(ultra_detail_log_level_))        \
+      ultra::log::print(ultra_detail_log_level_, __VA_ARGS__);  \
+  } while (false)
 
-#define ultraDEBUG   ultraPRINT(log::lDEBUG)
-#define ultraERROR   ultraPRINT(log::lERROR)
-#define ultraFATAL   ultraPRINT(log::lFATAL)
-#define ultraINFO    ultraPRINT(log::lINFO)
-#define ultraPAROUT  ultraPRINT(log::lPAROUT)
-#define ultraSTDOUT  ultraPRINT(log::lSTDOUT)
-#define ultraWARNING ultraPRINT(log::lWARNING)
+#define ultraDEBUG(...)   \
+  ultraPRINT(ultra::log::lDEBUG, __VA_ARGS__)
+#define ultraINFO(...)    \
+  ultraPRINT(ultra::log::lINFO, __VA_ARGS__)
+#define ultraSTDOUT(...)  \
+  ultraPRINT(ultra::log::lSTDOUT, __VA_ARGS__)
+#define ultraPAROUT(...)  \
+  ultraPRINT(ultra::log::lPAROUT, __VA_ARGS__)
+#define ultraWARNING(...) \
+  ultraPRINT(ultra::log::lWARNING, __VA_ARGS__)
+#define ultraERROR(...)   \
+  ultraPRINT(ultra::log::lERROR, __VA_ARGS__)
+#define ultraFATAL(...)   \
+  ultraPRINT(ultra::log::lFATAL, __VA_ARGS__)
 
 }  // namespace ultra
 

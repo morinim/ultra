@@ -98,8 +98,8 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 
   if (output_index && *output_index >= row_size)
   {
-    ultraWARNING << "Malformed example " << size()
-                 <<  " skipped (wrong column count)";
+    ultraWARNING("Malformed example {} skipped (wrong column count)",
+                   size());
     return false;
   }
 
@@ -108,8 +108,8 @@ bool dataframe::read_record(R r, std::optional<std::size_t> output_index,
 
   if (logical_size != columns.size())
   {
-    ultraWARNING << "Malformed example " << size()
-                 <<  " skipped (wrong column count)";
+    ultraWARNING("Malformed example {} skipped (wrong column count)",
+                   size());
     return false;
   }
 

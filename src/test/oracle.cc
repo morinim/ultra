@@ -288,12 +288,12 @@ TEST_CASE_FIXTURE(fixture, "reg_oracle")
 
         if (!almost_equal(sum / n, std::get<D_DOUBLE>(out_t)))
         {
-          ultraWARNING << std::get<D_DOUBLE>(out1) << "  "
-                       << std::get<D_DOUBLE>(out2) << "  "
-                       << std::get<D_DOUBLE>(out3) << "  "
-                       << std::get<D_DOUBLE>(out4) << "       "
-                       << sum / n << " "
-                       << std::get<D_DOUBLE>(out_t) << std::endl;
+          ultraWARNING("{}  {}  {}  {}       {} {}\n",
+                         std::get<D_DOUBLE>(out1),
+                         std::get<D_DOUBLE>(out2),
+                         std::get<D_DOUBLE>(out3),
+                         std::get<D_DOUBLE>(out4), sum / n,
+                         std::get<D_DOUBLE>(out_t));
         }
 
         CHECK(sum / n == doctest::Approx(std::get<D_DOUBLE>(out_t)));

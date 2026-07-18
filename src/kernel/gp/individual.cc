@@ -12,6 +12,7 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/nullary.h"
+#include "kernel/value_format.h"
 #include "kernel/gp/src/variable.h"
 
 #include "utility/log.h"
@@ -920,13 +921,13 @@ bool individual::is_valid() const
   {
     if (!genome_.empty())
     {
-      ultraERROR << "Inconsistent internal status for empty individual";
+      ultraERROR("Inconsistent internal status for empty individual");
       return false;
     }
 
     if (!signature().empty())
     {
-      ultraERROR << "Empty individual and non-empty signature";
+      ultraERROR("Empty individual and non-empty signature");
       return false;
     }
 
@@ -935,7 +936,8 @@ bool individual::is_valid() const
 
   if (!genome_(start()).func)
   {
-    ultraERROR << "Empty function pointer at start (" << start() << ")";
+    ultraERROR("Empty function pointer at start ({})",
+               ultra::internal::streamed(start()));
     return false;
   }
 
@@ -949,7 +951,7 @@ bool individual::is_valid() const
 
       if (!g.is_valid())
       {
-        ultraERROR << "Arity and actual arguments don't match";
+        ultraERROR("Arity and actual arguments don't match");
         return false;
       }
 
@@ -957,8 +959,9 @@ bool individual::is_valid() const
       {
         if (func->category() != c)
         {
-          ultraERROR << "Wrong category: " << l << ' ' << func->name()
-                     << " -> " << g.category() << " should be " << c;
+          ultraERROR("Wrong category: {} {} -> {} should be {}",
+                     ultra::internal::streamed(l), func->name(),
+                     g.category(), c);
           return false;
         }
 
@@ -968,16 +971,20 @@ bool individual::is_valid() const
           case d_address:
             if (const auto al(g.locus_of_argument(a)); al.index >= i)
             {
-              ultraERROR << "Argument `" << get_index(a, g.args)
-                         << "` (`" << a << "`) of function `" << l << ' '
-                         << func->name() << "` should be < `" << i << "`)";
+              ultraERROR("Argument `{}` (`{}`) of function `{} {}` "
+                         "should be < `{}`",
+                         get_index(a, g.args), a,
+                         ultra::internal::streamed(l), func->name(),
+                         i);
               return false;
             }
             else if (!genome_(al).func)
             {
-              ultraERROR << "Argument `" << get_index(a, g.args)
-                         << "` of function `" << l << ' ' << func->name()
-                         << "` is the address `" << al << "` of an empty gene";
+              ultraERROR("Argument `{}` of function `{} {}` "
+                         "is the address `{}` of an empty gene",
+                         get_index(a, g.args),
+                         ultra::internal::streamed(l), func->name(),
+                         ultra::internal::streamed(al));
               return false;
             }
             break;
@@ -985,10 +992,11 @@ bool individual::is_valid() const
           case d_nullary:
             if (const auto *n(get_if_nullary(a)); n->category() != c)
             {
-              ultraERROR << "Argument `" << get_index(a, g.args)
-                         << "` of function `" << l << ' ' << func->name()
-                         << "` is the nullary `" << a << " -> " << n->category()
-                         << "` but category should be `" << c << '`';
+              ultraERROR("Argument `{}` of function `{} {}` is the nullary `"
+                         "{} -> {}` but category should be `{}`",
+                         get_index(a, g.args),
+                         ultra::internal::streamed(l), func->name(),
+                         a, n->category(), c);
               return false;
             }
             break;
@@ -998,17 +1006,18 @@ bool individual::is_valid() const
 
   if (categories() == 1 && active_slots(*this) > size())
   {
-    ultraERROR << "`active_functions()` (== " << active_slots(*this)
-               << ") cannot be greater than `size()` (" << size()
-               << ") in single-category individuals";
+    ultraERROR("`active_functions()` (== {}) cannot be greater than "
+               "`size()` ({}) in single-category individuals",
+               active_slots(*this), size());
     return false;
   }
 
   if (signature() != hash())
   {
-    ultraERROR << "Actual signature ("
-               << signature() << ") doesn't match the individual` ("
-               << hash() << ')';
+    const auto s(signature());
+    const auto h(hash());
+    ultraERROR("Actual signature ({}{}) doesn't match the individual` "
+               "({}{})", s.data[0], s.data[1], h.data[0], h.data[1]);
     return false;
   }
 

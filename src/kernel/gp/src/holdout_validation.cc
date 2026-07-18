@@ -169,7 +169,7 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
     par.training_perc = 70;  // %
   else if (par.training_perc >= 100)
   {
-    ultraWARNING << "Holdout with 100% training is unusual";
+    ultraWARNING("Holdout with 100% training is unusual");
     par.training_perc = 100;
   }
 
@@ -201,12 +201,11 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
     split_dataset(stratum, par.training_perc, par.validation_perc,
                   training_set, validation_set, test_set);
 
-  ultraINFO << "Holdout validation settings: " << par.training_perc
-            << "% training (" << training_set.size() << "), "
-            << par.validation_perc << "% validation ("
-            << validation_set.size() << "), "
-            << 100 - par.training_perc - par.validation_perc << "% test ("
-            << test_set.size() << ')';
+  ultraINFO("Holdout validation settings: {}% training ({}), "
+              "{}% validation ({}), {}% test ({})",
+              par.training_perc, training_set.size(),
+              par.validation_perc, validation_set.size(),
+              100 - par.training_perc - par.validation_perc, test_set.size());
 }
 
 evaluation_context holdout_validation::training_setup(unsigned) noexcept

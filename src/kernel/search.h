@@ -23,8 +23,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <stop_token>
 #include <utility>

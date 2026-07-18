@@ -15,8 +15,60 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <format>
 #include <sstream>
 #include <vector>
+
+namespace
+{
+
+struct streamable_fitness
+{
+  constexpr streamable_fitness(double v) : value(v) {}
+
+  friend auto operator<=>(const streamable_fitness &,
+                          const streamable_fitness &) = default;
+
+  [[maybe_unused]] friend streamable_fitness operator+(
+    streamable_fitness lhs, streamable_fitness rhs)
+  {
+    return lhs.value + rhs.value;
+  }
+  [[maybe_unused]] friend streamable_fitness operator-(
+    streamable_fitness lhs, streamable_fitness rhs)
+  {
+    return lhs.value - rhs.value;
+  }
+  [[maybe_unused]] friend streamable_fitness operator*(
+    streamable_fitness lhs, streamable_fitness rhs)
+  {
+    return lhs.value * rhs.value;
+  }
+  [[maybe_unused]] friend streamable_fitness operator/(
+    streamable_fitness lhs, streamable_fitness rhs)
+  {
+    return lhs.value / rhs.value;
+  }
+  [[maybe_unused]] friend streamable_fitness operator-(streamable_fitness f)
+  {
+    return -f.value;
+  }
+  [[maybe_unused]] friend streamable_fitness operator/(
+    streamable_fitness lhs, double rhs)
+  {
+    return lhs.value / rhs;
+  }
+
+  [[maybe_unused]] friend std::ostream &operator<<(
+    std::ostream &out, const streamable_fitness &f)
+  {
+    return out << f.value;
+  }
+
+  double value;
+};
+
+}  // namespace
 
 TEST_SUITE("FITNESS")
 {
@@ -27,6 +79,8 @@ TEST_CASE("Concepts")
 
   static_assert(Fitness<double>);
   static_assert(Fitness<int>);
+  static_assert(Fitness<streamable_fitness>);
+  static_assert(!std::formattable<streamable_fitness, char>);
 
   static_assert(MultiDimFitness<fitnd>);
   static_assert(MultiDimFitness<std::vector<double>>);

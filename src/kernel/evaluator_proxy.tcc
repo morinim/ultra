@@ -32,7 +32,7 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
 
   if (!ts)
   {
-    ultraWARNING << "Evaluator proxy cache is disabled";
+    ultraWARNING("Evaluator proxy cache is disabled");
   }
 }
 
@@ -61,8 +61,9 @@ evaluator_fitness_t<E> evaluator_proxy<E>::operator()(
 
     if (!almost_equal(*cached_fit, effective_fit))  [[unlikely]]
     {
-      ultraERROR << "COLLISION [" << *cached_fit << " != " << effective_fit
-                 << ']';
+      ultraERROR("COLLISION [{} != {}]",
+                 internal::streamed(*cached_fit),
+                 internal::streamed(effective_fit));
       return effective_fit;
     }
 

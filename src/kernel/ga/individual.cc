@@ -11,7 +11,6 @@
  */
 
 #include "kernel/ga/individual.h"
-#include "kernel/hash_t.h"
 #include "kernel/print_internal.h"
 #include "kernel/random.h"
 
@@ -271,13 +270,13 @@ bool individual::is_valid() const
   {
     if (!genome_.empty())
     {
-      ultraERROR << "Inconsistent internal status for empty individual";
+      ultraERROR("Inconsistent internal status for empty individual");
       return false;
     }
 
     if (!signature().empty())
     {
-      ultraERROR << "Empty individual must have empty signature";
+      ultraERROR("Empty individual must have empty signature");
       return false;
     }
 
@@ -285,8 +284,9 @@ bool individual::is_valid() const
   }
   else /* !empty() */ if (signature() != hash())
   {
-    ultraERROR << "Wrong signature: " << signature() << " should be "
-               << hash();
+    ultraERROR("Wrong signature: {} should be {}",
+               internal::streamed(signature()),
+               internal::streamed(hash()));
     return false;
   }
 

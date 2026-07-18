@@ -113,8 +113,8 @@ bool sum_container::is_valid() const
 
   if (check_sum != sum())
   {
-    ultraERROR << name_ << ": incorrect cached sum of weights (stored: "
-               << sum() << ", correct: " << check_sum << ')';
+    ultraERROR("{}: incorrect cached sum of weights (stored: {}, correct: {})",
+                 name_, sum(), check_sum);
     return false;
   }
 
@@ -146,7 +146,7 @@ bool collection::is_valid() const
 {
   if (!all.is_valid() || !functions.is_valid() || !terminals.is_valid())
   {
-    ultraERROR << "(inside " << name_ << ")";
+    ultraERROR("(inside {})", name_);
     return false;
   }
 
@@ -162,8 +162,7 @@ bool collection::is_valid() const
     {
       if (!std::ranges::contains(terminals, s))
       {
-        ultraERROR << name_ << ": terminal " << s.sym->name()
-                   << " badly stored";
+        ultraERROR("{}: terminal {} badly stored", name_, s.sym->name());
         return false;
       }
     }
@@ -171,8 +170,7 @@ bool collection::is_valid() const
     {
       if (!std::ranges::contains(functions, s))
       {
-        ultraERROR << name_ << ": function " << s.sym->name()
-                   << " badly stored";
+        ultraERROR("{}: function {} badly stored", name_, s.sym->name());
         return false;
       }
     }
@@ -183,13 +181,13 @@ bool collection::is_valid() const
 
   if (ssize < functions.size())
   {
-    ultraERROR << name_ << ": wrong function set size (more than symbol set)";
+    ultraERROR("{}: wrong function set size (more than symbol set)", name_);
     return false;
   }
 
   if (ssize < terminals.size())
   {
-    ultraERROR << name_ << ": wrong terminal set size (more than symbol set)";
+    ultraERROR("{}: wrong terminal set size (more than symbol set)", name_);
     return false;
   }
 
@@ -197,7 +195,7 @@ bool collection::is_valid() const
   //
   //     if (ssize && !terminals.size())
   //     {
-  //       ultraERROR << name_ << ": no terminal in the symbol set";
+  //       ultraERROR("{}: no terminal in the symbol set", name_);
   //       return false;
   //     }
   //
@@ -501,7 +499,7 @@ bool symbol_set::is_valid() const
 {
   if (!enough_terminals())
   {
-    ultraERROR << "Symbol set doesn't contain enough symbols";
+    ultraERROR("Symbol set doesn't contain enough symbols");
     return false;
   }
 

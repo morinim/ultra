@@ -131,7 +131,7 @@ void evolution_strategy<E>::after_generation(
           && issmall(sum.az.fit_dist(layer).variance()))
       {
         layer.reset(pop.problem());
-        ultraINFO << "Resetting layer " << layer.uid();
+        ultraINFO("Resetting layer {}", layer.uid());
       }
   }
 }
@@ -292,7 +292,7 @@ void alps_es<E>::after_generation(P &pop,
       if (almost_equal(sum.az.fit_dist(*std::prev(layer)).mean(),
                        sum.az.fit_dist(*layer).mean()))
       {
-        ultraDEBUG << "ALPS: erasing layer UID=" << layer->uid();
+        ultraDEBUG("ALPS: erasing layer UID={}", layer->uid());
         layer = pop.erase(layer);
         layer_structure_changed = true;
       }
@@ -309,17 +309,16 @@ void alps_es<E>::after_generation(P &pop,
 
           if (new_allowed < prev_allowed)
           {
-            ultraDEBUG << "ALPS: decreasing allowed individuals of layer UID="
-                       << layer->uid() << " to " << new_allowed;
+            ultraDEBUG("ALPS: decreasing allowed individuals of layer "
+                         "UID={} to {}", layer->uid(), new_allowed);
 
             layer->allowed(new_allowed);
           }
         }
         else if (layer->allowed() < params.population.individuals)
         {
-          ultraDEBUG << "ALPS: restoring allowed individuals of layer UID="
-                     << layer->uid() << " to "
-                     << params.population.individuals;
+          ultraDEBUG("ALPS: restoring allowed individuals of layer UID={} "
+                       "to {}", layer->uid(), params.population.individuals);
 
           layer->allowed(params.population.individuals);
         }
@@ -334,13 +333,13 @@ void alps_es<E>::after_generation(P &pop,
   {
     if (pop.layers() < params.alps.max_layers)
     {
-      ultraDEBUG << "ALPS: adding layer";
+      ultraDEBUG("ALPS: adding layer");
       pop.add_layer();
       layer_structure_changed = true;
     }
     else
     {
-      ultraDEBUG << "ALPS: try moving up first layer";
+      ultraDEBUG("ALPS: try moving up first layer");
       this->replace_.try_promote_individuals(pop.front(), pop.layer(1));
       pop.init(pop.front());
     }

@@ -748,13 +748,13 @@ bool dataframe::is_valid() const
   case task_t::classification:
     if (cl_size <= 1)
     {
-      ultraERROR << "Not enough classes for a classification task";
+      ultraERROR("Not enough classes for a classification task");
       return false;
     }
     if (out_domain != d_int)
     {
-      ultraERROR << "Wrong output domain (" << out_domain
-                 << ") for a classification task";
+      ultraERROR("Wrong output domain ({}) for a classification task",
+                   as_integer(out_domain));
       return false;
     }
     break;
@@ -762,13 +762,13 @@ bool dataframe::is_valid() const
   case task_t::regression:
     if (cl_size != 0)
     {
-      ultraERROR << "Symbolic regression tasks require zero classes";
+      ultraERROR("Symbolic regression tasks require zero classes");
       return false;
     }
     if (out_domain != d_double && out_domain != d_int)
     {
-      ultraERROR << "Wrong output domain (" << out_domain
-                 << ") for a regression task";
+      ultraERROR("Wrong output domain ({}) for a regression task",
+                   as_integer(out_domain));
       return false;
     }
     break;
@@ -776,13 +776,13 @@ bool dataframe::is_valid() const
   case task_t::unsupervised:
     if (cl_size != 0)
     {
-      ultraERROR << "Unsupervised learning tasks require zero classes";
+      ultraERROR("Unsupervised learning tasks require zero classes");
       return false;
     }
     if (out_domain != d_void)
     {
-      ultraERROR << "Wrong output domain (" << out_domain
-                 << ") for a unsupervised task";
+      ultraERROR("Wrong output domain ({}) for a unsupervised task",
+                   as_integer(out_domain));
       return false;
     }
     break;

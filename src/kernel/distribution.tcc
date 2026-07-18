@@ -338,19 +338,23 @@ bool distribution<T>::is_valid() const
 
   if (isfinite(min()) && isfinite(mean()) && min() > mean())
   {
-    ultraERROR << "Distribution: min=" << min() << " > mean=" << mean();
+    ultraERROR("Distribution: min={} > mean={}",
+               internal::streamed(min()),
+               internal::streamed(mean()));
     return false;
   }
 
   if (isfinite(max()) && isfinite(mean()) && max() < mean())
   {
-    ultraERROR << "Distribution: max=" << max() << " < mean=" << mean();
+    ultraERROR("Distribution: max={} < mean={}",
+               internal::streamed(max()),
+               internal::streamed(mean()));
     return false;
   }
 
   if (isnan(variance()) || !isnonnegative(variance()))
   {
-    ultraERROR << "Distribution: negative variance";
+    ultraERROR("Distribution: negative variance");
     return false;
   }
 
@@ -359,13 +363,13 @@ bool distribution<T>::is_valid() const
   {
     if (!v)
     {
-      ultraERROR << "Seen histogram contains zero-count bin";
+      ultraERROR("Seen histogram contains zero-count bin");
       return false;
     }
 
     if (v > std::numeric_limits<std::size_t>::max() - total)
     {
-      ultraERROR << "Seen histogram total overflow";
+      ultraERROR("Seen histogram total overflow");
       return false;
     }
 
@@ -374,8 +378,8 @@ bool distribution<T>::is_valid() const
 
   if (total != size())
   {
-    ultraERROR << "Seen histogram total " << total
-               << " does not match distribution size " << size_;
+    ultraERROR("Seen histogram total {} does not match distribution size {}",
+                 total, size_);
     return false;
   }
 

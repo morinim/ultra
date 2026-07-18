@@ -12,14 +12,30 @@
 
 #include "utility/log.h"
 
-#include <filesystem>
-#include <fstream>
-
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <filesystem>
+#include <fstream>
+
 namespace
 {
+
+struct streamable_value
+{
+  double value;
+};
+
+std::ostream &operator<<(std::ostream &out, const streamable_value &value)
+{
+  return out << value.value;
+}
+
+std::string nested_log()
+{
+  ultraINFO("inner");
+  return "value";
+}
 
 class scoped_file_cleanup
 {
@@ -55,6 +71,50 @@ TEST_CASE("Order of levels")
   static_assert(log::lFATAL < log::lOFF);
 }
 
+TEST_CASE("Disabled arguments are not evaluated")
+{
+  int calls(0);
+  ultra::log::reporting_level = ultra::log::lOFF;
+
+  ultraINFO("{}", ++calls);
+
+  CHECK(calls == 0);
+}
+
+TEST_CASE("Stream conversion compatibility")
+{
+  const streamable_value value{1.23456789};
+
+  CHECK(ultra::internal::streamed(value) == "1.23457");
+}
+
+TEST_CASE("Nested logging preserves messages")
+{
+  using namespace ultra;
+
+  log::reporting_level = log::lINFO;
+
+  const auto logpath(log::setup_stream((std::filesystem::temp_directory_path()
+                                        / "nested_log").string()));
+  REQUIRE(!logpath.empty());
+
+  scoped_file_cleanup cleanup(logpath);
+
+  ultraINFO("outer {}", nested_log());
+  log::flush();
+
+  std::ifstream logstream(logpath);
+  std::string inner, outer;
+
+  REQUIRE(std::getline(logstream, inner));
+  REQUIRE(std::getline(logstream, outer));
+  CHECK(inner.ends_with("\tINFO\tinner"));
+  CHECK(outer.ends_with("\tINFO\touter value"));
+
+  std::string extra;
+  CHECK(!std::getline(logstream, extra));
+}
+
 TEST_CASE("Reporting level")
 {
   using namespace ultra;
@@ -70,7 +130,7 @@ TEST_CASE("Reporting level")
 
   log::reporting_level = log::lOFF;
   msg = "Fatal message";
-  ultraFATAL << msg;
+  ultraFATAL("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -78,7 +138,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lFATAL;
-  ultraFATAL << msg;
+  ultraFATAL("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -87,7 +147,7 @@ TEST_CASE("Reporting level")
   }
 
   msg = "Error message";
-  ultraERROR << msg;
+  ultraERROR("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -96,7 +156,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lERROR;
-  ultraERROR << msg;
+  ultraERROR("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -106,7 +166,7 @@ TEST_CASE("Reporting level")
   }
 
   msg = "Warning message";
-  ultraWARNING << msg;
+  ultraWARNING("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -116,7 +176,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lWARNING;
-  ultraWARNING << msg;
+  ultraWARNING("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -127,7 +187,7 @@ TEST_CASE("Reporting level")
   }
 
   msg = "ParOut message";
-  ultraPAROUT << msg;
+  ultraPAROUT("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -138,7 +198,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lPAROUT;
-  ultraPAROUT << msg;
+  ultraPAROUT("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -150,7 +210,7 @@ TEST_CASE("Reporting level")
   }
 
   msg = "StdOut message";
-  ultraSTDOUT << msg;
+  ultraSTDOUT("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -162,7 +222,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lSTDOUT;
-  ultraSTDOUT << msg;
+  ultraSTDOUT("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -175,7 +235,7 @@ TEST_CASE("Reporting level")
   }
 
   msg = "Info message";
-  ultraINFO << msg;
+  ultraINFO("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -188,7 +248,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lINFO;
-  ultraINFO << msg;
+  ultraINFO("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -203,7 +263,7 @@ TEST_CASE("Reporting level")
 
 #if !defined(NDEBUG)
   msg = "Debug message";
-  ultraDEBUG << msg;
+  ultraDEBUG("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -217,7 +277,7 @@ TEST_CASE("Reporting level")
   }
 
   log::reporting_level = log::lDEBUG;
-  ultraDEBUG << msg;
+  ultraDEBUG("{}", msg);
   log::flush();
   {
     std::ifstream logstream(logpath);
@@ -234,4 +294,4 @@ TEST_CASE("Reporting level")
 
 }
 
-}  // TEST_SUITE("LOG")
+}  // TEST_SUITE

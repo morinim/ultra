@@ -106,97 +106,97 @@ bool parameters::is_valid(bool force_defined) const
   {
     if (!alps.age_gap)
     {
-      ultraERROR << "Undefined `alps.age_gap` parameter";
+      ultraERROR("Undefined `alps.age_gap` parameter");
       return false;
     }
 
     if (!alps.max_layers)
     {
-      ultraERROR << "Undefined `alps.max_layers` parameter";
+      ultraERROR("Undefined `alps.max_layers` parameter");
       return false;
     }
 
     if (!in_0_1(alps.p_main_layer))
     {
-      ultraERROR << "Undefined `alps.p_main_layer` parameter";
+      ultraERROR("Undefined `alps.p_main_layer` parameter");
       return false;
     }
 
     if (!evolution.brood_recombination)
     {
-      ultraERROR << "Undefined `evolution.brood_recombination` data member";
+      ultraERROR("Undefined `evolution.brood_recombination` data member");
       return false;
     }
 
     if (!in_0_1(evolution.elitism))
     {
-      ultraERROR << "Undefined `evolution.elitism` data member";
+      ultraERROR("Undefined `evolution.elitism` data member");
       return false;
     }
 
     if (!evolution.generations)
     {
-      ultraERROR << "Undefined `evolution.generations` data member";
+      ultraERROR("Undefined `evolution.generations` data member");
       return false;
     }
 
     if (!evolution.mate_zone)
     {
-      ultraERROR << "Undefined `evolution.mate_zone` data member";
+      ultraERROR("Undefined `evolution.mate_zone` data member");
       return false;
     }
 
     if (!evolution.max_stuck_gen)
     {
-      ultraERROR << "Undefined `evolution.max_stuck_gen` data member";
+      ultraERROR("Undefined `evolution.max_stuck_gen` data member");
       return false;
     }
 
     if (!in_0_1(evolution.p_cross))
     {
-      ultraERROR << "Undefined `evolution.p_cross` data member";
+      ultraERROR("Undefined `evolution.p_cross` data member");
       return false;
     }
 
     if (!in_0_1(evolution.p_mutation))
     {
-      ultraERROR << "Undefined `evolution.p_mutation` data member";
+      ultraERROR("Undefined `evolution.p_mutation` data member");
       return false;
     }
 
     if (!evolution.tournament_size)
     {
-      ultraERROR << "Undefined `evolution.tournament_size` data member";
+      ultraERROR("Undefined `evolution.tournament_size` data member");
       return false;
     }
 
     if (!population.individuals)
     {
-      ultraERROR << "Undefined `population.individuals` data member";
+      ultraERROR("Undefined `population.individuals` data member");
       return false;
     }
 
     if (!population.init_subgroups)
     {
-      ultraERROR << "Undefined `population.init_subgroups` data member";
+      ultraERROR("Undefined `population.init_subgroups` data member");
       return false;
     }
 
     if (!population.min_individuals)
     {
-      ultraERROR << "Undefined `population.min_individuals` data member";
+      ultraERROR("Undefined `population.min_individuals` data member");
       return false;
     }
 
     if (!slp.code_length)
     {
-      ultraERROR << "Undefined `slp.code_length` data member";
+      ultraERROR("Undefined `slp.code_length` data member");
       return false;
     }
 
     if (!team.individuals)
     {
-      ultraERROR << "Undefined `team.individuals` parameter";
+      ultraERROR("Undefined `team.individuals` parameter");
       return false;
     }
   }  // if (force_defined)
@@ -206,56 +206,56 @@ bool parameters::is_valid(bool force_defined) const
 
   if (alps.max_layers == 1)
   {
-    ultraERROR << "ALPS require at least two layers";
+    ultraERROR("ALPS require at least two layers");
     return false;
   }
 
   if (alps.max_layers && population.init_subgroups
       && alps.max_layers < population.init_subgroups)
   {
-    ultraERROR << "`alps.max_layers` must be greater than or equal to "
-               << "`population.init_subgroups`";
+    ultraERROR("`alps.max_layers` must be greater than or equal to "
+                 "`population.init_subgroups`");
     return false;
   }
 
   if (evolution.tournament_size > evolution.max_tournament_size)
   {
-    ultraERROR << "`evolution.tournament_size` out of range";
+    ultraERROR("`evolution.tournament_size` out of range");
     return false;
   }
 
   if (refinement.tournament_size > evolution.max_tournament_size)
   {
-    ultraERROR << "`refinement.tournament_size` out of range";
+    ultraERROR("`refinement.tournament_size` out of range");
     return false;
   }
 
   if (population.min_individuals == 1)
   {
-    ultraERROR << "At least 2 individuals for layer";
+    ultraERROR("At least 2 individuals for layer");
     return false;
   }
 
   if (population.individuals && population.min_individuals
       && population.individuals < population.min_individuals)
   {
-    ultraERROR << "`population.individuals` must be greater than or equal to "
-               << "`population.min_individuals";
+    ultraERROR("`population.individuals` must be greater than or equal to "
+                 "`population.min_individuals");
     return false;
   }
 
   if (population.individuals && evolution.tournament_size
       && evolution.tournament_size > population.individuals)
   {
-    ultraERROR << "`evolution.tournament_size` (" << evolution.tournament_size
-              << ") cannot be greater than population size ("
-              << population.individuals << ")";
+    ultraERROR("`evolution.tournament_size` ({}) cannot be greater than "
+                 "population size ({})",
+                 evolution.tournament_size, population.individuals);
     return false;
   }
 
   if (de.weight.min > de.weight.sup)
   {
-    ultraERROR << "Wrong DE dither interval";
+    ultraERROR("Wrong DE dither interval");
     return false;
   }
 
@@ -263,31 +263,31 @@ bool parameters::is_valid(bool force_defined) const
   // satisfy their domain constraints.
   if (refinement.de.rel_radius < 0.0)
   {
-    ultraERROR << "`refinement.de.rel_radius` cannot be negative";
+    ultraERROR("`refinement.de.rel_radius` cannot be negative");
     return false;
   }
 
   if (refinement.de.min_radius < 0.0)
   {
-    ultraERROR << "`refinement.de.min_radius` cannot be negative";
+    ultraERROR("`refinement.de.min_radius` cannot be negative");
     return false;
   }
 
   if (!refinement.de.individuals)
   {
-    ultraERROR << "`refinement.de.individuals` must be positive";
+    ultraERROR("`refinement.de.individuals` must be positive");
     return false;
   }
 
   if (!refinement.de.generations)
   {
-    ultraERROR << "`refinement.de.generations` must be positive";
+    ultraERROR("`refinement.de.generations` must be positive");
     return false;
   }
 
   if (!in_0_1(refinement.fraction))
   {
-    ultraERROR << "`refinement.fraction` is out of range";
+    ultraERROR("`refinement.fraction` is out of range");
     return false;
   }
 

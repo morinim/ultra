@@ -164,7 +164,7 @@ evolution<E>::evolution(const problem &prob, E &eva) : pop_(prob), eva_(eva)
 {
   Ensures(is_valid());
 
-  ultraDEBUG << "Creating a new instance of evolution class";
+  ultraDEBUG("Creating a new instance of evolution class");
 }
 
 ///
@@ -208,10 +208,11 @@ void evolution<E>::print(message m, internal::print_status &ps) const
 
   if (m == message::summary)
   {
-    ultraPAROUT << tags << std::setw(8) << lexical_cast<std::string>(elapsed)
-                << std::setw(8) << sum_.generation
-                << std::setw(12) << str_phase << ':'
-                << std::setw(13) << sum_.best().fit;
+    const auto fitness(internal::streamed(sum_.best().fit));
+
+    ultraPAROUT("{}{:>8}{:>8}{:>12}:{:>13}", tags,
+                lexical_cast<std::string>(elapsed), sum_.generation,
+                str_phase, fitness);
   }
   else  // message::status
   {
@@ -584,7 +585,7 @@ summary<typename evolution<E>::individual_t,
       return false;
     });
 
-  ultraDEBUG << "Calling evolution_strategy init method";
+  ultraDEBUG("Calling evolution_strategy init method");
   strategy.init(pop_);  // strategy-specific customisation point
 
   internal::task_group tasks(strategy.max_parallelism(pop_));
@@ -596,13 +597,13 @@ summary<typename evolution<E>::individual_t,
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 
-    ultraDEBUG << "Launching tasks for generation " << sum_.generation;
+    ultraDEBUG("Launching tasks for generation {}", sum_.generation);
     const auto subpops(pop_.range_of_layers());
 
     for (auto l(subpops.begin()); l != subpops.end(); ++l)
       tasks.submit(evolve_subpop, l);
 
-    ultraDEBUG << "Tasks running";
+    ultraDEBUG("Tasks running");
 
     while (!tasks.wait_for(10ms))
     {
@@ -615,7 +616,7 @@ summary<typename evolution<E>::individual_t,
       if (!source.stop_requested() && stop_condition()) [[unlikely]]
       {
         source.request_stop();
-        ultraDEBUG << "Sending closing message to tasks";
+        ultraDEBUG("Sending closing message to tasks");
       }
     }
 
@@ -663,11 +664,9 @@ summary<typename evolution<E>::individual_t,
   sum_.elapsed = ps.from_start.elapsed();
 
   if (emit_messages_)
-  {
-    ultraINFO << "Evolution completed at generation: " << sum_.generation
-              << ". Elapsed time: "
-              << lexical_cast<std::string>(ps.from_start.elapsed());
-  }
+    ultraINFO("Evolution completed at generation: {}. Elapsed time: {}",
+                sum_.generation,
+                lexical_cast<std::string>(ps.from_start.elapsed()));
 
   return sum_;
 }

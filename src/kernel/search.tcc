@@ -47,9 +47,7 @@ void basic_search<ES, E>::init()
   tune_parameters();
 
   if (!load())
-  {
-    ultraINFO << "Init continues without cache";
-  }
+    ultraINFO("Init continues without cache");
 }
 
 template<template<class> class ES, Evaluator E>
@@ -133,17 +131,13 @@ void basic_search<ES, E>::after_evolution(
   {
     std::string accuracy;
     if (m.accuracy)
-    {
-      std::ostringstream ss;
-      ss << *m.accuracy * 100.0 << '%';
-      accuracy = ss.str();
-    }
+      accuracy = std::format("{:.6g}%", *m.accuracy * 100.0);
 
     if (emit_messages_)
     {
-      ultraPAROUT << tags << "Run " << run << ' ' << phase[i]
-                  << ". Fitness: " << *m.fitness
-                  << "  Accuracy: " << accuracy;
+      ultraPAROUT("{}Run {} {}. Fitness: {}  Accuracy: {}",
+                  tags, run, phase[i],
+                  internal::streamed(*m.fitness), accuracy);
     }
 
     ++i;
@@ -385,24 +379,24 @@ bool basic_search<ES, E>::load()
 
   if (!prob_.params.cache.size)
   {
-    ultraINFO << "Cache size is 0; skipping cache load from " << file;
+    ultraINFO("Cache size is 0; skipping cache load from {}", file.string());
     return false;
   }
 
   std::ifstream in(file);
   if (!in)
   {
-    ultraWARNING << "Cannot open cache file " << file;
+    ultraWARNING("Cannot open cache file {}", file.string());
     return false;
   }
 
   if (!eva_.load_cache(in))
   {
-    ultraWARNING << "Cannot load cache from " << file;
+    ultraWARNING("Cannot load cache from {}", file.string());
     return false;
   }
 
-  ultraINFO << "Loaded cache from " << file;
+  ultraINFO("Loaded cache from {}", file.string());
   return true;
 }
 

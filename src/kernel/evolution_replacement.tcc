@@ -229,8 +229,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
       // legitimately change before commit.
       if (pops.has_secondary())
       {
-        ultraERROR << "ALPS snapshot/commit mismatch in non-final layer"
-                   << pop.uid();
+        ultraERROR("ALPS snapshot/commit mismatch in non-final layer{}",
+                     pop.uid());
       }
 
       return false;

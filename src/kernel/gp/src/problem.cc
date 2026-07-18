@@ -90,14 +90,13 @@ bool compatible(const function::param_data_types &instance,
 ///
 problem::problem(dataframe d, symbol_init init_flags)
 {
-  ultraINFO << "Importing dataset...";
+  ultraINFO("Importing dataset...");
   data[dataset_t::training] = std::move(d);
-  ultraINFO << "...dataset imported";
+  ultraINFO("...dataset imported");
 
-  ultraINFO << "Examples: " << data[dataset_t::training].size()
-            << ", features: " << variables()
-            << ", classes: " << classes()
-            << ", categories: " << categories();
+  ultraINFO("Examples: {}, features: {}, classes: {}, categories: {}",
+              data[dataset_t::training].size(), variables(), classes(),
+              categories());
 
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
   data[dataset_t::test].clone_schema(data[dataset_t::training]);
@@ -227,7 +226,7 @@ std::expected<void, problem::readiness_error> problem::ready() const
 ///
 void problem::setup_terminals(symbol_init init_flags)
 {
-  ultraINFO << "Setting up terminals...";
+  ultraINFO("Setting up terminals...");
 
   const auto &columns(data[dataset_t::training].columns);
   if (columns.size() <= 1)
@@ -251,7 +250,7 @@ void problem::setup_terminals(symbol_init init_flags)
     for (const auto &[category, inserted] : variables)
       if (!inserted.empty())
       {
-        ultraINFO << "Category " << category << " variables:" << inserted;
+        ultraINFO("Category {} variables:{}", category, inserted);
       }
   }
 
@@ -280,8 +279,8 @@ void problem::setup_terminals(symbol_init init_flags)
             ok = insert<str::literal>(std::get<D_STRING>(s), category);
             break;
           default:
-            ultraWARNING << "Attribute '" << s << "' from column `"
-                         << columns[i].name() << "` not inserted";
+            ultraWARNING("Attribute '{}' from column `{}` not inserted",
+                           lexical_cast<std::string>(s), columns[i].name());
           }
 
           if (ok)
@@ -298,8 +297,8 @@ void problem::setup_terminals(symbol_init init_flags)
           attributes_in_category += " `" + lexical_cast<std::string>(attribute)
                                     + "`";
 
-        ultraINFO << "Category " << category << " attributes: "
-                  << attributes_in_category;
+        ultraINFO("Category {} attributes: {}", category,
+                    attributes_in_category);
       }
   }
 
@@ -326,13 +325,13 @@ void problem::setup_terminals(symbol_init init_flags)
 
       if (inserted_terminal)
       {
-        ultraINFO << "Category " << category << " ephemeral `"
-                  << inserted_terminal->name() << '`';
+        ultraINFO("Category {} ephemeral `{}`", category,
+                    inserted_terminal->name());
       }
     }
   }
 
-  ultraINFO << "...terminals ready";
+  ultraINFO("...terminals ready");
 }
 
 ///
@@ -354,22 +353,18 @@ void problem::setup_terminals(symbol_init init_flags)
 ///
 void problem::setup_symbols(symbol_init init_flags)
 {
-  ultraINFO << "Automatically setting up symbol set...";
+  ultraINFO("Automatically setting up symbol set...");
 
   if (sset.terminals())
-  {
-    ultraWARNING << "Terminals already present, initialisation skipped";
-  }
+    ultraWARNING("Terminals already present, initialisation skipped");
   else
     setup_terminals(init_flags);
 
   if (sset.functions())
-  {
-    ultraWARNING << "Functions already present, initialisation skipped";
-  }
+    ultraWARNING("Functions already present, initialisation skipped");
   else if (has_flag(init_flags, symbol_init::functions))
   {
-    ultraINFO << "Setting up functions...";
+    ultraINFO("Setting up functions...");
 
     std::map<symbol::category_t, std::string> symbols;
     const auto add_symbol([&symbols](symbol *s)
@@ -416,8 +411,8 @@ void problem::setup_symbols(symbol_init init_flags)
         break;
 
       default:
-        ultraWARNING << "No predefined functions for domain " << domain
-                     << " (category " << category << ')';
+        ultraWARNING("No predefined functions for domain {} (category {})",
+                       as_integer(domain), category);
         break;
       }
     }
@@ -425,13 +420,13 @@ void problem::setup_symbols(symbol_init init_flags)
     for (const auto &[category, names] : symbols)
       if (!names.empty())
       {
-        ultraINFO << "Category " << category << " symbols:" << names;
+        ultraINFO("Category {} symbols:{}", category, names);
       }
 
-    ultraINFO << "...functions ready";
+    ultraINFO("...functions ready");
   }
 
-  ultraINFO << "...symbol set setup complete";
+  ultraINFO("...symbol set setup complete");
 }
 
 ///

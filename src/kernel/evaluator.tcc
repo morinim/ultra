@@ -25,7 +25,7 @@
 template<Individual I>
 test_evaluator<I>::test_evaluator(test_evaluator_type et) : et_(et)
 {
-  ultraDEBUG << "Creating a new instance of test_evaluator " << et;
+  ultraDEBUG("Creating a new instance of test_evaluator {}", as_integer(et));
 }
 
 ///

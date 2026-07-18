@@ -183,8 +183,7 @@ void basic_search<ES, E>::tune_parameters()
     else
       params.population.init_subgroups = dflt.population.init_subgroups;
 
-    ultraINFO << "Number of layers set to "
-              << params.population.init_subgroups;
+    ultraINFO("Number of layers set to {}", params.population.init_subgroups);
   }
 
   // A larger number of training cases requires an increase in the population
@@ -208,7 +207,7 @@ void basic_search<ES, E>::tune_parameters()
     if (params.population.individuals < 4)
       params.population.individuals = 4;
 
-    ultraINFO << "Population size set to " << params.population.individuals;
+    ultraINFO("Population size set to {}", params.population.individuals);
   }
 
   Ensures(params.is_valid(true));

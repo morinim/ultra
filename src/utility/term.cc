@@ -157,9 +157,7 @@ bool term::user_stop() const
   const bool stop(keypressed('.'));
 
   if (stop)
-  {
-    ultraINFO << "User request to stop evolution...";
-  }
+    ultraINFO("User request to stop evolution...");
 
   return stop;
 }
