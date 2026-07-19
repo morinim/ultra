@@ -88,7 +88,7 @@ basic_search<ES, E> &basic_search<ES, E>::stop_source(std::stop_source ss)
 /// disabled.
 ///
 template<template<class> class ES, Evaluator E>
-basic_search<ES, E> &basic_search<ES, E>::logger(search_log &sl)
+basic_search<ES, E> &basic_search<ES, E>::logger(search_log &sl) noexcept
 {
   search_log_ = &sl;
   return *this;
@@ -124,7 +124,8 @@ void basic_search<ES, E>::after_evolution(
 {
   Expects(mm.size());
 
-  const std::vector phase = {"TRAINING", "VALIDATION"};
+  static const std::vector<std::string> phase_names {"TRAINING", "VALIDATION"};
+
   const std::string tags(tag_.empty() ? tag_ : "[" + tag_ + "] ");
 
   for (std::size_t i(0); const auto &m : mm)
@@ -135,9 +136,11 @@ void basic_search<ES, E>::after_evolution(
 
     if (emit_messages_)
     {
+      const auto phase(mm.size() <= phase_names.size()
+                       ? phase_names[i] : "PHASE" + std::to_string(i));
+
       ultraPAROUT("{}Run {} {}. Fitness: {}  Accuracy: {}",
-                  tags, run, phase[i],
-                  internal::streamed(*m.fitness), accuracy);
+                  tags, run, phase, internal::streamed(*m.fitness), accuracy);
     }
 
     ++i;

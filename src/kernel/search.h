@@ -66,7 +66,7 @@ public:
 
   // ---- Hooks ----
   basic_search &after_generation(after_generation_callback_t);
-  basic_search &logger(search_log &);
+  basic_search &logger(search_log &) noexcept;
   basic_search &refinement(refinement_callback_t);
   basic_search &on_training_new_best(on_training_new_best_callback_t);
 
@@ -109,7 +109,6 @@ private:
   virtual void init();
 
   bool load();
-  //bool save() const;
 
   mutable search_log *search_log_ {nullptr};
   std::stop_source stop_source_ {std::nostopstate};
