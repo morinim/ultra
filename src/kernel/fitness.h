@@ -160,7 +160,6 @@ private:
 // ***********************************************************************
 [[nodiscard]] fitnd abs(fitnd);
 [[nodiscard]] fitnd sqrt(fitnd);
-[[nodiscard]] fitnd combine(const fitnd &, const fitnd &);
 std::ostream &operator<<(std::ostream &, const fitnd &);
 std::istream &operator>>(std::istream &, fitnd &);
 

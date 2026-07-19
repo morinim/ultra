@@ -83,14 +83,10 @@ template<MultiDimFitness F>
 
   bool one_better(false);
 
-  auto it_lhs(std::ranges::begin(lhs));
-  auto it_rhs(std::ranges::begin(rhs));
-  const auto end_lhs(std::ranges::end(lhs));
-
-  for (; it_lhs != end_lhs; ++it_lhs, ++it_rhs)
-    if (*it_rhs < *it_lhs)
+  for (auto [l, r] : std::views::zip(lhs, rhs))
+    if (l > r)
       one_better = true;
-    else if (*it_lhs < *it_rhs)
+    else if (l < r)
       return false;
 
   return one_better;
