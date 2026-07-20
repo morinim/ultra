@@ -1961,20 +1961,15 @@ std::vector<double> make_positions(std::size_t n)
 {
   assert(n);
 
-  std::vector<double> positions(n);
-  std::iota(positions.begin(), positions.end(), 0.0);
-
-  return positions;
+  return std::views::iota(0uz, n)
+       | std::views::transform([](auto i) { return static_cast<double>(i); })
+       | std::ranges::to<std::vector<double>>();
 }
 
 std::vector<const char *> to_cstr_vector(const std::vector<std::string> &v)
 {
-  std::vector<const char *> out(v.size());
-
-  std::ranges::transform(v, out.begin(),
-                         [](const auto &str) noexcept { return str.data(); });
-
-  return out;
+  return v | std::views::transform(&std::string::c_str)
+           | std::ranges::to<std::vector>();
 }
 
 labels_data make_labels(const rs::collection_t &c)
@@ -2072,6 +2067,26 @@ std::optional<std::string> read_log_file::get_line()
 }
 
 //
+template<typename Queue, typename DataClass>
+void process_log_stream(read_log_file &log_file, Queue &queue,
+                        ultra::timer &last_read,
+                        const std::stop_token &stoken)
+{
+  if (auto line(log_file.get_line()); line)
+  {
+    do
+    {
+      if (stoken.stop_requested()) break;
+
+      queue.push(DataClass(*line));
+      line = log_file.get_line();
+    } while (line);
+
+    last_read.restart();
+  }
+}
+
+//
 // Asynchronously reads all specified log files into queues for subsequent
 // processing.
 //
@@ -2089,44 +2104,12 @@ void get_logs(std::stop_token stoken)
 
   while (!stoken.stop_requested())
   {
-    if (auto line(dynamic_log.get_line()); line)
-    {
-      do
-      {
-        if (stoken.stop_requested()) break;
-
-        dynamic_queue.push(dynamic_data(*line));
-        line = dynamic_log.get_line();
-      } while (line);
-
-      last_read.restart();
-    }
-
-    if (auto line(population_log.get_line()); line)
-    {
-      do
-      {
-        if (stoken.stop_requested()) break;
-
-        population_queue.push(population_line(*line));
-        line = population_log.get_line();
-      } while (line);
-
-      last_read.restart();
-    }
-
-    if (auto line(layers_log.get_line()); line)
-    {
-      do
-      {
-        if (stoken.stop_requested()) break;
-
-        layers_queue.push(layers_line(*line));
-        line = layers_log.get_line();
-      } while (line);
-
-      last_read.restart();
-    }
+    process_log_stream<decltype(dynamic_queue), dynamic_data>(
+      dynamic_log, dynamic_queue, last_read, stoken);
+    process_log_stream<decltype(population_queue), population_line>(
+      population_log, population_queue, last_read, stoken);
+    process_log_stream<decltype(layers_queue), layers_line>(
+      layers_log, layers_queue, last_read, stoken);
 
     const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
                          last_read.elapsed()));
