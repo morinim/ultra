@@ -21,7 +21,7 @@ template<Fitness F>
 model_measurements<F>::model_measurements(const F &f, double a)
   : fitness(f), accuracy(a)
 {
-  Expects(0.0 <= accuracy && accuracy <= 1.0);
+  Expects(in_0_1(accuracy));
 }
 
 ///

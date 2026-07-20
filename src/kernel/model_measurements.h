@@ -16,6 +16,7 @@
 #include <optional>
 
 #include "kernel/fitness.h"
+#include "utility/misc.h"
 
 namespace ultra
 {

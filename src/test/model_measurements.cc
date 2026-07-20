@@ -96,6 +96,49 @@ TEST_CASE("Serialization")
 
     CHECK(m1.empty());
   }
+
+  SUBCASE("Partially Empty")
+  {
+    model_measurements<double> m1;
+    m1.fitness = -5.0;
+
+    CHECK(m1.save(ss));
+
+    model_measurements<double> m2;
+    CHECK(m2.load(ss));
+
+    CHECK(m2.fitness.has_value());
+    CHECK(*m2.fitness == doctest::Approx(-5.0));
+    CHECK(!m2.accuracy.has_value());
+
+    ss.str("");
+    ss.clear();
+
+    model_measurements<double> m3;
+    m3.accuracy = .85;
+
+    CHECK(m3.save(ss));
+
+    model_measurements<double> m4;
+    CHECK(m4.load(ss));
+
+    CHECK(!m4.fitness.has_value());
+    CHECK(m4.accuracy.has_value());
+    CHECK(*m4.accuracy == doctest::Approx(.85));
+  }
+
+  SUBCASE("Load Failure Rollback")
+  {
+    model_measurements m(-5.0, .8);
+
+    std::stringstream invalid_ss("1 invalid_fitness_data");
+    CHECK(!m.load(invalid_ss));
+
+    CHECK(m.fitness.has_value());
+    CHECK(*m.fitness == doctest::Approx(-5.0));
+    CHECK(m.accuracy.has_value());
+    CHECK(*m.accuracy == doctest::Approx(.8));
+  }
 }
 
 }  // TEST_SUITE("MODEL MEASUREMENTS")
