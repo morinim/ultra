@@ -1979,14 +1979,9 @@ std::vector<const char *> to_cstr_vector(const std::vector<std::string> &v)
 
 labels_data make_labels(const rs::collection_t &c)
 {
-  labels_data out;
-
-  out.reserve(c.size());
-
-  for (const auto &[name, _] : c)
-    out.push_back(name.c_str());
-
-  return out;
+  return c | std::views::keys
+           | std::views::transform(&std::string::c_str)
+           | std::ranges::to<labels_data>();
 }
 
 std::string random_string()
