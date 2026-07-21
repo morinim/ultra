@@ -2078,23 +2078,51 @@ std::optional<std::string> read_log_file::get_line()
   return {};
 }
 
-//
-template<typename Queue, typename DataClass>
-void process_log_stream(read_log_file &log_file, Queue &queue,
-                        ultra::timer &last_read,
-                        const std::stop_token &stoken)
+[[nodiscard]] std::optional<read_log_file> open_log_file(
+  const fs::path &filename)
 {
-  if (auto line(log_file.get_line()); line)
+  if (filename.empty())
+    return {};
+
+  try
   {
-    do
+    return std::optional<read_log_file>(std::in_place, filename);
+  }
+  catch (const std::runtime_error &e)
+  {
+    std::cerr << "Stopped monitoring " << filename << ": " << e.what() << '\n';
+    return {};
+  }
+}
+
+template<typename Queue, typename DataClass>
+[[nodiscard]] bool process_log_stream(read_log_file &log_file, Queue &queue,
+                                      ultra::timer &last_read,
+                                      const std::stop_token &stoken,
+                                      const fs::path &filename)
+{
+  try
+  {
+    if (auto line(log_file.get_line()); line)
     {
-      if (stoken.stop_requested()) break;
+      do
+      {
+        if (stoken.stop_requested())
+          break;
 
-      queue.push(DataClass(*line));
-      line = log_file.get_line();
-    } while (line);
+        queue.push(DataClass(*line));
+        line = log_file.get_line();
+      } while (line);
 
-    last_read.restart();
+      last_read.restart();
+    }
+
+    return true;
+  }
+  catch (const std::runtime_error &e)
+  {
+    std::cerr << "Stopped monitoring " << filename << ": " << e.what() << '\n';
+    return false;
   }
 }
 
@@ -2104,28 +2132,50 @@ void process_log_stream(read_log_file &log_file, Queue &queue,
 //
 void get_logs(std::stop_token stoken)
 {
-  assert(!monitor::slog.dynamic_file_path.empty()
-         || !monitor::slog.layers_file_path.empty()
-         || !monitor::slog.population_file_path.empty());
-
-  read_log_file dynamic_log(monitor::slog.dynamic_file_path);
-  read_log_file population_log(monitor::slog.population_file_path);
-  read_log_file layers_log(monitor::slog.layers_file_path);
-
-  ultra::timer last_read;
-
-  while (!stoken.stop_requested())
+  try
   {
-    process_log_stream<decltype(dynamic_queue), dynamic_data>(
-      dynamic_log, dynamic_queue, last_read, stoken);
-    process_log_stream<decltype(population_queue), population_line>(
-      population_log, population_queue, last_read, stoken);
-    process_log_stream<decltype(layers_queue), layers_line>(
-      layers_log, layers_queue, last_read, stoken);
+    auto dynamic_log(open_log_file(monitor::slog.dynamic_file_path));
+    auto population_log(open_log_file(monitor::slog.population_file_path));
+    auto layers_log(open_log_file(monitor::slog.layers_file_path));
 
-    const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         last_read.elapsed()));
-    std::this_thread::sleep_for(std::clamp(elapsed, 100ms, 3000ms));
+    ultra::timer last_read;
+
+    while (!stoken.stop_requested())
+    {
+      if (dynamic_log
+          && !process_log_stream<decltype(dynamic_queue), dynamic_data>(
+                *dynamic_log, dynamic_queue, last_read, stoken,
+                monitor::slog.dynamic_file_path))
+        dynamic_log.reset();
+
+      if (population_log
+          && !process_log_stream<decltype(population_queue), population_line>(
+                *population_log, population_queue, last_read, stoken,
+                monitor::slog.population_file_path))
+        population_log.reset();
+
+      if (layers_log
+          && !process_log_stream<decltype(layers_queue), layers_line>(
+                *layers_log, layers_queue, last_read, stoken,
+                monitor::slog.layers_file_path))
+        layers_log.reset();
+
+      if (!dynamic_log && !population_log && !layers_log)
+        return;
+
+      const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           last_read.elapsed()));
+
+      std::this_thread::sleep_for(std::clamp(elapsed, 100ms, 3000ms));
+    }
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "Stopped all log monitoring: " << e.what() << '\n';
+  }
+  catch (...)
+  {
+    std::cerr << "Stopped all log monitoring: unknown error.\n";
   }
 }
 
@@ -2578,9 +2628,26 @@ bool monitor::setup_cmd(argh::parser &cmdl)
       && !population_file_paths.empty())
     monitor::slog.population_file_path = population_file_paths.front();
 
-  if (!fs::exists(monitor::slog.dynamic_file_path)
-      && !fs::exists(monitor::slog.layers_file_path)
-      && !fs::exists(monitor::slog.population_file_path))
+  const std::vector log_vect =
+  {
+    monitor::slog.dynamic_file_path, monitor::slog.layers_file_path,
+    monitor::slog.population_file_path
+  };
+
+  bool all_empty(true);
+  for (const auto &path : log_vect)
+  {
+    if (!path.empty())
+      all_empty = false;
+
+    if (!path.empty() && !fs::is_regular_file(path))
+    {
+      std::cerr << "A configured log file (" << path << ") is not available.\n";
+      return false;
+    }
+  }
+
+  if (all_empty)
   {
     std::cerr << "No log file available.\n";
     return false;
