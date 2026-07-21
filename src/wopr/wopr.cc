@@ -200,8 +200,20 @@ struct dynamic_sequence
     len_std_dev.push_back(dd.len_std_dev);
     len_max.push_back(dd.len_max);
 
-    for (const auto &[key, val] : dd.crossover_types)
-      crossover_types[key].push_back(val);
+    // Assume zero crossovers for every known type.
+    for (auto &[_, history] : crossover_types)
+      history.push_back(0.0);
+
+    for (const auto &[type, count] : dd.crossover_types)
+    {
+      auto &history(crossover_types[type]);
+
+      // Backfills previous generations when this type is new.
+      history.resize(xs.size(), 0.0);
+
+      // Possibly replace a zero with the value actually reported.
+      history.back() = count;
+    }
 
     if (best_prg.empty() || best_prg.back() != dd.best_prg)
       best_prg.push_back(dd.best_prg);
