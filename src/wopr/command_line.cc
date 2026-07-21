@@ -1,0 +1,591 @@
+/**
+ *  \file
+ *  \remark This file is part of ULTRA.
+ *
+ *  \copyright Copyright (C) 2025 EOS di Manlio Morini.
+ *
+ *  \license
+ *  This Source Code Form is subject to the terms of the Mozilla Public
+ *  License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *  You can obtain one at http://mozilla.org/MPL/2.0/
+ */
+
+#include "command_line.h"
+
+#include "monitor.h"
+#include "results.h"
+
+#include "kernel/search_log.h"
+#include "utility/misc.h"
+
+#include "argh/argh.h"
+
+#include <algorithm>
+#include <cctype>
+#include <iostream>
+#include <iterator>
+#include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace fs = std::filesystem;
+
+namespace ultra::wopr
+{
+
+bool imgui_demo_panel {false};
+
+[[nodiscard]] ultra::model_measurements<double> extract_threshold(
+  const std::string &txt)
+{
+  ultra::model_measurements<double> threshold;
+
+  if (!txt.empty())
+  {
+    if (txt.back() == '%')
+    {
+      const auto v(txt.substr(0, txt.size()-1));
+      threshold.accuracy = std::clamp<double>(std::stod(v)/100.0, 0.0, 1.0);
+    }
+    else
+      threshold.fitness = std::stod(txt);
+  }
+
+  return threshold;
+}
+
+rs::settings rs::read_settings(const fs::path &test_fn)
+{
+  assert(test_fn.extension() == ".csv");
+
+  const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
+  if (!fs::exists(settings_fn))
+    return {};
+
+  tinyxml2::XMLDocument doc;
+  if (const auto result(doc.LoadFile(settings_fn.c_str()));
+      result != tinyxml2::XML_SUCCESS)
+  {
+    std::cerr << "Cannot open settings for " << test_fn << ".\n";
+    return {};
+  }
+
+  settings ret;
+
+  tinyxml2::XMLConstHandle handle(&doc);
+  const auto h_ultra(handle.FirstChildElement("ultra"));
+
+  const auto h_search(h_ultra.FirstChildElement("search"));
+  if (const auto *e = h_search.FirstChildElement("generations").ToElement())
+    ret.generations = e->UnsignedText(ret.generations);
+  else
+    ret.generations = settings::default_generations;
+
+  if (const auto *e = h_search.FirstChildElement("runs").ToElement())
+    ret.runs = e->UnsignedText(ret.runs);
+  else
+    ret.runs = settings::default_runs;
+
+  if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
+  {
+    if (const char *text = e->GetText())
+      ret.threshold = extract_threshold(std::string(text));
+    else
+      ret.threshold = settings::default_threshold;
+  }
+
+  const auto h_dataset(h_ultra.FirstChildElement("dataset"));
+  if (const auto *e = h_dataset.FirstChildElement("output_index").ToElement())
+    if (const char *text = e->GetText())
+    {
+      if (ultra::iequals(text, "last"))
+        ret.params.output_index = ultra::src::dataframe::params::index::back;
+      else if (unsigned output_index;
+               e->QueryUnsignedText(&output_index) == tinyxml2::XML_SUCCESS)
+        ret.params.output_index = output_index;
+    }
+
+  return ret;
+}
+void cmdl_usage()
+{
+  std::cout
+    << R"( _       ___   ___   ___)" "\n"
+       R"(\ \    // / \ | |_) | |_))" "\n"
+       R"( \_\/\/ \_\_/ |_|   |_| \)"
+       "\n\n"
+       "GREETINGS PROFESSOR FALKEN.\n"
+       "\n"
+       "Please enter your selection:\n"
+       "\n"
+  "> wopr monitor [path]\n"
+  "\n"
+  "  OBSERVE A RUNNING TEST IN REAL-TIME\n"
+  "  The path must point to a directory containing a search log produced by\n"
+  "  ULTRA. If omitted, the current working directory is used.\n"
+  "  Omit the file extension when specifying a test path (e.g. use\n"
+  "  \"/path/test\" instead of \"/path/test.csv\").\n"
+  "\n"
+  "  Available switches:\n"
+  "\n"
+  "  --dynamic    <filepath>\n"
+  "  --layers     <filepath>\n"
+  "  --population <filepath>\n"
+  "      Monitor files with non-default names.\n"
+  "  --window <nr>\n"
+  "      Restrict the monitoring window to the last `nr` generations.\n"
+  "\n"
+  "-------------------------------------------------------------------\n"
+  "> wopr run [path]\n"
+  "\n"
+  "  EXECUTE TESTS ON THE SPECIFIED DATASET(s)\n"
+  "  The argument must be a folder containing at least one .csv dataset\n"
+  "  (and optionally a config file), or a specific dataset file. If omitted,\n"
+  "  the current directory is used.\n"
+  "\n"
+  "  Available switches:\n"
+  "\n"
+  "  --generations <nr>\n"
+  "      Set the maximum number of generations in a run.\n"
+  "  --nogui\n"
+  "      Disable the graphical user interface (headless mode).\n"
+  "  --reference <directory>\n"
+  "      Specify a directory containing reference results.\n"
+  "  --runs <nr>\n"
+  "      Perform the specified number of evolutionary runs.\n"
+  "  --threshold <val>\n"
+  "      Set the success threshold. Values ending in '%' are treated as\n"
+  "      accuracy; otherwise, as fitness value.\n"
+  "\n"
+  "-------------------------------------------------------------------\n"
+  "> wopr summary <directory> [directory]\n"
+  "\n"
+  "  DISPLAY OR COMPARE STATS FOR COMPLETED TESTS\n"
+  "  Displays a high-level overview of the first directory. If a second\n"
+  "  directory is provided, a comparison is performed.\n"
+  "\n"
+  "--help\n"
+  "    Display this help screen.\n"
+  "--imguidemo\n"
+  "    Enable ImGUI demo panel.\n"
+  "\n"
+  "SHALL WE PLAY A GAME?\n\n";
+}
+
+fs::path build_path(fs::path base_dir, fs::path f,
+                    const std::string &default_filename)
+{
+  f = f.lexically_normal();
+
+  if (f.is_absolute())
+    return f;
+
+  if (base_dir.empty())
+    base_dir = "./";
+
+  if (!f.empty())
+    return base_dir / f;
+
+  if (!default_filename.empty())
+    return base_dir / default_filename;
+
+  return {};
+}
+rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
+{
+  using namespace ultra;
+
+  if (in1.empty())
+    in1 = "./";
+
+  if (in1 == in2)
+  {
+    std::cerr << "Same file or directory for comparison.\n";
+    return {};
+  }
+
+  if (!in2.empty() && !fs::is_directory(in2))
+  {
+    std::cerr << in2 << " isn't a directory.\n";
+    return {};
+  }
+
+  collection_t ret;
+
+  const auto check_and_insert([&m, &in2, &ret](const auto &path)
+  {
+    const auto get_reference([&in2](const fs::path &base)
+    {
+      if (!in2.empty())
+      {
+        if (const auto ref(in2 / summary_from_basename(base.filename()));
+            fs::exists(ref))
+        {
+          std::cout << "\n  reference: " << ref << '\n';
+
+          try
+          {
+            return summary_data(ref);
+          }
+          catch (const std::invalid_argument &e)
+          {
+            std::cerr << e.what() << '\n';
+          }
+        }
+      }
+      else
+        std::cout << "\n  no reference\n";
+
+      return summary_data();
+    });
+
+    const auto show_settings([](std::string_view name, const settings &ts)
+    {
+      std::cout << "Settings for " << name
+                << "\n  Runs: " << ts.runs
+                << "\n  Generations: " << ts.generations
+                << "\n  Threshold:";
+
+      if (ts.threshold.accuracy || ts.threshold.fitness)
+      {
+        if (ts.threshold.accuracy)
+          std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+        if (ts.threshold.fitness)
+          std::cout << ' ' << *ts.threshold.fitness;
+      }
+      else
+        std::cout << " none";
+      std::cout << '\n';
+    });
+
+    const auto ext(path.extension());
+
+    if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
+    {
+      const auto sum(summary_from_basename(path));
+
+      std::cout << "Basename: " << path
+                << "\n  first summary: " << sum;
+
+      const auto ref(get_reference(path));
+
+      const rs::data d(path, sum, read_settings(path), ref);
+
+      ret.emplace_back(path.stem(), d);
+
+      show_settings(ret.back().first, ret.back().second.conf);
+      return true;
+    }
+
+    if (m == exec_mode::summary && ultra::iequals(ext, ".xml")
+        && path.stem().string().ends_with(".summary"))
+    {
+      const auto basename(basename_from_summary(path));
+
+      std::cout << "Basename: " << basename
+                << "\n  first summary: " << path;
+
+      const auto ref(get_reference(basename));
+
+      const rs::data d(basename, path, {}, ref);
+
+      ret.emplace_back(basename.stem(), d);
+      return true;
+    }
+
+    return false;
+  });
+
+  if (fs::is_directory(in1))
+  {
+    std::vector<fs::path> sf;
+
+    for (const auto &entry : fs::directory_iterator(in1))
+    {
+      if (!entry.is_regular_file())
+        continue;
+
+      const auto &p(entry.path());
+
+      if (const auto ext(p.extension());
+          ultra::iequals(ext, ".csv") || ultra::iequals(ext, ".xml"))
+        sf.push_back(p);
+    }
+
+    std::ranges::sort(sf, {}, &fs::path::filename);
+
+    for (const auto &entry : sf)
+      check_and_insert(entry);
+  }
+  else if (fs::exists(in1))
+    check_and_insert(in1);
+  else
+  {
+    std::cerr << in1 << " isn't a valid input.\n";
+    return {};
+  }
+
+  if (ret.empty())
+  {
+    std::cerr << "No dataset available.\n";
+    return {};
+  }
+
+  std::cout << "Datasets:";
+  for (const auto &ds : ret)
+    std::cout << ' ' << ds.first;
+  std::cout << '\n';
+
+  return ret;
+}
+
+bool monitor::setup_cmd(argh::parser &cmdl)
+{
+  using namespace ultra;
+
+  const auto &pos_args(cmdl.pos_args());
+
+  fs::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
+
+  fs::path log_folder;
+  std::string basename;
+
+  if (fs::is_directory(log_object))
+    log_folder = log_object;
+  else
+  {
+    basename = log_object.filename();
+
+    log_folder = log_object.parent_path();
+    if (log_folder.empty())
+      log_folder = "./";
+  }
+
+  if (!fs::is_directory(log_folder))
+  {
+    std::cerr << log_folder << " isn't a directory.\n";
+    return false;
+  }
+
+  monitor::slog.base_dir = log_folder;
+  monitor::slog.summary_file_path = "";
+
+  monitor::slog.dynamic_file_path =
+    build_path(log_folder, cmdl("dynamic", "").str());
+  monitor::slog.layers_file_path =
+    build_path(log_folder, cmdl("layers", "").str());
+  monitor::slog.population_file_path =
+    build_path(log_folder, cmdl("population", "").str());
+
+  std::vector<fs::path> dynamic_file_paths;
+  std::vector<fs::path> layers_file_paths;
+  std::vector<fs::path> population_file_paths;
+
+  if (monitor::slog.dynamic_file_path.empty()
+      || monitor::slog.layers_file_path.empty()
+      || monitor::slog.population_file_path.empty())
+    for (const auto &entry : fs::directory_iterator(log_folder))
+      if (entry.is_regular_file()
+          && ultra::iequals(entry.path().extension(), ".txt"))
+      {
+        const std::string fn(entry.path().filename().string());
+
+        if (const auto def(search_log::default_dynamic_file);
+            monitor::slog.dynamic_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          dynamic_file_paths.push_back(entry.path());
+        }
+
+        if (const auto def(search_log::default_layers_file);
+            monitor::slog.layers_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          layers_file_paths.push_back(entry.path());
+        }
+
+        if (const auto def(search_log::default_population_file);
+            monitor::slog.population_file_path.empty()
+            && fn.find(def) != std::string::npos
+            && (basename.empty() || fn.find(basename) != std::string::npos))
+        {
+          population_file_paths.push_back(entry.path());
+        }
+
+        if (dynamic_file_paths.size() > 1
+            || layers_file_paths.size() > 1
+            || population_file_paths.size() > 1)
+        {
+          const auto example(
+            fs::path(entry.path()).replace_extension().replace_extension());
+          std::cerr << "Too many log files in folder; please choose one (e.g."
+                    << " `wopr monitor " << example << "`).\n";
+          return false;
+        }
+      }
+
+  if (monitor::slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
+    monitor::slog.dynamic_file_path = dynamic_file_paths.front();
+  if (monitor::slog.layers_file_path.empty() && !layers_file_paths.empty())
+    monitor::slog.layers_file_path = layers_file_paths.front();
+  if (monitor::slog.population_file_path.empty()
+      && !population_file_paths.empty())
+    monitor::slog.population_file_path = population_file_paths.front();
+
+  const std::vector log_vect =
+  {
+    monitor::slog.dynamic_file_path, monitor::slog.layers_file_path,
+    monitor::slog.population_file_path
+  };
+
+  bool all_empty(true);
+  for (const auto &path : log_vect)
+  {
+    if (!path.empty())
+      all_empty = false;
+
+    if (!path.empty() && !fs::is_regular_file(path))
+    {
+      std::cerr << "A configured log file (" << path << ") is not available.\n";
+      return false;
+    }
+  }
+
+  if (all_empty)
+  {
+    std::cerr << "No log file available.\n";
+    return false;
+  }
+
+  std::cout << "Dynamic file path: " << monitor::slog.dynamic_file_path
+            << "\nLayers file path: " << monitor::slog.layers_file_path
+            << "\nPopulation file path: " << monitor::slog.population_file_path
+            << '\n';
+
+
+  if (const auto v(cmdl("window").str()); !v.empty())
+  {
+    try
+    {
+      monitor::window = std::stoi(v);
+      std::cout << "Monitoring window: " << monitor::window << '\n';
+    }
+    catch (...)
+    {
+      std::cerr << "Wrong value for monitoring window.\n";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool rs::summary::setup_cmd(argh::parser &cmdl)
+{
+  const auto &pos_args(cmdl.pos_args());
+
+  if (pos_args.size() <= 2)
+  {
+    std::cerr << "At least one directory must be specified.\n";
+    return false;
+  }
+
+  const fs::path dir1(pos_args.size() <= 2 ? "./" : pos_args[2]);
+  const fs::path dir2(pos_args.size() <= 3 ? "" : pos_args[3]);
+
+  collection = setup_collection(dir1, dir2, exec_mode::summary);
+
+  if (collection.empty())
+    return false;
+
+  return true;
+}
+
+bool rs::run::setup_cmd(argh::parser &cmdl)
+{
+  const auto &pos_args(cmdl.pos_args());
+
+  for (const auto &a : pos_args)
+    std::cout << a << std::endl;
+
+  const fs::path test_input(pos_args.size() <= 2 ? "./" : pos_args[2]);
+  const fs::path ref_folder(cmdl("reference", "").str());
+
+  if (const auto v(cmdl("generations").str()); !v.empty())
+  {
+    settings::default_generations = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Generations: " << settings::default_generations << '\n';
+  }
+
+  if (const auto v(cmdl("runs").str()); !v.empty())
+  {
+    settings::default_runs = std::max<unsigned>(std::stoul(v), 1);
+    std::cout << "Runs: " << settings::default_runs << '\n';
+  }
+
+  if (const auto v(cmdl("threshold").str()); !v.empty())
+    settings::default_threshold = extract_threshold(v);
+
+  collection = setup_collection(test_input, ref_folder, exec_mode::run);
+
+  if (collection.empty())
+    return false;
+
+  run::nogui = cmdl["nogui"];
+
+  return true;
+}
+
+cmdl_result parse_args(int argc, char *argv[])
+{
+  argh::parser cmdl;
+
+  cmdl.add_param("basename");
+  cmdl.add_param("dynamic");
+  cmdl.add_param("generations");
+  cmdl.add_param("layers");
+  cmdl.add_param("population");
+  cmdl.add_param("reference");
+  cmdl.add_param("runs");
+  cmdl.add_param("threshold");
+  cmdl.add_param("window");
+
+  cmdl.parse(argc, argv);
+
+  const std::string cmd_monitor("monitor");
+  const std::string cmd_run("run");
+  const std::string cmd_summary("summary");
+  const std::set<std::string> cmds({cmd_monitor, cmd_run, cmd_summary});
+
+  const auto &pos_args(cmdl.pos_args());
+
+  if (pos_args.size() <= 1 || cmdl[{"-h", "--help"}])
+    return cmdl_result::help;
+
+  std::string cmd;
+  std::ranges::transform(pos_args[1], std::back_inserter(cmd),
+                         [](unsigned char c){ return std::tolower(c); });
+
+  if (!cmds.contains(cmd))
+  {
+    std::cerr << "Unknown command `" << cmd << "`.\n";
+    return cmdl_result::error;
+  }
+
+  imgui_demo_panel = cmdl["imguidemo"];
+
+  if (cmd == cmd_summary && rs::summary::setup_cmd(cmdl))
+    return cmdl_result::summary;
+  else if (cmd == cmd_monitor && monitor::setup_cmd(cmdl))
+    return cmdl_result::monitor;
+  else if (cmd == cmd_run && rs::run::setup_cmd(cmdl))
+    return cmdl_result::run;
+
+  return cmdl_result::error;
+}
+
+}  // namespace ultra::wopr
