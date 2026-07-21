@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <expected>
 #include <iostream>
 #include <iterator>
 #include <ranges>
@@ -36,6 +37,39 @@ namespace ultra::wopr
 {
 
 bool imgui_demo_panel {false};
+
+namespace
+{
+
+using log_file_discovery = std::expected<fs::path, fs::path>;
+
+[[nodiscard]] log_file_discovery discover_log_file(
+  const fs::path &folder, std::string_view basename, std::string_view marker)
+{
+  fs::path found;
+
+  for (const auto &entry : fs::directory_iterator(folder))
+  {
+    if (!entry.is_regular_file()
+        || !ultra::iequals(entry.path().extension(), ".txt"))
+      continue;
+
+    const std::string filename(entry.path().filename().string());
+    if (filename.find(marker) == std::string::npos
+        || (!basename.empty() && filename.find(basename) == std::string::npos))
+      continue;
+
+    if (!found.empty())
+      return std::unexpected(
+        fs::path(entry.path()).replace_extension().replace_extension());
+
+    found = entry.path();
+  }
+
+  return found;
+}
+
+}  // namespace
 
 [[nodiscard]] ultra::model_measurements<double> extract_threshold(
   const std::string &txt)
@@ -379,62 +413,30 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   monitor::slog.population_file_path =
     build_path(log_folder, cmdl("population", "").str());
 
-  std::vector<fs::path> dynamic_file_paths;
-  std::vector<fs::path> layers_file_paths;
-  std::vector<fs::path> population_file_paths;
+  const auto discover([&](fs::path &path, std::string_view marker)
+  {
+    if (!path.empty())
+      return true;
 
-  if (monitor::slog.dynamic_file_path.empty()
-      || monitor::slog.layers_file_path.empty()
-      || monitor::slog.population_file_path.empty())
-    for (const auto &entry : fs::directory_iterator(log_folder))
-      if (entry.is_regular_file()
-          && ultra::iequals(entry.path().extension(), ".txt"))
-      {
-        const std::string fn(entry.path().filename().string());
+    const auto result(discover_log_file(log_folder, basename, marker));
+    if (!result)
+    {
+      std::cerr << "Too many log files in folder; please choose one (e.g."
+                << " `wopr monitor " << result.error() << "`).\n";
+      return false;
+    }
 
-        if (const auto def(search_log::default_dynamic_file);
-            monitor::slog.dynamic_file_path.empty()
-            && fn.find(def) != std::string::npos
-            && (basename.empty() || fn.find(basename) != std::string::npos))
-        {
-          dynamic_file_paths.push_back(entry.path());
-        }
+    path = *result;
+    return true;
+  });
 
-        if (const auto def(search_log::default_layers_file);
-            monitor::slog.layers_file_path.empty()
-            && fn.find(def) != std::string::npos
-            && (basename.empty() || fn.find(basename) != std::string::npos))
-        {
-          layers_file_paths.push_back(entry.path());
-        }
-
-        if (const auto def(search_log::default_population_file);
-            monitor::slog.population_file_path.empty()
-            && fn.find(def) != std::string::npos
-            && (basename.empty() || fn.find(basename) != std::string::npos))
-        {
-          population_file_paths.push_back(entry.path());
-        }
-
-        if (dynamic_file_paths.size() > 1
-            || layers_file_paths.size() > 1
-            || population_file_paths.size() > 1)
-        {
-          const auto example(
-            fs::path(entry.path()).replace_extension().replace_extension());
-          std::cerr << "Too many log files in folder; please choose one (e.g."
-                    << " `wopr monitor " << example << "`).\n";
-          return false;
-        }
-      }
-
-  if (monitor::slog.dynamic_file_path.empty() && !dynamic_file_paths.empty())
-    monitor::slog.dynamic_file_path = dynamic_file_paths.front();
-  if (monitor::slog.layers_file_path.empty() && !layers_file_paths.empty())
-    monitor::slog.layers_file_path = layers_file_paths.front();
-  if (monitor::slog.population_file_path.empty()
-      && !population_file_paths.empty())
-    monitor::slog.population_file_path = population_file_paths.front();
+  if (!discover(monitor::slog.dynamic_file_path,
+                search_log::default_dynamic_file)
+      || !discover(monitor::slog.layers_file_path,
+                   search_log::default_layers_file)
+      || !discover(monitor::slog.population_file_path,
+                   search_log::default_population_file))
+    return false;
 
   const std::vector log_vect =
   {
