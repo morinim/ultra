@@ -679,7 +679,7 @@ namespace run
 bool nogui {false};
 
 [[nodiscard]] bool setup_cmd(argh::parser &);
-void start(const imgui_app::program::settings &);
+[[nodiscard]] bool start(const imgui_app::program::settings &);
 }  // namespace run
 
 namespace summary
@@ -2799,7 +2799,7 @@ void rs::summary::start(const imgui_app::program::settings &settings)
   prg.run(render_rs);
 }
 
-void rs::run::start(const imgui_app::program::settings &settings)
+bool rs::run::start(const imgui_app::program::settings &settings)
 {
   std::stop_source source;
 
@@ -2836,27 +2836,40 @@ void rs::run::start(const imgui_app::program::settings &settings)
   if (collection.size() > 1)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
-  std::vector<std::future<ultra::search_stats<ultra::gp::individual,
-                                              double>>> tasks;
+  using stats_t = ultra::search_stats<ultra::gp::individual, double>;
+  using task_t = std::pair<fs::path, std::future<stats_t>>;
+
+  std::vector<task_t> tasks;
   for (const auto &test : collection)
-    tasks.push_back(std::async(std::launch::async, test_driver, test));
+    tasks.emplace_back(test.second.dataset,
+                       std::async(std::launch::async, test_driver, test));
 
   if (run::nogui == false)
   {
     rs::summary::start(settings);
-
     source.request_stop();
   }
 
-  const auto task_completed(
-    [](const auto &future)
+  bool successful(true);
+  for (auto &[dataset, result] : tasks)
+  {
+    try
     {
-      return !future.valid()
-             || future.wait_for(0ms) == std::future_status::ready;
-    });
+      result.get();
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Search of `" << dataset << "` failed: " << e.what() << '\n';
+      successful = false;
+    }
+    catch (...)
+    {
+      std::cerr << "Search of `" << dataset << "` failed: unknown error.\n";
+      successful = false;
+    }
+  }
 
-  while (!std::ranges::all_of(tasks, task_completed))
-    std::this_thread::sleep_for(100ms);
+  return successful;
 }
 
 int main(int argc, char *argv[])
@@ -2886,7 +2899,10 @@ int main(int argc, char *argv[])
   else if (result == cmdl_result::monitor)
     monitor::start(settings);
   else if (result == cmdl_result::run)
-    rs::run::start(settings);
+  {
+    if (!rs::run::start(settings))
+      return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }
