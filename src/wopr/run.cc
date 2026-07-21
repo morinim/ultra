@@ -22,6 +22,7 @@
 #include <future>
 #include <iostream>
 #include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -71,6 +72,15 @@ bool rs::run::start(const imgui_app::program::settings &settings)
   using task_t = std::pair<fs::path, std::future<stats_t>>;
 
   std::vector<task_t> tasks;
+
+  // If task launch or the GUI throws, cancels running searches before stack
+  // unwinding destroys their futures and waits for them to finish.
+  struct stop_on_exit
+  {
+    std::stop_source &source_ref;
+    ~stop_on_exit() { source_ref.request_stop(); }
+  } guard{source};
+
   for (const auto &test : collection)
     tasks.emplace_back(test.second.dataset,
                        std::async(std::launch::async, test_driver, test));
@@ -86,7 +96,7 @@ bool rs::run::start(const imgui_app::program::settings &settings)
   {
     try
     {
-      result.get();
+      std::ignore = result.get();
     }
     catch (const std::exception &e)
     {
@@ -104,4 +114,3 @@ bool rs::run::start(const imgui_app::program::settings &settings)
 }
 
 }  // namespace ultra::wopr
-
