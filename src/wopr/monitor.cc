@@ -19,6 +19,8 @@
 #include "utility/timer.h"
 #include "utility/ts_queue.h"
 
+#include "implot/implot.h"
+
 #include <algorithm>
 #include <chrono>
 #include <fstream>
