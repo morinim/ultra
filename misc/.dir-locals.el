@@ -1,12 +1,14 @@
 ((nil
-  . ((eval . (let ((root (locate-dominating-file buffer-file-name "src")))
+  . ((eval . (let ((root (locate-dominating-file
+                           buffer-file-name "misc/ultra-style.el")))
                (load-file (expand-file-name "misc/ultra-style.el" root))))))
 
  (c++-mode
   . ((flycheck-clang-language-standard . "c++23")
      (flycheck-gcc-language-standard . "c++23")
      (eval
-      . (let* ((root (locate-dominating-file buffer-file-name "src"))
+      . (let* ((root (locate-dominating-file
+                      buffer-file-name "misc/ultra-style.el"))
                (src (expand-file-name "src" root))
                (third-party (expand-file-name "src/third_party" root))
                (src-root (file-name-as-directory src)))
@@ -49,7 +51,8 @@
   . ((flycheck-clang-language-standard . "c++23")
      (flycheck-gcc-language-standard . "c++23")
      (eval
-      . (let* ((root (locate-dominating-file buffer-file-name "src"))
+      . (let* ((root (locate-dominating-file
+                      buffer-file-name "misc/ultra-style.el"))
                (src (expand-file-name "src" root))
                (third-party (expand-file-name "src/third_party" root))
                (src-root (file-name-as-directory src)))
