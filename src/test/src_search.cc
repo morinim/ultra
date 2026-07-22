@@ -182,6 +182,17 @@ TEST_CASE("Refinement callback dispatches by problem type")
     s.run(1);
 
     CHECK(called);
+
+    s.refinement(
+      [](gp::individual &,
+         const evaluator_proxy<src::search<>::class_evaluator_t> &,
+         const parameters::refinement_parameters &)
+      { return std::optional<double>(); });
+
+    called = false;
+    s.run(1);
+
+    CHECK_FALSE(called);
   }
 
   SUBCASE("Classification evaluator")
@@ -219,6 +230,17 @@ TEST_CASE("Refinement callback dispatches by problem type")
     s.run(1);
 
     CHECK(called);
+
+    s.refinement(
+      [](gp::individual &,
+         const evaluator_proxy<src::search<>::reg_evaluator_t> &,
+         const parameters::refinement_parameters &)
+      { return std::optional<double>(); });
+
+    called = false;
+    s.run(1);
+
+    CHECK_FALSE(called);
   }
 }
 

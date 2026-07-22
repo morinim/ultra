@@ -57,7 +57,7 @@ template<class P>
 ///
 /// \param[in] p the problem we're working on. The lifetime of `p` must exceed
 ///              the lifetime of `this` class
-/// \param[in] m a bit field used to specify matrics we have to calculate while
+/// \param[in] m a bit field used to specify metrics we have to calculate while
 ///              searching
 ///
 template<template<class> class ES, Evaluator E>
@@ -107,7 +107,7 @@ problem &basic_search<ES, E>::prob() const noexcept
 /// \param[in] prg best individual from the evolution run just finished
 /// \return        measurements about the individual
 ///
-/// Fitness and accuracy are calculated by default. Additional must be
+/// Fitness and accuracy are calculated by default. Additional metrics must be
 /// explicitly requested in the basic_search constructor.
 ///
 /// \warning
@@ -353,6 +353,8 @@ search_stats<P, typename search<P>::fitness_t> search<P>::run(
 /// \note
 /// The concrete evaluator type depends on the problem (classification or
 /// regression) and is selected automatically at runtime.
+/// An evaluator-specific callable that does not match the selected evaluator
+/// disables refinement.
 ///
 template<Individual P>
 template<class F>
@@ -379,24 +381,16 @@ search<P> &search<P>::refinement(F &&f)
   std::visit(
     [&](auto &s)
     {
+      s.refinement({});
+
       using search_t = std::remove_cvref_t<decltype(s)>;
 
-      if constexpr (std::same_as<search_t, class_search_t>)
-      {
-        if constexpr (class_ok)
-          s.refinement(callback);
-        else
-          s.refinement({});
-      }
-      else
-      {
-        static_assert(std::same_as<search_t, reg_search_t>);
+      constexpr bool compatible =
+        (std::same_as<search_t, class_search_t> && class_ok)
+        || (std::same_as<search_t, reg_search_t> && reg_ok);
 
-        if constexpr (reg_ok)
-          s.refinement(callback);
-        else
-          s.refinement({});
-      }
+      if constexpr (compatible)
+        s.refinement(callback);
     },
     engine_);
 
@@ -411,7 +405,7 @@ search<P> &search<P>::refinement(F &&f)
 ///                evaluator does not provide one
 ///
 /// This function provides a uniform interface over different evaluator types.
-/// If the selected evaluator exposes an `predictor()` method, its result is
+/// If the selected evaluator exposes a `predictor()` method, its result is
 /// wrapped into a `std::unique_ptr<basic_oracle>`. Otherwise `nullptr` is
 /// returned.
 ///
