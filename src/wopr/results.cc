@@ -16,6 +16,8 @@
 
 #include "kernel/search_log.h"
 
+#include "implot/implot.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -882,4 +884,3 @@ void rs::summary::start(const imgui_app::program::settings &settings)
 }
 
 }  // namespace ultra::wopr
-

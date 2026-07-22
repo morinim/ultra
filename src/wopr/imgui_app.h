@@ -17,24 +17,12 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
+#include <string_view>
 
 #include <SDL3/SDL.h>
-//#include <SDL3_image/SDL_image.h>
-//#include <SDL3_ttf/SDL_ttf.h>
-#include "imgui/backends/imgui_impl_sdl3.h"
-#include "imgui/backends/imgui_impl_sdlrenderer3.h"
-
-#include "implot/implot.h"
 
 namespace imgui_app
 {
-
-struct window_size
-{
-  int width;
-  int height;
-};
 
 class window
 {
@@ -92,7 +80,7 @@ public:
   program(const program &) = delete;
   program(program &&) = delete;
   program &operator=(const program &) = delete;
-  program& operator=(program &&) = delete;
+  program &operator=(program &&) = delete;
 
   void run(std::function<void(const program &, bool *)>);
   void stop();
