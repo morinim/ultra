@@ -498,11 +498,12 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
                         ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
       ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
-      ImPlot::GetStyle().ErrorBarWeight = 6;
-      ImPlot::GetStyle().ErrorBarSize = 12;
+      ImPlot::PushStyleVar(ImPlotStyleVar_ErrorBarWeight, 6.0f);
+      ImPlot::PushStyleVar(ImPlotStyleVar_ErrorBarSize, 12.0f);
       ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
                             bottom.data(), top.data(), ys.size(),
                             ImPlotErrorBarsFlags_Horizontal);
+      ImPlot::PopStyleVar(2);
       ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
                           ys.size());
       ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(), ys.size());
