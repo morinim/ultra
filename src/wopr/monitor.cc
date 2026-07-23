@@ -736,17 +736,14 @@ std::optional<std::string> read_log_file::get_line()
     file_.clear();
     file_.seekg(position_);
 
-    if (std::string line; std::getline(file_, line))
+    if (std::string line; std::getline(file_, line) && !file_.eof())
     {
-      if (file_.bad())
-        throw std::runtime_error("Error occurred while reading the file.");
-
-      if (!file_.eof())
-      {
-        position_ = file_.tellg();  // update the position for the next read
-        return line;
-      }
+      position_ = file_.tellg();  // update the position for the next read
+      return line;
     }
+
+    if (file_.bad())
+      throw std::runtime_error("Error occurred while reading the file.");
   }
 
   return {};
