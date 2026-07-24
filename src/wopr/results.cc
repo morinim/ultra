@@ -12,6 +12,7 @@
 
 #include "results.h"
 
+#include "dashboard.h"
 #include "gui_helpers.h"
 
 #include "kernel/search_log.h"
@@ -19,6 +20,7 @@
 #include "implot/implot.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <format>
@@ -700,113 +702,31 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
                        "%s", random_string().c_str());
     ImGui::Separator();
 
-    const bool show_runs(
-      show_runs_check
-      && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
-      && !(mxz_elite && show_elite_check));
-    const bool show_success_rate(
-      show_success_rate_check
-      && !(mxz_runs && show_runs_check)
-      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check)
-      && !(mxz_elite && show_elite_check));
-    const bool show_fitness_across_datasets(
-      show_fitness_across_datasets_check
-      && !(mxz_runs && show_runs_check)
-      && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_elite && show_elite_check));
-    const bool show_elite(
-      show_elite_check
-      && !(mxz_runs && show_runs_check)
-      && !(mxz_success_rate && show_success_rate_check)
-      && !(mxz_fitness_across_datasets && show_fitness_across_datasets_check));
-
-    const int available_width(ImGui::GetContentRegionAvail().x - 4);
-    const int available_height(ImGui::GetContentRegionAvail().y - 4);
-
-    const int w1(show_runs && show_success_rate ? available_width/2
-                                                : available_width);
-    const int h1(show_fitness_across_datasets || show_elite
-                 ? available_height/2 : available_height);
-    if (show_runs)
+    std::array panels
     {
-      const auto w(mxz_runs ? available_width : w1);
-      const auto h(mxz_runs ? available_height : h1);
-
-      ImGui::BeginChild("Runs##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("RUNS");
-      ImGui::SameLine();
-      if (const char *bs(mxz_runs ? "Minimise##Runs" : "Maximise##Runs");
-          ImGui::Button(bs))
-        mxz_runs = !mxz_runs;
-
-      render_number_of_runs();
-      ImGui::EndChild();
-    }
-
-    if (show_success_rate)
-    {
-      if (show_runs)
-        ImGui::SameLine();
-
-      const auto w(mxz_success_rate ? available_width : w1);
-      const auto h(mxz_success_rate ? available_height : h1);
-
-      ImGui::BeginChild("Success rate##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("SUCCESS RATE");
-      ImGui::SameLine();
-      if (const char *bs(mxz_success_rate ? "Minimise##SR" : "Maximise##SR");
-          ImGui::Button(bs))
-        mxz_success_rate = !mxz_success_rate;
-
-      render_success_rate();
-      ImGui::EndChild();
-    }
-
-    if (show_fitness_across_datasets)
-    {
-      const auto w(mxz_fitness_across_datasets ? available_width : w1);
-      const auto h(mxz_fitness_across_datasets ? available_height : h1);
-
-      ImGui::BeginChild("FADs##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("FITNESS ACROSS DATASETS");
-      ImGui::SameLine();
-      if (const char *bs(mxz_fitness_across_datasets
-                         ? "Minimise##FitnessAcrossDatasets"
-                         : "Maximise##FitnessAcrossDatasets");
-          ImGui::Button(bs))
-        mxz_fitness_across_datasets = !mxz_fitness_across_datasets;
-
-      render_fitness_across_datasets();
-      ImGui::EndChild();
-    }
-
-    if (show_elite)
-    {
-      if (show_fitness_across_datasets)
-        ImGui::SameLine();
-
-      const auto w(mxz_elite ? available_width : w1);
-      const auto h(mxz_elite ? available_height : h1);
-
-      ImGui::BeginChild("ELITEs##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("ELITE RUNS");
-      ImGui::SameLine();
-      if (const char *bs(mxz_elite ? "Minimise##ELITE" : "Maximise##ELITE");
-          ImGui::Button(bs))
-        mxz_elite = !mxz_elite;
-
-      render_elite();
-      ImGui::EndChild();
-    }
+      dashboard_panel
+      {
+        "Runs##ChildWindow", "RUNS", show_runs_check, mxz_runs,
+        render_number_of_runs
+      },
+      dashboard_panel
+      {
+        "Success rate##ChildWindow", "SUCCESS RATE", show_success_rate_check,
+        mxz_success_rate, render_success_rate
+      },
+      dashboard_panel
+      {
+        "FADs##ChildWindow", "FITNESS ACROSS DATASETS",
+        show_fitness_across_datasets_check, mxz_fitness_across_datasets,
+        render_fitness_across_datasets
+      },
+      dashboard_panel
+      {
+        "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check, mxz_elite,
+        render_elite
+      }
+    };
+    render_dashboard(panels);
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.

@@ -12,6 +12,7 @@
 
 #include "monitor.h"
 
+#include "dashboard.h"
 #include "gui_helpers.h"
 #include "monitor_data.h"
 
@@ -22,6 +23,7 @@
 #include "implot/implot.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -588,116 +590,36 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
                        "%s", random_string().c_str());
     ImGui::Separator();
 
-    const bool show_dynamic(
-      !monitor::slog.dynamic_file_path.empty() && show_dynamic_check
-      && !(mxz_population && show_population_check)
-      && !(mxz_layers_fit && show_layers_fit_check)
-      && !(mxz_layers_age && show_layers_age_check));
-    const bool show_population(
-      !monitor::slog.population_file_path.empty() && show_population_check
-      && !(mxz_dynamic && show_dynamic_check)
-      && !(mxz_layers_fit && show_layers_fit_check)
-      && !(mxz_layers_age && show_layers_age_check));
-    const bool show_layers_fit(
-      !monitor::slog.layers_file_path.empty() && show_layers_fit_check
-      && !(mxz_dynamic && show_dynamic_check)
-      && !(mxz_population && show_population_check)
-      && !(mxz_layers_age && show_layers_age_check));
-    const bool show_layers_age(
-      !monitor::slog.layers_file_path.empty() && show_layers_age_check
-      && !(mxz_dynamic && show_dynamic_check)
-      && !(mxz_population && show_population_check)
-      && !(mxz_layers_fit && show_layers_fit_check));
-
-    const int available_width(ImGui::GetContentRegionAvail().x - 4);
-    const int available_height(ImGui::GetContentRegionAvail().y - 4);
-
-    const int w1(show_dynamic && show_population ? available_width/2
-                                                 : available_width);
-    const int h1(show_layers_fit || show_layers_age ? available_height/2
-                                                    : available_height);
-    if (show_dynamic)
+    std::array panels
     {
-      const auto w(mxz_dynamic ? available_width : w1);
-      const auto h(mxz_dynamic ? available_height : h1);
-
-      ImGui::BeginChild("Dynamic##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("DYNAMICS");
-      ImGui::SameLine();
-      const char *bs(mxz_dynamic ? "Minimise##Dyn" : "Maximise##Dyn");
-      if (ImGui::Button(bs))
-        mxz_dynamic = !mxz_dynamic;
-
-      render_dynamic();
-      ImGui::EndChild();
-    }
-
-    if (show_population)
-    {
-      if (show_dynamic)
-        ImGui::SameLine();
-
-      const auto w(mxz_population ? available_width : w1);
-      const auto h(mxz_population ? available_height : h1);
-
-      ImGui::BeginChild("Population##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("POPULATION");
-      ImGui::SameLine();
-      const char *bs(mxz_population ? "Minimise##Pop" : "Maximise##Pop");
-      if (ImGui::Button(bs))
-        mxz_population = !mxz_population;
-
-      render_population();
-      ImGui::EndChild();
-    }
-
-    const int w2(show_layers_fit && show_layers_age ? available_width/2
-                                                    : available_width);
-    const int h2(show_dynamic || show_population ? available_height/2
-                                                 : available_height);
-
-    if (show_layers_fit)
-    {
-      const auto w(mxz_layers_fit ? available_width : w2);
-      const auto h(mxz_layers_fit ? available_height : h2);
-
-      ImGui::BeginChild("LayersFitness##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("FITNESS BY LAYER");
-      ImGui::SameLine();
-      const char *bs(mxz_layers_fit ? "Minimise##LFt" : "Maximise##LFt");
-      if (ImGui::Button(bs))
-        mxz_layers_fit = !mxz_layers_fit;
-
-      render_layers(layer_info::fitness);
-      ImGui::EndChild();
-    }
-
-    if (show_layers_age)
-    {
-      if (show_layers_fit)
-        ImGui::SameLine();
-
-      const auto w(mxz_layers_age ? available_width : w2);
-      const auto h(mxz_layers_age ? available_height : h2);
-
-      ImGui::BeginChild("LayersAge##ChildWindow", ImVec2(w, h),
-                        ImGuiChildFlags_Borders);
-      ImGui::AlignTextToFramePadding();
-      ImGui::Text("AGE BY LAYER");
-      ImGui::SameLine();
-      const char *bs(mxz_layers_age ? "Minimise##LAg" : "Maximise##LAg");
-      if (ImGui::Button(bs))
-        mxz_layers_age = !mxz_layers_age;
-
-      render_layers(layer_info::age);
-      ImGui::EndChild();
-    }
+      dashboard_panel
+      {
+        "Dynamic##ChildWindow", "DYNAMICS",
+        !monitor::slog.dynamic_file_path.empty() && show_dynamic_check,
+        mxz_dynamic, render_dynamic
+      },
+      dashboard_panel
+      {
+        "Population##ChildWindow", "POPULATION",
+        !monitor::slog.population_file_path.empty() && show_population_check,
+        mxz_population, render_population
+      },
+      dashboard_panel
+      {
+        "LayersFitness##ChildWindow", "FITNESS BY LAYER",
+        !monitor::slog.layers_file_path.empty() && show_layers_fit_check,
+        mxz_layers_fit,
+        [] { render_layers(layer_info::fitness); }
+      },
+      dashboard_panel
+      {
+        "LayersAge##ChildWindow", "AGE BY LAYER",
+        !monitor::slog.layers_file_path.empty() && show_layers_age_check,
+        mxz_layers_age,
+        [] { render_layers(layer_info::age); }
+      }
+    };
+    render_dashboard(panels);
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
