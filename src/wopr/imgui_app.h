@@ -85,13 +85,9 @@ public:
   void run(std::function<void(const program &, bool *)>);
   void stop();
 
-  [[nodiscard]] window &get_window() { return *window_; }
-
   SDL_Rect free_area() const;
 
   void on_event(const SDL_WindowEvent &);
-  void on_minimize();
-  void on_show();
   void on_close();
 
 private:
@@ -102,7 +98,6 @@ private:
   int menu_height_ {0};
 
   bool running_ {true};
-  bool minimized_ {false};
   bool show_main_panel_ {true};
   bool show_demo_panel_ {false};
 };

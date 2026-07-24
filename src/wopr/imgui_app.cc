@@ -178,26 +178,12 @@ void program::on_event(const SDL_WindowEvent &event)
   {
   case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     return on_close();
-  case SDL_EVENT_WINDOW_MINIMIZED:
-    return on_minimize();
   case SDL_EVENT_WINDOW_RESIZED:
     return;
-  case SDL_EVENT_WINDOW_SHOWN:
-    return on_show();
   default:
     // Do nothing otherwise
     return;
   }
-}
-
-void program::on_minimize()
-{
-  minimized_ = true;
-}
-
-void program::on_show()
-{
-  minimized_ = false;
 }
 
 void program::on_close()
