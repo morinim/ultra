@@ -14,11 +14,15 @@
 #
 #  \see https://ultraevolution.org/blog/combine_test_batches/
 
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
 import math
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
-from checksum_summary import CHECKSUM_LENGTH, CHECKSUM_TAG, sign_etree_xml
+from checksum_summary import sign_etree_xml
 
 
 class UltraParseError(RuntimeError):
@@ -99,95 +103,6 @@ def _require_float(parent: ET.Element, path: str, *, file: Path) -> float:
         raise UltraParseError(f"{file}: node '{path}' is not a float: {text!r}") from e
 
 
-def parse_ultra_file(path: Path):
-    try:
-        tree = ET.parse(path)
-    except FileNotFoundError as e:
-        raise UltraParseError(f"{path}: file not found") from e
-    except OSError as e:
-        raise UltraParseError(f"{path}: cannot read file: {e}") from e
-    except ET.ParseError as e:
-        raise UltraParseError(f"{path}: XML parse error: {e}") from e
-
-    root = tree.getroot()
-    summary = root.find("summary")
-    if summary is None:
-        raise UltraParseError(f"{path}: missing required node 'summary'")
-
-    runs = _require_int(summary, "runs", file=path)
-    if runs <= 0:
-        raise UltraParseError(f"{path}: runs must be positive")
-
-    elapsed = _require_int(summary, "elapsed_time", file=path)
-    if elapsed < 0:
-        raise UltraParseError(f"{path}: elapsed_time must be non-negative")
-
-    success = _require_float(summary, "success_rate", file=path)
-    if not (0.0 <= success <= 1.0):
-        raise UltraParseError(f"{path}: success_rate out of range: {success}")
-
-    mean = _require_float(summary, "distributions/fitness/mean", file=path)
-    if not math.isfinite(mean):
-        raise UltraParseError(f"{path}: mean must be finite, got {mean}")
-
-    std  = _require_float(summary, "distributions/fitness/standard_deviation",
-                          file=path)
-    if not math.isfinite(std) or std < 0.0:
-        raise UltraParseError(
-            f"{path}: standard_deviation must be finite and non-negative, got {std}")
-
-    best_fitness = _require_float(summary, "best/fitness", file=path)
-    if not math.isfinite(best_fitness):
-        raise UltraParseError(f"{path}: best/fitness must be finite, got {best_fitness}")
-
-    best_accuracy = _require_float(summary, "best/accuracy", file=path)
-    if not math.isfinite(best_accuracy) or not (0.0 <= best_accuracy <= 1.0):
-        raise UltraParseError(f"{path}: best/accuracy out of range: {best_accuracy} (expected 0..1)")
-
-    best_run = _require_int(summary, "best/run", file=path)
-    if best_run < 0 or best_run >= runs:
-        raise UltraParseError(f"{path}: best/run out of range: {best_run} (runs={runs})")
-
-    best_code = _require_text(summary, "best/code", file=path)
-
-    sol_parent = summary.find("solutions")
-    if sol_parent is None:
-        raise UltraParseError(f"{path}: missing required node 'solutions'")
-
-    solutions = []
-    for node in sol_parent.findall("run"):
-        if node.text is None or not node.text.strip():
-            raise UltraParseError(f"{path}: empty <solutions><run> entry")
-        try:
-            solutions.append(int(node.text.strip()))
-        except ValueError as e:
-            raise UltraParseError(f"{path}: non-integer solution run: {node.text!r}") from e
-    if any(s < 0 for s in solutions):
-        raise UltraParseError(f"{path}: solutions contains negative run index")
-    if any(s >= runs for s in solutions):
-        raise UltraParseError(f"{path}: solutions contains run index >= runs")
-    if len(set(solutions)) != len(solutions):
-        raise UltraParseError(f"{path}: duplicate run indices in solutions")
-
-    elite = parse_elite(summary, runs, file=path)
-
-    return {
-        "runs": runs,
-        "elapsed": elapsed,
-        "success": success,
-        "mean": mean,
-        "std": std,
-        "best_fitness": best_fitness,
-        "best_accuracy": best_accuracy,
-        "best_run": best_run,
-        "best_code": best_code,
-        "solutions": solutions,
-        "elite": elite,
-        "tree": tree,
-        "root": root,
-    }
-
-
 def _parse_percentile_attr(elite_node: ET.Element, *, file: Path) -> float:
     """
     Returns elite fraction in [0, 1]. Accepts either:
@@ -196,18 +111,19 @@ def _parse_percentile_attr(elite_node: ET.Element, *, file: Path) -> float:
     """
     raw = elite_node.get("percentile")
     if raw is None:
-        raise UltraParseError(f"{file}: <elite> missing required attribute 'percentile'")
+        raise UltraParseError(
+            f"{file}: <elite> missing required attribute 'percentile'")
     try:
         v = float(raw)
     except ValueError as e:
-        raise UltraParseError(f"{file}: <elite percentile> is not numeric: {raw!r}") from e
+        raise UltraParseError(
+            f"{file}: <elite percentile> is not numeric: {raw!r}") from e
 
     # If it looks like a percentage (e.g. 5), convert to fraction.
     frac = v / 100.0 if v > 1.0 else v
-    if not (0.0 <= frac <= 1.0):
+    if not 0.0 <= frac <= 1.0:
         raise UltraParseError(f"{file}: elite percentile out of range: {raw!r}")
     return frac
-
 
 
 def _format_percentile_attr(frac: float) -> str:
@@ -220,72 +136,308 @@ def _format_percentile_attr(frac: float) -> str:
     return f"{pct:.12g}"
 
 
-def parse_elite(summary: ET.Element, runs: int, *, file: Path):
-    """
-    Parses:
-      <elite percentile="5">
-        <run id="...">
-          <fitness>...</fitness>
-          <accuracy>...</accuracy>
-        </run>
-      </elite>
+@dataclass(frozen=True)
+class EliteRun:
+    id: int
+    fitness: float | None
+    accuracy: float | None
 
-    Returns None if <elite> is absent.
-    """
-    elite_node = summary.find("elite")
-    if elite_node is None:
-        return None
+    def offset(self, amount: int) -> EliteRun:
+        return EliteRun(self.id + amount, self.fitness, self.accuracy)
 
-    frac = _parse_percentile_attr(elite_node, file=file)
+    def sort_key(self) -> tuple[float, float]:
+        """Returns a key that places missing or non-finite values last."""
+        fitness = (self.fitness if self.fitness is not None
+                   and math.isfinite(self.fitness) else float("-inf"))
+        accuracy = (self.accuracy if self.accuracy is not None
+                    and math.isfinite(self.accuracy) else float("-inf"))
+        return fitness, accuracy
 
-    items = []
-    for run_node in elite_node.findall("run"):
-        raw_id = run_node.get("id")
-        if raw_id is None:
-            raise UltraParseError(f"{file}: <elite><run> missing required attribute 'id'")
+
+@dataclass(frozen=True)
+class Elite:
+    percentile: float
+    runs: list[EliteRun]
+
+    @classmethod
+    def parse(cls, summary: ET.Element, runs: int, *,
+              file: Path) -> Elite | None:
+        elite_node = summary.find("elite")
+        if elite_node is None:
+            return None
+
+        items: list[EliteRun] = []
+        for run_node in elite_node.findall("run"):
+            raw_id = run_node.get("id")
+            if raw_id is None:
+                raise UltraParseError(
+                    f"{file}: <elite><run> missing required attribute 'id'")
+            try:
+                run_id = int(raw_id)
+            except ValueError as e:
+                raise UltraParseError(
+                    f"{file}: elite run id is not an int: {raw_id!r}") from e
+
+            if run_id < 0 or run_id >= runs:
+                raise UltraParseError(
+                    f"{file}: elite run id out of range: {run_id} "
+                    f"(runs={runs})")
+
+            fitness = cls._optional_float(run_node, "fitness", file)
+            accuracy = cls._optional_float(run_node, "accuracy", file)
+            items.append(EliteRun(run_id, fitness, accuracy))
+
+        ids = [item.id for item in items]
+        if len(set(ids)) != len(ids):
+            raise UltraParseError(f"{file}: duplicate ids in <elite>")
+
+        return cls(_parse_percentile_attr(elite_node, file=file), items)
+
+    @staticmethod
+    def _optional_float(node: ET.Element, name: str,
+                        file: Path) -> float | None:
+        value = node.find(name)
+        if value is None or value.text is None or not value.text.strip():
+            return None
         try:
-            rid = int(raw_id)
+            return float(value.text.strip())
         except ValueError as e:
-            raise UltraParseError(f"{file}: elite run id is not an int: {raw_id!r}") from e
+            raise UltraParseError(
+                f"{file}: elite/{name} is not a float: {value.text!r}") from e
 
-        if rid < 0 or rid >= runs:
-            raise UltraParseError(f"{file}: elite run id out of range: {rid} (runs={runs})")
+    @classmethod
+    def merge(cls, first: Elite | None, second: Elite | None, *,
+              offset: int, total_runs: int) -> Elite | None:
+        if first is None and second is None:
+            return None
 
-        # fitness/accuracy may be absent depending on logger choices.
-        fitness = None
-        acc = None
+        if first is not None:
+            percentile = first.percentile
+        else:
+            assert second is not None
+            percentile = second.percentile
+        if (first is not None and second is not None
+                and abs(first.percentile - second.percentile) > 1e-12):
+            raise UltraParseError(
+                "Elite percentile mismatch: "
+                f"{first.percentile} vs {second.percentile}")
 
-        f_node = run_node.find("fitness")
-        if f_node is not None and f_node.text and f_node.text.strip():
+        candidates = list(first.runs) if first is not None else []
+        if second is not None:
+            candidates.extend(run.offset(offset) for run in second.runs)
+
+        if percentile == 0.0:
+            return cls(percentile, [])
+
+        count = max(1, min(int(total_runs * percentile), total_runs))
+        candidates.sort(key=EliteRun.sort_key, reverse=True)
+
+        selected: list[EliteRun] = []
+        seen: set[int] = set()
+        for run in candidates:
+            if run.id in seen:
+                continue
+            seen.add(run.id)
+            selected.append(run)
+            if len(selected) >= count:
+                break
+
+        return cls(percentile, selected)
+
+    def append_xml(self, summary: ET.Element) -> None:
+        elite = ET.SubElement(summary, "elite")
+        elite.set("percentile", _format_percentile_attr(self.percentile))
+        for run in self.runs:
+            run_node = ET.SubElement(elite, "run", id=str(run.id))
+            if run.fitness is not None:
+                ET.SubElement(run_node, "fitness").text = (
+                    f"{run.fitness:.12g}"
+                )
+            if run.accuracy is not None:
+                ET.SubElement(run_node, "accuracy").text = (
+                    f"{run.accuracy:.12g}"
+                )
+
+
+@dataclass(frozen=True)
+class Best:
+    fitness: float
+    accuracy: float
+    run: int
+    code: str
+
+    def offset(self, amount: int) -> Best:
+        return Best(self.fitness, self.accuracy, self.run + amount, self.code)
+
+
+@dataclass(frozen=True)
+class Summary:
+    runs: int
+    elapsed: int
+    success: float
+    mean: float
+    std: float
+    best: Best
+    solutions: list[int]
+    elite: Elite | None
+
+    @classmethod
+    def parse(cls, path: Path) -> Summary:
+        try:
+            tree = ET.parse(path)
+        except FileNotFoundError as e:
+            raise UltraParseError(f"{path}: file not found") from e
+        except OSError as e:
+            raise UltraParseError(f"{path}: cannot read file: {e}") from e
+        except ET.ParseError as e:
+            raise UltraParseError(f"{path}: XML parse error: {e}") from e
+
+        summary = tree.getroot().find("summary")
+        if summary is None:
+            raise UltraParseError(
+                f"{path}: missing required node 'summary'")
+
+        runs = _require_int(summary, "runs", file=path)
+        if runs <= 0:
+            raise UltraParseError(f"{path}: runs must be positive")
+
+        elapsed = _require_int(summary, "elapsed_time", file=path)
+        if elapsed < 0:
+            raise UltraParseError(
+                f"{path}: elapsed_time must be non-negative")
+
+        success = _require_float(summary, "success_rate", file=path)
+        if not 0.0 <= success <= 1.0:
+            raise UltraParseError(
+                f"{path}: success_rate out of range: {success}")
+
+        mean = _require_float(
+            summary, "distributions/fitness/mean", file=path)
+        if not math.isfinite(mean):
+            raise UltraParseError(
+                f"{path}: mean must be finite, got {mean}")
+
+        std = _require_float(
+            summary, "distributions/fitness/standard_deviation", file=path)
+        if not math.isfinite(std) or std < 0.0:
+            raise UltraParseError(
+                f"{path}: standard_deviation must be finite and "
+                f"non-negative, got {std}")
+
+        best = cls._parse_best(summary, runs, path)
+        solutions = cls._parse_solutions(summary, runs, path)
+        return cls(runs, elapsed, success, mean, std, best, solutions,
+                   Elite.parse(summary, runs, file=path))
+
+    @staticmethod
+    def _parse_best(summary: ET.Element, runs: int, path: Path) -> Best:
+        fitness = _require_float(summary, "best/fitness", file=path)
+        if not math.isfinite(fitness):
+            raise UltraParseError(
+                f"{path}: best/fitness must be finite, got {fitness}")
+
+        accuracy = _require_float(summary, "best/accuracy", file=path)
+        if not math.isfinite(accuracy) or not 0.0 <= accuracy <= 1.0:
+            raise UltraParseError(
+                f"{path}: best/accuracy out of range: {accuracy} "
+                "(expected 0..1)")
+
+        run = _require_int(summary, "best/run", file=path)
+        if run < 0 or run >= runs:
+            raise UltraParseError(
+                f"{path}: best/run out of range: {run} (runs={runs})")
+
+        return Best(fitness, accuracy, run,
+                    _require_text(summary, "best/code", file=path))
+
+    @staticmethod
+    def _parse_solutions(summary: ET.Element, runs: int,
+                         path: Path) -> list[int]:
+        parent = summary.find("solutions")
+        if parent is None:
+            raise UltraParseError(
+                f"{path}: missing required node 'solutions'")
+
+        solutions = []
+        for node in parent.findall("run"):
+            if node.text is None or not node.text.strip():
+                raise UltraParseError(
+                    f"{path}: empty <solutions><run> entry")
             try:
-                fitness = float(f_node.text.strip())
+                solutions.append(int(node.text.strip()))
             except ValueError as e:
-                raise UltraParseError(f"{file}: elite/fitness is not a float: {f_node.text!r}") from e
+                raise UltraParseError(
+                    f"{path}: non-integer solution run: {node.text!r}") from e
 
-        a_node = run_node.find("accuracy")
-        if a_node is not None and a_node.text and a_node.text.strip():
-            try:
-                acc = float(a_node.text.strip())
-            except ValueError as e:
-                raise UltraParseError(f"{file}: elite/accuracy is not a float: {a_node.text!r}") from e
+        if any(run < 0 for run in solutions):
+            raise UltraParseError(
+                f"{path}: solutions contains negative run index")
+        if any(run >= runs for run in solutions):
+            raise UltraParseError(
+                f"{path}: solutions contains run index >= runs")
+        if len(set(solutions)) != len(solutions):
+            raise UltraParseError(
+                f"{path}: duplicate run indices in solutions")
+        return solutions
 
-        items.append({"id": rid, "fitness": fitness, "accuracy": acc})
+    def merge(self, other: Summary) -> Summary:
+        runs = self.runs + other.runs
+        if runs == 0:
+            raise UltraParseError(
+                "Merged runs is 0; cannot compute merged statistics")
 
-    # Deduplicate ids (defensive)
-    ids = [x["id"] for x in items]
-    if len(set(ids)) != len(ids):
-        raise UltraParseError(f"{file}: duplicate ids in <elite>")
+        best = (self.best if self.best.fitness >= other.best.fitness
+                else other.best.offset(self.runs))
+        solutions = self.solutions + [
+            run + self.runs for run in other.solutions
+        ]
+        return Summary(
+            runs=runs,
+            elapsed=self.elapsed + other.elapsed,
+            success=(self.success * self.runs
+                     + other.success * other.runs) / runs,
+            mean=combine_mean(
+                self.mean, self.runs, other.mean, other.runs),
+            std=combine_std(
+                self.mean, self.std, self.runs,
+                other.mean, other.std, other.runs),
+            best=best,
+            solutions=solutions,
+            elite=Elite.merge(
+                self.elite, other.elite,
+                offset=self.runs, total_runs=runs),
+        )
 
-    return {"frac": frac, "items": items}
+    def to_xml(self) -> str:
+        ultra = ET.Element("ultra")
+        summary = ET.SubElement(ultra, "summary")
+        ET.SubElement(summary, "runs").text = str(self.runs)
+        ET.SubElement(summary, "elapsed_time").text = str(self.elapsed)
+        ET.SubElement(summary, "success_rate").text = f"{self.success:.12g}"
 
+        distributions = ET.SubElement(summary, "distributions")
+        fitness = ET.SubElement(distributions, "fitness")
+        ET.SubElement(fitness, "mean").text = f"{self.mean:.12g}"
+        ET.SubElement(fitness, "standard_deviation").text = (
+            f"{self.std:.12g}"
+        )
 
-def elite_key(item: dict):
-    # Missing values are treated as -inf so they sort last.
-    f = item["fitness"]
-    a = item["accuracy"]
-    f_key = f if (f is not None and math.isfinite(f)) else float("-inf")
-    a_key = a if (a is not None and math.isfinite(a)) else float("-inf")
-    return (f_key, a_key)
+        best = ET.SubElement(summary, "best")
+        ET.SubElement(best, "fitness").text = f"{self.best.fitness:.12g}"
+        ET.SubElement(best, "accuracy").text = f"{self.best.accuracy:.12g}"
+        ET.SubElement(best, "run").text = str(self.best.run)
+        ET.SubElement(best, "code").text = self.best.code
+
+        solutions = ET.SubElement(summary, "solutions")
+        for run in self.solutions:
+            ET.SubElement(solutions, "run").text = str(run)
+
+        if self.elite is not None:
+            self.elite.append_xml(summary)
+
+        ET.indent(ultra, space="  ")
+        return sign_etree_xml(
+            ET.tostring(ultra, encoding="unicode"), create=True)
 
 
 # ---------------------------------------------------------------------
@@ -315,138 +467,10 @@ def index_by_name(d: Path) -> dict[str, Path]:
 #  Main merge functions.
 # ---------------------------------------------------------------------
 
-def merge_ultra_files(path1: Path, path2: Path, output: Path):
-    A = parse_ultra_file(path1)
-    B = parse_ultra_file(path2)
-
-    # Merged summary.
-    runs = A["runs"] + B["runs"]
-
-    if runs == 0:
-        raise UltraParseError("Merged runs is 0; cannot compute merged statistics")
-
-    elapsed = A["elapsed"] + B["elapsed"]
-
-    success = (A["success"] * A["runs"] + B["success"] * B["runs"]) / runs
-
-    mean = combine_mean(A["mean"], A["runs"],
-                        B["mean"], B["runs"])
-
-    std = combine_std(A["mean"], A["std"], A["runs"],
-                      B["mean"], B["std"], B["runs"])
-
-    # Best.
-    if A["best_fitness"] >= B["best_fitness"]:
-        best_fitness = A["best_fitness"]
-        best_accuracy = A["best_accuracy"]
-        best_run = A["best_run"]
-        best_code = A["best_code"]
-    else:
-        best_fitness = B["best_fitness"]
-        best_accuracy = B["best_accuracy"]
-        best_run = B["best_run"] + A["runs"]  # important offset
-        best_code = B["best_code"]
-
-    # Solutions: merge + offset for B.
-    solutions = A["solutions"] + [s + A["runs"] for s in B["solutions"]]
-
-    # Elite.
-    # If neither input has elite, omit it in output.
-    # This merge can only choose elite runs from the union of the two
-    # precomputed elite lists. If the "true" top percentile of the combined
-    # dataset includes runs that were not in either file's elite list, you
-    # can't recover them without having per-run measurements for all runs.
-    merged_elite = None
-    eA = A["elite"]
-    eB = B["elite"]
-
-    if eA is not None or eB is not None:
-        # Choose the elite percentile fraction.
-        # If both inputs contain elite data, they must use the same percentile;
-        # otherwise the merged elite set would be ambiguous.
-        frac = (eA["frac"] if eA is not None else eB["frac"])
-        if eA is not None and eB is not None and abs(eA["frac"] - eB["frac"]) > 1e-12:
-            raise UltraParseError(
-                f"Elite percentile mismatch: {eA['frac']} vs {eB['frac']}")
-
-        items = []
-        if eA is not None:
-            items.extend(eA["items"])
-        if eB is not None:
-            # Offset B ids by A['runs'] to match merged run indexing.
-            items.extend(
-                {"id": it["id"] + A["runs"], "fitness": it["fitness"], "accuracy": it["accuracy"]}
-                for it in eB["items"]
-            )
-
-        # How many elite runs should the merged file report?
-        # At least 1 when frac>0 and runs>0.
-        if frac == 0.0:
-            merged_elite = {"frac": frac, "items": []}
-        else:
-            n = int(runs * frac)  # floor
-            n = max(1, min(n, runs))
-
-            # Sort best-first, take prefix, and ensure unique ids.
-            items_sorted = sorted(items, key=elite_key, reverse=True)
-            seen = set()
-            picked = []
-            for it in items_sorted:
-                if it["id"] in seen:
-                    continue
-                seen.add(it["id"])
-                picked.append(it)
-                if len(picked) >= n:
-                    break
-
-            merged_elite = {"frac": frac, "items": picked}
-
-    # Build XML.
-    ultra = ET.Element("ultra")
-    summary = ET.SubElement(ultra, "summary")
-
-    ET.SubElement(summary, "runs").text = str(runs)
-    ET.SubElement(summary, "elapsed_time").text = str(elapsed)
-    ET.SubElement(summary, "success_rate").text = f"{success:.12g}"
-
-    dist = ET.SubElement(summary, "distributions")
-    fit = ET.SubElement(dist, "fitness")
-    ET.SubElement(fit, "mean").text = f"{mean:.12g}"
-    ET.SubElement(fit, "standard_deviation").text = f"{std:.12g}"
-
-    best = ET.SubElement(summary, "best")
-    ET.SubElement(best, "fitness").text = f"{best_fitness:.12g}"
-    ET.SubElement(best, "accuracy").text = f"{best_accuracy:.12g}"
-    ET.SubElement(best, "run").text = str(best_run)
-    ET.SubElement(best, "code").text = best_code
-
-    sol = ET.SubElement(summary, "solutions")
-    for s in solutions:
-        ET.SubElement(sol, "run").text = str(s)
-
-    if merged_elite is not None:
-        elite = ET.SubElement(summary, "elite")
-        elite.set("percentile", _format_percentile_attr(merged_elite["frac"]))
-
-        for it in merged_elite["items"]:
-            run_el = ET.SubElement(elite, "run")
-            run_el.set("id", str(it["id"]))
-            if it["fitness"] is not None:
-                ET.SubElement(run_el, "fitness").text = f"{it['fitness']:.12g}"
-            if it["accuracy"] is not None:
-                ET.SubElement(run_el, "accuracy").text = f"{it['accuracy']:.12g}"
-
-    # Convert to string (canonical formatting for merged output).
-    ET.indent(ultra, space="  ")
-    xml = ET.tostring(ultra, encoding="unicode")
-
-    # Embed real checksum (canonical ElementTree signing).
-    xml_signed = sign_etree_xml(xml, create=True)
-
-    # Save.
-    output.write_text(xml_signed, encoding="utf-8")
-
-    return xml_signed
+def merge_ultra_files(path1: Path, path2: Path, output: Path) -> str:
+    xml = Summary.parse(path1).merge(Summary.parse(path2)).to_xml()
+    output.write_text(xml, encoding="utf-8")
+    return xml
 
 
 def merge_ultra_dirs(dir1: Path, dir2: Path, out_dir: Path) -> None:
@@ -459,7 +483,8 @@ def merge_ultra_dirs(dir1: Path, dir2: Path, out_dir: Path) -> None:
 
     all_names = sorted(set(a.keys()) | set(b.keys()))
     if not all_names:
-        raise UltraParseError("No *.summary.xml files found in either input directory")
+        raise UltraParseError(
+            "No *.summary.xml files found in either input directory")
 
     merged = 0
     copied = 0
@@ -473,47 +498,52 @@ def merge_ultra_dirs(dir1: Path, dir2: Path, out_dir: Path) -> None:
         else:
             src = a.get(name) or b.get(name)
             assert src is not None
-            out_path.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            out_path.write_text(
+                src.read_text(encoding="utf-8"), encoding="utf-8")
             copied += 1
 
     print(f"Merged: {merged}, copied: {copied}, total: {len(all_names)}")
 
 
 # ---------------------------------------------------------------------
-#  Example command-line usage
+#  CLI
 # ---------------------------------------------------------------------
+def build_argparser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="merge_summary.py",
+        description=(
+            "Merge two ULTRA summary XML files or matching summary "
+            "directories."
+        ),
+    )
+    parser.add_argument("first", type=Path, help="first file or directory")
+    parser.add_argument("second", type=Path, help="second file or directory")
+    parser.add_argument("output", type=Path, help="output file or directory")
+    return parser
 
-if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage:\n"
-              "  merge_summary.py summary1.xml summary2.xml output.xml\n"
-              "  merge_summary.py dir1/ dir2/ out_dir/\n",
-              file=sys.stderr)
-        sys.exit(1)
 
-    p1 = Path(sys.argv[1])
-    p2 = Path(sys.argv[2])
-    p3 = Path(sys.argv[3])
+def main(argv: list[str] | None = None) -> int:
+    args = build_argparser().parse_args(argv)
 
     try:
-        p1_is_dir = p1.is_dir()
-        p2_is_dir = p2.is_dir()
+        first_is_dir = args.first.is_dir()
+        second_is_dir = args.second.is_dir()
 
-        if p1_is_dir and p2_is_dir:
-            # Directory mode. If the output already exists, it must be a directory.
-            if p3.exists() and not p3.is_dir():
+        if first_is_dir and second_is_dir:
+            if args.output.exists() and not args.output.is_dir():
                 raise UltraParseError(
-                    f"In directory mode, output must be a directory: {p3}"
+                    "In directory mode, output must be a directory: "
+                    f"{args.output}"
                 )
-            merge_ultra_dirs(p1, p2, p3)
+            merge_ultra_dirs(args.first, args.second, args.output)
 
-        elif not p1_is_dir and not p2_is_dir:
-            # File mode. If the output already exists, it must not be a directory.
-            if p3.exists() and p3.is_dir():
+        elif not first_is_dir and not second_is_dir:
+            if args.output.exists() and args.output.is_dir():
                 raise UltraParseError(
-                    f"In file mode, output must be a file path, not a directory: {p3}"
+                    "In file mode, output must be a file path, "
+                    f"not a directory: {args.output}"
                 )
-            merge_ultra_files(p1, p2, p3)
+            merge_ultra_files(args.first, args.second, args.output)
             print("Merged file written.")
 
         else:
@@ -524,7 +554,13 @@ if __name__ == "__main__":
 
     except UltraParseError as e:
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(2)
+        return 2
     except Exception as e:
         print(f"Error: unexpected failure: {e}", file=sys.stderr)
-        sys.exit(3)
+        return 3
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
