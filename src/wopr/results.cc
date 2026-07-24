@@ -56,17 +56,64 @@ struct results_state
   std::shared_mutex current_mutex;
 };
 
-[[nodiscard]] labels_data make_labels(const rs::collection_t &);
 [[nodiscard]] std::vector<double> make_positions(std::size_t);
 [[nodiscard]] std::vector<const char *> to_cstr_vector(
   const std::vector<std::string> &);
 
-[[nodiscard]] bool references_available(const results_state &state) noexcept
+struct fit_data
 {
-  return std::ranges::any_of(
-    state.collection,
-    [](const auto &entry) { return !entry.second.reference.empty(); });
-}
+  explicit fit_data(std::size_t count)
+  {
+    best.reserve(count);
+    mean.reserve(count);
+    std_dev.reserve(count);
+    runs.reserve(count);
+  }
+
+  std::vector<double> best;
+  std::vector<double> mean;
+  std::vector<double> std_dev;
+  std::vector<double> runs;
+};
+
+struct elite_data
+{
+  explicit elite_data(std::size_t count) { elite.reserve(count); }
+
+  struct run
+  {
+    std::vector<unsigned> id {};
+    std::vector<double> fit {};
+    std::vector<double> acc {};
+    std::vector<std::string> tick_text {};
+    labels_data tick_labels {};
+    std::vector<double> tick_positions {};
+  };
+
+  std::vector<run> elite;
+};
+
+struct results_snapshot
+{
+  explicit results_snapshot(results_state &);
+
+  std::vector<std::string> labels;
+  labels_data label_data;
+  std::vector<double> positions;
+  bool references_available {false};
+
+  std::vector<unsigned> capacity_runs;
+  std::vector<unsigned> runs;
+  unsigned max_runs {0};
+  unsigned max_runs_with_reference {0};
+  std::vector<double> success_rates;
+  double best_success_rate {0.0};
+  double best_success_rate_with_reference {0.0};
+  fit_data current_fitness;
+  fit_data reference_fitness;
+  elite_data current_elite;
+  elite_data reference_elite;
+};
 
 bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
 {
@@ -182,67 +229,120 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
     }
   }
 }
-void render_number_of_runs(results_state &state)
+
+void add_fit_data(fit_data &out, const summary_data &summary)
+{
+  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+
+  out.best.push_back(summary.best_fit.size() ? summary.best_fit[0] : qnan);
+  out.mean.push_back(summary.fit_mean.size() ? summary.fit_mean[0] : qnan);
+  out.std_dev.push_back(summary.fit_std_dev.size()
+                        ? summary.fit_std_dev[0] : qnan);
+  out.runs.push_back(summary.runs);
+}
+
+void add_elite_data(elite_data &out, const summary_data &summary)
+{
+  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+
+  elite_data::run run;
+  run.id.reserve(summary.elite.size());
+  run.fit.reserve(summary.elite.size());
+  run.acc.reserve(summary.elite.size());
+
+  for (const auto &[id, measurements] : summary.elite)
+  {
+    run.id.push_back(id);
+    run.fit.push_back(measurements.fitness
+                      ? (*measurements.fitness)[0] : qnan);
+    run.acc.push_back(measurements.accuracy ? *measurements.accuracy : qnan);
+  }
+
+  out.elite.push_back(std::move(run));
+}
+
+results_snapshot::results_snapshot(results_state &state)
+  : current_fitness(state.collection.size()),
+    reference_fitness(state.collection.size()),
+    current_elite(state.collection.size()),
+    reference_elite(state.collection.size())
+{
+  std::shared_lock guard(state.current_mutex);
+
+  const std::size_t size(state.collection.size());
+  labels.reserve(size);
+  capacity_runs.reserve(size);
+  runs.reserve(size * 2);
+  success_rates.reserve(size * 2);
+
+  references_available = std::ranges::any_of(
+    state.collection,
+    [](const auto &entry) { return !entry.second.reference.empty(); });
+
+  for (const auto &[label, data] : state.collection)
+  {
+    labels.push_back(label);
+    capacity_runs.push_back(data.conf.runs);
+    runs.push_back(data.current.runs);
+    success_rates.push_back(data.current.success_rate * 100.0);
+    max_runs = std::max({max_runs, data.conf.runs, data.current.runs});
+    best_success_rate = std::max(best_success_rate,
+                                 data.current.success_rate);
+    add_fit_data(current_fitness, data.current);
+    add_fit_data(reference_fitness, data.reference);
+    add_elite_data(current_elite, data.current);
+    add_elite_data(reference_elite, data.reference);
+  }
+
+  max_runs_with_reference = max_runs;
+  best_success_rate_with_reference = best_success_rate;
+  for (const auto &[_, data] : state.collection)
+  {
+    runs.push_back(data.reference.runs);
+    success_rates.push_back(data.reference.success_rate * 100.0);
+    max_runs_with_reference = std::max(max_runs_with_reference,
+                                       data.reference.runs);
+    best_success_rate_with_reference = std::max(
+      best_success_rate_with_reference, data.reference.success_rate);
+  }
+
+  label_data = to_cstr_vector(labels);
+  if (size)
+    positions = make_positions(size);
+
+  for (auto &run : current_elite.elite)
+  {
+    run.tick_text.reserve(run.id.size());
+    std::ranges::transform(run.id, std::back_inserter(run.tick_text),
+                           [](unsigned id) { return std::to_string(id); });
+    run.tick_labels = to_cstr_vector(run.tick_text);
+    if (!run.id.empty())
+      run.tick_positions = make_positions(run.id.size());
+  }
+}
+
+void render_number_of_runs(const results_snapshot &snapshot)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
   constexpr double bar_width(0.5), half_width(bar_width / 2.0);
 
-  const std::size_t size(state.collection.size());
+  const std::size_t size(snapshot.labels.size());
   if (!size)
     return;
 
-  static bool show_reference_values {references_available(state)};
-  if (references_available(state))
+  static bool show_reference_values {snapshot.references_available};
+  if (snapshot.references_available)
     ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
 
   const std::size_t group_count(1 + show_reference_values);
 
-  struct cap_data
-  {
-    std::vector<unsigned> runs;
-    unsigned max;
-  };
-
-  const cap_data caps = [&]
-  {
-    cap_data out;
-    out.max = 0;
-    out.runs.reserve(size);
-
-    for (const auto &[_, data] : state.collection)
-    {
-      out.runs.push_back(data.conf.runs);
-      out.max = std::max(out.max, data.conf.runs);
-    }
-
-    return out;
-  }();
-
-  std::vector<unsigned> bar_values;
-  bar_values.reserve(size * group_count);
-
-  unsigned max_runs(caps.max);
-
-  for (std::shared_lock guard(state.current_mutex);
-       const auto &[_, data] : state.collection)
-  {
-    bar_values.push_back(data.current.runs);
-    max_runs = std::max(max_runs, data.current.runs);
-  }
-
-  if (show_reference_values)
-    for (const auto &[_, data] : state.collection)
-    {
-      bar_values.push_back(data.reference.runs);
-      max_runs = std::max(max_runs, data.reference.runs);
-    }
-
-  const auto labels(make_labels(state.collection));
-  const auto positions(make_positions(size));
+  const unsigned max_runs(show_reference_values
+                          ? snapshot.max_runs_with_reference
+                          : snapshot.max_runs);
 
   int flags(ImPlotFlags_NoTitle);
-  if (!references_available(state) || !show_reference_values)
+  if (!snapshot.references_available || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
@@ -255,20 +355,21 @@ void render_number_of_runs(results_state &state)
 
   constexpr auto padding(0.75);
   ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
-  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
+  ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.positions.data(), size,
+                         snapshot.label_data.data());
 
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
 
   // Bars.
-  ImPlot::PlotBarGroups(ilabels.data(), bar_values.data(), group_count, size,
+  ImPlot::PlotBarGroups(ilabels.data(), snapshot.runs.data(), group_count, size,
                         bar_width);
 
   // Capacity lines.
   for (std::size_t i(0); i < size; ++i)
-    if (caps.runs[i] > 1)
+    if (snapshot.capacity_runs[i] > 1)
     {
       const auto di(static_cast<double>(i));
-      const auto dcp(static_cast<double>(caps.runs[i]));
+      const auto dcp(static_cast<double>(snapshot.capacity_runs[i]));
 
       const double xs[] =
       {
@@ -284,44 +385,26 @@ void render_number_of_runs(results_state &state)
   ImPlot::EndPlot();
 }
 
-void render_success_rate(results_state &state)
+void render_success_rate(const results_snapshot &snapshot)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
-  const std::size_t size(state.collection.size());
+  const std::size_t size(snapshot.labels.size());
   if (!size)
     return;
 
-  static bool show_reference_values {references_available(state)};
-  if (references_available(state))
+  static bool show_reference_values {snapshot.references_available};
+  if (snapshot.references_available)
     ImGui::Checkbox("Reference values##Run##Success rate",
                     &show_reference_values);
   const std::size_t group_count(1 + show_reference_values);
 
-  std::vector<double> sr;
-  sr.reserve(size * group_count);
-
-  double best_success_rate(0.0);
-  for (std::shared_lock guard(state.current_mutex);
-       const auto &[_, data] : state.collection)
-  {
-    best_success_rate = std::max(data.current.success_rate, best_success_rate);
-    sr.push_back(data.current.success_rate * 100.0);
-  }
-
-  if (show_reference_values)
-    for (const auto &[_, data] : state.collection)
-    {
-      best_success_rate = std::max(data.reference.success_rate,
-                                   best_success_rate);
-      sr.push_back(data.reference.success_rate * 100.0);
-    }
-
-  const auto labels(make_labels(state.collection));
-  const auto positions(make_positions(size));
+  const double best_success_rate(
+    show_reference_values ? snapshot.best_success_rate_with_reference
+                          : snapshot.best_success_rate);
 
   int flags(ImPlotFlags_NoTitle);
-  if (!references_available(state) || !show_reference_values)
+  if (!snapshot.references_available || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
@@ -334,7 +417,8 @@ void render_success_rate(results_state &state)
 
   constexpr auto padding(0.75);
   ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
-  ImPlot::SetupAxisTicks(ImAxis_X1, positions.data(), size, labels.data());
+  ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.positions.data(), size,
+                         snapshot.label_data.data());
 
   if (best_success_rate > 0.0)
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0,
@@ -343,75 +427,24 @@ void render_success_rate(results_state &state)
   else
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
 
-  ImPlot::PlotBarGroups(ilabels.data(), sr.data(), group_count, size, 0.5);
+  ImPlot::PlotBarGroups(ilabels.data(), snapshot.success_rates.data(),
+                        group_count, size, 0.5);
   ImPlot::EndPlot();
 }
 
-void render_fitness_across_datasets(results_state &state)
+void render_fitness_across_datasets(const results_snapshot &snapshot)
 {
-  const std::size_t size(state.collection.size());
+  const std::size_t size(snapshot.labels.size());
   if (!size)
     return;
 
-  static bool show_reference_values {references_available(state)};
-  if (references_available(state))
+  static bool show_reference_values {snapshot.references_available};
+  if (snapshot.references_available)
     ImGui::Checkbox("Reference values##FAD", &show_reference_values);
 
-  struct fit_data
-  {
-    explicit fit_data(std::size_t count)
-    {
-      best.reserve(count);
-      mean.reserve(count);
-      std_dev.reserve(count);
-      runs.reserve(count);
-    }
-
-    std::vector<double> best;
-    std::vector<double> mean;
-    std::vector<double> std_dev;
-    std::vector<double> runs;
-  };
-
-  const auto add_data([](fit_data &fitd, const summary_data &sumd)
-  {
-    constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
-
-    if (sumd.best_fit.size())
-      fitd.best.push_back(sumd.best_fit[0]);
-    else
-      fitd.best.push_back(qnan);
-
-    if (sumd.fit_mean.size())
-      fitd.mean.push_back(sumd.fit_mean[0]);
-    else
-      fitd.mean.push_back(qnan);
-
-    if (sumd.fit_std_dev.size())
-      fitd.std_dev.push_back(sumd.fit_std_dev[0]);
-    else
-      fitd.std_dev.push_back(qnan);
-
-    fitd.runs.push_back(sumd.runs);
-  });
-
-  fit_data current(size);
-
-  for (std::shared_lock guard(state.current_mutex);
-       const auto &[_, data] : state.collection)
-    add_data(current, data.current);
-
-  const fit_data reference = [&]
-  {
-    fit_data out(size);
-
-    for (const auto &[_, data] : state.collection)
-      add_data(out, data.reference);
-
-    return out;
-  }();
-
-  const auto labels(make_labels(state.collection));
+  const auto &current(snapshot.current_fitness);
+  const auto &reference(snapshot.reference_fitness);
+  const auto &labels(snapshot.label_data);
   static const char title[] = "##FAD";
   const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
 
@@ -440,7 +473,7 @@ void render_fitness_across_datasets(results_state &state)
     }
 
     int flags(0);
-    if (!references_available(state) || !show_reference_values)
+    if (!snapshot.references_available || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
@@ -502,71 +535,19 @@ void render_fitness_across_datasets(results_state &state)
   ImPlot::EndSubplots();
 }
 
-void render_elite(results_state &state)
+void render_elite(const results_snapshot &snapshot)
 {
-  const std::size_t size(state.collection.size());
+  const std::size_t size(snapshot.labels.size());
   if (!size)
     return;
 
-  static bool show_reference_values {references_available(state)};
-  if (references_available(state))
+  static bool show_reference_values {snapshot.references_available};
+  if (snapshot.references_available)
     ImGui::Checkbox("Reference values##ELITE", &show_reference_values);
 
-  struct elite_data
-  {
-    explicit elite_data(std::size_t count) { elite.reserve(count); }
-
-    struct run
-    {
-      std::vector<unsigned> id {};
-      std::vector<double> fit {};
-      std::vector<double> acc {};
-    };
-
-    std::vector<run> elite;
-  };
-
-  const auto add_data([](elite_data &e, const summary_data &sumd)
-  {
-    constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
-
-    elite_data::run d;
-
-    for (std::size_t i(0); i < sumd.elite.size(); ++i)
-    {
-      d.id.push_back(sumd.elite[i].first);
-
-      if (sumd.elite[i].second.fitness)
-        d.fit.push_back((*sumd.elite[i].second.fitness)[0]);
-      else
-        d.fit.push_back(qnan);
-
-      if (sumd.elite[i].second.accuracy)
-        d.acc.push_back(*sumd.elite[i].second.accuracy);
-      else
-        d.acc.push_back(qnan);
-    }
-
-    e.elite.push_back(d);
-  });
-
-  elite_data current(size);
-
-  for (std::shared_lock guard(state.current_mutex);
-       const auto &[_, data] : state.collection)
-    add_data(current, data.current);
-
-  const elite_data reference = [&]
-  {
-    elite_data out(size);
-
-    for (const auto &[_, data] : state.collection)
-      add_data(out, data.reference);
-
-    return out;
-  }();
-
-  const auto labels(make_labels(state.collection));
+  const auto &current(snapshot.current_elite);
+  const auto &reference(snapshot.reference_elite);
+  const auto &labels(snapshot.label_data);
   static const char title[] = "##ELITE";
   const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
 
@@ -577,7 +558,7 @@ void render_elite(results_state &state)
   for (std::size_t i(0); i < size; ++i)
   {
     int flags(0);
-    if (!references_available(state) || !show_reference_values)
+    if (!snapshot.references_available || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
@@ -598,19 +579,10 @@ void render_elite(results_state &state)
 
       if (const auto &ids(current.elite[i].id); !ids.empty())
       {
-        static std::vector<std::string> tick_text;
-        tick_text.resize(ids.size());
-
-        for (std::size_t k(0); k < ids.size(); ++k)
-          tick_text[k] = std::to_string(ids[k]);
-
-        const auto tick_cstr(to_cstr_vector(tick_text));
-        const auto tick_pos(make_positions(current.elite[i].id.size()));
-
         ImPlot::SetupAxisTicks(ImAxis_X2,
-                               tick_pos.data(),
-                               static_cast<int>(tick_pos.size()),
-                               tick_cstr.data());
+                               current.elite[i].tick_positions.data(),
+                               static_cast<int>(ids.size()),
+                               current.elite[i].tick_labels.data());
       }
 
       const ImVec2 offset_upward(0, -10);
@@ -676,6 +648,8 @@ void render_elite(results_state &state)
 void render_rs(const imgui_app::program &prg, bool *p_open,
                results_state &state)
 {
+  const results_snapshot snapshot(state);
+
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
   ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
@@ -710,23 +684,23 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
       dashboard_panel
       {
         "Runs##ChildWindow", "RUNS", show_runs_check, mxz_runs,
-        [&state] { render_number_of_runs(state); }
+        [&snapshot] { render_number_of_runs(snapshot); }
       },
       dashboard_panel
       {
         "Success rate##ChildWindow", "SUCCESS RATE", show_success_rate_check,
-        mxz_success_rate, [&state] { render_success_rate(state); }
+        mxz_success_rate, [&snapshot] { render_success_rate(snapshot); }
       },
       dashboard_panel
       {
         "FADs##ChildWindow", "FITNESS ACROSS DATASETS",
         show_fitness_across_datasets_check, mxz_fitness_across_datasets,
-        [&state] { render_fitness_across_datasets(state); }
+        [&snapshot] { render_fitness_across_datasets(snapshot); }
       },
       dashboard_panel
       {
         "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check, mxz_elite,
-        [&state] { render_elite(state); }
+        [&snapshot] { render_elite(snapshot); }
       }
     };
     render_dashboard(panels);
@@ -751,12 +725,6 @@ std::vector<const char *> to_cstr_vector(const std::vector<std::string> &v)
            | std::ranges::to<std::vector>();
 }
 
-labels_data make_labels(const rs::collection_t &c)
-{
-  return c | std::views::keys
-           | std::views::transform(&std::string::c_str)
-           | std::ranges::to<labels_data>();
-}
 // Asynchronously reads all available summary files into queues for subsequent
 // processing.
 void get_summaries(std::stop_token stoken, results_state &state)
