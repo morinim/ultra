@@ -27,6 +27,7 @@
 #include <fstream>
 #include <mutex>
 #include <ranges>
+#include <shared_mutex>
 #include <sstream>
 #include <thread>
 
@@ -40,20 +41,6 @@ using namespace std::chrono_literals;
 namespace rs
 {
 
-unsigned settings::default_generations {100};
-unsigned settings::default_runs {1};
-ultra::model_measurements<double> settings::default_threshold {};
-
-std::shared_mutex current_mutex;
-collection_t collection;
-
-namespace run
-{
-
-bool nogui {false};
-
-}  // namespace run
-
 }  // namespace rs
 
 const std::string current_str {"Current"};
@@ -61,10 +48,25 @@ const std::string reference_str {"Reference"};
 
 using labels_data = std::vector<const char *>;
 
+struct results_state
+{
+  explicit results_state(rs::collection_t c) : collection(std::move(c)) {}
+
+  rs::collection_t collection;
+  std::shared_mutex current_mutex;
+};
+
 [[nodiscard]] labels_data make_labels(const rs::collection_t &);
 [[nodiscard]] std::vector<double> make_positions(std::size_t);
 [[nodiscard]] std::vector<const char *> to_cstr_vector(
   const std::vector<std::string> &);
+
+[[nodiscard]] bool references_available(const results_state &state) noexcept
+{
+  return std::ranges::any_of(
+    state.collection,
+    [](const auto &entry) { return !entry.second.reference.empty(); });
+}
 
 bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
 {
@@ -180,18 +182,18 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
     }
   }
 }
-void render_number_of_runs()
+void render_number_of_runs(results_state &state)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
   constexpr double bar_width(0.5), half_width(bar_width / 2.0);
 
-  static const std::size_t size(rs::collection.size());
+  const std::size_t size(state.collection.size());
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available()};
-  if (rs::references_available())
+  static bool show_reference_values {references_available(state)};
+  if (references_available(state))
     ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
 
   const std::size_t group_count(1 + show_reference_values);
@@ -202,13 +204,13 @@ void render_number_of_runs()
     unsigned max;
   };
 
-  static const cap_data caps = []
+  const cap_data caps = [&]
   {
     cap_data out;
     out.max = 0;
     out.runs.reserve(size);
 
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[_, data] : state.collection)
     {
       out.runs.push_back(data.conf.runs);
       out.max = std::max(out.max, data.conf.runs);
@@ -222,25 +224,25 @@ void render_number_of_runs()
 
   unsigned max_runs(caps.max);
 
-  for (std::shared_lock guard(rs::current_mutex);
-       const auto &[_, data] : rs::collection)
+  for (std::shared_lock guard(state.current_mutex);
+       const auto &[_, data] : state.collection)
   {
     bar_values.push_back(data.current.runs);
     max_runs = std::max(max_runs, data.current.runs);
   }
 
   if (show_reference_values)
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[_, data] : state.collection)
     {
       bar_values.push_back(data.reference.runs);
       max_runs = std::max(max_runs, data.reference.runs);
     }
 
-  static const auto labels(make_labels(rs::collection));
-  static const auto positions(make_positions(size));
+  const auto labels(make_labels(state.collection));
+  const auto positions(make_positions(size));
 
   int flags(ImPlotFlags_NoTitle);
-  if (!rs::references_available() || !show_reference_values)
+  if (!references_available(state) || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
@@ -282,16 +284,16 @@ void render_number_of_runs()
   ImPlot::EndPlot();
 }
 
-void render_success_rate()
+void render_success_rate(results_state &state)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
 
-  static const std::size_t size(rs::collection.size());
+  const std::size_t size(state.collection.size());
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available()};
-  if (rs::references_available())
+  static bool show_reference_values {references_available(state)};
+  if (references_available(state))
     ImGui::Checkbox("Reference values##Run##Success rate",
                     &show_reference_values);
   const std::size_t group_count(1 + show_reference_values);
@@ -300,26 +302,26 @@ void render_success_rate()
   sr.reserve(size * group_count);
 
   double best_success_rate(0.0);
-  for (std::shared_lock guard(rs::current_mutex);
-       const auto &[_, data] : rs::collection)
+  for (std::shared_lock guard(state.current_mutex);
+       const auto &[_, data] : state.collection)
   {
     best_success_rate = std::max(data.current.success_rate, best_success_rate);
     sr.push_back(data.current.success_rate * 100.0);
   }
 
   if (show_reference_values)
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[_, data] : state.collection)
     {
       best_success_rate = std::max(data.reference.success_rate,
                                    best_success_rate);
       sr.push_back(data.reference.success_rate * 100.0);
     }
 
-  static const auto labels(make_labels(rs::collection));
-  static const auto positions(make_positions(size));
+  const auto labels(make_labels(state.collection));
+  const auto positions(make_positions(size));
 
   int flags(ImPlotFlags_NoTitle);
-  if (!rs::references_available() || !show_reference_values)
+  if (!references_available(state) || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
   if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
@@ -345,24 +347,24 @@ void render_success_rate()
   ImPlot::EndPlot();
 }
 
-void render_fitness_across_datasets()
+void render_fitness_across_datasets(results_state &state)
 {
-  static const std::size_t size(rs::collection.size());
+  const std::size_t size(state.collection.size());
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available()};
-  if (rs::references_available())
+  static bool show_reference_values {references_available(state)};
+  if (references_available(state))
     ImGui::Checkbox("Reference values##FAD", &show_reference_values);
 
   struct fit_data
   {
-    fit_data()
+    explicit fit_data(std::size_t count)
     {
-      best.reserve(size);
-      mean.reserve(size);
-      std_dev.reserve(size);
-      runs.reserve(size);
+      best.reserve(count);
+      mean.reserve(count);
+      std_dev.reserve(count);
+      runs.reserve(count);
     }
 
     std::vector<double> best;
@@ -393,25 +395,25 @@ void render_fitness_across_datasets()
     fitd.runs.push_back(sumd.runs);
   });
 
-  fit_data current;
+  fit_data current(size);
 
-  for (std::shared_lock guard(rs::current_mutex);
-       const auto &[_, data] : rs::collection)
+  for (std::shared_lock guard(state.current_mutex);
+       const auto &[_, data] : state.collection)
     add_data(current, data.current);
 
-  static const fit_data reference = [&add_data]
+  const fit_data reference = [&]
   {
-    fit_data out;
+    fit_data out(size);
 
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[_, data] : state.collection)
       add_data(out, data.reference);
 
     return out;
   }();
 
-  static const auto labels(make_labels(rs::collection));
+  const auto labels(make_labels(state.collection));
   static const char title[] = "##FAD";
-  static const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
+  const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
 
   if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
                              ImPlotSubplotFlags_NoLegend))
@@ -438,7 +440,7 @@ void render_fitness_across_datasets()
     }
 
     int flags(0);
-    if (!rs::references_available() || !show_reference_values)
+    if (!references_available(state) || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
@@ -500,19 +502,19 @@ void render_fitness_across_datasets()
   ImPlot::EndSubplots();
 }
 
-void render_elite()
+void render_elite(results_state &state)
 {
-  static const std::size_t size(rs::collection.size());
+  const std::size_t size(state.collection.size());
   if (!size)
     return;
 
-  static bool show_reference_values {rs::references_available()};
-  if (rs::references_available())
+  static bool show_reference_values {references_available(state)};
+  if (references_available(state))
     ImGui::Checkbox("Reference values##ELITE", &show_reference_values);
 
   struct elite_data
   {
-    elite_data() { elite.reserve(size); }
+    explicit elite_data(std::size_t count) { elite.reserve(count); }
 
     struct run
     {
@@ -548,25 +550,25 @@ void render_elite()
     e.elite.push_back(d);
   });
 
-  elite_data current;
+  elite_data current(size);
 
-  for (std::shared_lock guard(rs::current_mutex);
-       const auto &[_, data] : rs::collection)
+  for (std::shared_lock guard(state.current_mutex);
+       const auto &[_, data] : state.collection)
     add_data(current, data.current);
 
-  static const elite_data reference = [&add_data]
+  const elite_data reference = [&]
   {
-    elite_data out;
+    elite_data out(size);
 
-    for (const auto &[_, data] : rs::collection)
+    for (const auto &[_, data] : state.collection)
       add_data(out, data.reference);
 
     return out;
   }();
 
-  static const auto labels(make_labels(rs::collection));
+  const auto labels(make_labels(state.collection));
   static const char title[] = "##ELITE";
-  static const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
+  const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
 
   if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
                              ImPlotSubplotFlags_NoLegend))
@@ -575,7 +577,7 @@ void render_elite()
   for (std::size_t i(0); i < size; ++i)
   {
     int flags(0);
-    if (!rs::references_available() || !show_reference_values)
+    if (!references_available(state) || !show_reference_values)
       flags |= ImPlotFlags_NoLegend;
 
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
@@ -671,7 +673,8 @@ void render_elite()
   ImPlot::EndSubplots();
 }
 
-void render_rs(const imgui_app::program &prg, bool *p_open)
+void render_rs(const imgui_app::program &prg, bool *p_open,
+               results_state &state)
 {
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -707,23 +710,23 @@ void render_rs(const imgui_app::program &prg, bool *p_open)
       dashboard_panel
       {
         "Runs##ChildWindow", "RUNS", show_runs_check, mxz_runs,
-        render_number_of_runs
+        [&state] { render_number_of_runs(state); }
       },
       dashboard_panel
       {
         "Success rate##ChildWindow", "SUCCESS RATE", show_success_rate_check,
-        mxz_success_rate, render_success_rate
+        mxz_success_rate, [&state] { render_success_rate(state); }
       },
       dashboard_panel
       {
         "FADs##ChildWindow", "FITNESS ACROSS DATASETS",
         show_fitness_across_datasets_check, mxz_fitness_across_datasets,
-        render_fitness_across_datasets
+        [&state] { render_fitness_across_datasets(state); }
       },
       dashboard_panel
       {
         "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check, mxz_elite,
-        render_elite
+        [&state] { render_elite(state); }
       }
     };
     render_dashboard(panels);
@@ -756,19 +759,19 @@ labels_data make_labels(const rs::collection_t &c)
 }
 // Asynchronously reads all available summary files into queues for subsequent
 // processing.
-void rs::summary::get_summaries(std::stop_token stoken)
+void get_summaries(std::stop_token stoken, results_state &state)
 {
-  assert(!collection.empty());
+  assert(!state.collection.empty());
 
   while (!stoken.stop_requested())
   {
-    for (auto &test : collection)
+    for (auto &test : state.collection)
     {
       const auto xml_fn(test.second.xml_summary);
 
       if (tinyxml2::XMLDocument summary; summary_data::check(xml_fn, summary))
       {
-        std::lock_guard guard(current_mutex);
+        std::lock_guard guard(state.current_mutex);
         test.second.current = summary_data(summary);
       }
     }
@@ -776,31 +779,18 @@ void rs::summary::get_summaries(std::stop_token stoken)
     std::this_thread::sleep_for(3000ms);
   }
 }
-[[nodiscard]] bool rs::references_available() noexcept
+void rs::summary::start(const imgui_app::program::settings &settings,
+                        options options)
 {
-  static bool init {false};
-  static bool available;
-
-  if (!init)
-  {
-    for (const auto &[_, d] : collection)
-      if (!d.reference.empty())
-      {
-        available = true;
-        break;
-      }
-
-    init = true;
-  }
-
-  return available;
-}
-void rs::summary::start(const imgui_app::program::settings &settings)
-{
-  std::jthread t_summaries(get_summaries);
+  results_state state(std::move(options.collection));
+  std::jthread t_summaries(get_summaries, std::ref(state));
 
   imgui_app::program prg(settings);
-  prg.run(render_rs);
+  prg.run(
+    [&state](const auto &program, bool *open)
+    {
+      render_rs(program, open, state);
+    });
 }
 
 }  // namespace ultra::wopr

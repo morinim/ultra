@@ -26,6 +26,7 @@
 #include <array>
 #include <chrono>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -45,14 +46,6 @@ using namespace std::chrono_literals;
 ultra::ts_queue<dynamic_data> dynamic_queue;
 ultra::ts_queue<population_line> population_queue;
 ultra::ts_queue<layers_line> layers_queue;
-
-namespace monitor
-{
-
-ultra::search_log slog {};
-int window {0};
-
-}  // namespace monitor
 
 /*********************************************************************
  * A normal distribution that supports works when standard deviation is zero.
@@ -100,9 +93,7 @@ struct id_scope
   id_scope &operator=(const id_scope &) = delete;
 };
 
-// Invariants:
-// - `rs::collection` size and ordering are immutable after initialisation;
-void render_dynamic()
+void render_dynamic(int monitoring_window)
 {
   static std::vector<dynamic_sequence> dynamic_runs;
 
@@ -145,8 +136,8 @@ void render_dynamic()
     {
       const auto &xs(dr.xs);
 
-      std::size_t window(monitor::window
-                         ? static_cast<std::size_t>(monitor::window)
+      std::size_t window(monitoring_window
+                         ? static_cast<std::size_t>(monitoring_window)
                          : std::numeric_limits<std::size_t>::max());
       window = std::min<std::size_t>(xs.size(), window);
 
@@ -552,7 +543,8 @@ void render_layers(layer_info li)
     render_layers_fit(layers_runs);
 }
 
-void render_monitor(const imgui_app::program &prg, bool *p_open)
+void render_monitor(const imgui_app::program &prg, bool *p_open,
+                    monitor::options &options)
 {
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -581,7 +573,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       ImGui::Checkbox("Layers age", &show_layers_age_check);
       ImGui::SameLine();
       ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
-      ImGui::SliderInt("##MonitoringWindow", &monitor::window, 0, 8000,
+      ImGui::SliderInt("##MonitoringWindow", &options.window, 0, 8000,
                        "window = %d");
       ImGui::PopItemWidth();
     }
@@ -595,26 +587,27 @@ void render_monitor(const imgui_app::program &prg, bool *p_open)
       dashboard_panel
       {
         "Dynamic##ChildWindow", "DYNAMICS",
-        !monitor::slog.dynamic_file_path.empty() && show_dynamic_check,
-        mxz_dynamic, render_dynamic
+        !options.slog.dynamic_file_path.empty() && show_dynamic_check,
+        mxz_dynamic,
+        [&options] { render_dynamic(options.window); }
       },
       dashboard_panel
       {
         "Population##ChildWindow", "POPULATION",
-        !monitor::slog.population_file_path.empty() && show_population_check,
+        !options.slog.population_file_path.empty() && show_population_check,
         mxz_population, render_population
       },
       dashboard_panel
       {
         "LayersFitness##ChildWindow", "FITNESS BY LAYER",
-        !monitor::slog.layers_file_path.empty() && show_layers_fit_check,
+        !options.slog.layers_file_path.empty() && show_layers_fit_check,
         mxz_layers_fit,
         [] { render_layers(layer_info::fitness); }
       },
       dashboard_panel
       {
         "LayersAge##ChildWindow", "AGE BY LAYER",
-        !monitor::slog.layers_file_path.empty() && show_layers_age_check,
+        !options.slog.layers_file_path.empty() && show_layers_age_check,
         mxz_layers_age,
         [] { render_layers(layer_info::age); }
       }
@@ -723,13 +716,13 @@ template<typename Queue, typename DataClass>
 // Asynchronously reads all specified log files into queues for subsequent
 // processing.
 //
-void get_logs(std::stop_token stoken)
+void get_logs(std::stop_token stoken, const ultra::search_log &slog)
 {
   try
   {
-    auto dynamic_log(open_log_file(monitor::slog.dynamic_file_path));
-    auto population_log(open_log_file(monitor::slog.population_file_path));
-    auto layers_log(open_log_file(monitor::slog.layers_file_path));
+    auto dynamic_log(open_log_file(slog.dynamic_file_path));
+    auto population_log(open_log_file(slog.population_file_path));
+    auto layers_log(open_log_file(slog.layers_file_path));
 
     ultra::timer last_read;
 
@@ -738,19 +731,19 @@ void get_logs(std::stop_token stoken)
       if (dynamic_log
           && !process_log_stream<decltype(dynamic_queue), dynamic_data>(
                 *dynamic_log, dynamic_queue, last_read, stoken,
-                monitor::slog.dynamic_file_path))
+                slog.dynamic_file_path))
         dynamic_log.reset();
 
       if (population_log
           && !process_log_stream<decltype(population_queue), population_line>(
                 *population_log, population_queue, last_read, stoken,
-                monitor::slog.population_file_path))
+                slog.population_file_path))
         population_log.reset();
 
       if (layers_log
           && !process_log_stream<decltype(layers_queue), layers_line>(
                 *layers_log, layers_queue, last_read, stoken,
-                monitor::slog.layers_file_path))
+                slog.layers_file_path))
         layers_log.reset();
 
       if (!dynamic_log && !population_log && !layers_log)
@@ -773,12 +766,17 @@ void get_logs(std::stop_token stoken)
 }
 
 // Asynchronously reads all available summary files into queues for subsequent
-void monitor::start(const imgui_app::program::settings &settings)
+void monitor::start(const imgui_app::program::settings &settings,
+                    options options)
 {
-  std::jthread t_logs(get_logs);
+  std::jthread t_logs(get_logs, std::cref(options.slog));
 
   imgui_app::program prg(settings);
-  prg.run(render_monitor);
+  prg.run(
+    [&options](const auto &program, bool *open)
+    {
+      render_monitor(program, open, options);
+    });
 }
 
 }  // namespace ultra::wopr

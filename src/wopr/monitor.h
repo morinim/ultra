@@ -17,16 +17,17 @@
 
 #include "kernel/search_log.h"
 
-namespace argh { class parser; }
-
 namespace ultra::wopr::monitor
 {
 
-extern ultra::search_log slog;
-extern int window;
+struct options
+{
+  ultra::search_log slog {};
+  int window {0};
+  bool imgui_demo {false};
+};
 
-void start(const imgui_app::program::settings &);
-[[nodiscard]] bool setup_cmd(argh::parser &);
+void start(const imgui_app::program::settings &, options);
 
 }  // namespace ultra::wopr::monitor
 

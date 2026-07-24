@@ -23,13 +23,10 @@
 #include <filesystem>
 #include <limits>
 #include <set>
-#include <shared_mutex>
-#include <stop_token>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace argh { class parser; }
 namespace tinyxml2 { class XMLDocument; }
 
 namespace ultra::wopr
@@ -71,15 +68,11 @@ enum class exec_mode {run, summary};
 
 struct settings
 {
-  static unsigned default_generations;
-  static unsigned default_runs;
-  static ultra::model_measurements<double> default_threshold;
-
   ultra::src::dataframe::params params {};
 
-  unsigned generations {default_generations};
-  unsigned runs {default_runs};
-  ultra::model_measurements<double> threshold {default_threshold};
+  unsigned generations {100};
+  unsigned runs {1};
+  ultra::model_measurements<double> threshold {};
 };
 
 struct data
@@ -98,33 +91,39 @@ struct data
   const summary_data reference;
 };
 
-extern std::shared_mutex current_mutex;
-
 using collection_t = std::vector<std::pair<const std::string, data>>;
-extern collection_t collection;
 
-[[nodiscard]] settings read_settings(const std::filesystem::path &);
-[[nodiscard]] bool references_available() noexcept;
+[[nodiscard]] settings read_settings(const std::filesystem::path &,
+                                     const settings & = {});
 [[nodiscard]] collection_t setup_collection(std::filesystem::path,
                                             std::filesystem::path,
-                                            exec_mode);
+                                            exec_mode,
+                                            const settings & = {});
 
 namespace run
 {
 
-extern bool nogui;
+struct options
+{
+  collection_t collection {};
+  bool nogui {false};
+  bool imgui_demo {false};
+};
 
-[[nodiscard]] bool setup_cmd(argh::parser &);
-[[nodiscard]] bool start(const imgui_app::program::settings &);
+[[nodiscard]] bool start(const imgui_app::program::settings &, options);
 
 }  // namespace run
 
 namespace summary
 {
 
-void get_summaries(std::stop_token);
-[[nodiscard]] bool setup_cmd(argh::parser &);
-void start(const imgui_app::program::settings &);
+struct options
+{
+  collection_t collection {};
+  bool imgui_demo {false};
+};
+
+void start(const imgui_app::program::settings &, options);
 
 }  // namespace summary
 

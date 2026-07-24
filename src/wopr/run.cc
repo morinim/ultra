@@ -31,12 +31,14 @@ namespace fs = std::filesystem;
 namespace ultra::wopr
 {
 
-bool rs::run::start(const imgui_app::program::settings &settings)
+bool rs::run::start(const imgui_app::program::settings &settings,
+                    options options)
 {
   std::stop_source source;
+  const bool multiple_tests(options.collection.size() > 1);
 
   const auto test_driver(
-    [source](auto test)
+    [source, multiple_tests](auto test)
     {
       const auto &dataset(test.second.dataset);
       ultra::src::problem prob(
@@ -59,13 +61,13 @@ bool rs::run::start(const imgui_app::program::settings &settings)
 
       s.logger(sl).stop_source(source);
 
-      if (collection.size() > 1)
+      if (multiple_tests)
         s.tag(dataset.stem());
 
       return s.run(test.second.conf.runs, test.second.conf.threshold);
     });
 
-  if (collection.size() > 1)
+  if (multiple_tests)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
   using stats_t = ultra::search_stats<ultra::gp::individual, double>;
@@ -81,13 +83,14 @@ bool rs::run::start(const imgui_app::program::settings &settings)
     ~stop_on_exit() { source_ref.request_stop(); }
   } guard{source};
 
-  for (const auto &test : collection)
+  for (const auto &test : options.collection)
     tasks.emplace_back(test.second.dataset,
                        std::async(std::launch::async, test_driver, test));
 
-  if (run::nogui == false)
+  if (!options.nogui)
   {
-    rs::summary::start(settings);
+    rs::summary::start(
+      settings, rs::summary::options{std::move(options.collection)});
     source.request_stop();
   }
 

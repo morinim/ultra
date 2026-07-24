@@ -17,40 +17,53 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
 int main(int argc, char *argv[])
 {
-  using ultra::wopr::cmdl_result;
+  auto result(ultra::wopr::parse_args(argc, argv));
 
-  const auto result(ultra::wopr::parse_args(argc, argv));
-
-  if (result == cmdl_result::error)
+  if (!result)
   {
-    std::cerr << "Use `--help` switch for command line description.\n\n"
+    std::cerr << result.error() << "\n\n"
+              << "Use `--help` switch for command line description.\n\n"
               << "People sometimes make mistakes.\n";
     return EXIT_FAILURE;
   }
 
-  if (result == cmdl_result::help)
-  {
-    ultra::wopr::cmdl_usage();
-    return EXIT_SUCCESS;
-  }
+  return std::visit(
+    [](auto options)
+    {
+      using options_t = decltype(options);
 
-  imgui_app::program::settings settings;
-  settings.w_related.title = "WOPR";
-  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
-  settings.demo = ultra::wopr::imgui_demo_panel;
+      if constexpr (std::is_same_v<options_t, ultra::wopr::help_command>)
+      {
+        ultra::wopr::cmdl_usage();
+        return EXIT_SUCCESS;
+      }
+      else
+      {
+        imgui_app::program::settings settings;
+        settings.w_related.title = "WOPR";
+        settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+        settings.demo = options.imgui_demo;
 
-  if (result == cmdl_result::summary)
-    ultra::wopr::rs::summary::start(settings);
-  else if (result == cmdl_result::monitor)
-    ultra::wopr::monitor::start(settings);
-  else if (result == cmdl_result::run)
-  {
-    if (!ultra::wopr::rs::run::start(settings))
-      return EXIT_FAILURE;
-  }
+        if constexpr (std::is_same_v<options_t,
+                                     ultra::wopr::monitor::options>)
+          ultra::wopr::monitor::start(settings, std::move(options));
+        else if constexpr (std::is_same_v<options_t,
+                                          ultra::wopr::rs::run::options>)
+        {
+          if (!ultra::wopr::rs::run::start(settings, std::move(options)))
+            return EXIT_FAILURE;
+        }
+        else
+          ultra::wopr::rs::summary::start(settings, std::move(options));
 
-  return EXIT_SUCCESS;
+        return EXIT_SUCCESS;
+      }
+    },
+    std::move(*result));
 }

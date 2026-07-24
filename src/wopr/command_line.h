@@ -13,20 +13,29 @@
 #if !defined(ULTRA_WOPR_COMMAND_LINE_H)
 #define      ULTRA_WOPR_COMMAND_LINE_H
 
+#include "monitor.h"
+#include "results.h"
+
+#include <expected>
 #include <filesystem>
 #include <string>
+#include <variant>
 
 namespace ultra::wopr
 {
 
-enum class cmdl_result {error, help, monitor, run, summary};
+struct help_command {};
 
-extern bool imgui_demo_panel;
+using command = std::variant<
+  help_command,
+  monitor::options,
+  rs::run::options,
+  rs::summary::options>;
 
 void cmdl_usage();
 [[nodiscard]] std::filesystem::path build_path(
   std::filesystem::path, std::filesystem::path, const std::string & = {});
-[[nodiscard]] cmdl_result parse_args(int, char *[]);
+[[nodiscard]] std::expected<command, std::string> parse_args(int, char *[]);
 
 }  // namespace ultra::wopr
 

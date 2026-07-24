@@ -36,8 +36,6 @@ namespace fs = std::filesystem;
 namespace ultra::wopr
 {
 
-bool imgui_demo_panel {false};
-
 namespace
 {
 
@@ -90,23 +88,24 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return threshold;
 }
 
-rs::settings rs::read_settings(const fs::path &test_fn)
+rs::settings rs::read_settings(const fs::path &test_fn,
+                               const settings &defaults)
 {
   assert(test_fn.extension() == ".csv");
 
   const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
   if (!fs::exists(settings_fn))
-    return {};
+    return defaults;
 
   tinyxml2::XMLDocument doc;
   if (const auto result(doc.LoadFile(settings_fn.c_str()));
       result != tinyxml2::XML_SUCCESS)
   {
     std::cerr << "Cannot open settings for " << test_fn << ".\n";
-    return {};
+    return defaults;
   }
 
-  settings ret;
+  settings ret(defaults);
 
   tinyxml2::XMLConstHandle handle(&doc);
   const auto h_ultra(handle.FirstChildElement("ultra"));
@@ -114,20 +113,14 @@ rs::settings rs::read_settings(const fs::path &test_fn)
   const auto h_search(h_ultra.FirstChildElement("search"));
   if (const auto *e = h_search.FirstChildElement("generations").ToElement())
     ret.generations = e->UnsignedText(ret.generations);
-  else
-    ret.generations = settings::default_generations;
 
   if (const auto *e = h_search.FirstChildElement("runs").ToElement())
     ret.runs = e->UnsignedText(ret.runs);
-  else
-    ret.runs = settings::default_runs;
 
   if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
   {
     if (const char *text = e->GetText())
       ret.threshold = extract_threshold(std::string(text));
-    else
-      ret.threshold = settings::default_threshold;
   }
 
   const auto h_dataset(h_ultra.FirstChildElement("dataset"));
@@ -227,7 +220,8 @@ fs::path build_path(fs::path base_dir, fs::path f,
 
   return {};
 }
-rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
+rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m,
+                                      const settings &defaults)
 {
   using namespace ultra;
 
@@ -248,7 +242,7 @@ rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
 
   collection_t ret;
 
-  const auto check_and_insert([&m, &in2, &ret](const auto &path)
+  const auto check_and_insert([&m, &in2, &ret, &defaults](const auto &path)
   {
     const auto get_reference([&in2](const fs::path &base)
     {
@@ -305,7 +299,7 @@ rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
 
       const auto ref(get_reference(path));
 
-      const rs::data d(path, sum, read_settings(path), ref);
+      const rs::data d(path, sum, read_settings(path, defaults), ref);
 
       ret.emplace_back(path.stem(), d);
 
@@ -375,10 +369,15 @@ rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m)
   return ret;
 }
 
-bool monitor::setup_cmd(argh::parser &cmdl)
+namespace
+{
+
+std::expected<monitor::options, std::string>
+parse_monitor(const argh::parser &cmdl)
 {
   using namespace ultra;
 
+  monitor::options options;
   const auto &pos_args(cmdl.pos_args());
 
   fs::path log_object(pos_args.size() <= 2 ? "./" : pos_args[2]);
@@ -399,18 +398,17 @@ bool monitor::setup_cmd(argh::parser &cmdl)
 
   if (!fs::is_directory(log_folder))
   {
-    std::cerr << log_folder << " isn't a directory.\n";
-    return false;
+    return std::unexpected(log_folder.string() + " isn't a directory.");
   }
 
-  monitor::slog.base_dir = log_folder;
-  monitor::slog.summary_file_path = "";
+  options.slog.base_dir = log_folder;
+  options.slog.summary_file_path = "";
 
-  monitor::slog.dynamic_file_path =
+  options.slog.dynamic_file_path =
     build_path(log_folder, cmdl("dynamic", "").str());
-  monitor::slog.layers_file_path =
+  options.slog.layers_file_path =
     build_path(log_folder, cmdl("layers", "").str());
-  monitor::slog.population_file_path =
+  options.slog.population_file_path =
     build_path(log_folder, cmdl("population", "").str());
 
   const auto discover([&](fs::path &path, std::string_view marker)
@@ -430,18 +428,18 @@ bool monitor::setup_cmd(argh::parser &cmdl)
     return true;
   });
 
-  if (!discover(monitor::slog.dynamic_file_path,
+  if (!discover(options.slog.dynamic_file_path,
                 search_log::default_dynamic_file)
-      || !discover(monitor::slog.layers_file_path,
+      || !discover(options.slog.layers_file_path,
                    search_log::default_layers_file)
-      || !discover(monitor::slog.population_file_path,
+      || !discover(options.slog.population_file_path,
                    search_log::default_population_file))
-    return false;
+    return std::unexpected("Cannot select the log files.");
 
   const std::vector log_vect =
   {
-    monitor::slog.dynamic_file_path, monitor::slog.layers_file_path,
-    monitor::slog.population_file_path
+    options.slog.dynamic_file_path, options.slog.layers_file_path,
+    options.slog.population_file_path
   };
 
   bool all_empty(true);
@@ -451,21 +449,16 @@ bool monitor::setup_cmd(argh::parser &cmdl)
       all_empty = false;
 
     if (!path.empty() && !fs::is_regular_file(path))
-    {
-      std::cerr << "A configured log file (" << path << ") is not available.\n";
-      return false;
-    }
+      return std::unexpected(
+        "A configured log file (" + path.string() + ") is not available.");
   }
 
   if (all_empty)
-  {
-    std::cerr << "No log file available.\n";
-    return false;
-  }
+    return std::unexpected("No log file available.");
 
-  std::cout << "Dynamic file path: " << monitor::slog.dynamic_file_path
-            << "\nLayers file path: " << monitor::slog.layers_file_path
-            << "\nPopulation file path: " << monitor::slog.population_file_path
+  std::cout << "Dynamic file path: " << options.slog.dynamic_file_path
+            << "\nLayers file path: " << options.slog.layers_file_path
+            << "\nPopulation file path: " << options.slog.population_file_path
             << '\n';
 
 
@@ -473,41 +466,43 @@ bool monitor::setup_cmd(argh::parser &cmdl)
   {
     try
     {
-      monitor::window = std::stoi(v);
-      std::cout << "Monitoring window: " << monitor::window << '\n';
+      options.window = std::stoi(v);
+      std::cout << "Monitoring window: " << options.window << '\n';
     }
     catch (...)
     {
-      std::cerr << "Wrong value for monitoring window.\n";
-      return false;
+      return std::unexpected("Wrong value for monitoring window.");
     }
   }
 
-  return true;
+  options.imgui_demo = cmdl["imguidemo"];
+  return options;
 }
 
-bool rs::summary::setup_cmd(argh::parser &cmdl)
+std::expected<rs::summary::options, std::string>
+parse_summary(const argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
   if (pos_args.size() <= 2)
-  {
-    std::cerr << "At least one directory must be specified.\n";
-    return false;
-  }
+    return std::unexpected("At least one directory must be specified.");
 
   const fs::path dir1(pos_args.size() <= 2 ? "./" : pos_args[2]);
   const fs::path dir2(pos_args.size() <= 3 ? "" : pos_args[3]);
 
-  collection = setup_collection(dir1, dir2, exec_mode::summary);
+  auto collection(rs::setup_collection(dir1, dir2, rs::exec_mode::summary));
 
   if (collection.empty())
-    return false;
+    return std::unexpected("Cannot create the results collection.");
 
-  return true;
+  return rs::summary::options{
+    .collection = std::move(collection),
+    .imgui_demo = cmdl["imguidemo"]
+  };
 }
 
-bool rs::run::setup_cmd(argh::parser &cmdl)
+std::expected<rs::run::options, std::string>
+parse_run(const argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
@@ -516,33 +511,46 @@ bool rs::run::setup_cmd(argh::parser &cmdl)
 
   const fs::path test_input(pos_args.size() <= 2 ? "./" : pos_args[2]);
   const fs::path ref_folder(cmdl("reference", "").str());
+  rs::settings defaults;
 
-  if (const auto v(cmdl("generations").str()); !v.empty())
+  try
   {
-    settings::default_generations = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Generations: " << settings::default_generations << '\n';
+    if (const auto v(cmdl("generations").str()); !v.empty())
+    {
+      defaults.generations = std::max<unsigned>(std::stoul(v), 1);
+      std::cout << "Generations: " << defaults.generations << '\n';
+    }
+
+    if (const auto v(cmdl("runs").str()); !v.empty())
+    {
+      defaults.runs = std::max<unsigned>(std::stoul(v), 1);
+      std::cout << "Runs: " << defaults.runs << '\n';
+    }
+
+    if (const auto v(cmdl("threshold").str()); !v.empty())
+      defaults.threshold = extract_threshold(v);
+  }
+  catch (const std::exception &)
+  {
+    return std::unexpected("Invalid run option value.");
   }
 
-  if (const auto v(cmdl("runs").str()); !v.empty())
-  {
-    settings::default_runs = std::max<unsigned>(std::stoul(v), 1);
-    std::cout << "Runs: " << settings::default_runs << '\n';
-  }
-
-  if (const auto v(cmdl("threshold").str()); !v.empty())
-    settings::default_threshold = extract_threshold(v);
-
-  collection = setup_collection(test_input, ref_folder, exec_mode::run);
+  auto collection(
+    rs::setup_collection(test_input, ref_folder, rs::exec_mode::run, defaults));
 
   if (collection.empty())
-    return false;
+    return std::unexpected("Cannot create the run collection.");
 
-  run::nogui = cmdl["nogui"];
-
-  return true;
+  return rs::run::options{
+    .collection = std::move(collection),
+    .nogui = cmdl["nogui"],
+    .imgui_demo = cmdl["imguidemo"]
+  };
 }
 
-cmdl_result parse_args(int argc, char *argv[])
+}  // namespace
+
+std::expected<command, std::string> parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
 
@@ -566,28 +574,24 @@ cmdl_result parse_args(int argc, char *argv[])
   const auto &pos_args(cmdl.pos_args());
 
   if (pos_args.size() <= 1 || cmdl[{"-h", "--help"}])
-    return cmdl_result::help;
+    return help_command{};
 
   std::string cmd;
   std::ranges::transform(pos_args[1], std::back_inserter(cmd),
                          [](unsigned char c){ return std::tolower(c); });
 
   if (!cmds.contains(cmd))
-  {
-    std::cerr << "Unknown command `" << cmd << "`.\n";
-    return cmdl_result::error;
-  }
+    return std::unexpected("Unknown command `" + cmd + "`.");
 
-  imgui_demo_panel = cmdl["imguidemo"];
+  if (cmd == cmd_summary)
+    return parse_summary(cmdl)
+      .transform([](auto options) -> command { return options; });
+  if (cmd == cmd_monitor)
+    return parse_monitor(cmdl)
+      .transform([](auto options) -> command { return options; });
 
-  if (cmd == cmd_summary && rs::summary::setup_cmd(cmdl))
-    return cmdl_result::summary;
-  else if (cmd == cmd_monitor && monitor::setup_cmd(cmdl))
-    return cmdl_result::monitor;
-  else if (cmd == cmd_run && rs::run::setup_cmd(cmdl))
-    return cmdl_result::run;
-
-  return cmdl_result::error;
+  return parse_run(cmdl)
+    .transform([](auto options) -> command { return options; });
 }
 
 }  // namespace ultra::wopr
