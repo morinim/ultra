@@ -220,6 +220,7 @@ fs::path build_path(fs::path base_dir, fs::path f,
 
   return {};
 }
+
 rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m,
                                       const settings &defaults)
 {
@@ -372,8 +373,8 @@ rs::collection_t rs::setup_collection(fs::path in1, fs::path in2, exec_mode m,
 namespace
 {
 
-std::expected<monitor::options, std::string>
-parse_monitor(const argh::parser &cmdl)
+std::expected<monitor::options, std::string> parse_monitor(
+  const argh::parser &cmdl)
 {
   using namespace ultra;
 
@@ -397,9 +398,7 @@ parse_monitor(const argh::parser &cmdl)
   }
 
   if (!fs::is_directory(log_folder))
-  {
     return std::unexpected(log_folder.string() + " isn't a directory.");
-  }
 
   options.slog.base_dir = log_folder;
   options.slog.summary_file_path = "";
@@ -461,7 +460,6 @@ parse_monitor(const argh::parser &cmdl)
             << "\nPopulation file path: " << options.slog.population_file_path
             << '\n';
 
-
   if (const auto v(cmdl("window").str()); !v.empty())
   {
     try
@@ -479,8 +477,8 @@ parse_monitor(const argh::parser &cmdl)
   return options;
 }
 
-std::expected<rs::summary::options, std::string>
-parse_summary(const argh::parser &cmdl)
+std::expected<rs::summary::options, std::string> parse_summary(
+  const argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
@@ -501,8 +499,8 @@ parse_summary(const argh::parser &cmdl)
   };
 }
 
-std::expected<rs::run::options, std::string>
-parse_run(const argh::parser &cmdl)
+std::expected<rs::run::options, std::string> parse_run(
+  const argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
 
@@ -574,7 +572,7 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
   const auto &pos_args(cmdl.pos_args());
 
   if (pos_args.size() <= 1 || cmdl[{"-h", "--help"}])
-    return help_command{};
+    return help_command();
 
   std::string cmd;
   std::ranges::transform(pos_args[1], std::back_inserter(cmd),
@@ -584,14 +582,11 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
     return std::unexpected("Unknown command `" + cmd + "`.");
 
   if (cmd == cmd_summary)
-    return parse_summary(cmdl)
-      .transform([](auto options) -> command { return options; });
+    return parse_summary(cmdl);
   if (cmd == cmd_monitor)
-    return parse_monitor(cmdl)
-      .transform([](auto options) -> command { return options; });
+    return parse_monitor(cmdl);
 
-  return parse_run(cmdl)
-    .transform([](auto options) -> command { return options; });
+  return parse_run(cmdl);
 }
 
 }  // namespace ultra::wopr
