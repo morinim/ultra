@@ -82,8 +82,6 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return found;
 }
 
-}  // namespace
-
 [[nodiscard]] ultra::model_measurements<double> extract_threshold(
   const std::string &txt)
 {
@@ -103,10 +101,12 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return threshold;
 }
 
+}  // namespace
+
 rs::settings rs::read_settings(const fs::path &test_fn,
                                const settings &defaults)
 {
-  assert(test_fn.extension() == ".csv");
+  assert(ultra::iequals(test_fn.extension(), ".csv"));
 
   const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
   if (!fs::exists(settings_fn))
@@ -518,9 +518,6 @@ std::expected<rs::run::options, std::string> parse_run(
   const argh::parser &cmdl)
 {
   const auto &pos_args(cmdl.pos_args());
-
-  for (const auto &a : pos_args)
-    std::cout << a << std::endl;
 
   const fs::path test_input(pos_args.size() <= 2 ? "./" : pos_args[2]);
   const fs::path ref_folder(cmdl("reference", "").str());
