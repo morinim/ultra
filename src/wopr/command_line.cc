@@ -41,20 +41,35 @@ namespace
 
 using log_file_discovery = std::expected<fs::path, fs::path>;
 
+// - `basename` identifies the test/run request by the user:
+//   `wopr monitor /path/to/test` produces `folder = "/path/to"` and
+//   `basename = "test"`. It remains empty when the user supply only a
+//   directory.
+// - `marker` identifies the kind of log being discovered (`dynamic.txt`,
+//   `layers.txt`...).
+//
+// Together they're intended to match filenames such as `test.dynamic.txt`,
+// `test.layers.txt`...
 [[nodiscard]] log_file_discovery discover_log_file(
-  const fs::path &folder, std::string_view basename, std::string_view marker)
+  const fs::path &folder, const std::string &basename, const std::string &marker)
 {
+  if (!basename.empty())
+  {
+    const auto filename(basename + "." + marker);
+    const auto path(folder / filename);
+    return fs::is_regular_file(path) ? path : fs::path{};
+  }
+
   fs::path found;
+  const auto suffix("." + marker);
 
   for (const auto &entry : fs::directory_iterator(folder))
   {
-    if (!entry.is_regular_file()
-        || !ultra::iequals(entry.path().extension(), ".txt"))
+    if (!entry.is_regular_file())
       continue;
 
-    const std::string filename(entry.path().filename().string());
-    if (filename.find(marker) == std::string::npos
-        || (!basename.empty() && filename.find(basename) == std::string::npos))
+    if (const auto filename(entry.path().filename().string());
+        filename != marker && !filename.ends_with(suffix))
       continue;
 
     if (!found.empty())
@@ -410,7 +425,7 @@ std::expected<monitor::options, std::string> parse_monitor(
   options.slog.population_file_path =
     build_path(log_folder, cmdl("population", "").str());
 
-  const auto discover([&](fs::path &path, std::string_view marker)
+  const auto discover([&](fs::path &path, const std::string &marker)
   {
     if (!path.empty())
       return true;
