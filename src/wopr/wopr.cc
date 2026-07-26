@@ -17,9 +17,49 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <type_traits>
 #include <utility>
 #include <variant>
+
+namespace
+{
+
+using namespace ultra::wopr;
+
+imgui_app::program::settings make_settings(bool imgui_demo)
+{
+  imgui_app::program::settings settings;
+  settings.w_related.title = "WOPR";
+  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+  settings.demo = imgui_demo;
+  return settings;
+}
+
+[[nodiscard]] int execute(help_command)
+{
+  cmdl_usage();
+  return EXIT_SUCCESS;
+}
+
+[[nodiscard]] int execute(monitor::options options)
+{
+  monitor::start(make_settings(options.imgui_demo), std::move(options));
+  return EXIT_SUCCESS;
+}
+
+[[nodiscard]] int execute(rs::run::options options)
+{
+  return rs::run::start(make_settings(options.imgui_demo), std::move(options))
+         ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+[[nodiscard]] int execute(rs::summary::options options)
+{
+  rs::summary::start(make_settings(options.imgui_demo), std::move(options));
+  return EXIT_SUCCESS;
+}
+
+}  // namespace
+
 
 int main(int argc, char *argv[])
 {
@@ -36,34 +76,7 @@ int main(int argc, char *argv[])
   return std::visit(
     [](auto options)
     {
-      using options_t = decltype(options);
-
-      if constexpr (std::is_same_v<options_t, ultra::wopr::help_command>)
-      {
-        ultra::wopr::cmdl_usage();
-        return EXIT_SUCCESS;
-      }
-      else
-      {
-        imgui_app::program::settings settings;
-        settings.w_related.title = "WOPR";
-        settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
-        settings.demo = options.imgui_demo;
-
-        if constexpr (std::is_same_v<options_t,
-                                     ultra::wopr::monitor::options>)
-          ultra::wopr::monitor::start(settings, std::move(options));
-        else if constexpr (std::is_same_v<options_t,
-                                          ultra::wopr::rs::run::options>)
-        {
-          if (!ultra::wopr::rs::run::start(settings, std::move(options)))
-            return EXIT_FAILURE;
-        }
-        else
-          ultra::wopr::rs::summary::start(settings, std::move(options));
-
-        return EXIT_SUCCESS;
-      }
+      return execute(std::move(options));
     },
     std::move(*result));
 }
