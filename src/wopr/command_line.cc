@@ -530,13 +530,23 @@ std::expected<rs::run::options, std::string> parse_run(
   {
     if (const auto v(cmdl("generations").str()); !v.empty())
     {
-      defaults.generations = std::max<unsigned>(std::stoul(v), 1);
+      const auto value(std::stoll(v));
+
+      if (value < 1 || !std::in_range<unsigned>(value))
+        return std::unexpected("Invalid number of generations.");;
+
+      defaults.generations = value;
       std::cout << "Generations: " << defaults.generations << '\n';
     }
 
     if (const auto v(cmdl("runs").str()); !v.empty())
     {
-      defaults.runs = std::max<unsigned>(std::stoul(v), 1);
+      const auto value(std::stoll(v));
+
+      if (value < 1 || !std::in_range<unsigned>(value))
+        return std::unexpected("Invalid number of runs.");;
+
+      defaults.runs = value;
       std::cout << "Runs: " << defaults.runs << '\n';
     }
 
