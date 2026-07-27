@@ -1,5 +1,13 @@
-#!/usr/bin/bash
-git repack
-git prune-packed
-git gc --auto
-find -name "*~" -print -delete
+#!/bin/sh
+set -eu
+
+script_dir=$(
+  CDPATH= cd -P "$(dirname "$0")"
+  pwd
+)
+
+repository_root=$(git -C "$script_dir" rev-parse --show-toplevel)
+
+git -C "${repository_root}" gc
+
+find "${repository_root}" -type f -name '*~' -print -delete
