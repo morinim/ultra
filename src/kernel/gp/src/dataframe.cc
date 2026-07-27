@@ -754,7 +754,7 @@ bool dataframe::is_valid() const
     if (out_domain != d_int)
     {
       ultraERROR("Wrong output domain ({}) for a classification task",
-                   as_integer(out_domain));
+                 std::to_underlying(out_domain));
       return false;
     }
     break;
@@ -768,7 +768,7 @@ bool dataframe::is_valid() const
     if (out_domain != d_double && out_domain != d_int)
     {
       ultraERROR("Wrong output domain ({}) for a regression task",
-                   as_integer(out_domain));
+                 std::to_underlying(out_domain));
       return false;
     }
     break;
@@ -782,7 +782,7 @@ bool dataframe::is_valid() const
     if (out_domain != d_void)
     {
       ultraERROR("Wrong output domain ({}) for a unsupervised task",
-                   as_integer(out_domain));
+                 std::to_underlying(out_domain));
       return false;
     }
     break;

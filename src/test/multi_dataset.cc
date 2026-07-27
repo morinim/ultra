@@ -37,10 +37,10 @@ TEST_CASE("dataset_t")
 
   // We rely on code like:
   // - `dataset_t::training <= d && d <= dataset_t::test`;
-  // - `datasets_[as_integer(d)]`.
-  CHECK(ultra::as_integer(dataset_t::training) == 0);
-  CHECK(ultra::as_integer(dataset_t::validation) == 1);
-  CHECK(ultra::as_integer(dataset_t::test) == 2);
+  // - `datasets_[std::to_underlying(d)]`.
+  CHECK(std::to_underlying(dataset_t::training) == 0);
+  CHECK(std::to_underlying(dataset_t::validation) == 1);
+  CHECK(std::to_underlying(dataset_t::test) == 2);
 }
 
 TEST_CASE("Base")

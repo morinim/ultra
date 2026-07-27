@@ -253,7 +253,7 @@ TEST_CASE("Stratify")
 
     for (auto index : indices)
       for (auto example : prob.data[index])
-        ++count[as_integer(index)][example.output];
+        ++count[std::to_underlying(index)][example.output];
 
     for (auto pair : count[0])
     {

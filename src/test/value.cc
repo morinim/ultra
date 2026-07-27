@@ -115,7 +115,9 @@ TEST_CASE("Base")
 
     out << v1;
     CHECK(out.str()
-          == "[" + std::to_string(as_integer(std::get<D_ADDRESS>(v1))) + "]");
+          == "["
+             + std::to_string(std::to_underlying(std::get<D_ADDRESS>(v1)))
+             + "]");
   }
 
   SUBCASE("Integer value")
@@ -234,7 +236,7 @@ TEST_CASE("Serialization")
     value_t v1(a);
     CHECK(save(ss, v1));
     CHECK(ss.str() == std::to_string(v1.index()) + " "
-          + std::to_string(as_integer(a)));
+          + std::to_string(std::to_underlying(a)));
   }
 
   SUBCASE("Vector value")

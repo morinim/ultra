@@ -16,11 +16,11 @@
 #include "kernel/value.h"
 #include "kernel/nullary.h"
 #include "kernel/gp/src/variable.h"
-#include "utility/misc.h"   // for as_integer(E)
 
 #include <format>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 namespace ultra::detail
 {
@@ -82,7 +82,7 @@ struct std::formatter<ultra::value_t, char>
                    : std::format_to(ctx.out(), "<nullary:null>");
 
         else if constexpr (std::is_same_v<T, ultra::D_ADDRESS>)
-          return std::format_to(ctx.out(), "[{}]", ultra::as_integer(x));
+          return std::format_to(ctx.out(), "[{}]", std::to_underlying(x));
 
         else if constexpr (std::is_same_v<T, const ultra::D_VARIABLE *>)
           return x ? std::format_to(ctx.out(), "{}", x->to_string())

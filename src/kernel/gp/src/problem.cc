@@ -412,16 +412,14 @@ void problem::setup_symbols(symbol_init init_flags)
 
       default:
         ultraWARNING("No predefined functions for domain {} (category {})",
-                       as_integer(domain), category);
+                     std::to_underlying(domain), category);
         break;
       }
     }
 
     for (const auto &[category, names] : symbols)
       if (!names.empty())
-      {
         ultraINFO("Category {} symbols:{}", category, names);
-      }
 
     ultraINFO("...functions ready");
   }

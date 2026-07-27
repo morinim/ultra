@@ -65,7 +65,7 @@ public:
 private:
   // Number of datasets managed by this class.
   static constexpr std::size_t dataset_count = 3;
-  static_assert(ultra::as_integer(dataset_t::test) + 1 == dataset_count,
+  static_assert(std::to_underlying(dataset_t::test) + 1 == dataset_count,
                 "dataset_t enumerators must be contiguous and zero-based");
 
   // Storage for the datasets, indexed by `dataset_t`.

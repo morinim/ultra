@@ -68,7 +68,7 @@ TEST_CASE_FIXTURE(fixture1, "Random creation")
 
         for (const auto &a : ind[{i, c}].args)
           if (const auto *pa(std::get_if<param_address>(&a)); pa)
-            CHECK(as_integer(*pa) < i);
+            CHECK(std::to_underlying(*pa) < i);
       }
   }
 }
@@ -96,7 +96,7 @@ TEST_CASE_FIXTURE(fixture2, "Random creation multicategories")
 
           for (const auto &a : ind[{i, c}].args)
             if (const auto *pa(std::get_if<param_address>(&a)); pa)
-              CHECK(as_integer(*pa) < i);
+              CHECK(std::to_underlying(*pa) < i);
         }
   }
 }
@@ -124,7 +124,7 @@ TEST_CASE_FIXTURE(fixture3, "Random creation full-multicategories")
 
           for (const auto &a : ind[{i, c}].args)
             if (const auto *pa(std::get_if<param_address>(&a)); pa)
-              CHECK(as_integer(*pa) < i);
+              CHECK(std::to_underlying(*pa) < i);
         }
   }
 }

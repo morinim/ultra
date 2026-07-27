@@ -24,6 +24,7 @@
 #include <fstream>
 #include <numeric>
 #include <ranges>
+#include <utility>
 
 namespace ultra
 {
@@ -246,21 +247,6 @@ private:
 template<typename T> concept IsEnum = std::is_enum_v<T>;
 
 ///
-/// Encapsulate the logic to convert a scoped enumeration element to its
-/// integer value.
-///
-/// \tparam E a scoped enumeration
-///
-/// \param[in] v element of an enum class
-/// \return      the integer value of `v`
-///
-template<IsEnum E>
-[[nodiscard]] constexpr std::underlying_type_t<E> as_integer(E v)
-{
-  return static_cast<std::underlying_type_t<E>>(v);
-}
-
-///
 /// Bitwise OR operator for bitmask-enabled enums.
 ///
 /// \param[in] lhs left-hand operand
@@ -270,7 +256,7 @@ template<IsEnum E>
 template<bitmask_enum E>
 [[nodiscard]] constexpr E operator|(E lhs, E rhs) noexcept
 {
-  return static_cast<E>(as_integer(lhs) | as_integer(rhs));
+  return static_cast<E>(std::to_underlying(lhs) | std::to_underlying(rhs));
 }
 
 ///
@@ -283,7 +269,7 @@ template<bitmask_enum E>
 template<bitmask_enum E>
 [[nodiscard]] constexpr E operator&(E lhs, E rhs) noexcept
 {
-  return static_cast<E>(as_integer(lhs) & as_integer(rhs));
+  return static_cast<E>(std::to_underlying(lhs) & std::to_underlying(rhs));
 }
 
 ///
@@ -296,7 +282,7 @@ template<bitmask_enum E>
 template<bitmask_enum E>
 [[nodiscard]] constexpr E operator^(E lhs, E rhs) noexcept
 {
-  return static_cast<E>(as_integer(lhs) ^ as_integer(rhs));
+  return static_cast<E>(std::to_underlying(lhs) ^ std::to_underlying(rhs));
 }
 
 ///
@@ -308,7 +294,7 @@ template<bitmask_enum E>
 template<bitmask_enum E>
 [[nodiscard]] constexpr E operator~(E value) noexcept
 {
-  return static_cast<E>(~as_integer(value));
+  return static_cast<E>(~std::to_underlying(value));
 }
 
 
@@ -586,7 +572,7 @@ bool load_float_from_stream(std::istream &in, T *i)
 ///
 template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 {
-  return s << as_integer(v);
+  return s << std::to_underlying(v);
 }
 
 ///

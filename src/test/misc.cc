@@ -127,17 +127,6 @@ TEST_CASE("save/load float to/from stream")
   CHECK(d  == doctest::Approx(2.5));
 }
 
-TEST_CASE("as_integer")
-{
-  using namespace ultra;
-
-  enum class my_enum {a = 3, b, c};
-
-  CHECK(as_integer(my_enum::a) == 3);
-  CHECK(as_integer(my_enum::b) == 4);
-  CHECK(as_integer(my_enum::c) == 5);
-}
-
 TEST_CASE("is_integer")
 {
   using namespace ultra;
@@ -263,9 +252,9 @@ TEST_CASE("Bitmask enum")
   CHECK(has_flag(all, myenum::B));
   CHECK(has_flag(all, myenum::C));
   CHECK(has_flag(all, myenum::all));
-  CHECK(as_integer(all & a));
-  CHECK(as_integer(all & b));
-  CHECK(as_integer(all & c));
+  CHECK(std::to_underlying(all & a));
+  CHECK(std::to_underlying(all & b));
+  CHECK(std::to_underlying(all & c));
 
   CHECK(!has_flag(all ^ a, a));
   CHECK(!has_flag(all ^ b, b));

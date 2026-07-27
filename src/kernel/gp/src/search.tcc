@@ -49,7 +49,7 @@ template<class P>
 [[nodiscard]] constexpr std::underlying_type_t<metric_flags> operator&(
   metric_flags f1, metric_flags f2)
 {
-  return as_integer(f1) & as_integer(f2);
+  return std::to_underlying(f1) & std::to_underlying(f2);
 }
 
 ///

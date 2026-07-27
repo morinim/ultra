@@ -25,7 +25,7 @@
 template<DataSet D>
 const D &multi_dataset<D>::selected() const noexcept
 {
-  return datasets_[as_integer(selected_)];
+  return datasets_[std::to_underlying(selected_)];
 }
 
 ///
@@ -36,7 +36,7 @@ const D &multi_dataset<D>::selected() const noexcept
 template<DataSet D>
 D &multi_dataset<D>::selected() noexcept
 {
-  return datasets_[as_integer(selected_)];
+  return datasets_[std::to_underlying(selected_)];
 }
 
 ///
@@ -51,7 +51,7 @@ template<DataSet D>
 const D &multi_dataset<D>::operator[](dataset_t d) const noexcept
 {
   Expects(dataset_t::training <= d && d <= dataset_t::test);
-  return datasets_[as_integer(d)];
+  return datasets_[std::to_underlying(d)];
 }
 
 ///
@@ -66,7 +66,7 @@ template<DataSet D>
 D &multi_dataset<D>::operator[](dataset_t d) noexcept
 {
   Expects(dataset_t::training <= d && d <= dataset_t::test);
-  return datasets_[as_integer(d)];
+  return datasets_[std::to_underlying(d)];
 }
 
 ///

@@ -210,7 +210,7 @@ bool save(std::ostream &out, const value_t &v)
   switch (v.index())
   {
   case d_address:
-    out << as_integer(std::get<D_ADDRESS>(v));
+    out << std::to_underlying(std::get<D_ADDRESS>(v));
     break;
   case d_double:
     save_float_to_stream(out, std::get<D_DOUBLE>(v));
