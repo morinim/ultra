@@ -82,20 +82,39 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return found;
 }
 
-[[nodiscard]] ultra::model_measurements<double> extract_threshold(
-  const std::string &txt)
+[[nodiscard]] std::expected<ultra::model_measurements<double>, std::string>
+extract_threshold(std::string txt)
 {
-  ultra::model_measurements<double> threshold;
+  if (txt.empty())
+    return {};
 
-  if (!txt.empty())
+  ultra::model_measurements<double> threshold;
+  std::size_t consumed;
+
+  const bool accuracy(txt.back() == '%');
+  if (accuracy)
+    txt = txt.substr(0, txt.size()-1);
+
+  try
   {
-    if (txt.back() == '%')
+    double val(std::stod(txt, &consumed));
+
+    if (consumed != txt.size())
+      return std::unexpected("Invalid threshold.");
+
+    if (accuracy)
     {
-      const auto v(txt.substr(0, txt.size()-1));
-      threshold.accuracy = std::clamp<double>(std::stod(v)/100.0, 0.0, 1.0);
+      threshold.accuracy = val / 100.0;
+
+      if (threshold.accuracy < 0.0 || threshold.accuracy > 1.0)
+        return std::unexpected("Wrong range for accuracy.");
     }
     else
-      threshold.fitness = std::stod(txt);
+      threshold.fitness = val;
+  }
+  catch (...)
+  {
+    return std::unexpected("Cannot convert threshold.");
   }
 
   return threshold;
@@ -133,10 +152,13 @@ rs::settings rs::read_settings(const fs::path &test_fn,
     ret.runs = e->UnsignedText(ret.runs);
 
   if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
-  {
     if (const char *text = e->GetText())
-      ret.threshold = extract_threshold(std::string(text));
-  }
+    {
+      if (const auto threshold(extract_threshold(std::string(text))); threshold)
+        ret.threshold = threshold.value();
+      else
+        std::cerr << threshold.error() << '\n';
+    }
 
   const auto h_dataset(h_ultra.FirstChildElement("dataset"));
   if (const auto *e = h_dataset.FirstChildElement("output_index").ToElement())
@@ -151,6 +173,7 @@ rs::settings rs::read_settings(const fs::path &test_fn,
 
   return ret;
 }
+
 void cmdl_usage()
 {
   std::cout
@@ -548,7 +571,12 @@ std::expected<rs::run::options, std::string> parse_run(
     }
 
     if (const auto v(cmdl("threshold").str()); !v.empty())
-      defaults.threshold = extract_threshold(v);
+    {
+      if (const auto threshold(extract_threshold(v)); threshold)
+        defaults.threshold = threshold.value();
+      else
+        return std::unexpected(threshold.error());
+    }
   }
   catch (const std::exception &)
   {
