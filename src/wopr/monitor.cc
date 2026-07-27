@@ -54,8 +54,6 @@ template<class RealType = double>
 class degenerate_normal_distribution
 {
 public:
-  using result_type = RealType;
-
   struct param_type
   {
     RealType mean {0.0};
@@ -72,7 +70,7 @@ public:
   void reset() { dist_.reset(); }
 
   template<class URNG>
-  [[nodiscard]] result_type operator()(URNG &g)
+  [[nodiscard]] RealType operator()(URNG &g)
   {
     return ultra::issmall(params_.stddev) ? params_.mean : dist_(g);
   }
@@ -81,6 +79,7 @@ private:
   param_type params_;
   std::normal_distribution<RealType> dist_;
 };
+
 struct id_scope
 {
   explicit id_scope(int id) { ImGui::PushID(id); }
@@ -726,6 +725,9 @@ void get_logs(std::stop_token stoken, const ultra::search_log &slog)
 
     ultra::timer last_read;
 
+    std::condition_variable_any wake;
+    std::mutex wake_mutex;
+
     while (!stoken.stop_requested())
     {
       if (dynamic_log
@@ -752,7 +754,9 @@ void get_logs(std::stop_token stoken, const ultra::search_log &slog)
       const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
                            last_read.elapsed()));
 
-      std::this_thread::sleep_for(std::clamp(elapsed, 100ms, 3000ms));
+      const auto delay(std::clamp(elapsed, 100ms, 3000ms));
+      std::unique_lock lock(wake_mutex);
+      wake.wait_for(lock, stoken, delay, [] { return false; });
     }
   }
   catch (const std::exception &e)

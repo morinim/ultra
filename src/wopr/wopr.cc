@@ -25,7 +25,7 @@ namespace
 
 using namespace ultra::wopr;
 
-imgui_app::program::settings make_settings(bool imgui_demo)
+[[nodiscard]] imgui_app::program::settings make_settings(bool imgui_demo)
 {
   imgui_app::program::settings settings;
   settings.w_related.title = "WOPR";
