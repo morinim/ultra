@@ -391,7 +391,7 @@ template<Individual I>
 bool layered_population<I>::load(std::istream &in)
 {
   std::size_t n_layers;
-  if (!(in >> n_layers) || !n_layers)
+  if (!(in >> n_layers))
     return false;
 
   layered_population<I> lp(problem(), false);
