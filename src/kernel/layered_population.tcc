@@ -224,14 +224,11 @@ std::size_t layered_population<I>::layers() const noexcept
 template<Individual I>
 std::size_t layered_population<I>::size() const
 {
-  using ret_t = decltype(size());
-
-  return std::accumulate(layers_.begin(), layers_.end(), ret_t(0),
-                         [](auto accumulator, const auto &l)
-                         {
-                           return accumulator
-                                  + static_cast<ret_t>(l.size());
-                         });
+  return std::ranges::fold_left(layers_, 0uz,
+                                [](auto accumulator, const auto &l)
+                                {
+                                  return accumulator + l.size();
+                                });
 }
 
 ///
