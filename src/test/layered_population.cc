@@ -194,6 +194,64 @@ TEST_CASE_FIXTURE(fixture1, "Age")
   CHECK(std::ranges::all_of(pop, [](const auto &i) { return i.age() == 1; }));
 }
 
+TEST_CASE_FIXTURE(fixture1, "Layer initialization")
+{
+  using namespace ultra;
+
+  SUBCASE("Depleted layer")
+  {
+    prob.params.population.individuals = 10;
+
+    layered_population<gp::individual> pop(prob);
+    auto &layer(pop.front());
+
+    layer.clear();
+    pop.init(layer);
+
+    CHECK(layer.size() == prob.params.population.individuals);
+    CHECK(std::ranges::all_of(layer,
+                              [](const auto &i) { return i.age() == 0; }));
+    CHECK(layer.is_valid());
+  }
+
+  SUBCASE("Minimum layer size")
+  {
+    prob.params.population.individuals = 5;
+    prob.params.population.min_individuals = 10;
+
+    layered_population<gp::individual> pop(prob);
+    auto &layer(pop.front());
+
+    layer.clear();
+    pop.init(layer);
+
+    CHECK(layer.allowed() == prob.params.population.min_individuals);
+    CHECK(layer.size() == prob.params.population.min_individuals);
+    CHECK(layer.is_valid());
+  }
+
+  SUBCASE("Repeated initialization")
+  {
+    prob.params.population.individuals = 10;
+
+    layered_population<gp::individual> pop(prob);
+    auto &layer(pop.front());
+
+    for (unsigned i(0); i < 3; ++i)
+    {
+      layer.inc_age();
+      layer.pop_back();
+      pop.init(layer);
+
+      CHECK(layer.allowed() == prob.params.population.individuals);
+      CHECK(layer.size() == prob.params.population.individuals);
+      CHECK(std::ranges::all_of(layer,
+                                [](const auto &ind) { return ind.age() == 0; }));
+      CHECK(layer.is_valid());
+    }
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Iterators")
 {
   using namespace ultra;
