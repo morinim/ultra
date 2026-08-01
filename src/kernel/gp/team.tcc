@@ -149,7 +149,12 @@ team_decision_vector extract_decision_vector(const team<I> &t)
 ///
 /// \param[in] v decision vector to be written back
 ///
-/// \pre `v.is_valid()`
+/// \pre
+/// - `v.is_valid()`;
+/// - `v` must have been obtained from a team with the same structure (same
+///   number of individuals, active exons, loci, and argument layout). Applying
+///   a decision vector to a structurally different team results in undefined
+///   behaviour.
 /// \post `is_valid()`
 ///
 /// The entries of `v` are first regrouped by team member, then each member
@@ -168,15 +173,13 @@ void team<I>::apply_decision_vector(const team_decision_vector &v)
 
   std::vector<ind_dv_t> per_ind(size());
 
-  for (std::size_t i(0); i < v.size(); ++i)
+  for (auto &&[value, c] : std::views::zip(v.values, v.coords))
   {
-    const auto &c(v.coords[i]);
-
     Expects(c.coord.ind_index < size());
 
-    per_ind[c.coord.ind_index].values.push_back(v.values[i]);
-    per_ind[c.coord.ind_index].coords.push_back(
-      {{c.coord.loc, c.coord.arg_index}, c.kind});
+    auto &ind_v(per_ind[c.coord.ind_index]);
+    ind_v.values.push_back(value);
+    ind_v.coords.push_back({{c.coord.loc, c.coord.arg_index}, c.kind});
   }
 
   for (std::size_t i(0); i < size(); ++i)

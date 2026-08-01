@@ -19,6 +19,7 @@
 #include "kernel/problem.h"
 
 #include <algorithm>
+#include <ranges>
 
 namespace ultra::gp
 {
