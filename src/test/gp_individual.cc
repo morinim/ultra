@@ -179,6 +179,15 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
       }
     }
   }
+
+  SUBCASE("Empty individual")
+  {
+    gp::individual empty;
+
+    CHECK(empty.cexons().begin() == empty.cexons().end());
+    CHECK(empty.mutation(prob) == 0);
+    CHECK(empty.is_valid());
+  }
 }
 
 TEST_CASE_FIXTURE(fixture1, "Comparison")

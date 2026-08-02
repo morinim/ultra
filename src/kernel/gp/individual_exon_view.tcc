@@ -42,8 +42,7 @@ public:
 
   /// Constructs a view over the active genes of an individual.
   /// \param[in] ind The individual whose exons will be iterated.
-  explicit exon_view(gp::individual &ind) noexcept
-    : ind_(std::addressof(ind))
+  explicit exon_view(gp::individual &ind) noexcept : ind_(std::addressof(ind))
   {}
 
   /// \return an input iterator positioned at the first exon

@@ -66,8 +66,11 @@ public:
   /// Constructs an iterator starting from the output locus.
   ///
   /// \param[in] id the individual being iterated
-  explicit basic_exon_iterator(ind &id)
-    : loci_({id.start()}), ind_(std::addressof(id)) {}
+  explicit basic_exon_iterator(ind &id) : ind_(std::addressof(id))
+  {
+    if (!id.empty())
+      loci_.insert(id.start());
+  }
 
   /// Advances the iterator to the next active gene.
   ///
@@ -105,29 +108,13 @@ public:
   /// Compares the iterator with the end sentinel.
   ///
   /// \return `true` if no further active loci remain.
+  ///
+  /// \note
+  /// Since C++20, rewritten comparison candidates allow this single overload to
+  /// support `it == s`, `s == it`, `it != s`, and `s != it`.
   [[nodiscard]] bool operator==(exon_sentinel) const noexcept
   {
     return loci_.empty();
-  }
-
-  /// Inequality comparison with the sentinel.
-  [[nodiscard]] bool operator!=(exon_sentinel s) const noexcept
-  {
-    return !(*this == s);
-  }
-
-  /// Symmetric sentinel comparison.
-  friend bool operator==(exon_sentinel s,
-                         const basic_exon_iterator &it) noexcept
-  {
-    return it == s;
-  }
-
-  /// Symmetric sentinel comparison.
-  friend bool operator!=(exon_sentinel s,
-                         const basic_exon_iterator &it) noexcept
-  {
-    return !(it == s);
   }
 
   /// Dereferences the iterator.
