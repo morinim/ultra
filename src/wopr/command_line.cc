@@ -602,7 +602,6 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
 {
   argh::parser cmdl;
 
-  cmdl.add_param("basename");
   cmdl.add_param("dynamic");
   cmdl.add_param("generations");
   cmdl.add_param("layers");
