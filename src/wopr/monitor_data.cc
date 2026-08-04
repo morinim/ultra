@@ -100,7 +100,7 @@ std::size_t dynamic_sequence::size() const noexcept
 
 void dynamic_sequence::push_back(const dynamic_data &dd)
 {
-  xs.push_back(xs.size());
+  xs.push_back(dd.generation);
   fit_best.push_back(dd.fit_best[0]);
   fit_mean.push_back(dd.fit_mean[0]);
   fit_std_dev.push_back(dd.fit_std_dev[0]);
