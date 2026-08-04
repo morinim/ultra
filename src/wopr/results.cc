@@ -578,12 +578,10 @@ void render_elite(const results_snapshot &snapshot)
       ImPlot::SetupAxisLinks(ImAxis_X2, &x_from, &x_to);
 
       if (const auto &ids(current.elite[i].id); !ids.empty())
-      {
         ImPlot::SetupAxisTicks(ImAxis_X2,
                                current.elite[i].tick_positions.data(),
                                static_cast<int>(ids.size()),
                                current.elite[i].tick_labels.data());
-      }
 
       const ImVec2 offset_upward(0, -10);
 

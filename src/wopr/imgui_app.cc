@@ -19,13 +19,6 @@
 
 #include <stdexcept>
 
-namespace
-{
-
-static const std::string BASE_PATH(SDL_GetBasePath());
-
-}
-
 namespace imgui_app
 {
 
@@ -190,53 +183,5 @@ void program::on_close()
 {
   stop();
 }
-
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-
-std::filesystem::path resources::resource_path(
-  const std::filesystem::path &file_path)
-{
-  std::filesystem::path font_path(BASE_PATH);
-  font_path /= "../share" / file_path;
-  return font_path;
-}
-
-std::filesystem::path resources::font_path(const std::string_view &font_file)
-{
-  return resource_path("fonts") / font_file;
-}
-
-#elif defined(SDL_PLATFORM_APPLE)
-
-std::filesystem::path resources::resource_path(
-  const std::filesystem::path &file_path)
-{
-  std::filesystem::path font_path{BASE_PATH};
-  font_path /= file_path;
-  return font_path;
-}
-
-std::filesystem::path resources::font_path(const std::string_view &font_file)
-{
-  return resource_path(font_file);
-}
-
-#else
-
-std::filesystem::path resources::resource_path(
-  const std::filesystem::path &file_path)
-{
-  std::filesystem::path font_path{BASE_PATH};
-  font_path /= "../share";
-  font_path /= "fonts" / file_path;
-  return font_path;
-}
-
-std::filesystem::path resources::font_path(const std::string_view &font_file)
-{
-  return resource_path(font_file);
-}
-
-#endif
 
 }  // namespace imgui_app

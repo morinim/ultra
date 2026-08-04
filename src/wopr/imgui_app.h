@@ -54,16 +54,6 @@ private:
   SDL_Renderer *renderer_ {nullptr};
 };
 
-namespace resources
-{
-
-[[nodiscard]] ::std::filesystem::path resource_path(
-  const ::std::filesystem::path &);
-
-[[nodiscard]] ::std::filesystem::path font_path(const std::string_view &);
-
-}  // namespace resources
-
 class program
 {
 public:
