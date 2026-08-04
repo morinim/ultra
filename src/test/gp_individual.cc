@@ -445,6 +445,58 @@ TEST_CASE_FIXTURE(fixture1, "Crossover propagates metadata")
   }
 }
 
+TEST_CASE_FIXTURE(fixture1, "Dependency crossover preserves parental chains")
+{
+  using namespace ultra;
+
+  const std::vector<gene> lhs_genome
+  {
+    {f_add, {1.0, 2.0}},
+    {f_add, {0_addr, 3.0}},
+    {f_add, {1_addr, 4.0}}
+  };
+  const std::vector<gene> rhs_genome
+  {
+    {f_add, {5.0, 6.0}},
+    {f_add, {0_addr, 7.0}},
+    {f_add, {1_addr, 8.0}}
+  };
+
+  const auto make_parent([](const auto &genome)
+  {
+    for (;;)
+    {
+      gp::individual parent(genome);
+
+      if (parent.active_crossover_type() == gp::individual::dependency)
+        return parent;
+    }
+  });
+
+  const auto lhs(make_parent(lhs_genome));
+  const auto rhs(make_parent(rhs_genome));
+
+  unsigned from_lhs(0);
+  unsigned from_rhs(0);
+
+  constexpr unsigned trials(10000);
+  for (unsigned trial(0); trial < trials; ++trial)
+  {
+    const auto offspring(crossover(prob, lhs, rhs));
+    const bool takes_lhs(offspring[{0, 0}] == lhs[{0, 0}]);
+
+    takes_lhs ? ++from_lhs : ++from_rhs;
+
+    for (locus::index_t i(0); i < offspring.size(); ++i)
+      CHECK(offspring[{i, 0}]
+            == (takes_lhs ? lhs[{i, 0}] : rhs[{i, 0}]));
+  }
+
+  const auto difference(from_lhs > from_rhs
+                        ? from_lhs - from_rhs : from_rhs - from_lhs);
+  CHECK(difference < trials / 20);
+}
+
 TEST_CASE_FIXTURE(fixture1, "Repeated crossover remains valid")
 {
   using namespace ultra;

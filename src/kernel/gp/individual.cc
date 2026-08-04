@@ -18,7 +18,9 @@
 #include "utility/log.h"
 #include "utility/misc.h"
 
+#include <cstdint>
 #include <expected>
+#include <ranges>
 #include <vector>
 
 namespace ultra::gp
@@ -518,7 +520,6 @@ public:
 private:
   struct context
   {
-    // const problem &prob;
     const individual &from;
     individual to;
   };
@@ -530,6 +531,7 @@ private:
   void run(context &) const;
 
   void one_point(context &) const;
+  void dependency(context &) const;
   void two_points(context &) const;
   void tree(context &) const;
   void uniform(context &) const;
@@ -601,6 +603,40 @@ void crossover_engine::uniform(context &ctx) const
                          { return random::boolean() ? g1 : g2; });
 }
 
+/// Dependency-aware crossover.
+///
+/// Genes preferentially inherit from the parent that supplied most of their
+/// dependencies. Ties are resolved randomly.
+void crossover_engine::dependency(context &ctx) const
+{
+  matrix<std::int8_t> origin(ctx.to.size(), ctx.to.categories(), 0);
+
+  const auto dependency_score([&](const gene &g)
+  {
+    int score(0);
+
+    for (const auto &arg : g.args)
+      if (std::holds_alternative<D_ADDRESS>(arg))
+        score += origin(g.locus_of_argument(arg));
+
+    return score;
+  });
+
+  for (auto &&[recipient_gene, donor_gene, parent] :
+         std::views::zip(ctx.to.genome_, ctx.from, origin))
+  {
+    const auto score(dependency_score(recipient_gene)
+                     + dependency_score(donor_gene));
+
+    const bool keep_recipient(score > 0 || (score == 0 && random::boolean()));
+
+    parent = keep_recipient ? 1 : -1;
+
+    if (!keep_recipient)
+      recipient_gene = donor_gene;
+  }
+}
+
 /// Tree crossover.
 ///
 /// A random active locus is selected in the donor, and the dependency-closed
@@ -628,6 +664,10 @@ void crossover_engine::run(context &ctx) const
   {
   case individual::crossover_t::one_point:
     one_point(ctx);
+    break;
+
+  case individual::crossover_t::dependency:
+    dependency(ctx);
     break;
 
   case individual::crossover_t::two_points:

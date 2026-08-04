@@ -79,7 +79,8 @@ public:
   [[nodiscard]] locus start() const noexcept;
 
   // ---- Recombination operators ----
-  enum crossover_t {one_point, two_points, tree, uniform, NUM_CROSSOVERS};
+  enum crossover_t {one_point, two_points, tree, uniform, dependency,
+                    NUM_CROSSOVERS};
   unsigned mutation(const problem &, double = 1.0);
 
   void apply_decision_vector(const decision_vector &);
