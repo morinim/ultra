@@ -49,7 +49,7 @@ SDL_Renderer *window::get_native_renderer() const
 
 program::program(const settings &s) : settings_(s)
 {
-  const unsigned flags(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+  const unsigned flags(SDL_INIT_VIDEO);
 
   if (!SDL_Init(flags))
     throw std::runtime_error(SDL_GetError());
