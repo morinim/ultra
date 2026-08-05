@@ -19,6 +19,7 @@
 #include "kernel/individual.h"
 #include "kernel/population.h"
 #include "kernel/problem.h"
+#include "kernel/scored_individual.h"
 
 namespace ultra::recombination
 {

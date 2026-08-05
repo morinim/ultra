@@ -17,6 +17,8 @@
 #include "kernel/fitness.h"
 #include "kernel/problem.h"
 
+#include <utility>
+
 namespace ultra
 {
 
@@ -46,7 +48,7 @@ struct scored_individual
 {
   // ---- Constructor and support functions ----
   scored_individual() = default;
-  scored_individual(const I &, const F &);
+  scored_individual(I, F);
 
   // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;

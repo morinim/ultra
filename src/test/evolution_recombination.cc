@@ -102,10 +102,13 @@ struct colliding_evaluator
 struct mutation_only_evaluator
 {
   [[nodiscard]] double operator()(
-    const ultra::mutation_only_individual &) const
+    const ultra::mutation_only_individual &ind) const
   {
-    return 0.0;
+    evaluated.push_back(ind);
+    return static_cast<double>(evaluated.size());
   }
+
+  mutable std::vector<ultra::mutation_only_individual> evaluated;
 };
 
 TEST_SUITE("EVOLUTION RECOMBINATION")
@@ -205,17 +208,40 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   {
     constexpr unsigned brood_size(5);
 
-    prob.params.evolution.p_cross = 1.0;
-    prob.params.evolution.p_mutation = 0.0;
     prob.params.evolution.brood_recombination = brood_size;
 
-    increasing_evaluator increasing_eva;
-    recombination::base brood_recombine(increasing_eva, prob);
+    SUBCASE("Crossover")
+    {
+      prob.params.evolution.p_cross = 1.0;
+      prob.params.evolution.p_mutation = 0.0;
 
-    const auto off(brood_recombine(parents));
+      increasing_evaluator increasing_eva;
+      recombination::base brood_recombine(increasing_eva, prob);
 
-    REQUIRE(increasing_eva.evaluated.size() == brood_size);
-    CHECK(off == increasing_eva.evaluated.back());
+      const auto off(brood_recombine(parents));
+
+      REQUIRE(increasing_eva.evaluated.size() == brood_size);
+      CHECK(off == increasing_eva.evaluated.back());
+    }
+
+    SUBCASE("Mutation")
+    {
+      prob.params.evolution.p_cross = 0.0;
+      prob.params.evolution.p_mutation = 1.0;
+
+      mutation_only_evaluator mutation_only_eva;
+      recombination::base brood_recombine(mutation_only_eva, prob);
+      const std::vector mutation_only_parents =
+      {
+        mutation_only_individual(1), mutation_only_individual(2)
+      };
+
+      const auto off(brood_recombine(mutation_only_parents));
+
+      REQUIRE(mutation_only_eva.evaluated.size() == brood_size);
+      CHECK(off.parent == mutation_only_eva.evaluated.back().parent);
+      CHECK(off.mutations == mutation_only_eva.evaluated.back().mutations);
+    }
   }
 
   SUBCASE("Mutation avoids both parent signatures")

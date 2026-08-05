@@ -43,66 +43,66 @@ base<E>::operator()(const R &parents) const
   static_assert(std::is_same_v<evaluator_individual_t<E>,
                                std::ranges::range_value_t<R>>);
 
-  const auto p_cross(this->prob_.params.evolution.p_cross);
-  const auto brood_recombination(
-    this->prob_.params.evolution.brood_recombination);
+  const auto &params(this->prob_.params.evolution);
 
-  Expects(in_0_1(p_cross));
-  Expects(brood_recombination);
+  Expects(in_0_1(params.p_cross));
+  Expects(params.brood_recombination);
   Expects(parents.size() >= 2);
 
-  if (random::boolean(p_cross))
+  const bool use_crossover(random::boolean(params.p_cross));
+
+  const auto generate([&]
   {
-    const auto cross_and_mutate(
-      [this](const auto &p1, const auto &p2)
-      {
-        auto ret(crossover(this->prob_, p1, p2));
-
-        if (this->prob_.params.evolution.p_mutation > 0.0)
-        {
-          constexpr unsigned max_attempts(32);
-
-          // This could be an original contribution of Vita (now ported to
-          // Ultra) but it's hard to be sure.
-          // It remembers of the hereditary repulsion constraint (I guess you
-          // could call it signature repulsion) and seems to:
-          // - maintain diversity during the exploration phase;
-          // - optimize the exploitation phase.
-          for (unsigned i(0);
-               i < max_attempts && (ret.signature() == p1.signature()
-                                    || ret.signature() == p2.signature());
-               ++i)
-            ret.mutation(this->prob_, static_cast<double>(i + 1));
-        }
-
-        return ret;
-      });
-
-    auto off(cross_and_mutate(parents[0], parents[1]));
-
-    if (brood_recombination > 1)
+    if (!use_crossover)
     {
-      auto fit_off(this->eva_(off));
-
-      for (unsigned i(1); i < brood_recombination; ++i)
-      {
-        const auto tmp(cross_and_mutate(parents[0], parents[1]));
-
-        if (const auto fit_tmp(this->eva_(tmp)); fit_tmp > fit_off)
-        {
-          off     =     tmp;
-          fit_off = fit_tmp;
-        }
-      }
+      auto offspring(parents[random::boolean()]);
+      offspring.mutation(this->prob_);
+      return offspring;
     }
 
-    return {off};
-  }
+    auto offspring(crossover(this->prob_, parents[0], parents[1]));
 
-  // !crossover
-  auto off(parents[random::boolean()]);
-  off.mutation(this->prob_);
-  return off;
+    if (params.p_mutation > 0.0)
+    {
+      constexpr unsigned max_attempts(32);
+
+      // This could be an original contribution of Vita (now ported to Ultra) but
+      // it's hard to be sure.
+      // It remembers of the hereditary repulsion constraint (I guess you could
+      // call it signature repulsion) and seems to:
+      // - maintain diversity during the exploration phase;
+      // - optimize the exploitation phase.
+      for (unsigned i(0);
+           i < max_attempts
+             && (offspring.signature() == parents[0].signature()
+                 || offspring.signature() == parents[1].signature());
+           ++i)
+        offspring.mutation(this->prob_, static_cast<double>(i + 1));
+    }
+
+    return offspring;
+  });
+
+  const unsigned brood_size(use_crossover || params.p_mutation > 0.0
+                            ? params.brood_recombination : 1);
+
+  if (brood_size == 1)
+    return generate();
+
+  const auto brood_trial([&]
+  {
+    auto offspring(generate());
+    auto fitness(this->eva_(offspring));
+    return scored_individual(std::move(offspring), std::move(fitness));
+  });
+
+  auto best(brood_trial());
+
+  for (unsigned i(1); i < brood_size; ++i)
+    if (auto candidate(brood_trial()); candidate > best)
+      best = std::move(candidate);
+
+  return std::move(best.ind);
 }
 
 ///
@@ -118,7 +118,7 @@ template<Individual I>
 I de::operator()(const ultra::selection::de::selected_refs<I> &engaged) const
 {
   const auto &params(prob_.params);
-  Expects(0.0 <= params.evolution.p_cross && params.evolution.p_cross <= 1.0);
+  Expects(in_0_1(params.evolution.p_cross));
 
   return engaged.target.crossover(params.evolution.p_cross, params.de.weight,
                                   engaged.base, engaged.a, engaged.b);

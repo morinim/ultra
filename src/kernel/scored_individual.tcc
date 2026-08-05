@@ -24,10 +24,10 @@
 /// \param[in] f a fitness
 ///
 template<Individual I, Fitness F>
-scored_individual<I, F>::scored_individual(const I &i, const F &f)
-  : ind(i), fit(f)
+scored_individual<I, F>::scored_individual(I i, F f)
+  : ind(std::move(i)), fit(std::move(f))
 {
-  Expects(!i.empty());
+  Expects(!ind.empty());
 }
 
 ///
