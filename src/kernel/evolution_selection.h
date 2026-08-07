@@ -16,6 +16,7 @@
 #include "kernel/evaluator.h"
 #include "kernel/linear_population.h"
 #include "kernel/parameters.h"
+#include "kernel/scored_individual.h"
 
 #include <array>
 
@@ -29,6 +30,9 @@ template<Evaluator E>
 class strategy
 {
 public:
+  using scored_t = scored_individual<evaluator_individual_t<E>,
+                                     evaluator_fitness_t<E>>;
+
   strategy(E &, const parameters &);
 
 protected:
@@ -61,10 +65,12 @@ template<Evaluator E>
 class tournament : public strategy<E>
 {
 public:
+  using typename strategy<E>::scored_t;
+
   using strategy<E>::strategy;
 
   template<SizedRandomAccessPopulation P>
-  [[nodiscard]] std::vector<typename P::value_type> operator()(const P &) const;
+  [[nodiscard]] std::vector<scored_t> operator()(const P &) const;
 };
 
 template<Evaluator E> tournament(E &, const parameters &) -> tournament<E>;
@@ -76,10 +82,12 @@ template<Evaluator E>
 class alps : public strategy<E>
 {
 public:
+  using typename strategy<E>::scored_t;
+
   using strategy<E>::strategy;
 
   template<PopulationWithMutex P>
-  [[nodiscard]] std::array<typename P::value_type, 2> operator()(
+  [[nodiscard]] std::array<scored_t, 2> operator()(
     alps_layer_pair<const P>) const;
 };
 

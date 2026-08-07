@@ -32,7 +32,8 @@ strategy<E>::strategy(E &eva, const parameters &params)
 
 ///
 /// \param[in] pop a population
-/// \return        a collection of individuals ordered in descending fitness
+/// \return        a collection of scored individuals ordered in descending
+///                fitness
 ///
 /// \pre Parameters must have been initialised (no auto-tune values)
 ///
@@ -58,7 +59,7 @@ strategy<E>::strategy(E &eva, const parameters &params)
 ///
 template<Evaluator E>
 template<SizedRandomAccessPopulation P>
-std::vector<typename P::value_type>
+std::vector<typename tournament<E>::scored_t>
 tournament<E>::operator()(const P &pop) const
 {
   Expects(!this->params_.needs_init());
@@ -66,6 +67,7 @@ tournament<E>::operator()(const P &pop) const
   const auto rounds(this->params_.evolution.tournament_size);
   assert(0 < rounds);
   assert(rounds <= parameters::evolution_parameters::max_tournament_size);
+
   std::vector<std::pair<typename P::coord, evaluator_fitness_t<E>>> ret;
   ret.reserve(rounds);
 
@@ -96,13 +98,16 @@ tournament<E>::operator()(const P &pop) const
                                   return i1.second > i2.second;
                                 }));
 
-  std::vector<typename P::value_type> ri;
-  ri.reserve(ret.size());
-  std::ranges::transform(ret, std::back_inserter(ri),
-                         [&pop](const auto &c) { return pop[c.first]; });
+  std::vector<scored_t> rs;
+  rs.reserve(ret.size());
+  std::ranges::transform(ret, std::back_inserter(rs),
+                         [&pop](const auto &c)
+                         {
+                           return scored_t{pop[c.first], c.second};
+                         });
 
-  Ensures(ri.size() == rounds);
-  return ri;
+  Ensures(rs.size() == rounds);
+  return rs;
 }
 
 ///
@@ -111,14 +116,18 @@ tournament<E>::operator()(const P &pop) const
 /// \param[in] pops pair of eligible layers. `pops.primary()` is the
 ///                 current/main layer; `pops.secondary()` (if present) is the
 ///                 immediately younger layer
-/// \return         two selected individuals (best first)
+/// \return         two selected scored individuals (best first)
 ///
 /// \pre Parameters must have been initialised (no auto-tune values)
 ///
 /// Used parameters:
 /// - `evolution.tournament_size` to control number of selected individuals.
-/// - `alps.p_main_layer` (probability of sampling from the primary layer when
-///   a secondary layer is present)
+/// - `alps.p_main_layer` (probability of sampling each additional tournament
+///   candidate from the primary layer when a secondary layer is present).
+///
+/// The first two candidates are always sampled from the primary layer. The
+/// remaining `evolution.tournament_size - 1` candidates use
+/// `alps.p_main_layer`.
 ///
 /// \note
 /// This function can be used in a multithreaded environment. Individuals are
@@ -134,7 +143,7 @@ tournament<E>::operator()(const P &pop) const
 ///
 template<Evaluator E>
 template<PopulationWithMutex P>
-std::array<typename P::value_type, 2>
+std::array<typename alps<E>::scored_t, 2>
 alps<E>::operator()(alps_layer_pair<const P> pops) const
 {
   Expects(!this->params_.needs_init());
@@ -191,7 +200,7 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
     assert(fit0.first || !fit1.first);
   }
 
-  return {p0, p1};
+  return {scored_t{p0, fit0.second}, scored_t{p1, fit1.second}};
 }
 
 ///

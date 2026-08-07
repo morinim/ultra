@@ -49,6 +49,9 @@ template<Evaluator E>
 class strategy
 {
 public:
+  using scored_t =
+    scored_individual<evaluator_individual_t<E>, evaluator_fitness_t<E>>;
+
   strategy(E &, const problem &);
 
 protected:
@@ -67,10 +70,14 @@ template<Evaluator E>
 class base : public strategy<E>
 {
 public:
+  using typename strategy<E>::scored_t;
+
   using base::strategy::strategy;
 
-  template<RandomAccessIndividuals R>
-  [[nodiscard]] std::ranges::range_value_t<R> operator()(const R &) const;
+  template<std::ranges::random_access_range R>
+  requires std::ranges::sized_range<R>
+           && std::same_as<std::ranges::range_value_t<R>, scored_t>
+  [[nodiscard]] typename base<E>::scored_t operator()(const R &) const;
 };
 
 template<Evaluator E> base(E &, const problem &) -> base<E>;

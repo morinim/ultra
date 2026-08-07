@@ -69,14 +69,14 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
         std::ranges::is_sorted(parents,
                                [&](const auto &p1, const auto &p2)
                                {
-                                 return eva(p1) > eva(p2);
+                                 return p1.fit > p2.fit;
                                }));
       CHECK(is_sorted);
 
       if (std::ranges::find_if(parents,
                                [ma = max.age()](const auto &prg)
                                {
-                                 return prg.age() == ma;
+                                 return prg.ind.age() == ma;
                                })
           != parents.end())
         ++found;
@@ -193,8 +193,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS p_main_layer")
 
         CHECK(parents.size() == 2);
 
-        const auto l0(source_layer(parents[0]));
-        const auto l1(source_layer(parents[1]));
+        const auto l0(source_layer(parents[0].ind));
+        const auto l1(source_layer(parents[1].ind));
 
         if (l0 == 0 || l1 == 0)
           ++any_secondary;
@@ -293,10 +293,10 @@ TEST_CASE_FIXTURE(fixture1, "ALPS age precedence")
 
   const auto parents(select(alps::selection_layers(cpop, ln)));
 
-  CHECK(parents[0].signature() == weak.signature());
-  CHECK(parents[0].age() <= pop.layer(0).max_age());
-  CHECK(parents[1].signature() == strong.signature());
-  CHECK(parents[1].age() > pop.layer(1).max_age());
+  CHECK(parents[0].ind.signature() == weak.signature());
+  CHECK(parents[0].ind.age() <= pop.layer(0).max_age());
+  CHECK(parents[1].ind.signature() == strong.signature());
+  CHECK(parents[1].ind.age() > pop.layer(1).max_age());
 }
 
 TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
@@ -319,7 +319,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
       const auto parents(select(from_layers));
 
       for (const auto &p : parents)
-        CHECK(p.is_valid());
+        CHECK(p.ind.is_valid());
     }
   });
 

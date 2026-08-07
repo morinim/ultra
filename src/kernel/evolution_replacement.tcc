@@ -29,7 +29,7 @@ strategy<E>::strategy(E &eva, const parameters &params)
 
 ///
 /// \param[in]  pop       a population
-/// \param[in]  offspring the child to be considered for replacement
+/// \param[in]  offspring the scored child to be considered for replacement
 /// \param[out] status    current evolution status
 ///
 /// Used parameters:
@@ -38,7 +38,7 @@ strategy<E>::strategy(E &eva, const parameters &params)
 ///
 template<Evaluator E>
 template<Population P>
-bool tournament<E>::operator()(P &pop, const individual_t &offspring,
+bool tournament<E>::operator()(P &pop, const scored_t &offspring,
                                status_t &status) const
 {
   static_assert(std::is_same_v<individual_t, typename P::value_type>);
@@ -64,16 +64,14 @@ bool tournament<E>::operator()(P &pop, const individual_t &offspring,
     }
   }
 
-  const auto off_fit(this->eva_(offspring));
-
-  status.update_if_better(scored_individual(offspring, off_fit));
+  status.update_if_better(offspring);
 
   const auto elitism(this->params_.evolution.elitism);
   assert(in_0_1(elitism));
 
-  const bool replace(off_fit > worst_fitness || !random::boolean(elitism));
+  const bool replace(offspring.fit > worst_fitness || !random::boolean(elitism));
   if (replace)
-    pop[worst_coord] = offspring;
+    pop[worst_coord] = offspring.ind;
 
   return replace;
 }
@@ -96,15 +94,15 @@ void alps<E>::try_promote_individuals(const P &from, P &to) const
 ///
 /// Attempts to insert `incoming` into the primary layer.
 ///
-/// \param[in] pops     a collection of references to sub-populations. It may
-///                     contain one or two layers. `pops.primary()` is the
-///                     current layer; `pops.secondary()`, when present, is the
-///                     next (older) layer
-/// \param[in] incoming the individual that we attempt to insert in the current
-///                     layer
-/// \return             `true` if `incoming` has been accepted into the primary
-///                     layer (either appended or replacing a resident);
-///                     `false` otherwise
+/// \param[in] pops            a collection of references to sub-populations. It
+///                            may contain one or two layers. `pops.primary()`
+///                            is the current layer; `pops.secondary()`, when
+///                            present, is the next (older) layer
+/// \param[in] incoming_source the individual/scored_individual that we attempt
+///                            to insert in the current layer
+/// \return                    `true` if `incoming` has been accepted into the
+///                            primary layer (either appended or replacing a
+///                            resident); `false` otherwise
 ///
 /// The insertion succeeds if one of the following conditions holds:
 /// - the layer still has free capacity;
@@ -123,11 +121,22 @@ void alps<E>::try_promote_individuals(const P &from, P &to) const
 /// doesn't affect the return value.
 ///
 template<Evaluator E>
-template<PopulationWithMutex P>
+template<PopulationWithMutex P, class S>
+requires (std::same_as<S, typename alps<E>::individual_t>
+          || std::same_as<S, typename alps<E>::scored_t>)
 bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
-                               const individual_t &incoming) const
+                               const S &incoming_source) const
 {
   static_assert(std::is_same_v<individual_t, typename P::value_type>);
+
+  const individual_t &incoming([&] -> const individual_t &
+  {
+    if constexpr (std::same_as<S, scored_t>)
+      return incoming_source.ind;
+    else
+      return incoming_source;
+  }());
+
   Expects(incoming.is_valid());
 
   auto &pop(pops.primary());
@@ -186,7 +195,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
     const auto trial_age(candidates[i].ind.age());
 
     if (trial_age > std::max(worst_age, max_age)
-        || (std::max(worst_age, trial_age) <= max_age && trial_fit < worst_fit))
+        || (std::max(worst_age, trial_age) <= max_age
+            && trial_fit < worst_fit))
     {
       worst_idx = i;
       worst_fit = trial_fit;
@@ -209,7 +219,14 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
   }
   else
   {
-    const auto incoming_fit(this->eva_(incoming));
+    const auto incoming_fit([&]
+    {
+      if constexpr (std::same_as<S, scored_t>)
+        return incoming_source.fit;
+      else
+        return this->eva_(incoming);
+    }());
+
     replace_worst = incoming_fit >= worst_fit;
   }
 
@@ -240,15 +257,21 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
     pop[coord] = incoming;
   }
 
-  if (pops.has_secondary() && !displaced.empty())
-    try_add_to_layer(pops.secondary(), displaced);
+  const bool replaced(!displaced.empty());
 
-  return !displaced.empty();
+  if (pops.has_secondary() && replaced)
+    try_add_to_layer(
+      pops.secondary(),
+      scored_t(std::move(displaced), std::move(worst_fit)));
+
+  return replaced;
 }
 
 template<Evaluator E>
-template<PopulationWithMutex P>
-bool alps<E>::try_add_to_layer(P &layer, const individual_t &incoming) const
+template<PopulationWithMutex P, class S>
+requires (std::same_as<S, typename alps<E>::individual_t>
+          || std::same_as<S, typename alps<E>::scored_t>)
+bool alps<E>::try_add_to_layer(P &layer, const S &incoming) const
 {
   return try_add_to_layer(alps_layer_pair(layer), incoming);
 }
@@ -258,7 +281,7 @@ bool alps<E>::try_add_to_layer(P &layer, const individual_t &incoming) const
 ///                       contain one or two elements. The first one (`pop[0]`)
 ///                       is the main/current layer; the second one, if
 ///                       available, is the next layer
-/// \param[in]  offspring the "incoming" individual
+/// \param[in]  offspring the "incoming" scored individual
 /// \param[out] status    current evolution status
 ///
 /// Used parameters:
@@ -267,19 +290,16 @@ bool alps<E>::try_add_to_layer(P &layer, const individual_t &incoming) const
 ///
 template<Evaluator E>
 template<PopulationWithMutex P>
-void alps<E>::operator()(alps_layer_pair<P> pops,
-                         const individual_t &offspring, status_t &status) const
+void alps<E>::operator()(alps_layer_pair<P> pops, const scored_t &offspring,
+                         status_t &status) const
 {
   static_assert(std::is_same_v<individual_t, typename P::value_type>);
   Expects(!this->params_.needs_init());
 
-  const bool ins(try_add_to_layer(pops, offspring));
+  const bool inserted(try_add_to_layer(pops, offspring));
+  const bool new_best(status.update_if_better(offspring));
 
-  const auto f_off(this->eva_(offspring));
-  const bool new_best(
-    status.update_if_better(scored_individual(offspring, f_off)));
-
-  if (ins || !new_best || !pops.has_secondary())
+  if (inserted || !new_best || !pops.has_secondary())
     return;
 
   // If a rejected offspring is a new global best, try to preserve it in the
@@ -289,6 +309,7 @@ void alps<E>::operator()(alps_layer_pair<P> pops,
   assert(in_0_1(elitism));
 
   auto retries(static_cast<unsigned>(std::round(elitism * 3.0)));
+
   while (retries--)
     if (try_add_to_layer(pops.secondary(), offspring))
       break;

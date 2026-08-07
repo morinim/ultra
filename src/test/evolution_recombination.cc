@@ -121,9 +121,15 @@ TEST_CASE_FIXTURE(fixture1, "Base")
   test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
   recombination::base recombine(eva, prob);
 
-  std::vector parents = { gp::individual(prob), gp::individual(prob) };
-  while (parents[0] == parents[1])
-    parents[1] = gp::individual(prob);
+  const auto scored([&eva](const auto &prg)
+  {
+    return scored_individual(prg, eva(prg));
+  });
+
+  std::vector parents = {scored(gp::individual(prob)),
+                         scored(gp::individual(prob))};
+  while (parents[0].ind == parents[1].ind)
+    parents[1] = scored(gp::individual(prob));
 
   SUBCASE("No crossover and no mutation")
   {
@@ -134,9 +140,11 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     {
       const auto off(recombine(parents));
 
-      CHECK(off.is_valid());
-      const bool one_or_the_other(off == parents[0] || off == parents[1]);
+      CHECK(off.ind.is_valid());
+      const bool one_or_the_other(off.ind == parents[0].ind
+                                  || off.ind == parents[1].ind);
       CHECK(one_or_the_other);
+      CHECK(off.fit == doctest::Approx(eva(off.ind)));
     }
   }
 
@@ -151,8 +159,9 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     {
       const auto off(recombine(same_parents));
 
-      CHECK(off.is_valid());
-      CHECK(off == same_parents[0]);
+      CHECK(off.ind.is_valid());
+      CHECK(off.ind == same_parents[0].ind);
+      CHECK(off.fit == doctest::Approx(eva(off.ind)));
     }
   }
 
@@ -168,7 +177,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     recombination::base mutation_only_recombine(mutation_only_eva, prob);
     const std::vector mutation_only_parents =
     {
-      mutation_only_individual(1), mutation_only_individual(2)
+      scored_individual(mutation_only_individual(1), 0.0),
+      scored_individual(mutation_only_individual(2), 0.0)
     };
     bool selected_first(false);
     bool selected_second(false);
@@ -177,9 +187,9 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     {
       const auto off(mutation_only_recombine(mutation_only_parents));
 
-      CHECK(off.mutations == 1);
-      selected_first |= off.parent == 1;
-      selected_second |= off.parent == 2;
+      CHECK(off.ind.mutations == 1);
+      selected_first |= off.ind.parent == 1;
+      selected_second |= off.ind.parent == 2;
     }
 
     CHECK(selected_first);
@@ -194,9 +204,9 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     for (unsigned repetitions(N); repetitions; --repetitions)
     {
       const auto off(recombine(parents));
-      CHECK(off.is_valid());
+      CHECK(off.ind.is_valid());
 
-      if (off != parents[0] && off != parents[1])
+      if (off.ind != parents[0].ind && off.ind != parents[1].ind)
         ++distinct;
     }
 
@@ -221,7 +231,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
       const auto off(brood_recombine(parents));
 
       REQUIRE(increasing_eva.evaluated.size() == brood_size);
-      CHECK(off == increasing_eva.evaluated.back());
+      CHECK(off.ind == increasing_eva.evaluated.back());
+      CHECK(off.fit == doctest::Approx(brood_size));
     }
 
     SUBCASE("Mutation")
@@ -233,14 +244,17 @@ TEST_CASE_FIXTURE(fixture1, "Base")
       recombination::base brood_recombine(mutation_only_eva, prob);
       const std::vector mutation_only_parents =
       {
-        mutation_only_individual(1), mutation_only_individual(2)
+        scored_individual(mutation_only_individual(1), 0.0),
+        scored_individual(mutation_only_individual(2), 0.0)
       };
 
       const auto off(brood_recombine(mutation_only_parents));
 
       REQUIRE(mutation_only_eva.evaluated.size() == brood_size);
-      CHECK(off.parent == mutation_only_eva.evaluated.back().parent);
-      CHECK(off.mutations == mutation_only_eva.evaluated.back().mutations);
+      CHECK(off.ind.parent == mutation_only_eva.evaluated.back().parent);
+      CHECK(off.ind.mutations
+            == mutation_only_eva.evaluated.back().mutations);
+      CHECK(off.fit == doctest::Approx(brood_size));
     }
   }
 
@@ -255,7 +269,8 @@ TEST_CASE_FIXTURE(fixture1, "Base")
     // Parent signatures are 1 and 2.
     const std::vector colliding_parents =
     {
-      colliding_individual(1), colliding_individual(2)
+      scored_individual(colliding_individual(1), 0.0),
+      scored_individual(colliding_individual(2), 0.0)
     };
 
     // - Crossover returns the first parent, so the offspring initially has
@@ -267,9 +282,9 @@ TEST_CASE_FIXTURE(fixture1, "Base")
 
     // The assertions directly exercises the while loop that prevents offspring
     // retaining either parent's signature.
-    CHECK(off.mutations == 2);
-    CHECK(off.signature() != colliding_parents[0].signature());
-    CHECK(off.signature() != colliding_parents[1].signature());
+    CHECK(off.ind.mutations == 2);
+    CHECK(off.ind.signature() != colliding_parents[0].ind.signature());
+    CHECK(off.ind.signature() != colliding_parents[1].ind.signature());
   }
 }
 

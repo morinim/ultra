@@ -36,31 +36,38 @@ strategy<E>::strategy(E &eva, const problem &prob) : eva_(eva), prob_(prob)
 /// \return            the offspring (single child)
 ///
 template<Evaluator E>
-template<RandomAccessIndividuals R>
-[[nodiscard]] std::ranges::range_value_t<R>
+template<std::ranges::random_access_range R>
+requires std::ranges::sized_range<R>
+         && std::same_as<std::ranges::range_value_t<R>,
+                         typename base<E>::scored_t>
+[[nodiscard]] typename base<E>::scored_t
 base<E>::operator()(const R &parents) const
 {
-  static_assert(std::is_same_v<evaluator_individual_t<E>,
-                               std::ranges::range_value_t<R>>);
-
   const auto &params(this->prob_.params.evolution);
 
   Expects(in_0_1(params.p_cross));
   Expects(params.brood_recombination);
-  Expects(parents.size() >= 2);
+  Expects(std::ranges::size(parents) >= 2);
 
   const bool use_crossover(random::boolean(params.p_cross));
+
+  const auto scored([this](auto ind)
+  {
+    auto fitness(this->eva_(ind));
+    return scored_t(std::move(ind), std::move(fitness));
+  });
 
   const auto generate([&]
   {
     if (!use_crossover)
     {
-      auto offspring(parents[random::boolean()]);
+      auto offspring(parents[random::boolean()].ind);
       offspring.mutation(this->prob_);
-      return offspring;
+      return scored(std::move(offspring));
     }
 
-    auto offspring(crossover(this->prob_, parents[0], parents[1]));
+    auto offspring(crossover(this->prob_,
+                             parents[0].ind, parents[1].ind));
 
     if (params.p_mutation > 0.0)
     {
@@ -74,35 +81,25 @@ base<E>::operator()(const R &parents) const
       // - optimize the exploitation phase.
       for (unsigned i(0);
            i < max_attempts
-             && (offspring.signature() == parents[0].signature()
-                 || offspring.signature() == parents[1].signature());
+             && (offspring.signature() == parents[0].ind.signature()
+                 || offspring.signature() == parents[1].ind.signature());
            ++i)
         offspring.mutation(this->prob_, static_cast<double>(i + 1));
     }
 
-    return offspring;
+    return scored(std::move(offspring));
   });
 
   const unsigned brood_size(use_crossover || params.p_mutation > 0.0
                             ? params.brood_recombination : 1);
 
-  if (brood_size == 1)
-    return generate();
-
-  const auto brood_trial([&]
-  {
-    auto offspring(generate());
-    auto fitness(this->eva_(offspring));
-    return scored_individual(std::move(offspring), std::move(fitness));
-  });
-
-  auto best(brood_trial());
+  auto best(generate());
 
   for (unsigned i(1); i < brood_size; ++i)
-    if (auto candidate(brood_trial()); candidate > best)
+    if (auto candidate(generate()); candidate > best)
       best = std::move(candidate);
 
-  return std::move(best.ind);
+  return best;
 }
 
 ///

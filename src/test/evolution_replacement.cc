@@ -60,7 +60,7 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     prob.params.evolution.tournament_size = 1;
 
     for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
-      replace(pop.front(), worst.ind, status);
+      replace(pop.front(), worst, status);
 
     for (const auto &prg : pop.front())
       CHECK(prg == worst.ind);
@@ -75,16 +75,16 @@ TEST_CASE_FIXTURE(fixture1, "Tournament")
     const auto backup(pop);
 
     for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
-      replace(pop.front(), worst.ind, status);
+      replace(pop.front(), worst, status);
 
     CHECK(std::ranges::equal(pop, backup));
     CHECK(status.best().ind == worst.ind);
 
-    replace(pop.front(), best.ind, status);
+    replace(pop.front(), best, status);
     CHECK(status.best().ind == best.ind);
 
     for (unsigned i(0); i < prob.params.population.individuals * 100; ++i)
-      replace(pop.front(), best.ind, status);
+      replace(pop.front(), best, status);
 
     for (const auto &prg : pop.front())
       CHECK(prg == best.ind);
@@ -140,7 +140,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       else
         CHECK(new_best.age() > layer.max_age());
 
-    replace(alps_layer_pair(pop.front(), pop.back()), new_best, status);
+    replace(alps_layer_pair(pop.front(), pop.back()), scored(new_best), status);
 
     CHECK(std::ranges::find(pop.front(), new_best) == pop.front().end());
     CHECK(std::ranges::find(pop.back(), new_best) != pop.back().end());
@@ -151,7 +151,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
     for (auto &layer : pop.range_of_layers())
     {
       layer.clear();
-      replace(alps_layer_pair(layer, pop.back()), new_best, status);
+      replace(alps_layer_pair(layer, pop.back()), scored(new_best), status);
       CHECK(std::ranges::find(layer, new_best) != layer.end());
     }
   }
@@ -168,7 +168,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS")
       {
         const auto elem(random::individual(*l));
 
-        replace(alps::replacement_layers(pop, l), elem, status);
+        replace(alps::replacement_layers(pop, l), scored(elem), status);
 
         if (const auto it(std::ranges::mismatch(*l, *b));
             it.in1 != l->end())
@@ -212,7 +212,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS Concurrency")
       const auto offspring{gp::individual(prob)};
       CHECK(offspring.is_valid());
 
-      replace(to_layers, offspring, status);
+      replace(to_layers, scored_individual(offspring, eva(offspring)), status);
     }
   });
 
@@ -253,7 +253,8 @@ TEST_CASE_FIXTURE(fixture1,
     evolution_status<gp::individual, double> status;
 
     const auto backup(pop.front());
-    replace(alps_layer_pair(pop.front(), pop.back()), incoming, status);
+    replace(alps_layer_pair(pop.front(), pop.back()),
+            scored_individual(incoming, eva(incoming)), status);
 
     CHECK(std::ranges::equal(pop.front(), backup));
     CHECK(std::ranges::contains(pop.back(), incoming));
@@ -392,7 +393,8 @@ TEST_CASE_FIXTURE(fixture1, "ALPS rejects snapshot/commit mismatch")
     eva.released.count_down();
   });
 
-  replace(alps_layer_pair(layer, upper), incoming, status);
+  replace(alps_layer_pair(layer, upper), scored_individual(incoming, 0.0),
+          status);
 
   // The sampled resident changed before commit, so replacement must be skipped.
   CHECK(layer[0] == intruder);
