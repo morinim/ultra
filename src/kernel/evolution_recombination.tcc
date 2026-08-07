@@ -37,8 +37,7 @@ strategy<E>::strategy(E &eva, const problem &prob) : eva_(eva), prob_(prob)
 ///
 template<Evaluator E>
 template<std::ranges::random_access_range R>
-[[nodiscard]] typename base<E>::scored_t
-base<E>::operator()(const R &parents) const
+[[nodiscard]] auto base<E>::operator()(const R &parents) const
   requires std::ranges::sized_range<R>
            && std::same_as<std::ranges::range_value_t<R>, scored_t>
 {

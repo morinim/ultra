@@ -32,10 +32,9 @@
 /// \post The individual's signature is recomputed.
 ///
 template<class F>
-requires
-  std::invocable<F &, individual::value_type &>
-  && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
 void individual::apply_each(std::size_t first, std::size_t last, F &&f)
+  requires std::invocable<F &, value_type &>
+           && std::same_as<std::invoke_result_t<F &, value_type &>, void>
 {
   Expects(first <= last);
   Expects(last <= parameters());
@@ -48,10 +47,9 @@ void individual::apply_each(std::size_t first, std::size_t last, F &&f)
 }
 
 template<class F>
-requires
-  std::invocable<F &, individual::value_type &>
-  && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
 void individual::apply_each(F &&f)
+  requires std::invocable<F &, value_type &>
+           && std::same_as<std::invoke_result_t<F &, value_type &>, void>
 {
   apply_each(0, size(), std::forward<F>(f));
 }

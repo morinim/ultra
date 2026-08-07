@@ -57,16 +57,14 @@ public:
 
   // ---- Modifiers ----
   template<class F>
-  requires
-    std::invocable<F &, individual::value_type &>
-    && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
-  void apply_each(std::size_t, std::size_t, F &&);
+  void apply_each(std::size_t, std::size_t, F &&)
+    requires std::invocable<F &, value_type &>
+             && std::same_as<std::invoke_result_t<F &, value_type &>, void>;
 
   template<class F>
-  requires
-    std::invocable<F &, individual::value_type &>
-    && std::same_as<std::invoke_result_t<F &, individual::value_type &>, void>
-  void apply_each(F &&);
+  void apply_each(F &&)
+    requires std::invocable<F &, value_type &>
+             && std::same_as<std::invoke_result_t<F &, value_type &>, void>;
 
   // ---- Recombination operators ----
   [[nodiscard]] individual crossover(double, const interval<double> &,

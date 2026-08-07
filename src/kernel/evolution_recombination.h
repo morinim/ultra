@@ -75,7 +75,7 @@ public:
   using base::strategy::strategy;
 
   template<std::ranges::random_access_range R>
-  [[nodiscard]] typename base<E>::scored_t operator()(const R &) const
+  [[nodiscard]] auto operator()(const R &) const
     requires std::ranges::sized_range<R>
              && std::same_as<std::ranges::range_value_t<R>, scored_t>;
 };
