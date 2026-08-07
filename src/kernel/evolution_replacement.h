@@ -92,12 +92,12 @@ public:
 
 private:
   template<PopulationWithMutex P, class S>
-  requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>)
-  bool try_add_to_layer(alps_layer_pair<P>, const S &) const;
+  bool try_add_to_layer(alps_layer_pair<P>, const S &) const
+    requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>);
 
   template<PopulationWithMutex P, class S>
-  requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>)
-  bool try_add_to_layer(P &, const S &) const;
+  bool try_add_to_layer(P &, const S &) const
+    requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>);
 };
 
 template<Evaluator E> alps(E &, const parameters &) -> alps<E>;

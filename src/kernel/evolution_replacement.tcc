@@ -122,10 +122,9 @@ void alps<E>::try_promote_individuals(const P &from, P &to) const
 ///
 template<Evaluator E>
 template<PopulationWithMutex P, class S>
-requires (std::same_as<S, typename alps<E>::individual_t>
-          || std::same_as<S, typename alps<E>::scored_t>)
 bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
                                const S &incoming_source) const
+  requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>)
 {
   static_assert(std::is_same_v<individual_t, typename P::value_type>);
 
@@ -269,9 +268,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
 
 template<Evaluator E>
 template<PopulationWithMutex P, class S>
-requires (std::same_as<S, typename alps<E>::individual_t>
-          || std::same_as<S, typename alps<E>::scored_t>)
 bool alps<E>::try_add_to_layer(P &layer, const S &incoming) const
+  requires (std::same_as<S, individual_t> || std::same_as<S, scored_t>)
 {
   return try_add_to_layer(alps_layer_pair(layer), incoming);
 }

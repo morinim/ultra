@@ -75,9 +75,9 @@ public:
   using base::strategy::strategy;
 
   template<std::ranges::random_access_range R>
-  requires std::ranges::sized_range<R>
-           && std::same_as<std::ranges::range_value_t<R>, scored_t>
-  [[nodiscard]] typename base<E>::scored_t operator()(const R &) const;
+  [[nodiscard]] typename base<E>::scored_t operator()(const R &) const
+    requires std::ranges::sized_range<R>
+             && std::same_as<std::ranges::range_value_t<R>, scored_t>;
 };
 
 template<Evaluator E> base(E &, const problem &) -> base<E>;
