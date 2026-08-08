@@ -36,10 +36,11 @@ strategy<E>::strategy(E &eva, const problem &prob) : eva_(eva), prob_(prob)
 /// \return            the offspring (single child)
 ///
 template<Evaluator E>
-template<std::ranges::random_access_range R>
+template<class R>
 [[nodiscard]] auto base<E>::operator()(const R &parents) const
-  requires std::ranges::sized_range<R>
-           && std::same_as<std::ranges::range_value_t<R>, scored_t>
+  requires std::ranges::random_access_range<const R>
+             && std::ranges::sized_range<const R>
+             && std::same_as<std::ranges::range_value_t<const R>, scored_t>
 {
   const auto &params(this->prob_.params.evolution);
 
@@ -57,15 +58,16 @@ template<std::ranges::random_access_range R>
 
   const auto generate([&]
   {
+    const auto first(std::ranges::begin(parents));
+
     if (!use_crossover)
     {
-      auto offspring(parents[random::boolean()].ind);
+      auto offspring(first[random::boolean()].ind);
       offspring.mutation(this->prob_);
       return scored(std::move(offspring));
     }
 
-    auto offspring(crossover(this->prob_,
-                             parents[0].ind, parents[1].ind));
+    auto offspring(crossover(this->prob_, first[0].ind, first[1].ind));
 
     if (params.p_mutation > 0.0)
     {
@@ -79,8 +81,8 @@ template<std::ranges::random_access_range R>
       // - optimize the exploitation phase.
       for (unsigned i(0);
            i < max_attempts
-             && (offspring.signature() == parents[0].ind.signature()
-                 || offspring.signature() == parents[1].ind.signature());
+             && (offspring.signature() == first[0].ind.signature()
+                 || offspring.signature() == first[1].ind.signature());
            ++i)
         offspring.mutation(this->prob_, static_cast<double>(i + 1));
     }

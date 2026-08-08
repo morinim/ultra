@@ -74,10 +74,10 @@ public:
 
   using base::strategy::strategy;
 
-  template<std::ranges::random_access_range R>
-  [[nodiscard]] auto operator()(const R &) const
-    requires std::ranges::sized_range<R>
-             && std::same_as<std::ranges::range_value_t<R>, scored_t>;
+  template<class R> [[nodiscard]] auto operator()(const R &) const
+    requires std::ranges::random_access_range<const R>
+             && std::ranges::sized_range<const R>
+             && std::same_as<std::ranges::range_value_t<const R>, scored_t>;
 };
 
 template<Evaluator E> base(E &, const problem &) -> base<E>;
