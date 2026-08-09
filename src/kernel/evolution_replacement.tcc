@@ -170,7 +170,7 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
 
   const auto max_age([&]
   {
-    std::shared_lock<std::shared_mutex> lock(pop.mutex());
+    std::shared_lock lock(pop.mutex());
 
     // Sample `ts` candidates (with replacement). Copy individuals out.
     for (std::size_t i(0); i < ts; ++i)
