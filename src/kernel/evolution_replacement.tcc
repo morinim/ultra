@@ -236,6 +236,8 @@ bool alps<E>::try_add_to_layer(alps_layer_pair<P> pops,
 
     std::lock_guard lock(pop.mutex());
 
+    // Equality intentionally ignores age. Concurrent changes occur only in the
+    // final layer, where age does not affect layer eligibility.
     if (const bool changed(pop[coord] != candidates[worst_idx].ind); changed)
     {
       // In ALPS, every non-final layer is owned by a single thread, so a
@@ -306,7 +308,7 @@ void alps<E>::operator()(alps_layer_pair<P> pops, const scored_t &offspring,
   const auto elitism(this->params_.evolution.elitism);
   assert(in_0_1(elitism));
 
-  auto retries(static_cast<unsigned>(std::round(elitism * 3.0)));
+  auto retries(static_cast<unsigned>(std::ceil(elitism * 3.0)));
 
   while (retries--)
     if (try_add_to_layer(pops.secondary(), offspring))
