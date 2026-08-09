@@ -163,6 +163,9 @@
 (setq-default indicate-empty-lines t)
 (column-number-mode 1)
 
+(setq-default fill-column 80)
+(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+
 (show-paren-mode 1)
 
 (provide 'ultra-style)
