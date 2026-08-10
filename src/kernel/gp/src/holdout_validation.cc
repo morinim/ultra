@@ -100,7 +100,8 @@ void split_dataset(R &stratum, int training_perc, int validation_perc,
   assert(n_training);
 
   std::size_t n_validation(0);
-  if (const auto remaining(available - n_training); remaining)
+  if (const auto remaining(available - n_training);
+      remaining && validation_perc > 0)
   {
     if (validation_perc == 100 - training_perc)
       n_validation = remaining;
