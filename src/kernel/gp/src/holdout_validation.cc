@@ -216,6 +216,9 @@ evaluation_context holdout_validation::training_setup(unsigned) noexcept
 
 bool holdout_validation::validation_setup(unsigned) noexcept
 {
+  if (prob_.data[dataset_t::validation].empty())
+    return false;
+
   prob_.data.select(dataset_t::validation);
   return true;
 }
