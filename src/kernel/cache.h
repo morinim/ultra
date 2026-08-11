@@ -13,9 +13,12 @@
 #if !defined(ULTRA_CACHE_H)
 #define      ULTRA_CACHE_H
 
+#include <algorithm>
+#include <bit>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <vector>
 
 #include "kernel/fitness.h"
 #include "kernel/hash_t.h"

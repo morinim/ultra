@@ -118,7 +118,15 @@ cache<F, LOCK_GROUP_SIZE>::lock_index(std::size_t idx) const noexcept
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 void cache<F, LOCK_GROUP_SIZE>::clear() noexcept
 {
-  ++seal_;
+  if (++seal_ == 0)
+  {
+    for (auto &slot : table_)
+      slot.seal = 0;
+
+    seal_ = 1;
+  }
+
+  Ensures(is_valid());
 }
 
 ///
