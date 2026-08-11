@@ -38,7 +38,7 @@ bool model_measurements<F>::empty() const noexcept
 /// \param[in] rhs second term of comparison
 /// \return        a partial ordering result
 ///
-/// The comparison criterium is Pareto dominance
+/// The comparison criterion is Pareto dominance
 /// (https://en.wikipedia.org/wiki/Pareto_efficiency)
 ///
 template<Fitness F>

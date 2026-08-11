@@ -114,11 +114,11 @@ individual &individual::operator=(const std::vector<individual::value_type> &v)
 /// \param[in] f scaling factor interval (`parameters.de.weight`)
 /// \param[in] a base vector
 /// \param[in] b first vector used for calculating the difference vector
-/// \param[in] c seconfo vector used for calculating the difference vector
+/// \param[in] c second vector used for calculating the difference vector
 /// \return      the offspring / trial vector
 ///
 /// First the search direction is defined by calculating a *difference vector*
-/// between the pair of vectors `b` and `c` (usually choosen at random from the
+/// between the pair of vectors `b` and `c` (usually chosen at random from the
 /// population). This difference vector is scaled by using the *scale factor*
 /// `F`.
 /// This way no separate probability distribution has to be used which makes
@@ -230,7 +230,7 @@ hash_t individual::hash() const
 
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparsion
+/// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs` (taxicab / L1 distance)
 ///

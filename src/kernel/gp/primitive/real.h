@@ -531,7 +531,7 @@ public:
 /// Natural logarithm of a real number.
 ///
 /// \remark
-/// The argument of a trascendental function must be dimensionless and
+/// The argument of a transcendental function must be dimensionless and
 /// dimensionless is the return type (so same category). For a possible
 /// explanation see https://math.stackexchange.com/a/238400
 ///

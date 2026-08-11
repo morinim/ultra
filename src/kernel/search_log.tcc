@@ -82,7 +82,7 @@ void search_log::save_population(unsigned generation,
 }
 
 ///
-/// Saves working / statistical informations about layer status.
+/// Saves working / statistical information about layer status.
 ///
 /// \param[in] pop complete evolved population
 /// \param[in] sum up to date evolution summary
@@ -132,7 +132,7 @@ void search_log::save_layers(
 }
 
 ///
-/// Saves working / statistical informations in a log file.
+/// Saves working / statistical information in a log file.
 ///
 /// Data are written in a CSV-like fashion and are partitioned in blocks
 /// separated by two blank lines:

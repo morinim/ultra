@@ -23,7 +23,7 @@ namespace ultra
 {
 
 ///
-/// Checks whether a givene `value_t` contains a value.
+/// Checks whether a given `value_t` contains a value.
 ///
 /// \param[in] v value to be checked
 /// \return      `true` if `v` isn't empty

@@ -194,7 +194,7 @@ std::size_t individual::size() const noexcept
 /// Calculates the Hamming distance between two individuals.
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparsion
+/// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs`
 ///
@@ -294,7 +294,7 @@ D_IVECTOR pmx(const D_IVECTOR &lhs, const D_IVECTOR &rhs)
 }
 
 ///
-/// Heterogeneos crossover.
+/// Heterogeneous crossover.
 ///
 /// \param[in] prb the current problem
 /// \param[in] lhs first parent
@@ -442,7 +442,7 @@ bool individual::is_valid() const
 ///
 /// \param[in] in input stream
 /// \param[in] ss symbol set (currently not used since terminals used in HGAs
-///               don't require deconding)
+///               don't require decoding)
 /// \return       `true` if the object has been loaded correctly
 ///
 /// \note

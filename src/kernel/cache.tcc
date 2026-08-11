@@ -132,7 +132,7 @@ void cache<F, LOCK_GROUP_SIZE>::clear() noexcept
 ///
 /// Clears the cached information for a specific individual.
 ///
-/// \param[in] h individual's signature whose informations we have to clear
+/// \param[in] h individual's signature whose information we have to clear
 ///
 template<Fitness F, std::size_t LOCK_GROUP_SIZE>
 void cache<F, LOCK_GROUP_SIZE>::clear(const hash_t &h)

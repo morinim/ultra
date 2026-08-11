@@ -171,7 +171,7 @@ std::size_t individual::size() const noexcept
 /// Calculates the Hamming distance between two individuals.
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparsion
+/// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs` (the number of different genes)
 ///

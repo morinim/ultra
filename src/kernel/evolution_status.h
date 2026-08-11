@@ -27,6 +27,10 @@ namespace ultra
 /// \remark
 /// Every thread has its own `evolution_status`.
 ///
+/// \warning
+/// The generation pointer and any objects referenced by the update callback
+/// must outlive this object and all its copies.
+///
 template<Individual I, Fitness F>
 class evolution_status
 {
@@ -51,7 +55,7 @@ private:
 
   global_update_f update_overall_best_ {};
 
-  // Current generation.
+  // Non-owning pointer to the current generation.
   const unsigned *generation_ {nullptr};
 };
 

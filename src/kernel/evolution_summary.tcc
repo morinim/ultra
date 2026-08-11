@@ -18,7 +18,7 @@
 #define      ULTRA_EVOLUTION_SUMMARY_TCC
 
 ///
-/// Resets summary informations.
+/// Resets summary information.
 ///
 template<Individual I, Fitness F>
 void summary<I, F>::clear()
@@ -121,7 +121,7 @@ unsigned summary<I, F>::stagnation() const
 }
 
 ///
-/// \return best scored individul found so far
+/// \return best scored individual found so far
 ///
 template<Individual I, Fitness F>
 scored_individual<I, F> summary<I, F>::best() const

@@ -60,7 +60,7 @@ struct nonogram_problem
         auto end(col_clues[col].end());
         // Every remaining block requires one space.
         auto spaces(std::distance(next, end));
-        // Minimum number of cells reserved for the remaing blocks.
+        // Minimum number of cells reserved for the remaining blocks.
         auto reserved(std::accumulate(next, end, 0uz) + spaces);
         // Number of allowed positions for the current block.
         auto allowed(col_size - reserved - start - block_size + 1);

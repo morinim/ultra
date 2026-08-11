@@ -120,7 +120,7 @@ dataframe::dataframe(std::istream &is, const params &p)
 dataframe::dataframe(std::istream &is) : dataframe(is, {}) {}
 
 ///
-/// New datafame instance containing the learning collection from a file.
+/// New dataframe instance containing the learning collection from a file.
 ///
 /// \param[in] fn name of the file containing the learning collection (CSV /
 ///               XRFF format)

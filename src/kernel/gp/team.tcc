@@ -313,7 +313,7 @@ bool operator==(const team<I> &lhs, const team<I> &rhs) noexcept
 
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparision
+/// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `x` and
 ///                `this` (the number of different genes between teams)
 ///

@@ -581,7 +581,7 @@ template<IsEnum E> std::ostream &operator<<(std::ostream &s, E v)
 /// \tparam R range type
 ///
 /// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparsion
+/// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
 ///                `rhs`
 ///

@@ -46,7 +46,7 @@ using raw_data = std::vector<record_t>;
 /// Stores a single processed element (row) of the dataset.
 ///
 /// The `example` struct consists of an input vector (`input`) and an
-/// outoput value (`output`). Depending on the task, `output` holds:
+/// output value (`output`). Depending on the task, `output` holds:
 /// - a numeric value (e.g. in symbolic regression);
 /// - a categorical label (e.g. in classification).
 ///
@@ -234,7 +234,7 @@ std::ostream &operator<<(std::ostream &, const dataframe &);
 ///
 /// \remark
 /// If, after the operation, the new `size()` is greater than old `capacity()`
-/// areallocation takes place, in which case all iterators (including the
+/// a reallocation takes place, in which case all iterators (including the
 /// `end()` iterator) and all references to the elements are invalidated;
 /// otherwise, only the iterators and references before the insertion point
 /// remain valid.

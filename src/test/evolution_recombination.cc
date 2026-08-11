@@ -319,7 +319,7 @@ TEST_CASE_FIXTURE(fixture4, "DE")
     }
   }
 
-  SUBCASE("No diether")
+  SUBCASE("No dither")
   {
     prob.params.de.weight = {std::nextafter(1.0, 0.0), 1.0};
 

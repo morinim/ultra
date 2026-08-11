@@ -62,7 +62,7 @@ protected:
 ///
 /// This class defines the program skeleton of a standard genetic
 /// programming crossover plus mutation operation. It's a template method
-/// design pattern: one or more of the algorithm steps can be overriden
+/// design pattern: one or more of the algorithm steps can be overridden
 /// by subclasses to allow differing behaviours while ensuring that the
 /// overarching algorithm is still followed.
 ///

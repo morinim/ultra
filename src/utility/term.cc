@@ -150,7 +150,7 @@ void term::reset()
 /// \return `true` when the user presses the '.' key
 ///
 /// \note
-/// While concurrency safe, conside that just one thread will detect the
+/// While concurrency safe, consider that just one thread will detect the
 /// keypress.
 ///
 bool term::user_stop() const

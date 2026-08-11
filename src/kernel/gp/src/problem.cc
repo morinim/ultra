@@ -348,7 +348,7 @@ void problem::setup_terminals(symbol_init init_flags)
 ///
 /// \warning
 /// - Data must be loaded before creating symbols, as without data it is
-///   impossibile to determine, among other things, the dataset's features.
+///   impossible to determine, among other things, the dataset's features.
 /// - Multi-category tasks are supported, but the result may be suboptimal.
 ///
 void problem::setup_symbols(symbol_init init_flags)
