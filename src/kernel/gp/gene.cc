@@ -28,7 +28,7 @@ namespace ultra
 /// This constructor is primarily intended for debugging and hand-crafted
 /// individuals:
 ///
-///     std::vector<gene> g(
+///     std::vector<gene> g
 ///     {
 ///       {f_add, {1, 2}},  // [0] ADD 1,2
 ///       {    y,     {}},  // [1] Y
@@ -56,6 +56,7 @@ gene::gene(const function *f, const arg_pack &a) : func(f), args(a)
 ///
 locus gene::locus_of_argument(std::size_t i) const noexcept
 {
+  Expects(func);
   Expects(i < func->arity());
   Expects(std::holds_alternative<D_ADDRESS>(args[i]));
 
@@ -78,6 +79,7 @@ locus gene::locus_of_argument(std::size_t i) const noexcept
 ///
 locus gene::locus_of_argument(const arg_pack::value_type &a) const noexcept
 {
+  Expects(func);
   Expects(std::holds_alternative<D_ADDRESS>(a));
 
   return {

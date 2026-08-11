@@ -37,8 +37,8 @@ namespace ultra
 /// - **empty gene**: `func == nullptr` and `args.empty()`;
 /// - **active gene**: `func != nullptr` and `args.size() == func->arity()`.
 ///
-/// These invariants are enforced by construction and validated by
-/// `is_valid()`.
+/// These states are recognised by `is_valid()`; callers modifying public
+/// members must preserve the invariant.
 ///
 /// ### Ownership and lifetime
 /// The `gene` class does **not** own the function it refers to. The pointed
