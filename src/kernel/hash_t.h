@@ -13,8 +13,12 @@
 #if !defined(ULTRA_HASH_T_H)
 #define      ULTRA_HASH_T_H
 
+#include "utility/assert.h"
+
+#include <algorithm>
 #include <array>
 #include <bit>
+#include <concepts>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -69,7 +73,7 @@ struct hash_t
   bool save(std::ostream &) const;
 
   // Data members.
-  std::uint_least64_t data[2];
+  std::uint64_t data[2];
 };
 
 std::ostream &operator<<(std::ostream &, hash_t);
@@ -253,6 +257,8 @@ public:
 inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
                                    std::uint32_t seed) noexcept
 {
+  Expects(data || len == 0);
+
   const auto n_blocks(len / internal::murmurhash3_block_size);
 
   // Body.
@@ -272,9 +278,12 @@ inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
   }
 
   // Tail.
-  const auto tail_offset(n_blocks * internal::murmurhash3_block_size);
-  internal::process_tail(h, bytes + tail_offset,
-                         len % internal::murmurhash3_block_size);
+  if (const auto tail_len(len % internal::murmurhash3_block_size); tail_len)
+  {
+    const auto tail_offset(len - tail_len);
+    internal::process_tail(h, bytes + tail_offset, tail_len);
+  }
+
   internal::finalize(h, len);
 
   return h;
