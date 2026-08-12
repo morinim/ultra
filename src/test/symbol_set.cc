@@ -254,17 +254,31 @@ TEST_CASE("Distribution")
 
   SUBCASE("roulette_terminal with parameters")
   {
-    const std::size_t sup(11);
     const symbol_set::weight_t weight(100);
+    const std::size_t sup(weight + 1);
 
     unsigned count_p[2] = {0, 0};
+    std::vector<bool> seen(sup, false);
+
+    random::engine().seed(1973u);
+
     for (unsigned i(0); i < n; ++i)
     {
-      const symbol::category_t c(random::boolean());
+      const symbol::category_t c(i % 2);
+
       if (const auto v(ss.roulette_terminal(sup, c, weight));
           v.index() == d_address)
+      {
+        const auto address(
+          static_cast<std::size_t>(std::get<D_ADDRESS>(v)));
+
+        REQUIRE(address < sup);
+        seen[address] = true;
         ++count_p[c];
+      }
     }
+
+    CHECK(std::ranges::all_of(seen, [](bool value) { return value; }));
 
     for (symbol::category_t c(0); c <= 1; ++c)
     {
@@ -272,7 +286,7 @@ TEST_CASE("Distribution")
       const auto actual(count_p[c]);
 
       CHECK(98 * expected <= 100 * actual);
-      CHECK(100 * actual <= 102 *expected);
+      CHECK(100 * actual <= 102 * expected);
     }
   }
 

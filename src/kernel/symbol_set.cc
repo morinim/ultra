@@ -414,8 +414,8 @@ value_t symbol_set::roulette_terminal(std::size_t sup,
   {
     const auto sum(views_[c].terminals.sum() + pa_w);
 
-    if (const auto r(random::sup(sum)); r < pa_w)
-      return param_address(r % sup);
+    if (random::sup(sum) < pa_w)
+      return param_address(random::sup(sup));
   }
 
   return roulette_terminal(c);
