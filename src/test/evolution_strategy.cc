@@ -270,6 +270,17 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
   {
     sum.az = analyzer(pop, eva);
 
+    const auto layers(pop.range_of_layers());
+    auto previous(layers.begin());
+    std::size_t expected_layers(1);
+    for (auto layer(std::next(previous)); layer != layers.end(); ++layer)
+      if (!almost_equal(sum.az.fit_dist(*previous).mean(),
+                        sum.az.fit_dist(*layer).mean()))
+      {
+        ++expected_layers;
+        previous = layer;
+      }
+
     alps.after_generation(pop, sum);
 
     CHECK(std::ranges::all_of(
@@ -281,7 +292,7 @@ TEST_CASE_FIXTURE(fixture1, "ALPS init / after_generation")
                                 return layer.allowed() == layer.size();
                               }));
 
-    CHECK(pop.layers() == prob.params.population.init_subgroups);
+    CHECK(pop.layers() == expected_layers);
   }
 
   SUBCASE("Two identical layers")
