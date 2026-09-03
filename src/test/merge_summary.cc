@@ -388,7 +388,7 @@ TEST_CASE("rounds the merged elite size upwards")
   CHECK_MESSAGE(rc == 0, "CLI failed; stderr:\n" << read_all(err));
 
   XMLDocument doc;
-  REQUIRE(doc.LoadFile(out.c_str()) == tinyxml2::XML_SUCCESS);
+  REQUIRE(doc.LoadFile(out.string().c_str()) == tinyxml2::XML_SUCCESS);
   auto *summary(require_child(doc.FirstChildElement("ultra"), "summary"));
   auto *elite(require_child(summary, "elite"));
   auto *run(elite->FirstChildElement("run"));
