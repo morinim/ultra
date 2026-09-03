@@ -229,7 +229,7 @@ class Elite:
         if percentile == 0.0:
             return cls(percentile, [])
 
-        count = max(1, min(int(total_runs * percentile), total_runs))
+        count = math.ceil(total_runs * percentile)
         candidates.sort(key=EliteRun.sort_key, reverse=True)
 
         selected: list[EliteRun] = []

@@ -252,6 +252,22 @@ void check_checksum_matches(const std::string &xml_bytes)
   return oss.str();
 }
 
+[[nodiscard]] std::string add_elite(
+  std::string xml, std::initializer_list<std::pair<int, double>> runs)
+{
+  std::ostringstream elite;
+  elite << "    <elite percentile=\"5\">\n";
+  for (const auto &[id, fitness] : runs)
+    elite << "      <run id=\"" << id << "\"><fitness>" << fitness
+          << "</fitness></run>\n";
+  elite << "    </elite>\n";
+
+  const auto pos(xml.find("  </summary>"));
+  REQUIRE(pos != std::string::npos);
+  xml.insert(pos, elite.str());
+  return xml;
+}
+
 
 TEST_SUITE("merge_summary")
 {
@@ -345,6 +361,43 @@ TEST_CASE("merges two summaries and produces a checksum-valid output")
 
   // checksum validates against exact output bytes
   check_checksum_matches(xml_bytes);
+
+  [[maybe_unused]] std::error_code ec;
+  fs::remove_all(tmp, ec);
+}
+
+TEST_CASE("rounds the merged elite size upwards")
+{
+  REQUIRE_MESSAGE(fs::exists(script),
+                  "Script not found at: " << script.string());
+
+  const auto tmp(make_temp_dir());
+  const auto a(tmp / "a.xml");
+  const auto b(tmp / "b.xml");
+  const auto out(tmp / "out.xml");
+  const auto err(tmp / "err.txt");
+
+  write_all(a, add_elite(make_input_xml(11, 1, 0.0, 1.0, 0.0,
+                                         2.0, 0.0, 0, "A", {}),
+                         {{0, 2.0}}));
+  write_all(b, add_elite(make_input_xml(10, 1, 0.0, 1.0, 0.0,
+                                         3.0, 0.0, 0, "B", {}),
+                         {{0, 3.0}}));
+
+  const int rc(run_cli(a, b, out, err));
+  CHECK_MESSAGE(rc == 0, "CLI failed; stderr:\n" << read_all(err));
+
+  XMLDocument doc;
+  REQUIRE(doc.LoadFile(out.c_str()) == tinyxml2::XML_SUCCESS);
+  auto *summary(require_child(doc.FirstChildElement("ultra"), "summary"));
+  auto *elite(require_child(summary, "elite"));
+  auto *run(elite->FirstChildElement("run"));
+  REQUIRE(run != nullptr);
+  CHECK(run->IntAttribute("id") == 11);
+  run = run->NextSiblingElement("run");
+  REQUIRE(run != nullptr);
+  CHECK(run->IntAttribute("id") == 0);
+  CHECK(run->NextSiblingElement("run") == nullptr);
 
   [[maybe_unused]] std::error_code ec;
   fs::remove_all(tmp, ec);

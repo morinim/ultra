@@ -183,8 +183,7 @@ double search_stats<I, F>::success_rate(
 /// therefore the elite set corresponds to a prefix of the internal run
 /// summaries.
 ///
-/// The number of runs returned is `floor(runs() * perc)`, clamped to the
-/// interval `[1, runs()]` when `perc > 0`.
+/// The number of runs returned is `ceil(runs() * perc)`.
 /// If no runs have been recorded or `perc` is zero, an empty span is
 /// returned.
 ///
@@ -201,9 +200,10 @@ search_stats<I, F>::elite_runs(double perc) const noexcept
   if (total == 0 || issmall(perc))
     return {};
 
-  const auto n(static_cast<std::size_t>(static_cast<double>(total) * perc));
+  const auto n(static_cast<std::size_t>(
+    std::ceil(static_cast<double>(total) * perc)));
 
-  return {stats_.data(), std::clamp(n, 1uz, total)};
+  return {stats_.data(), n};
 }
 
 #endif  // include guard

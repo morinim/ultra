@@ -183,21 +183,21 @@ TEST_CASE_FIXTURE(fixture1, "elite_runs returns a best-first prefix")
     }
   }
 
-  SUBCASE("perc rounds down but clamps to [1, runs()]")
+  SUBCASE("perc rounds up")
   {
-    // total=10 -> floor(10*0.5)=5
-    const auto elite(s.elite_runs(0.5));
-    REQUIRE(elite.size() == 5);
+    // total=10 -> ceil(10*0.51)=6
+    const auto elite(s.elite_runs(0.51));
+    REQUIRE(elite.size() == 6);
 
-    // It must be a prefix: first element is best run, last is the 5th best.
+    // It must be a prefix: first element is best run, last is the 6th best.
     CHECK(elite.front().run == s.best_run());
 
-    // With fitness values 0...9, the 5 best have fitness 9,8,7,6,5 in that
+    // With fitness values 0...9, the 6 best have fitness 9,8,7,6,5,4 in that
     // order.
     REQUIRE(elite.front().best_measurements.fitness);
     REQUIRE(elite.back().best_measurements.fitness);
     CHECK(*elite.front().best_measurements.fitness == doctest::Approx(9.0));
-    CHECK(*elite.back().best_measurements.fitness == doctest::Approx(5.0));
+    CHECK(*elite.back().best_measurements.fitness == doctest::Approx(4.0));
   }
 }
 
