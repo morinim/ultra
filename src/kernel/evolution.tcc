@@ -541,7 +541,8 @@ summary<typename evolution<E>::individual_t,
 
   ES<E> strategy(pop_.problem(), eva_);
 
-  scored_individual previous_best(sum_.best());
+  // Last observed best (for progress reporting).
+  scored_individual progress_best(sum_.best());
 
   internal::print_status ps;
   internal::refinement_schedule ref_sched(params.refinement);
@@ -575,9 +576,9 @@ summary<typename evolution<E>::individual_t,
   const auto print_and_update_if_better(
     [&](auto candidate)
     {
-      if (previous_best < candidate)
+      if (progress_best < candidate)
       {
-        previous_best = candidate;
+        progress_best = candidate;
         print(message::summary, ps);
         return true;
       }
@@ -595,7 +596,15 @@ summary<typename evolution<E>::individual_t,
     ps.new_generation();
 
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
+    {
       invalidate_cache_if_supported(eva_);
+
+      if (const auto best(sum_.best()); !best.empty())
+      {
+        sum_.set_best_fitness(eva_(best.ind));
+        progress_best = sum_.best();
+      }
+    }
 
     ultraDEBUG("Launching tasks for generation {}", sum_.generation);
     const auto subpops(pop_.range_of_layers());
@@ -607,11 +616,9 @@ summary<typename evolution<E>::individual_t,
 
     while (!tasks.wait_for(10ms))
     {
-      if (ps.from_last_msg.elapsed() > 2s)
-      {
-        if (!print_and_update_if_better(sum_.best()))
-          print(message::status, ps);
-      }
+      if (ps.from_last_msg.elapsed() > 2s
+          && !print_and_update_if_better(sum_.best()))
+        print(message::status, ps);
 
       if (!source.stop_requested() && stop_condition()) [[unlikely]]
       {
@@ -638,12 +645,10 @@ summary<typename evolution<E>::individual_t,
 
           ref_sched.after_refinement_attempt(performed);
 
+          // `performed` only means refinement ran. It may still have updated
+          // and reported `sum_`, so refresh the local progress cache.
           if (performed)
-          {
-            // `performed` only means refinement ran. It may still have updated and
-            // reported `sum_`, so refresh the local progress cache.
-            previous_best = sum_.best();
-          }
+            progress_best = sum_.best();
         }
         else
           ref_sched.tick();

@@ -114,6 +114,25 @@ bool summary<I, F>::update_if_better(scored_individual<I, F> prg)
   return improved;
 }
 
+///
+/// Replaces the fitness associated with the best individual.
+///
+/// \param[in] fit fitness under the current evaluation context
+///
+/// This is used after the evaluation context changes and the current best
+/// individual is evaluated again. The individual and last-improvement
+/// generation are preserved, and the new-best callback isn't invoked.
+///
+template<Individual I, Fitness F>
+void summary<I, F>::set_best_fitness(F fit)
+{
+  // The mutex protects memory access, but cannot detect an intervening change
+  // of best.
+  std::lock_guard lock(mutex_);
+  Expects(!data_.best.empty());
+  data_.best.fit = std::move(fit);
+}
+
 template<Individual I, Fitness F>
 unsigned summary<I, F>::stagnation() const
 {

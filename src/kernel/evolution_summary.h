@@ -43,6 +43,8 @@ public:
   [[nodiscard]] evolution_status<I, F> starting_status();
   summary &on_new_best(on_new_best_callback_t);
 
+  void set_best_fitness(F);
+
   // --- Concurrency aware functions ---
   bool update_if_better(scored_individual<I, F>);
   [[nodiscard]] scored_individual<I, F> best() const;

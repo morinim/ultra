@@ -121,6 +121,19 @@ struct clear_counting_evaluator
   void clear() const noexcept { ++*clear_count; }
 };
 
+struct context_dependent_evaluator
+{
+  using individual_t = ultra::gp::individual;
+  using fitness_t = double;
+
+  [[nodiscard]] double operator()(const individual_t &) const
+  {
+    return fitness;
+  }
+
+  double fitness {1.0};
+};
+
 TEST_CASE_FIXTURE(fixture1, "Shake function")
 {
   using namespace ultra;
@@ -175,6 +188,29 @@ TEST_CASE_FIXTURE(fixture1, "Shake function")
     evo.run<std_es>();
 
     CHECK(*eva.clear_count == 0);
+  }
+
+  SUBCASE("shake updates the stored best fitness when context changes")
+  {
+    prob.params.evolution.generations = 2;
+
+    context_dependent_evaluator eva;
+
+    evolution evo(prob, eva);
+    evo.shake_function([&eva](unsigned generation)
+    {
+      if (generation != 1)
+        return evaluation_context::unchanged;
+
+      eva.fitness = -1.0;
+      return evaluation_context::changed;
+    });
+
+    const auto sum(evo.run<std_es>());
+    const auto best(sum.best());
+
+    CHECK(!best.empty());
+    CHECK(best.fit == doctest::Approx(eva(best.ind)));
   }
 }
 
