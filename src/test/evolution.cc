@@ -24,6 +24,27 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <stop_token>
+
+template<ultra::Evaluator E>
+class cancellation_probe_strategy : public ultra::std_es<E>
+{
+public:
+  cancellation_probe_strategy(const ultra::problem &prob, E &eva)
+    : ultra::std_es<E>(prob, eva)
+  {
+    ++constructions;
+  }
+
+  template<ultra::Population P>
+  void init(P &) const
+  {
+    ++initialisations;
+  }
+
+  inline static unsigned constructions {};
+  inline static unsigned initialisations {};
+};
 
 TEST_SUITE("EVOLUTION")
 {
@@ -66,6 +87,28 @@ TEST_CASE_FIXTURE(fixture1, "Uninitialised parameters")
   evolution evo(prob, eva);
 
   CHECK_THROWS_AS(evo.run<std_es>(), std::logic_error);
+}
+
+TEST_CASE_FIXTURE(fixture1,
+                  "Pre-cancelled evolution doesn't initialise strategy")
+{
+  using namespace ultra;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+
+  using strategy = cancellation_probe_strategy<decltype(eva)>;
+  strategy::constructions = 0;
+  strategy::initialisations = 0;
+
+  std::stop_source source;
+  source.request_stop();
+
+  evolution evo(prob, eva);
+  const auto sum(evo.stop_source(source).run<cancellation_probe_strategy>());
+
+  CHECK(sum.generation == 0);
+  CHECK(strategy::constructions == 0);
+  CHECK(strategy::initialisations == 0);
 }
 
 TEST_CASE_FIXTURE(fixture1, "ALPS evolution")

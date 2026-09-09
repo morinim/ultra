@@ -539,6 +539,17 @@ summary<typename evolution<E>::individual_t,
 
   using namespace std::chrono_literals;
 
+  std::stop_source source;
+
+  // An external stop request immediately requests cancellation on the local
+  // source.
+  std::stop_callback external_stop_callback(
+    external_stop_source_.get_token(),
+    [&source] { source.request_stop(); });
+
+  if (source.stop_requested())
+    return sum_;
+
   ES<E> strategy(pop_.problem(), eva_);
 
   // Last observed best (for progress reporting).
@@ -546,8 +557,6 @@ summary<typename evolution<E>::individual_t,
 
   internal::print_status ps;
   internal::refinement_schedule ref_sched(params.refinement);
-
-  std::stop_source source;
 
   // Asynchronous population update: each newly generated offspring can replace
   // an individual of the current population (aka steady state population).
