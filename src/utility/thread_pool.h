@@ -83,29 +83,33 @@ public:
 
             for (;;)
             {
-              task_type task;
-
+              // Destroy the callable before marking the task complete. Its
+              // packaged task may own exception state observed by a waiter.
               {
-                std::unique_lock lock(mutex_);
-                cv_available_.wait(lock, stop_token,
-                                   [this] { return !tasks_.empty(); });
-                // `wait` unblocks either when tasks are available or when
-                // stop is requested.
+                task_type task;
 
-                if (stop_token.stop_requested() && tasks_.empty())
-                  return;
+                {
+                  std::unique_lock lock(mutex_);
+                  cv_available_.wait(lock, stop_token,
+                                     [this] { return !tasks_.empty(); });
+                  // `wait` unblocks either when tasks are available or when
+                  // stop is requested.
 
-                task = std::move(tasks_.front());
-                tasks_.pop();
-              }
+                  if (stop_token.stop_requested() && tasks_.empty())
+                    return;
 
-              try
-              {
-                task();
-              }
-              catch (...)
-              {
-                // Intentionally swallow exceptions.
+                  task = std::move(tasks_.front());
+                  tasks_.pop();
+                }
+
+                try
+                {
+                  task();
+                }
+                catch (...)
+                {
+                  // Intentionally swallow exceptions.
+                }
               }
 
               if (std::lock_guard lock(task_counter_mutex_);
