@@ -139,14 +139,14 @@ public:
     symbol::category_t = symbol::default_category) const noexcept;
 
   // ---- Lookup / symbol access ----
+  [[nodiscard]] value_t random_argument(
+    std::size_t, symbol::category_t, double) const;
   [[nodiscard]] const symbol *roulette(
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] const function *roulette_function(
     symbol::category_t = symbol::default_category) const;
   [[nodiscard]] value_t roulette_terminal(
     symbol::category_t = symbol::default_category) const;
-  [[nodiscard]] value_t roulette_terminal(
-    std::size_t, symbol::category_t, weight_t = default_weight) const;
   [[nodiscard]] const symbol *roulette_free(
     symbol::category_t = symbol::default_category) const;
 

@@ -23,6 +23,20 @@
 #include <ranges>
 #include <vector>
 
+namespace
+{
+
+[[nodiscard]] double address_probability(ultra::locus::index_t index,
+                                         ultra::locus::index_t size,
+                                         double p_address_end)
+{
+  Expects(index < size);
+
+  return p_address_end * static_cast<double>(index) / size;
+}
+
+}  // namespace
+
 namespace ultra::gp
 {
 
@@ -52,12 +66,15 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
         g.func = p.sset.roulette_function(c);
         g.args.reserve(g.func->arity());
 
-        std::ranges::transform(g.func->categories(),
-                               std::back_inserter(g.args),
-                               [&](auto arg_c)
-                               {
-                                 return p.sset.roulette_terminal(i, arg_c);
-                               });
+        const auto p_address(address_probability(i, i_sup,
+                                                 p.params.slp.p_address));
+
+        std::ranges::transform(
+          g.func->categories(), std::back_inserter(g.args),
+          [&](symbol::category_t arg_c)
+          {
+            return p.sset.random_argument(i, arg_c, p_address);
+          });
       }
 
   signature_ = hash();
@@ -843,11 +860,14 @@ unsigned individual::mutation(const problem &prb, double temperature)
         g.func = prb.sset.roulette_function(snap_i->category());
         g.args.reserve(g.func->arity());
 
+        const auto p_address(address_probability(idx, size(),
+                                                 prb.params.slp.p_address));
+
         std::ranges::transform(
           g.func->categories(), std::back_inserter(g.args),
           [&](symbol::category_t c)
           {
-            return prb.sset.roulette_terminal(idx, c);
+            return prb.sset.random_argument(idx, c, p_address);
           });
 
         *snap_i = g;
@@ -855,7 +875,9 @@ unsigned individual::mutation(const problem &prb, double temperature)
       else  // input parameter
       {
         const auto c(snap_i->func->param_category(pos));
-        snap_i->args[pos] = prb.sset.roulette_terminal(idx, c);
+        const auto p_address(address_probability(idx, size(),
+                                                 prb.params.slp.p_address));
+        snap_i->args[pos] = prb.sset.random_argument(idx, c, p_address);
       }
 
       ++n;

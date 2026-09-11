@@ -395,28 +395,26 @@ value_t symbol_set::roulette_terminal(symbol::category_t c) const
 }
 
 ///
-/// Extends roulette_terminal allowing `param_address` values.
+/// Generates a random argument for a program instruction.
 ///
-/// \param[in] sup  superior bound for the parameter address value
-/// \param[in] c    a category
-/// \param[in] pa_w weight used for `param_addr` type
-/// \return         a random value among those allowed for category `c`
+/// \param[in] address_sup number of preceding instructions available
+/// \param[in] c           required argument category
+/// \param[in] p_address   probability of referencing a preceding instruction
+/// \return                a random argument compatible with category `c`
 ///
-value_t symbol_set::roulette_terminal(std::size_t sup,
-                                      symbol::category_t c,
-                                      weight_t pa_w) const
+/// The argument can be either a literal value or a reference to a preceding
+/// instruction.
+///
+value_t symbol_set::random_argument(std::size_t address_sup,
+                                    symbol::category_t c,
+                                    double p_address) const
 {
-  Expects(pa_w > 0);
   Expects(c < categories());
   Expects(terminals(c) > 0);
+  Expects(in_0_1(p_address));
 
-  if (sup && functions(c))
-  {
-    const auto sum(views_[c].terminals.sum() + pa_w);
-
-    if (random::sup(sum) < pa_w)
-      return param_address(random::sup(sup));
-  }
+   if (address_sup && functions(c) && random::boolean(p_address))
+    return param_address(random::sup(address_sup));
 
   return roulette_terminal(c);
 }

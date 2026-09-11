@@ -35,6 +35,9 @@ struct parameters
     /// \note
     /// A length of `0` means undefined (auto-tune).
     std::size_t code_length {0};
+
+    /// Upper bound for the probability of using a previous gene as an argument.
+    double p_address {0.3};
   } slp;
 
   struct population_parameters

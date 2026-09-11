@@ -34,6 +34,8 @@ parameters &parameters::fill_undefined_from(const parameters &defaults)
 
   if (!slp.code_length)
     slp.code_length = defaults.slp.code_length;
+  if (!in_0_1(slp.p_address))
+    slp.p_address = defaults.slp.p_address;
 
   if (!population.individuals)
     population.individuals = defaults.population.individuals;
@@ -90,6 +92,8 @@ parameters &parameters::init()
 
   if (!slp.code_length)
     slp.code_length = 100;
+  if (!in_0_1(slp.p_address))
+    slp.p_address = 0.3;
 
   if (!population.individuals)
     population.individuals = 100;
@@ -122,6 +126,7 @@ bool parameters::needs_init() const noexcept
 {
   return
     slp.code_length == 0
+    || !in_0_1(slp.p_address)
     || population.individuals == 0
     || population.init_subgroups == 0
     || population.min_individuals == 0
@@ -236,6 +241,12 @@ bool parameters::is_valid(bool force_defined) const
     if (!slp.code_length)
     {
       ultraERROR("Undefined `slp.code_length` data member");
+      return false;
+    }
+
+    if (!in_0_1(slp.p_address))
+    {
+      ultraERROR("Undefined `slp.p_address` data member");
       return false;
     }
 
