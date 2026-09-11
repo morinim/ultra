@@ -291,6 +291,7 @@ struct parameters
     std::size_t individuals {3};
   } team;
 
+  parameters &fill_undefined_from(const parameters &);
   parameters &init();
   [[nodiscard]] bool needs_init() const noexcept;
 

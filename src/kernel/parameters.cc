@@ -18,6 +18,51 @@ namespace ultra
 {
 
 ///
+/// Fills undefined parameters with values from another parameter set.
+///
+/// \param[in] defaults source of fallback values
+/// \return             a reference to this parameter set
+///
+parameters &parameters::fill_undefined_from(const parameters &defaults)
+{
+  if (!alps.age_gap)
+    alps.age_gap = defaults.alps.age_gap;
+  if (!alps.max_layers)
+    alps.max_layers = defaults.alps.max_layers;
+  if (!in_0_1(alps.p_main_layer))
+    alps.p_main_layer = defaults.alps.p_main_layer;
+
+  if (!slp.code_length)
+    slp.code_length = defaults.slp.code_length;
+
+  if (!population.individuals)
+    population.individuals = defaults.population.individuals;
+  if (!population.init_subgroups)
+    population.init_subgroups = defaults.population.init_subgroups;
+  if (!population.min_individuals)
+    population.min_individuals = defaults.population.min_individuals;
+
+  if (!evolution.brood_recombination)
+    evolution.brood_recombination = defaults.evolution.brood_recombination;
+  if (!in_0_1(evolution.elitism))
+    evolution.elitism = defaults.evolution.elitism;
+  if (!evolution.generations)
+    evolution.generations = defaults.evolution.generations;
+  if (!evolution.mate_zone)
+    evolution.mate_zone = defaults.evolution.mate_zone;
+  if (!evolution.max_stuck_gen)
+    evolution.max_stuck_gen = defaults.evolution.max_stuck_gen;
+  if (!in_0_1(evolution.p_cross))
+    evolution.p_cross = defaults.evolution.p_cross;
+  if (!in_0_1(evolution.p_mutation))
+    evolution.p_mutation = defaults.evolution.p_mutation;
+  if (!evolution.tournament_size)
+    evolution.tournament_size = defaults.evolution.tournament_size;
+
+  return *this;
+}
+
+///
 /// Initialises the undefined parameters with "common" values.
 ///
 /// \return a reference to the "filled" `struct parameters`
