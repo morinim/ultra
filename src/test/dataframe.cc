@@ -261,6 +261,16 @@ TEST_CASE("Filtering")
     CHECK(d.read(stream));
     CHECK(d.size() == LINES);
   }
+
+  SUBCASE("CSV header starting with angle bracket")
+  {
+    std::istringstream csv_ss("<target>,feature1,feature2\n1.0,2.0,3.0\n4.0,5.0,6.0\n");
+    dataframe d;
+    CHECK(d.read(csv_ss) == 2);
+    CHECK(d.columns[0].name() == "<target>");
+    CHECK(d.columns[1].name() == "feature1");
+    CHECK(d.columns[2].name() == "feature2");
+  }
 }
 
 TEST_CASE("load_csv headers")

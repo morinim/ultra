@@ -49,8 +49,25 @@ namespace
 
   const char *p(buffer.c_str() + first_non_space);
 
-  // Check for "<?xml" or "<".
-  return std::strncmp(p, "<?xml", 5) == 0 || *p == '<';
+  if (std::strncmp(p, "<?xml", 5) == 0
+      || std::strncmp(p, "<!--", 4) == 0
+      || std::strncmp(p, "<!DOCTYPE", 9) == 0
+      || std::strncmp(p, "<dataset", 8) == 0)
+    return true;
+
+  if (*p == '<'
+      && (std::isalpha(static_cast<unsigned char>(*(p + 1))) || *(p + 1) == '_'))
+  {
+    const char *close_tag(std::strchr(p, '>'));
+    const char *comma(std::strchr(p, ','));
+    const char *newline(std::strpbrk(p, "\r\n"));
+
+    if (close_tag && (!comma || close_tag < comma)
+        && (!newline || close_tag < newline))
+      return true;
+  }
+
+  return false;
 }
 
 }  // namespace
@@ -642,7 +659,8 @@ std::size_t dataframe::read(std::istream &from, params p)
   // Non-seekable streams (like std::cin, pipes, or sockets) do not support
   // seekoff/seekpos, which are required by pocket_csv to sniff dialects and
   // parse. We buffer the stream into a seekable stringstream first.
-  if (from.tellg() == std::istream::pos_type(-1))
+  const auto original_pos(from.tellg());
+  if (original_pos == std::istream::pos_type(-1))
   {
     std::stringstream ss;
     ss << from.rdbuf();
@@ -650,9 +668,19 @@ std::size_t dataframe::read(std::istream &from, params p)
   }
 
   if (looks_like_xml(from))
-    return read_xrff(from, p);
-  else
-    return read_csv(from, p);
+  {
+    try
+    {
+      return read_xrff(from, p);
+    }
+    catch (const exception::data_format &)
+    {
+      from.clear();
+      from.seekg(original_pos);
+    }
+  }
+
+  return read_csv(from, p);
 }
 
 std::size_t dataframe::read(std::istream &from)
