@@ -294,12 +294,20 @@ class_t dataframe::encode(const value_t &label)
 {
   Expects(task() == task_t::classification);
 
-  const auto str(std::get<D_STRING>(label));
+  // If label is already an internal integer ID, return it directly.
+  if (std::holds_alternative<D_INT>(label))
+    return std::get<D_INT>(label);
 
-  if (!classes_map_.contains(str))
-    classes_map_[str] = classes();
+  // If label is a string, map it to an integer class ID via classes_map_.
+  if (const auto *str = std::get_if<D_STRING>(&label))
+  {
+    if (!classes_map_.contains(*str))
+      classes_map_[*str] = classes();
 
-  return classes_map_[str];
+    return classes_map_[*str];
+  }
+
+  throw exception::data_format("Invalid label variant for classification task");
 }
 
 ///

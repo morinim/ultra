@@ -482,6 +482,21 @@ TEST_CASE("load_csv classification")
   CHECK(d.class_name(0) == "Iris-setosa");
   CHECK(d.class_name(1) == "Iris-versicolor");
   CHECK(d.class_name(2) == "Iris-virginica");
+
+  SUBCASE("push_back with D_INT label and invalid variant")
+  {
+    src::example ex_int;
+    ex_int.output = D_INT(0);
+    ex_int.input = {5.1, 3.5, 1.4, 0.2};
+    d.push_back(ex_int);
+    CHECK(d.size() == debug::IRIS_COUNT + 1);
+    CHECK(std::get<D_INT>(std::prev(d.end())->output) == 0);
+
+    src::example ex_invalid;
+    ex_invalid.output = D_DOUBLE(3.14);
+    ex_invalid.input = {5.1, 3.5, 1.4, 0.2};
+    CHECK_THROWS_AS(d.push_back(ex_invalid), exception::data_format);
+  }
 }
 
 TEST_CASE("load_xrff classification")
@@ -489,7 +504,7 @@ TEST_CASE("load_xrff classification")
   using namespace ultra;
   using ultra::src::dataframe;
 
-std::istringstream iris_xrff(R"(
+  std::istringstream iris_xrff(R"(
 <dataset name="iris">
   <header>
     <attributes>
@@ -757,5 +772,3 @@ TEST_CASE("clone_schema and set_schema edge cases")
 }
 
 }  // TEST_SUITE
-
-
