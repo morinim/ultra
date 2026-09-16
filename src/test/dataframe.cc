@@ -566,4 +566,137 @@ std::istringstream iris_xrff(R"(
   CHECK(d.class_name(2) == "Iris-virginica");
 }
 
+TEST_CASE("operator<< stream output")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  SUBCASE("empty dataframe formatting")
+  {
+    dataframe d;
+    d.set_schema({{"Y", d_double}, {"X", d_int}});
+
+    std::ostringstream ss;
+    ss << d;
+    const std::string out(ss.str());
+
+    CHECK(out.contains("| 'Y' double/0 | 'X' int/1 |"));
+    CHECK(out.contains("| ------------ | --------- |"));
+  }
+
+  SUBCASE("unnamed column and basic domains")
+  {
+    dataframe d;
+    d.set_schema({{"", d_double},
+                  {"c_int", d_int},
+                  {"c_string", d_string}});
+
+    std::ostringstream ss;
+    ss << d;
+    const std::string out(ss.str());
+
+    CHECK(out.contains("EMPTY double/0"));
+    CHECK(out.contains("'c_int' int/1"));
+    CHECK(out.contains("'c_string' string/2"));
+  }
+
+  SUBCASE("dataframe with data rows")
+  {
+    dataframe d;
+    d.set_schema({{"Y", d_double}, {"X", d_double}});
+
+    src::example ex;
+    ex.output = 1.5;
+    ex.input = {2.5};
+    d.push_back(ex);
+
+    std::ostringstream ss;
+    ss << d;
+    const std::string out(ss.str());
+
+    CHECK(out.contains("1.5"));
+    CHECK(out.contains("2.5"));
+  }
+}
+
+TEST_CASE("erase")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  dataframe d;
+  d.set_schema({{"Y", d_double}, {"X", d_double}});
+
+  for (int i(0); i < 5; ++i)
+  {
+    src::example ex;
+    ex.output = static_cast<double>(i);
+    ex.input = {static_cast<double>(i * 10)};
+    d.push_back(ex);
+  }
+
+  CHECK(d.size() == 5);
+
+  const auto it(d.erase(d.begin() + 1, d.begin() + 3));
+  CHECK(d.size() == 3);
+  CHECK(it == d.begin() + 1);
+  CHECK(std::get<D_DOUBLE>(d.front().output) == doctest::Approx(0.0));
+  CHECK(std::get<D_DOUBLE>((d.begin() + 1)->output) == doctest::Approx(3.0));
+  CHECK(std::get<D_DOUBLE>((d.begin() + 2)->output) == doctest::Approx(4.0));
+}
+
+TEST_CASE("front accessors")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  dataframe d;
+  d.set_schema({{"Y", d_double}, {"X", d_double}});
+
+  src::example ex;
+  ex.output = 1.0;
+  ex.input = {10.0};
+  d.push_back(ex);
+
+  SUBCASE("non-const front")
+  {
+    d.front().output = 2.0;
+    CHECK(std::get<D_DOUBLE>(d.front().output) == doctest::Approx(2.0));
+  }
+
+  SUBCASE("const front")
+  {
+    const dataframe &cd(d);
+    CHECK(std::get<D_DOUBLE>(cd.front().output) == doctest::Approx(1.0));
+  }
+}
+
+TEST_CASE("variables on empty dataframe")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  const dataframe d;
+  CHECK(d.empty());
+  CHECK(d.variables() == 0);
+  CHECK(!d);
+}
+
+TEST_CASE("class_name out of bounds")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  std::istringstream iris(debug::iris);
+  dataframe d;
+  dataframe::params p;
+  p.output_index = 4;
+  d.read(iris, p);
+
+  CHECK(d.task() == src::task_t::classification);
+  CHECK(d.class_name(0) == "Iris-setosa");
+  CHECK(d.class_name(999) == "");
+}
+
 }  // TEST_SUITE
+
