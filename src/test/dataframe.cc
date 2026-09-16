@@ -698,5 +698,64 @@ TEST_CASE("class_name out of bounds")
   CHECK(d.class_name(999) == "");
 }
 
+TEST_CASE("clone_schema and set_schema edge cases")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  SUBCASE("set_schema on non-empty dataframe")
+  {
+    dataframe d;
+    d.set_schema({{"Y", d_double}, {"X", d_double}});
+
+    src::example ex;
+    ex.output = 1.0;
+    ex.input = {2.0};
+    d.push_back(ex);
+
+    CHECK(!d.empty());
+    CHECK(!d.set_schema({{"NewY", d_int}, {"NewX", d_int}}));
+    CHECK(d.columns[0].name() == "Y");
+  }
+
+  SUBCASE("set_schema with empty schema")
+  {
+    dataframe d;
+    CHECK(!d.set_schema({}));
+    CHECK(d.columns.empty());
+  }
+
+  SUBCASE("clone_schema from classification dataframe")
+  {
+    std::istringstream iris(debug::iris);
+    dataframe source;
+    dataframe::params p;
+    p.output_index = 4;
+    source.read(iris, p);
+
+    dataframe target;
+    CHECK(target.clone_schema(source));
+    CHECK(target.empty());
+    CHECK(target.columns.size() == source.columns.size());
+    CHECK(target.task() == src::task_t::classification);
+    CHECK(target.classes() == source.classes());
+    CHECK(target.class_name(0) == "Iris-setosa");
+
+    SUBCASE("clone_schema on non-empty target dataframe")
+    {
+      src::example ex;
+      ex.output = D_STRING("Iris-setosa");
+      ex.input = {5.1, 3.5, 1.4, 0.2};
+      target.push_back(ex);
+
+      CHECK(!target.empty());
+
+      dataframe d2;
+      CHECK(!target.clone_schema(d2));
+    }
+  }
+}
+
 }  // TEST_SUITE
+
 

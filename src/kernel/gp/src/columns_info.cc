@@ -157,6 +157,9 @@ task_t columns_info::task() const noexcept
 ///
 void columns_info::settle_task_t()
 {
+  if (cols_.empty())
+    return;
+
   switch (cols_.front().domain())
   {
   case d_string:
