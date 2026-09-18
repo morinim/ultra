@@ -373,7 +373,41 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle serialization")
   test_serialization<src::gaussian_oracle, gp::team<gp::individual>>(pr);
 }
 
+TEST_CASE_FIXTURE(fixture, "gaussian_oracle missing inference fallback")
+{
+  using namespace ultra;
+
+  std::istringstream is(R"(
+    CLASS, X
+    C0, 1.0
+    C0, 2.0
+    C0, 3.0
+    C1, 4.0
+  )");
+
+  CHECK(pr.data.selected().read(is) == 4);
+  pr.setup_symbols();
+
+  const auto *var_x(static_cast<const src::variable *>(pr.sset.decode("X")));
+  REQUIRE(var_x);
+
+  const function *f_div(pr.insert<real::div>());
+  const gp::individual ind({{f_div, {1.0, var_x}}});
+
+  const src::gaussian_oracle oracle(ind, pr.data.selected());
+  REQUIRE(oracle.is_valid());
+
+  // Input X = 0.0 causes division by zero, returning an uncomputable result.
+  const std::vector<value_t> uncomputable_input{0.0};
+  const auto res(oracle.tag(uncomputable_input));
+
+  // Missing inference fallback selects class 0 with confidence 3/4 = 0.75.
+  CHECK(res.label == 0);
+  CHECK(res.sureness == doctest::Approx(3.0 / 4.0));
+}
+
 TEST_CASE_FIXTURE(fixture, "binary_oracle")
+
 {
   using namespace ultra;
   log::reporting_level = log::lWARNING;
