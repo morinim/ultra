@@ -27,12 +27,11 @@ namespace
 {
 
 [[nodiscard]] double address_probability(ultra::locus::index_t index,
-                                         ultra::locus::index_t size,
-                                         double p_address_end)
+                                         ultra::locus::index_t size)
 {
   Expects(index < size);
 
-  return p_address_end * static_cast<double>(index) / size;
+  return ultra::random::between(0.2, 0.9) * static_cast<double>(index) / size;
 }
 
 }  // namespace
@@ -66,8 +65,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
         g.func = p.sset.roulette_function(c);
         g.args.reserve(g.func->arity());
 
-        const auto p_address(address_probability(i, i_sup,
-                                                 p.params.slp.p_address));
+        const auto p_address(address_probability(i, i_sup));
 
         std::ranges::transform(
           g.func->categories(), std::back_inserter(g.args),
@@ -860,8 +858,7 @@ unsigned individual::mutation(const problem &prb, double temperature)
         g.func = prb.sset.roulette_function(snap_i->category());
         g.args.reserve(g.func->arity());
 
-        const auto p_address(address_probability(idx, size(),
-                                                 prb.params.slp.p_address));
+        const auto p_address(address_probability(idx, size()));
 
         std::ranges::transform(
           g.func->categories(), std::back_inserter(g.args),
@@ -875,8 +872,7 @@ unsigned individual::mutation(const problem &prb, double temperature)
       else  // input parameter
       {
         const auto c(snap_i->func->param_category(pos));
-        const auto p_address(address_probability(idx, size(),
-                                                 prb.params.slp.p_address));
+        const auto p_address(address_probability(idx, size()));
         snap_i->args[pos] = prb.sset.random_argument(idx, c, p_address);
       }
 
