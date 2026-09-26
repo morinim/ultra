@@ -26,12 +26,19 @@
 namespace
 {
 
+[[nodiscard]] double sample_address_end()
+{
+  return ultra::random::between(0.2, 0.9);
+}
+
 [[nodiscard]] double address_probability(ultra::locus::index_t index,
-                                         ultra::locus::index_t size)
+                                         ultra::locus::index_t size,
+                                         double sampled_end)
 {
   Expects(index < size);
+  Expects(ultra::in_0_1(sampled_end));
 
-  return ultra::random::between(0.2, 0.9) * static_cast<double>(index) / size;
+  return sampled_end * static_cast<double>(index) / size;
 }
 
 }  // namespace
@@ -55,6 +62,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
 
   const locus::index_t i_sup(size());
   const symbol::category_t c_sup(categories());
+  const double sampled_end(sample_address_end());
 
   for (locus::index_t i(0); i < i_sup; ++i)
     for (symbol::category_t c(0); c < c_sup; ++c)
@@ -65,7 +73,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
         g.func = p.sset.roulette_function(c);
         g.args.reserve(g.func->arity());
 
-        const auto p_address(address_probability(i, i_sup));
+        const auto p_address(address_probability(i, i_sup, sampled_end));
 
         std::ranges::transform(
           g.func->categories(), std::back_inserter(g.args),
@@ -834,6 +842,8 @@ unsigned individual::mutation(const problem &prb, double temperature)
   const double pgm(
     1.0 - std::pow(1.0 - prb.params.evolution.p_mutation, temperature));
 
+  const double sampled_end(sample_address_end());
+
   unsigned n(0);
 
   const auto frontier(exons());
@@ -850,6 +860,7 @@ unsigned individual::mutation(const problem &prb, double temperature)
     if (random::boolean(pgm))
     {
       const auto idx(snap_i.locus().index);
+      const auto p_address(address_probability(idx, size(), sampled_end));
 
       if (const auto pos(random::sup(snap_i->args.size() + 1));
           pos == snap_i->args.size())
@@ -857,8 +868,6 @@ unsigned individual::mutation(const problem &prb, double temperature)
         gene g;
         g.func = prb.sset.roulette_function(snap_i->category());
         g.args.reserve(g.func->arity());
-
-        const auto p_address(address_probability(idx, size()));
 
         std::ranges::transform(
           g.func->categories(), std::back_inserter(g.args),
@@ -872,7 +881,6 @@ unsigned individual::mutation(const problem &prb, double temperature)
       else  // input parameter
       {
         const auto c(snap_i->func->param_category(pos));
-        const auto p_address(address_probability(idx, size()));
         snap_i->args[pos] = prb.sset.random_argument(idx, c, p_address);
       }
 
