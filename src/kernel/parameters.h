@@ -36,8 +36,13 @@ struct parameters
     /// A length of `0` means undefined (auto-tune).
     std::size_t code_length {0};
 
-    /// Upper bound for the probability of using a previous gene as an argument.
-    double p_address {0.3};
+    /// Upper bound for the probability of referencing a preceding instruction.
+    ///
+    /// An endpoint is sampled once per individual construction or mutation call
+    /// from `[0.1, p_address)` when `p_address > 0.1`; otherwise `p_address` is
+    /// used directly. At gene index `i`, the probability is the endpoint
+    /// multiplied by `i / code_length`. A value of `0` disables addresses.
+    double p_address {1.0};
   } slp;
 
   struct population_parameters

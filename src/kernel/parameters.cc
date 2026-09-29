@@ -93,7 +93,7 @@ parameters &parameters::init()
   if (!slp.code_length)
     slp.code_length = 100;
   if (!in_0_1(slp.p_address))
-    slp.p_address = 0.3;
+    slp.p_address = 1.0;
 
   if (!population.individuals)
     population.individuals = 100;

@@ -26,9 +26,14 @@
 namespace
 {
 
-[[nodiscard]] double sample_address_end()
+[[nodiscard]] double sample_address_end(double p_address)
 {
-  return ultra::random::between(0.2, 0.9);
+  Expects(ultra::in_0_1(p_address));
+
+  if (p_address <= 0.1)
+    return p_address;
+
+  return ultra::random::between(0.1, p_address);
 }
 
 [[nodiscard]] double address_probability(ultra::locus::index_t index,
@@ -62,7 +67,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
 
   const locus::index_t i_sup(size());
   const symbol::category_t c_sup(categories());
-  const double sampled_end(sample_address_end());
+  const double sampled_end(sample_address_end(p.params.slp.p_address));
 
   for (locus::index_t i(0); i < i_sup; ++i)
     for (symbol::category_t c(0); c < c_sup; ++c)
@@ -842,7 +847,7 @@ unsigned individual::mutation(const problem &prb, double temperature)
   const double pgm(
     1.0 - std::pow(1.0 - prb.params.evolution.p_mutation, temperature));
 
-  const double sampled_end(sample_address_end());
+  const double sampled_end(sample_address_end(prb.params.slp.p_address));
 
   unsigned n(0);
 
