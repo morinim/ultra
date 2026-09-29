@@ -181,12 +181,6 @@ TEST_CASE("Distribution")
     {symbols[1][2], 200}
   };
 
-  const symbol_set::weight_t sum_c[2] =
-  {
-    number_weight,
-    apple_weight + orange_weight
-  };
-
   const auto ratio = [&symbols](const auto &container, const symbol *sym)
   {
     const auto val(container.at(sym));
@@ -252,10 +246,10 @@ TEST_CASE("Distribution")
         }
   }
 
-  SUBCASE("roulette_terminal with parameters")
+  SUBCASE("random_argument")
   {
-    const symbol_set::weight_t weight(100);
-    const std::size_t sup(weight + 1);
+    const std::size_t sup(101);
+    const double p_address(0.2);
 
     unsigned count_p[2] = {0, 0};
     std::vector<bool> seen(sup, false);
@@ -266,7 +260,7 @@ TEST_CASE("Distribution")
     {
       const symbol::category_t c(i % 2);
 
-      if (const auto v(ss.roulette_terminal(sup, c, weight));
+      if (const auto v(ss.random_argument(sup, c, p_address));
           v.index() == d_address)
       {
         const auto address(
@@ -282,7 +276,7 @@ TEST_CASE("Distribution")
 
     for (symbol::category_t c(0); c <= 1; ++c)
     {
-      const auto expected(weight * n / (sum_c[c] + weight) / 2);
+      const auto expected(p_address * n / 2);
       const auto actual(count_p[c]);
 
       CHECK(98 * expected <= 100 * actual);
