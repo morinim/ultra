@@ -1036,15 +1036,19 @@ bool individual::is_valid() const
           return false;
         }
 
-        for (const auto &a : g.args)
+        for (std::size_t arg_idx(0); arg_idx < g.args.size(); ++arg_idx)
+        {
+          const auto &a(g.args[arg_idx]);
+          const auto expected_category(func->param_category(arg_idx));
+
           switch (a.index())
           {
           case d_address:
-            if (const auto al(g.locus_of_argument(a)); al.index >= i)
+            if (const auto al(g.locus_of_argument(arg_idx)); al.index >= i)
             {
               ultraERROR("Argument `{}` (`{}`) of function `{} {}` "
                          "should be < `{}`",
-                         get_index(a, g.args), a,
+                         arg_idx, a,
                          ultra::internal::streamed(l), func->name(),
                          i);
               return false;
@@ -1053,7 +1057,7 @@ bool individual::is_valid() const
             {
               ultraERROR("Argument `{}` of function `{} {}` "
                          "is the address `{}` of an empty gene",
-                         get_index(a, g.args),
+                         arg_idx,
                          ultra::internal::streamed(l), func->name(),
                          ultra::internal::streamed(al));
               return false;
@@ -1061,17 +1065,19 @@ bool individual::is_valid() const
             break;
 
           case d_nullary:
-            if (const auto *n(get_if_nullary(a)); n->category() != c)
+            if (const auto *n(get_if_nullary(a));
+                n->category() != expected_category)
             {
               ultraERROR("Argument `{}` of function `{} {}` is the nullary `"
                          "{} -> {}` but category should be `{}`",
-                         get_index(a, g.args),
+                         arg_idx,
                          ultra::internal::streamed(l), func->name(),
-                         a, n->category(), c);
+                         a, n->category(), expected_category);
               return false;
             }
             break;
           }
+        }
       }
     }
 

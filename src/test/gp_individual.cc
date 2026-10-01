@@ -190,6 +190,27 @@ TEST_CASE_FIXTURE(fixture1, "Iterators")
   }
 }
 
+TEST_CASE_FIXTURE(fixture3, "Validation with cross-category nullary argument")
+{
+  using namespace ultra;
+
+  struct string_nullary final : public nullary
+  {
+    string_nullary() : nullary("S_NULL", 1) {}
+    [[nodiscard]] value_t eval() const override { return D_STRING("test"); }
+  };
+
+  auto *s_null(prob.insert<string_nullary>());
+
+  // f_len returns category 0 (real) and takes category 1 (string)
+  const gp::individual ind(
+    {
+      {f_len, {s_null}}  // [0,0] FLENGTH S_NULL
+    });
+
+  CHECK(ind.is_valid());
+}
+
 TEST_CASE_FIXTURE(fixture1, "Comparison")
 {
   using namespace ultra;
