@@ -934,6 +934,14 @@ bool individual::load_impl(std::istream &in, const symbol_set &ss)
     if (!(in >> opcode))
       return false;
 
+    if (!opcode)
+    {
+      g = gene();
+      continue;
+    }
+
+    --opcode;
+
     gene temp;
 
     temp.func = get_if<function>(ss.decode(opcode));
@@ -967,15 +975,19 @@ bool individual::save_impl(std::ostream &out) const
   out << genome_.rows() << ' ' << genome_.cols() << '\n';
   for (const auto &g : genome_)
   {
-    out << g.func->opcode();
-
-    for (const auto &a : g.args)
+    if (g.func)
     {
-      out << ' ';
+      out << g.func->opcode() + 1;  // 0 is reserved for empty function
 
-      if (!ultra::save(out, a))
-        return false;
+      for (const auto &a : g.args)
+      {
+        out << ' ';
+        if (!ultra::save(out, a))
+          return false;
+      }
     }
+    else
+      out << '0';
 
     out << '\n';
   }

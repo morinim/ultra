@@ -601,6 +601,30 @@ TEST_CASE_FIXTURE(fixture1, "Serialisation")
   }
 }
 
+TEST_CASE_FIXTURE(fixture3,
+                  "Multi-category serialization with unpopulated slots")
+{
+  using namespace ultra;
+
+  // Genome with unpopulated slots (e.g. slot [0, 0] has func == nullptr)
+  const gp::individual original(
+    {
+      {s_ife, {s1->instance(), s2->instance(), s1->instance(), s3->instance()}},
+      {f_len, {0_addr}},
+      {f_len, {s2->instance()}},
+      {f_add, {1_addr, 2_addr}}
+    });
+
+  std::stringstream ss;
+  REQUIRE(original.save(ss));
+
+  gp::individual loaded;
+  REQUIRE(loaded.load(ss, prob.sset));
+  CHECK(loaded.is_valid());
+  CHECK(loaded == original);
+  CHECK(loaded.signature() == original.signature());
+}
+
 TEST_CASE_FIXTURE(fixture1, "gp::individual format")
 {
   using namespace ultra;
