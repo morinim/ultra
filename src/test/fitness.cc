@@ -151,6 +151,34 @@ TEST_CASE("Range interface")
         == doctest::Approx(6.0));
 }
 
+TEST_CASE("Element access")
+{
+  using namespace ultra;
+
+  SUBCASE("const indexing")
+  {
+    const fitnd cf{1.0, 2.0, 3.0};
+
+    CHECK(cf[0] == doctest::Approx(1.0));
+    CHECK(cf[1] == doctest::Approx(2.0));
+    CHECK(cf[2] == doctest::Approx(3.0));
+  }
+
+  SUBCASE("mutable indexing")
+  {
+    fitnd f{1.0, 2.0, 3.0};
+
+    f[0] = 10.0;
+    f[1] = 20.0;
+    f[2] = 30.0;
+
+    CHECK(f == fitnd{10.0, 20.0, 30.0});
+    CHECK(f[0] == doctest::Approx(10.0));
+    CHECK(f[1] == doctest::Approx(20.0));
+    CHECK(f[2] == doctest::Approx(30.0));
+  }
+}
+
 TEST_CASE("Serialisation")
 {
   using namespace ultra;
@@ -301,6 +329,10 @@ TEST_CASE("Operators")
   x = x * x;
   x = sqrt(x);
   CHECK(x == f1);
+
+  CHECK(-f1 == fitnd{-2.0, -4.0, -8.0});
+  CHECK(-(-f1) == f1);
+  CHECK(-fitnd{} == fitnd{});
 
   x = x * -1.0;
   x = abs(x);
