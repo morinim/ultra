@@ -488,4 +488,54 @@ TEST_CASE_FIXTURE(fixture_ci, "load_csv classification strong")
   CHECK(cs.task() == src::task_t::classification);
 }
 
+TEST_CASE("columns_info iterator interface")
+{
+  using namespace ultra;
+
+  static_assert(std::ranges::common_range<src::columns_info>);
+  static_assert(std::ranges::common_range<const src::columns_info>);
+  static_assert(std::ranges::random_access_range<src::columns_info>);
+  static_assert(std::ranges::random_access_range<const src::columns_info>);
+
+  src::columns_info ci({{"a", d_double}, {"b", d_int}, {"c", d_string}});
+  REQUIRE(ci.size() == 3);
+
+  SUBCASE("mutable iterators")
+  {
+    auto it(ci.begin());
+    auto end(ci.end());
+
+    static_assert(std::same_as<decltype(it), src::columns_info::iterator>);
+    static_assert(std::same_as<decltype(end), src::columns_info::iterator>);
+
+    CHECK(it != end);
+    CHECK(it->name() == "a");
+    it->name("alpha");
+    CHECK(ci[0].name() == "alpha");
+
+    const auto match(std::find_if(ci.begin(), ci.end(),
+                                  [](const auto &c) { return c.name() == "b"; }));
+    CHECK(match != ci.end());
+    CHECK(match->domain() == d_int);
+  }
+
+  SUBCASE("const and explicit const iterators")
+  {
+    const auto &cci(ci);
+
+    static_assert(std::same_as<decltype(cci.begin()),
+                               src::columns_info::const_iterator>);
+    static_assert(std::same_as<decltype(cci.end()),
+                               src::columns_info::const_iterator>);
+    static_assert(std::same_as<decltype(ci.cbegin()),
+                               src::columns_info::const_iterator>);
+    static_assert(std::same_as<decltype(ci.cend()),
+                               src::columns_info::const_iterator>);
+
+    CHECK(cci.begin() == ci.cbegin());
+    CHECK(cci.end() == ci.cend());
+    CHECK(std::distance(ci.cbegin(), ci.cend()) == 3);
+  }
+}
+
 }  // TEST_SUITE("COLUMNS_INFO")

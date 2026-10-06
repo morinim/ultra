@@ -286,6 +286,21 @@ columns_info::const_iterator columns_info::end() const noexcept
   return cols_.end();
 }
 
+columns_info::iterator columns_info::end() noexcept
+{
+  return cols_.end();
+}
+
+columns_info::const_iterator columns_info::cbegin() const noexcept
+{
+  return cols_.cbegin();
+}
+
+columns_info::const_iterator columns_info::cend() const noexcept
+{
+  return cols_.cend();
+}
+
 ///
 /// Returns a reference to the first element in the container.
 ///
