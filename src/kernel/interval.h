@@ -49,6 +49,7 @@ struct interval
   }
 
   template<std::integral T1, std::integral T2>
+  requires std::integral<T>
   constexpr interval(T1 m, T2 s) : interval(static_cast<T>(m),
                                             static_cast<T>(s))
   {
@@ -66,6 +67,7 @@ struct interval
   }
 
   template<std::integral T1, std::integral T2>
+  requires std::integral<T>
   explicit constexpr interval(const std::pair<T1, T2> &p)
     : interval(static_cast<T>(p.first), static_cast<T>(p.second))
   {
@@ -73,6 +75,9 @@ struct interval
     Expects(std::in_range<T>(p.first));
     Expects(std::in_range<T>(p.second));
   }
+
+  [[nodiscard]] friend constexpr bool operator==(
+    const interval &, const interval &) noexcept = default;
 
   [[nodiscard]] bool is_valid() const noexcept
   {
