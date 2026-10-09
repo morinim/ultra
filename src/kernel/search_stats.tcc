@@ -98,7 +98,10 @@ std::set<std::size_t> search_stats<I, F>::good_runs(
     if (s.best_measurements >= threshold)
       ret.insert(s.run);
 
-  Ensures(ret.empty() || ret.contains(best_run()));
+  // When an accuracy threshold is present, `best_run()` (selected primarily by
+  // fitness) might fail it even if another run with lower fitness satisfies it.
+  Ensures(ret.empty() || threshold.accuracy.has_value()
+          || ret.contains(best_run()));
   return ret;
 }
 
