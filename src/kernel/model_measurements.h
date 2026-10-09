@@ -33,8 +33,6 @@ struct model_measurements
 
   [[nodiscard]] friend bool operator==(
     const model_measurements &, const model_measurements &) noexcept = default;
-  [[nodiscard]] friend bool operator!=(
-    const model_measurements &, const model_measurements &) noexcept = default;
 
   // --- Serialization ---
   [[nodiscard]] bool load(std::istream &);
