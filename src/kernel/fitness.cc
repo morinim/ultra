@@ -47,6 +47,14 @@ std::size_t fitnd::size() const noexcept
 }
 
 ///
+/// \return `true` if `size() == 0`.
+///
+bool fitnd::empty() const noexcept
+{
+  return vect_.empty();
+}
+
+///
 /// \param[in] i index of an element
 /// \return      the `i`-th element of the fitness vector
 ///
@@ -333,8 +341,7 @@ fitnd operator/(fitnd lhs, const fitnd &rhs)
 ///
 fitnd operator/(fitnd f, fitnd::value_type v)
 {
-  std::ranges::transform(f, f.begin(), [v](auto fi) { return fi / v; });
-  return f;
+  return f /= v;
 }
 
 ///
@@ -347,19 +354,42 @@ fitnd operator/(fitnd f, fitnd::value_type v)
 ///
 fitnd operator*(fitnd f, fitnd::value_type v)
 {
-  std::ranges::transform(f, f.begin(), [v](auto fi) { return fi * v; });
-  return f;
+  return f *= v;
 }
 
 fitnd operator*(fitnd::value_type v, fitnd f)
 {
-  return f * v;
+  return f *= v;
 }
 
 fitnd operator-(fitnd f)
 {
   std::ranges::transform(f, f.begin(), std::negate{});
   return f;
+}
+
+///
+/// \param[in] v scalar value
+/// \return      the product of `this` and `v`
+///
+fitnd &fitnd::operator*=(fitnd::value_type v)
+{
+  for (auto &elem : *this)
+    elem *= v;
+
+  return *this;
+}
+
+///
+/// \param[in] v scalar value
+/// \return      the division of `this` and `v`
+///
+fitnd &fitnd::operator/=(fitnd::value_type v)
+{
+  for (auto &elem : *this)
+    elem /= v;
+
+  return *this;
 }
 
 ///
@@ -396,8 +426,8 @@ fitnd combine(const fitnd &f1, const fitnd &f2)
   fitnd ret;
   ret.vect_.reserve(f1.size() + f2.size());
 
-  ret.vect_.insert(std::end(ret), std::begin(f1), std::end(f1));
-  ret.vect_.insert(std::end(ret), std::begin(f2), std::end(f2));
+  ret.vect_.insert(ret.end(), f1.begin(), f1.end());
+  ret.vect_.insert(ret.end(), f2.begin(), f2.end());
 
   return ret;
 }

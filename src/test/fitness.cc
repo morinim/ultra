@@ -141,12 +141,21 @@ TEST_CASE("Range interface")
 
   fitnd f{1.0, 2.0, 3.0};
 
+  CHECK(!f.empty());
+  CHECK(fitnd{}.empty());
+  CHECK(fitnd(with_size(0)).empty());
+  CHECK(!fitnd(with_size(3)).empty());
+
+  const fitnd empty_cf;
+  CHECK(empty_cf.empty());
+
   CHECK(std::ranges::size(f) == 3);
 
   std::ranges::fill(f, 4.0);
   CHECK(f == fitnd{4.0, 4.0, 4.0});
 
   const fitnd cf{1.0, 2.0, 3.0};
+  CHECK(!cf.empty());
   CHECK(std::accumulate(std::ranges::begin(cf), std::ranges::end(cf), 0.0)
         == doctest::Approx(6.0));
 }
@@ -313,6 +322,27 @@ TEST_CASE("Operators")
 
   CHECK(f1 * 2.0 == f2);
   CHECK(2.0 * f1 == f2);
+
+  x = f1;
+  x *= 2.0;
+  CHECK(x == f2);
+
+  x /= 2.0;
+  CHECK(x == f1);
+
+  fitnd &ref_mul(x *= 2.0);
+  CHECK(&ref_mul == &x);
+  CHECK(x == f2);
+
+  fitnd &ref_div(x /= 2.0);
+  CHECK(&ref_div == &x);
+  CHECK(x == f1);
+
+  fitnd empty_fit;
+  empty_fit *= 2.0;
+  CHECK(empty_fit.empty());
+  empty_fit /= 2.0;
+  CHECK(empty_fit.empty());
 
   x = f1 * fitnd{2.0, 2.0, 2.0};
   CHECK(x == f2);

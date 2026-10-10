@@ -116,6 +116,7 @@ public:
   fitnd(with_size, value_type = std::numeric_limits<value_type>::lowest());
 
   [[nodiscard]] std::size_t size() const noexcept;
+  [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] value_type operator[](std::size_t) const;
   [[nodiscard]] value_type &operator[](std::size_t);
 
@@ -130,6 +131,9 @@ public:
   fitnd &operator-=(const fitnd &);
   fitnd &operator*=(const fitnd &);
   fitnd &operator/=(const fitnd &);
+
+  fitnd &operator*=(value_type);
+  fitnd &operator/=(value_type);
 
   friend bool load(std::istream &, fitnd *);
   friend fitnd combine(const fitnd &, const fitnd &);
