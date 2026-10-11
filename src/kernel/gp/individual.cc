@@ -97,15 +97,23 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
 ///
 /// \param[in] gv vector of genes
 ///
+/// \pre `gv` is not empty
+///
 /// This is useful for debugging purpose (i.e. setup *ad-hoc* individuals).
 ///
 individual::individual(const std::vector<gene> &gv)
   : genome_(gv.size(),
-            std::ranges::max(gv,
-                             [](const gene &g1, const gene &g2)
-                             {
-                               return g1.category() < g2.category();
-                             }).category() + 1)
+            [&gv]
+            {
+              Expects(!gv.empty());
+
+              return std::ranges::max(
+                gv,
+                [](const gene &g1, const gene &g2)
+                {
+                  return g1.category() < g2.category();
+                }).category() + 1;
+            }())
 {
   locus::index_t i(0);
 
