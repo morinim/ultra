@@ -98,6 +98,7 @@ individual::individual(const problem &p) : genome_(p.params.slp.code_length,
 /// \param[in] gv vector of genes
 ///
 /// \pre `gv` is not empty
+/// \pre the final gene produces the default category
 ///
 /// This is useful for debugging purpose (i.e. setup *ad-hoc* individuals).
 ///
@@ -106,6 +107,7 @@ individual::individual(const std::vector<gene> &gv)
             [&gv]
             {
               Expects(!gv.empty());
+              Expects(gv.back().category() == symbol::default_category);
 
               return std::ranges::max(
                 gv,
@@ -115,9 +117,7 @@ individual::individual(const std::vector<gene> &gv)
                 }).category() + 1;
             }())
 {
-  locus::index_t i(0);
-
-  for (const auto &g : gv)
+  for (locus::index_t i(0); const auto &g : gv)
     genome_(i++, g.category()) = g;
 
   signature_ = hash();
