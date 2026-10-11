@@ -1272,11 +1272,10 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
       return format_call(g.func->to_string(fmt), args);
     };
 
-  std::string out(language_(prg[prg.start()]));
-  if (out.length() > 2 && out.front() == '(' && out.back() == ')')
-    out = out.substr(1, out.length() - 2);
-
-  s << out;
+  // Keep the parentheses supplied by primitives: the first and last may
+  // belong to separate pairs. Matching them requires handling literals and
+  // comments in the target language.
+  s << language_(prg[prg.start()]);
 }
 
 void print_in_line(std::ostream &s, const ultra::gp::individual &prg)

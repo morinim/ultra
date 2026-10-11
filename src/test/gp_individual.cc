@@ -636,7 +636,8 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual format")
       {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
-  const std::set<std::string> valid{"(2+Z())-(3+4)", "(2.0+Z())-(3.0+4.0)"};
+  const std::set<std::string> valid{"((2+Z())-(3+4))",
+                                    "((2.0+Z())-(3.0+4.0))"};
 
   SUBCASE("c")
   {
@@ -702,6 +703,47 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual format")
                                    "  FADD\n"
                                    "    3\n"
                                    "    4\n");
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1,
+                  "gp::individual format preserves separate parentheses")
+{
+  using namespace ultra;
+
+  // Leading and trailing parentheses belong to separate operand pairs.
+  // Stripping them corrupts "(Z())-(Z())" into "Z())-(Z()".
+  struct parenthesised_subtract final : public function
+  {
+    parenthesised_subtract() : function("PAREN_SUB", 2) {}
+
+    [[nodiscard]] std::string to_string(symbol::format) const override
+    {
+      return "({0})-({1})";
+    }
+
+    [[nodiscard]] value_t eval(const params &pars) const override
+    {
+      return real::base(pars[0]) - real::base(pars[1]);
+    }
+  };
+
+  const auto *f(prob.insert<parenthesised_subtract>());
+  const gp::individual i({{f, {z, z}}});
+
+  SUBCASE("c")
+  {
+    CHECK(i.format(out::c_language_f) == "(Z())-(Z())");
+  }
+
+  SUBCASE("cpp")
+  {
+    CHECK(i.format(out::cpp_language_f) == "(Z())-(Z())");
+  }
+
+  SUBCASE("python")
+  {
+    CHECK(i.format(out::python_language_f) == "(Z())-(Z())");
   }
 }
 
