@@ -336,7 +336,7 @@ template<std::floating_point T> [[nodiscard]] bool issmall(T v)
 {
   static constexpr auto e(std::numeric_limits<T>::epsilon());
 
-  return std::abs(v) < 2.0 * e;
+  return std::abs(v) < T(2.0) * e;
 }
 
 ///

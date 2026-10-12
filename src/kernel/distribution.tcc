@@ -81,7 +81,7 @@ template<ArithmeticFloatingType T>
 T distribution<T>::variance() const
 {
   Expects(size());
-  return m2_ / static_cast<double>(size());
+  return m2_ / static_cast<T>(size());
 }
 
 ///
@@ -204,7 +204,7 @@ void distribution<T>::update_variance(T val)
 
   const T delta(val - mean_);
 
-  kahan_add(mean_, mean_comp_, delta / static_cast<double>(size_));
+  kahan_add(mean_, mean_comp_, delta / static_cast<T>(size_));
   kahan_add(m2_, m2_comp_, delta * (val - mean_));
 }
 
@@ -418,9 +418,9 @@ void distribution<T>::merge(const distribution<T> &d2)
   const auto size2(d2.size());
   const auto new_size(size1 + size2);
 
-  const auto n1(static_cast<double>(size1));
-  const auto n2(static_cast<double>(size2));
-  const auto n(static_cast<double>(new_size));
+  const auto n1(static_cast<T>(size1));
+  const auto n2(static_cast<T>(size2));
+  const auto n(static_cast<T>(new_size));
 
   const auto delta(d2.mean() - mean());
   const auto new_mean(size1 >= size2
