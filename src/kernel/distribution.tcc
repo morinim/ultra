@@ -387,13 +387,14 @@ bool distribution<T>::is_valid() const
 }
 
 ///
-/// Updates the this distribution considering data from another distribution.
+/// Updates this distribution considering data from another distribution.
 ///
 /// \param[in] d2 distribution to be merged with `*this`
 ///
-/// \see
-/// - https://math.stackexchange.com/q/453113
-/// - https://stats.stackexchange.com/q/43159
+/// This WAS based on the textbook two-pass formula described in
+/// https://ultraevolution.org/blog/combine_test_batches/ and has been migrated
+/// to Chan's Parallel Update Formula (see
+/// https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance).
 ///
 template<ArithmeticFloatingType T>
 void distribution<T>::merge(const distribution<T> &d2)
@@ -415,24 +416,22 @@ void distribution<T>::merge(const distribution<T> &d2)
 
   const auto size1(size());
   const auto size2(d2.size());
-
   const auto new_size(size1 + size2);
 
-  const auto mean1(mean());
-  const auto mean2(d2.mean());
+  const auto n1(static_cast<double>(size1));
+  const auto n2(static_cast<double>(size2));
+  const auto n(static_cast<double>(new_size));
 
-  const auto new_mean((size1*mean1 + size2*mean2) / new_size);
+  const auto delta(d2.mean() - mean());
+  const auto new_mean(size1 >= size2
+    ? mean() + delta * (n2 / n)
+    : d2.mean() - delta * (n1 / n));
 
-  const auto variance1(variance());
-  const auto variance2(d2.variance());
-
-  const auto new_variance(
-    ((variance1 + mean1*mean1)*size1
-     + (variance2 + mean2*mean2)*size2) / new_size
-    - new_mean*new_mean);
-
+  m2_ += d2.m2_ + delta * delta * (n1 * n2 / n);
   mean_ = new_mean;
-  m2_ = new_variance * new_size;
+
+  mean_comp_ = T{};
+  m2_comp_ = T{};
 
   max_ = std::max(max1, max2);
   min_ = std::min(min1, min2);

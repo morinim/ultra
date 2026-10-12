@@ -248,6 +248,63 @@ TEST_CASE("Merge")
       CHECK(d.seen() == empty.seen());
     }
   }
+
+  SUBCASE("Large mean small variance")
+  {
+    const double base(1e9);
+
+    distribution<double> d, d1, d2;
+
+    d.add(base + 1.0);
+    d.add(base - 1.0);
+    d.add(base + 2.0);
+    d.add(base - 2.0);
+
+    d1.add(base + 1.0);
+    d1.add(base - 1.0);
+
+    d2.add(base + 2.0);
+    d2.add(base - 2.0);
+
+    d1.merge(d2);
+
+    CHECK(d1.is_valid());
+    CHECK(d1.mean() == doctest::Approx(d.mean()));
+    CHECK(d1.variance() == doctest::Approx(d.variance()));
+    CHECK(d1.variance() == doctest::Approx(2.5));
+    CHECK(d1.min() == doctest::Approx(d.min()));
+    CHECK(d1.max() == doctest::Approx(d.max()));
+    CHECK(d1.size() == d.size());
+    CHECK(d1.seen() == d.seen());
+
+    distribution<double> d3, d4;
+    d3.add(base);
+    d3.add(base);
+    d4.add(base);
+    d4.add(base);
+    d3.merge(d4);
+
+    CHECK(d3.is_valid());
+    CHECK(d3.mean() == doctest::Approx(base));
+    CHECK(d3.variance() == doctest::Approx(0.0));
+
+    // Asymmetric sizes: size1 < size2 and size1 > size2
+    distribution<double> large, small;
+    for (unsigned i(0); i < 1000; ++i)
+      large.add(base);
+    small.add(base + 1.0);
+
+    auto m_large_small(large);
+    m_large_small.merge(small);
+
+    auto m_small_large(small);
+    m_small_large.merge(large);
+
+    CHECK(m_large_small.is_valid());
+    CHECK(m_small_large.is_valid());
+    CHECK(m_large_small.mean() == doctest::Approx(m_small_large.mean()));
+    CHECK(m_large_small.variance() == doctest::Approx(m_small_large.variance()));
+  }
 }
 
 TEST_CASE("Serialization")
