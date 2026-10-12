@@ -636,8 +636,7 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual format")
       {f_sub, {0_addr, 1_addr}}  // [2] SUB [0] [1]
     });
 
-  const std::set<std::string> valid{"((2+Z())-(3+4))",
-                                    "((2.0+Z())-(3.0+4.0))"};
+  const std::set<std::string> valid{"(2+Z())-(3+4)", "(2.0+Z())-(3.0+4.0)"};
 
   SUBCASE("c")
   {
@@ -744,6 +743,79 @@ TEST_CASE_FIXTURE(fixture1,
   SUBCASE("python")
   {
     CHECK(i.format(out::python_language_f) == "(Z())-(Z())");
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1,
+                  "gp::individual format strips redundant function call parens")
+{
+  using namespace ultra;
+
+  const auto *f_sin(prob.insert<real::sin>());
+  const gp::individual i(
+    {
+      {f_add, {2.0, z}},    // [0] ADD 2.0 Z()
+      {f_sin, {0_addr}}     // [1] SIN [0]
+    });
+
+  const std::set<std::string> valid_c{"sin(2+Z())", "sin(2.0+Z())"};
+  const std::set<std::string> valid_cpp{"std::sin(2+Z())", "std::sin(2.0+Z())"};
+  const std::set<std::string> valid_py{"math.sin(2+Z())", "math.sin(2.0+Z())"};
+
+  SUBCASE("c")
+  {
+    CHECK(valid_c.contains(i.format(out::c_language_f)));
+  }
+
+  SUBCASE("cpp")
+  {
+    CHECK(valid_cpp.contains(i.format(out::cpp_language_f)));
+  }
+
+  SUBCASE("python")
+  {
+    CHECK(valid_py.contains(i.format(out::python_language_f)));
+  }
+
+  SUBCASE("chained function calls")
+  {
+    const gp::individual i_chained(
+      {
+        {f_add, {2.0, z}},     // [0] ADD 2.0 Z()
+        {f_cos, {0_addr}},     // [1] COS [0]
+        {f_sin, {1_addr}}      // [2] SIN [1]
+      });
+
+    const std::set<std::string> chained_c{"sin(cos(2+Z()))",
+                                          "sin(cos(2.0+Z()))"};
+    const std::set<std::string> chained_cpp{"std::sin(std::cos(2+Z()))",
+                                            "std::sin(std::cos(2.0+Z()))"};
+    const std::set<std::string> chained_py{"math.sin(math.cos(2+Z()))",
+                                           "math.sin(math.cos(2.0+Z()))"};
+
+    CHECK(chained_c.contains(i_chained.format(out::c_language_f)));
+    CHECK(chained_cpp.contains(i_chained.format(out::cpp_language_f)));
+    CHECK(chained_py.contains(i_chained.format(out::python_language_f)));
+  }
+
+  SUBCASE("function inside operator retains operator parentheses")
+  {
+    const gp::individual i_op(
+      {
+        {f_add, {2.0, z}},            // [0] ADD 2.0 Z()
+        {f_sin, {0_addr}},            // [1] SIN [0]
+        {f_sub, {1_addr, 3.0}}        // [2] SUB [1] 3.0
+      });
+
+    const std::set<std::string> op_c{"sin(2+Z())-3", "sin(2.0+Z())-3.0"};
+    const std::set<std::string> op_cpp{"std::sin(2+Z())-3",
+                                       "std::sin(2.0+Z())-3.0"};
+    const std::set<std::string> op_py{"math.sin(2+Z())-3",
+                                      "math.sin(2.0+Z())-3.0"};
+
+    CHECK(op_c.contains(i_op.format(out::c_language_f)));
+    CHECK(op_cpp.contains(i_op.format(out::cpp_language_f)));
+    CHECK(op_py.contains(i_op.format(out::python_language_f)));
   }
 }
 

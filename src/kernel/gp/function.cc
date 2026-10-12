@@ -90,7 +90,8 @@ const function::param_data_types &function::categories() const noexcept
 ///
 /// \warning
 /// Specific functions have to specialize this method to support different
-/// output formats.
+/// output formats. Format templates should avoid unbalanced parentheses
+/// in comments or string literals.
 ///
 std::string function::to_string(format) const
 {

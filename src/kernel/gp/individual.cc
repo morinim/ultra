@@ -1134,7 +1134,7 @@ namespace
 {
   const auto is_digit([](char c)
   {
-    return std::isdigit(static_cast<unsigned char>(c)) != 0;
+    return std::isdigit(static_cast<unsigned char>(c));
   });
 
   std::string out;
@@ -1250,12 +1250,93 @@ void print_gene(std::ostream &s, const ultra::gp::individual &prg,
   }
 }
 
+// Formats an individual into target-language source code.
+//
+// The current approach only removes basic syntactic noise (enclosing
+// parentheses at the root and within function argument lists) while relying on
+// primitive-supplied parentheses elsewhere to guarantee operator precedence
+// without an AST precedence engine.
+//
+// If fully normalized expressions without redundant parentheses are required,
+// downstream tools should post-process the output:
+// - Python: `ast.unparse(ast.parse(code))`;
+// - C/C++: Clang-based tools or code formatters.
 void print_language(std::ostream &s, ultra::symbol::format fmt,
                     const ultra::gp::individual &prg)
 {
-  const auto language_ =
-    [&](this auto &&self, const ultra::gene &g) -> std::string
+  // Checks whether the primitive format template is wrapped in a single
+  // matching pair of parentheses. Assumes the template itself does not contain
+  // unbalanced parentheses in comments or string literals.
+  const auto is_enclosed([](std::string_view str)
+  {
+    if (str.length() < 2 || str.front() != '(' || str.back() != ')')
+      return false;
+
+    str.remove_suffix(1);
+    unsigned depth(0);
+
+    for (const auto c : str)
+      if (c == '(')
+        ++depth;
+      else if (c == ')')
+      {
+        if (--depth == 0)
+          return false;
+      }
+
+    return depth == 1;
+  });
+
+  const auto is_function_argument([](std::string_view fmt, std::size_t idx)
+  {
+    // In standard C++, `std::isspace(int)` requires the argument to be
+    // representable as unsigned char or EOF. On platforms where char is signed,
+    // passing a negative byte causes undefined behavior.
+    const auto is_space([](char c)
     {
+      return std::isspace(static_cast<unsigned char>(c));
+    });
+
+    const auto tag("{" + std::to_string(idx) + "}");
+    const auto pos(fmt.find(tag));
+    if (pos == std::string_view::npos)
+      return false;
+
+    // Right boundary: must be ',' or ')'.
+    auto right(pos + tag.size());
+    while (right < fmt.size() && is_space(fmt[right]))
+      ++right;
+    if (right >= fmt.size() || (fmt[right] != ',' && fmt[right] != ')'))
+      return false;
+
+    // Left boundary: must be ',' or '(' preceded by an identifier character.
+    if (pos == 0)
+      return false;
+    auto left(pos - 1);
+    while (left > 0 && is_space(fmt[left]))
+      --left;
+
+    if (fmt[left] == ',')
+      return true;
+
+    if (fmt[left] == '(')
+    {
+      if (left == 0)
+        return false;
+
+      const auto prev(static_cast<unsigned char>(fmt[left - 1]));
+      return std::isalnum(prev) != 0 || prev == '_' || prev == ':';
+    }
+
+    return false;
+  });
+
+  const auto language_(
+    [&](this auto &&self, const ultra::gene &g,
+        bool strip_parens = false) -> std::string
+    {
+      const auto pattern(g.func->to_string(fmt));
+
       std::vector<std::string> args;
       args.reserve(g.func->arity());
 
@@ -1267,15 +1348,19 @@ void print_language(std::ostream &s, ultra::symbol::format fmt,
           args.push_back(ss.str());
         }
         else
-          args.push_back(self(prg[g.locus_of_argument(i)]));
+        {
+          const bool is_func_arg(is_function_argument(pattern, i));
+          args.push_back(self(prg[g.locus_of_argument(i)], is_func_arg));
+        }
 
-      return format_call(g.func->to_string(fmt), args);
-    };
+      auto out_pattern(pattern);
+      if (strip_parens && is_enclosed(out_pattern))
+        out_pattern = out_pattern.substr(1, out_pattern.length() - 2);
 
-  // Keep the parentheses supplied by primitives: the first and last may
-  // belong to separate pairs. Matching them requires handling literals and
-  // comments in the target language.
-  s << language_(prg[prg.start()]);
+      return format_call(out_pattern, args);
+    });
+
+  s << language_(prg[prg.start()], true);
 }
 
 void print_in_line(std::ostream &s, const ultra::gp::individual &prg)

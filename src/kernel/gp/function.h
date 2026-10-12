@@ -81,6 +81,11 @@ public:
   /// The base implementation produces a generic functional notation
   /// (e.g. `ADD({0},{1})`). Derived classes may override this method to
   /// support alternative syntaxes or formatting conventions.
+  ///
+  /// \note
+  /// Format templates should not contain unbalanced parentheses inside
+  /// comments or string literals, as program rendering checks enclosing
+  /// parentheses directly on the template.
   [[nodiscard]] virtual std::string to_string(format = c_format) const override;
 
   [[nodiscard]] bool is_valid() const override;

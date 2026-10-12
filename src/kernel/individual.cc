@@ -124,6 +124,19 @@ void individual::set_if_older_age(individual::age_t rhs_age) noexcept
     age_ = rhs_age;
 }
 
+///
+/// Formats the individual according to the requested print format.
+///
+/// \param[in] fmt format specifier
+/// \return        string representation of the individual
+///
+/// \remark
+/// Target-language formats (C, C++, Python) remove basic redundant
+/// parentheses (at root level and inside function calls) while preserving
+/// defensive parentheses around operators. When minimal parentheses are
+/// desired, output can be normalized using target-language AST tools
+/// (e.g. Python's `ast.unparse(ast.parse(code))` or C/C++ formatters).
+///
 std::string individual::format(out::print_format_t fmt) const
 {
   std::ostringstream oss;
