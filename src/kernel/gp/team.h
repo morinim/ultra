@@ -71,6 +71,9 @@ template<Individual I>
 class team
 {
 public:
+  /// Maximum allowed number of individuals in a team.
+  static constexpr std::size_t max_team_size {1024};
+
   team() = default;
   explicit team(std::size_t);
   explicit team(const problem &);

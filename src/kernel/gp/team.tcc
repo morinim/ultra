@@ -21,8 +21,13 @@
 /// Allocates space for a given number of individuals.
 ///
 template<Individual I>
-team<I>::team(std::size_t n) : individuals_(n)
+team<I>::team(std::size_t n)
 {
+  Expects(n <= max_team_size);
+
+  individuals_.resize(n);
+
+  Ensures(is_valid());
 }
 
 ///
@@ -32,6 +37,7 @@ template<Individual I>
 team<I>::team(const problem &p)
 {
   Expects(p.params.team.individuals);
+  Expects(p.params.team.individuals <= max_team_size);
 
   auto n(p.params.team.individuals);
   individuals_.reserve(n);
@@ -371,6 +377,9 @@ void team<I>::inc_age(unsigned delta)
 template<Individual I>
 bool team<I>::is_valid() const
 {
+  if (size() > max_team_size)
+    return false;
+
   if (std::ranges::any_of(individuals_,
                           [](const I &i) { return !i.is_valid(); }))
     return false;
@@ -390,7 +399,7 @@ template<Individual I>
 bool team<I>::load(std::istream &in, const symbol_set &ss)
 {
   std::size_t n;
-  if (!(in >> n))
+  if (!(in >> n) || n > max_team_size)
     return false;
 
   decltype(individuals_) v;
@@ -405,7 +414,7 @@ bool team<I>::load(std::istream &in, const symbol_set &ss)
     v.push_back(std::move(i));
   }
 
-  individuals_ = v;
+  individuals_ = std::move(v);
 
   // We don't save/load signature: it can be easily calculated on the fly.
   signature_.clear();
