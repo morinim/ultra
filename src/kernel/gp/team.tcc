@@ -390,7 +390,7 @@ template<Individual I>
 bool team<I>::load(std::istream &in, const symbol_set &ss)
 {
   std::size_t n;
-  if (!(in >> n) || !n)
+  if (!(in >> n))
     return false;
 
   decltype(individuals_) v;
@@ -399,10 +399,10 @@ bool team<I>::load(std::istream &in, const symbol_set &ss)
   for (std::size_t j(0); j < n; ++j)
   {
     I i;
-
     if (!i.load(in, ss))
       return false;
-    v.push_back(i);
+
+    v.push_back(std::move(i));
   }
 
   individuals_ = v;

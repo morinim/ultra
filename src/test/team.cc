@@ -34,6 +34,96 @@ TEST_CASE("Concept")
   REQUIRE(!Team<individual>);
 }
 
+TEST_CASE_FIXTURE(fixture1, "Empty team")
+{
+  using namespace ultra::gp;
+
+  const team<individual> t;
+  const team<individual> t0(0);
+  const team<individual> tv(std::vector<individual>{});
+
+  CHECK(t.empty());
+  CHECK(t.size() == 0);
+  CHECK(t.is_valid());
+  CHECK(t.age() == 0);
+  CHECK(t.begin() == t.end());
+  CHECK(active_slots(t) == 0);
+
+  CHECK(t0.empty());
+  CHECK(tv.empty());
+  CHECK(t == t0);
+  CHECK(t == tv);
+  CHECK(distance(t, t0) == 0);
+
+  SUBCASE("Aging and mutation")
+  {
+    team<individual> mut_t;
+    mut_t.inc_age();
+    CHECK(mut_t.age() == 0);
+    mut_t.inc_age(5);
+    CHECK(mut_t.age() == 0);
+
+    CHECK(mut_t.mutation(prob) == 0);
+    CHECK(mut_t.is_valid());
+  }
+
+  SUBCASE("Comparison with populated team")
+  {
+    const team<individual> populated(prob);
+    CHECK(t != populated);
+  }
+
+  SUBCASE("Crossover")
+  {
+    const auto crossed(crossover(prob, t, t0));
+    CHECK(crossed.empty());
+    CHECK(crossed.is_valid());
+  }
+
+  SUBCASE("Decision vector")
+  {
+    team<individual> dv_t;
+    const auto dv(extract_decision_vector(dv_t));
+    CHECK(dv.empty());
+    CHECK(dv.is_valid());
+
+    dv_t.apply_decision_vector(dv);
+    CHECK(dv_t.empty());
+    CHECK(dv_t.is_valid());
+  }
+
+  SUBCASE("Serialization")
+  {
+    std::stringstream ss;
+    CHECK(t.save(ss));
+
+    team<individual> loaded_empty;
+    CHECK(loaded_empty.load(ss, prob.sset));
+    CHECK(loaded_empty.empty());
+    CHECK(loaded_empty.is_valid());
+    CHECK(loaded_empty == t);
+
+    // Overwriting a pre-populated team with an empty stream
+    ss.clear();
+    ss.str({});
+    CHECK(t.save(ss));
+
+    team<individual> populated(prob);
+    REQUIRE(!populated.empty());
+    CHECK(populated.load(ss, prob.sset));
+    CHECK(populated.empty());
+    CHECK(populated.is_valid());
+    CHECK(populated == t);
+  }
+
+  SUBCASE("Stream output")
+  {
+    std::ostringstream ss;
+    ss << t;
+    CHECK(ss.str().empty());
+  }
+}
+
 TEST_CASE_FIXTURE(fixture1, "Random creation")
 {
   using namespace ultra::gp;
