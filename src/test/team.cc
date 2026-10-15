@@ -103,6 +103,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     CHECK(loaded_empty.empty());
     CHECK(loaded_empty.is_valid());
     CHECK(loaded_empty == t);
+    CHECK(loaded_empty.age() == 0);
 
     // Overwriting a pre-populated team with an empty stream
     ss.clear();
@@ -115,6 +116,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     CHECK(populated.empty());
     CHECK(populated.is_valid());
     CHECK(populated == t);
+    CHECK(populated.age() == 0);
   }
 
   SUBCASE("Stream output")
@@ -203,12 +205,186 @@ TEST_CASE_FIXTURE(fixture1, "Comparison")
     CHECK(a == b);
     CHECK(distance(a, b) == 0);
 
+    b.inc_age(1u + ultra::random::sup(100u));
+    CHECK(a.age() != b.age());
+    CHECK(a == b);
+    CHECK(distance(a, b) == 0);
+
     team<individual> c(prob);
     if (a.signature() != c.signature())
     {
       CHECK(a != c);
       CHECK(distance(a, c) > 0);
     }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Age")
+{
+  using namespace ultra::gp;
+
+  SUBCASE("inc_age")
+  {
+    team<individual> t(prob);
+    REQUIRE(t.size() > 0);
+    CHECK(t.age() == 0);
+    for (const auto &ind : t)
+      CHECK(ind.age() == 0);
+
+    const auto orig_sig(t.signature());
+
+    // Default delta is 1
+    t.inc_age();
+    CHECK(t.age() == 1);
+    for (const auto &ind : t)
+      CHECK(ind.age() == 1);
+
+    // Custom delta
+    t.inc_age(4);
+    CHECK(t.age() == 5);
+    for (const auto &ind : t)
+      CHECK(ind.age() == 5);
+
+    // Zero delta leaves age unchanged
+    t.inc_age(0);
+    CHECK(t.age() == 5);
+    for (const auto &ind : t)
+      CHECK(ind.age() == 5);
+
+    // Invariants and signature preserved
+    CHECK(t.is_valid());
+    CHECK(t.signature() == orig_sig);
+  }
+
+  SUBCASE("Averaging and integer division with non-uniform ages")
+  {
+    const individual i0(prob);
+    const individual i1(prob);
+    const individual i2(prob);
+    const individual i3(prob);
+
+    // Two members
+    {
+      auto ind0(i0);
+      auto ind1(i1);
+      ind1.inc_age(1);
+      const team<individual> t2({ind0, ind1});
+      // (0 + 1) / 2 = 0
+      CHECK(t2.age() == 0);
+
+      ind0.inc_age(1);
+      ind1.inc_age(1);
+      const team<individual> t2_b({ind0, ind1});
+      // (1 + 2) / 2 = 1
+      CHECK(t2_b.age() == 1);
+    }
+
+    // Three members
+    {
+      auto ind0(i0);
+      auto ind1(i1);
+      auto ind2(i2);
+      ind0.inc_age(1);
+      ind1.inc_age(2);
+      ind2.inc_age(4);
+
+      team<individual> t3({ind0, ind1, ind2});
+      CHECK(t3[0].age() == 1);
+      CHECK(t3[1].age() == 2);
+      CHECK(t3[2].age() == 4);
+      // (1 + 2 + 4) / 3 = 7 / 3 = 2
+      CHECK(t3.age() == 2);
+
+      // (1 + 2 + 5) / 3 = 8 / 3 = 2
+      ind2.inc_age(1);
+      const team<individual> t3_b({ind0, ind1, ind2});
+      CHECK(t3_b.age() == 2);
+
+      // (1 + 2 + 6) / 3 = 9 / 3 = 3
+      ind2.inc_age(1);
+      const team<individual> t3_c({ind0, ind1, ind2});
+      CHECK(t3_c.age() == 3);
+
+      // inc_age on team with non-uniform member ages
+      // {1, 2, 4} + 1 -> {2, 3, 5}, sum 10, 10 / 3 = 3
+      t3.inc_age();
+      CHECK(t3[0].age() == 2);
+      CHECK(t3[1].age() == 3);
+      CHECK(t3[2].age() == 5);
+      CHECK(t3.age() == 3);
+
+      // {2, 3, 5} + 2 -> {4, 5, 7}, sum 16, 16 / 3 = 5
+      t3.inc_age(2);
+      CHECK(t3[0].age() == 4);
+      CHECK(t3[1].age() == 5);
+      CHECK(t3[2].age() == 7);
+      CHECK(t3.age() == 5);
+    }
+
+    // Four members
+    {
+      auto ind0(i0);
+      auto ind1(i1);
+      auto ind2(i2);
+      auto ind3(i3);
+
+      ind3.inc_age(3);
+      const team<individual> t4({ind0, ind1, ind2, ind3});
+      // (0 + 0 + 0 + 3) / 4 = 0
+      CHECK(t4.age() == 0);
+
+      ind3.inc_age(1);
+      const team<individual> t4_b({ind0, ind1, ind2, ind3});
+      // (0 + 0 + 0 + 4) / 4 = 1
+      CHECK(t4_b.age() == 1);
+
+      ind0.inc_age(2);
+      ind1.inc_age(3);
+      ind2.inc_age(5);
+      ind3.inc_age(3);  // ind3 was 4, now 7
+      const team<individual> t4_c({ind0, ind1, ind2, ind3});
+      // (2 + 3 + 5 + 7) / 4 = 17 / 4 = 4
+      CHECK(t4_c.age() == 4);
+    }
+  }
+
+  SUBCASE("Equality indifference to age")
+  {
+    const team<individual> t1(prob);
+    team<individual> t2(t1);
+
+    REQUIRE(t1 == t2);
+    REQUIRE(t1.age() == t2.age());
+
+    t2.inc_age(10);
+
+    CHECK(t1.age() != t2.age());
+    CHECK(t1 == t2);
+    CHECK(t2 == t1);
+    CHECK(!(t1 != t2));
+    CHECK(!(t2 != t1));
+    CHECK(distance(t1, t2) == 0);
+    CHECK(t1.signature() == t2.signature());
+
+    // Non-uniform ages between teams with identical member code
+    individual i0(prob);
+    individual i1(prob);
+    individual i2(prob);
+
+    const team<individual> uniform({i0, i1, i2});
+
+    i0.inc_age(3);
+    i1.inc_age(7);
+    i2.inc_age(11);
+    const team<individual> non_uniform({i0, i1, i2});
+
+    CHECK(uniform.age() == 0);
+    CHECK(non_uniform.age() == 7);  // (3 + 7 + 11) / 3 = 21 / 3 = 7
+    CHECK(uniform == non_uniform);
+    CHECK(non_uniform == uniform);
+    CHECK(!(uniform != non_uniform));
+    CHECK(distance(uniform, non_uniform) == 0);
+    CHECK(uniform.signature() == non_uniform.signature());
   }
 }
 
@@ -257,20 +433,56 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
 {
   using namespace ultra;
 
-  for (unsigned i(0); i < 2000; ++i)
+  SUBCASE("Uniform team age")
   {
-    std::stringstream ss;
-    gp::team<gp::individual> t1(prob);
+    for (unsigned i(0); i < 2000; ++i)
+    {
+      std::stringstream ss;
+      gp::team<gp::individual> t1(prob);
 
-    t1.inc_age(random::sup(100u));
+      t1.inc_age(random::sup(100u));
 
-    CHECK(t1.save(ss));
+      CHECK(t1.save(ss));
 
-    gp::team<gp::individual> t2(prob);
-    CHECK(t2.load(ss, prob.sset));
-    CHECK(t2.is_valid());
+      gp::team<gp::individual> t2(prob);
+      CHECK(t2.load(ss, prob.sset));
+      CHECK(t2.is_valid());
 
-    CHECK(t1 == t2);
+      CHECK(t1 == t2);
+      CHECK(t2.age() == t1.age());
+      for (std::size_t j(0); j < t1.size(); ++j)
+        CHECK(t2[j].age() == t1[j].age());
+    }
+  }
+
+  SUBCASE("Non-uniform member ages")
+  {
+    for (unsigned i(0); i < 500; ++i)
+    {
+      std::vector<gp::individual> members;
+      const auto team_size(prob.params.team.individuals);
+      members.reserve(team_size);
+
+      for (std::size_t j(0); j < team_size; ++j)
+      {
+        gp::individual ind(prob);
+        ind.inc_age(random::sup(100u));
+        members.push_back(std::move(ind));
+      }
+
+      const gp::team<gp::individual> t1(std::move(members));
+      std::stringstream ss;
+      CHECK(t1.save(ss));
+
+      gp::team<gp::individual> t2(prob);
+      CHECK(t2.load(ss, prob.sset));
+      CHECK(t2.is_valid());
+
+      CHECK(t1 == t2);
+      CHECK(t2.age() == t1.age());
+      for (std::size_t j(0); j < t1.size(); ++j)
+        CHECK(t2[j].age() == t1[j].age());
+    }
   }
 }
 
