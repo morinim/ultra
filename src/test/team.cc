@@ -12,6 +12,7 @@
 
 #include "kernel/gp/individual.h"
 #include "kernel/gp/team.h"
+#include "kernel/individual_format.h"
 
 #include "test/fixture1.h"
 
@@ -121,6 +122,10 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     std::ostringstream ss;
     ss << t;
     CHECK(ss.str().empty());
+
+    std::ostringstream ss_inline;
+    ss_inline << ultra::out::in_line << t;
+    CHECK(ss_inline.str().empty());
   }
 }
 
@@ -435,6 +440,119 @@ TEST_CASE_FIXTURE(fixture1, "Decision vector")
     t.apply_decision_vector(dv);
 
     CHECK(t.signature() != old_sig);
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "operator<< stream output")
+{
+  using namespace ultra;
+
+  const gp::team<gp::individual> t(
+    {
+      gp::individual(
+        {
+          {f_add, {2.0, z}},         // [0]
+          {f_add, {3.0, 4.0}},       // [1]
+          {f_sub, {0_addr, 1_addr}}  // [2]
+        }),
+      gp::individual(
+        {
+          {f_add, {4.0, 5.0}},       // [0]
+          {f_sub, {0_addr, 2.0}}     // [1]
+        })
+    });
+
+  SUBCASE("multiline")
+  {
+    std::ostringstream ss;
+    ss << t;
+
+    std::ostringstream expected;
+    expected << t[0] << '\n' << t[1] << '\n';
+
+    CHECK(ss.str() == expected.str());
+    CHECK(ss.str() == "[2] FSUB [0] [1]\n"
+                      "[1] FADD 3 4\n"
+                      "[0] FADD 2 Z()\n"
+                      "\n"
+                      "[1] FSUB [0] 2\n"
+                      "[0] FADD 4 5\n"
+                      "\n");
+
+    const gp::team<gp::individual> single(
+      {
+        gp::individual({{f_add, {2.0, z}}})
+      });
+
+    std::ostringstream ss_single;
+    ss_single << single;
+
+    std::ostringstream expected_single;
+    expected_single << single[0] << '\n';
+
+    CHECK(ss_single.str() == expected_single.str());
+  }
+
+  SUBCASE("out::in_line_f")
+  {
+    std::ostringstream ss;
+    ss << out::in_line << t;
+
+    std::ostringstream expected;
+    expected << '{' << out::in_line << t[0] << '}'
+             << '{' << out::in_line << t[1] << '}';
+
+    CHECK(ss.str() == expected.str());
+    CHECK(ss.str() == "{FSUB FADD 2 Z() FADD 3 4}{FSUB FADD 4 5 2}");
+
+    std::ostringstream ss_pf;
+    ss_pf << out::print_format(out::in_line_f) << t;
+    CHECK(ss_pf.str() == ss.str());
+
+    const gp::team<gp::individual> single(
+      {
+        gp::individual({{f_add, {2.0, z}}})
+      });
+
+    std::ostringstream ss_single;
+    ss_single << out::in_line << single;
+
+    CHECK(ss_single.str() == "{FADD 2 Z()}");
+  }
+
+  SUBCASE("stream output with empty teams")
+  {
+    const gp::team<gp::individual> empty;
+    const gp::team<gp::individual> empty_sized(0);
+    const gp::team<gp::individual> empty_vec(std::vector<gp::individual>{});
+
+    std::ostringstream ss_multi;
+    ss_multi << empty;
+    CHECK(ss_multi.str().empty());
+
+    std::ostringstream ss_inline;
+    ss_inline << out::in_line << empty;
+    CHECK(ss_inline.str().empty());
+
+    std::ostringstream ss_pf;
+    ss_pf << out::print_format(out::in_line_f) << empty;
+    CHECK(ss_pf.str().empty());
+
+    std::ostringstream ss_sized_multi;
+    ss_sized_multi << empty_sized;
+    CHECK(ss_sized_multi.str().empty());
+
+    std::ostringstream ss_sized_inline;
+    ss_sized_inline << out::in_line << empty_sized;
+    CHECK(ss_sized_inline.str().empty());
+
+    std::ostringstream ss_vec_multi;
+    ss_vec_multi << empty_vec;
+    CHECK(ss_vec_multi.str().empty());
+
+    std::ostringstream ss_vec_inline;
+    ss_vec_inline << out::in_line << empty_vec;
+    CHECK(ss_vec_inline.str().empty());
   }
 }
 
