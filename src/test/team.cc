@@ -20,7 +20,54 @@
 #include "third_party/doctest/doctest.h"
 
 #include <cstdlib>
+#include <numeric>
 #include <sstream>
+
+namespace
+{
+
+struct tracking_individual
+{
+  mutable unsigned sig_calls {0};
+  mutable unsigned mutations_to_perform {0};
+  ultra::hash_t sig {12345};
+  ultra::individual::age_t age_val {0};
+  unsigned active_slots_count {1};
+  double last_temperature {1.0};
+
+  [[nodiscard]] bool empty() const noexcept { return false; }
+
+  [[nodiscard]] ultra::hash_t signature() const noexcept
+  {
+    ++sig_calls;
+    return sig;
+  }
+
+  [[nodiscard]] ultra::individual::age_t age() const noexcept { return age_val; }
+  void inc_age(unsigned delta = 1) noexcept { age_val += delta; }
+  [[nodiscard]] bool is_valid() const noexcept { return true; }
+
+  unsigned mutation(const ultra::problem &, double temperature = 1.0)
+  {
+    last_temperature = temperature;
+    if (mutations_to_perform > 0)
+    {
+      sig.combine(ultra::hash_t(mutations_to_perform));
+      return mutations_to_perform;
+    }
+
+    return 0;
+  }
+
+  bool operator==(const tracking_individual &) const = default;
+
+  friend unsigned active_slots(const tracking_individual &ind) noexcept
+  {
+    return ind.active_slots_count;
+  }
+};
+
+}  // namespace
 
 TEST_SUITE("TEAM")
 {
@@ -187,6 +234,405 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
     const double perc(100.0 * diff / length);
     CHECK(perc >= 45.0);
     CHECK(perc <= 55.0);
+  }
+
+  SUBCASE("Non-default temperature mutation")
+  {
+    SUBCASE("Zero temperature produces no mutations")
+    {
+      prob.params.evolution.p_mutation = 0.5;
+      for (unsigned i(0); i < 100; ++i)
+      {
+        const auto nm(t.mutation(prob, 0.0));
+        CHECK(nm == 0);
+        CHECK(t == orig);
+      }
+    }
+
+    SUBCASE("Temperature 0.5")
+    {
+      double diff(0.0), length(0.0);
+      prob.params.evolution.p_mutation = 0.5;
+
+      const unsigned trials(2000);
+      for (unsigned i(0); i < trials; ++i)
+      {
+        const team<individual> t1{t};
+
+        t.mutation(prob, 0.5);
+        diff += distance(t, t1);
+        length += active_slots(t1);
+      }
+
+      // Expected rate: 1.0 - sqrt(1.0 - 0.5) = 1.0 - sqrt(0.5) ~ 29.29%
+      const double perc(100.0 * diff / length);
+      CHECK(perc >= 25.0);
+      CHECK(perc <= 34.0);
+      CHECK(t.is_valid());
+    }
+
+    SUBCASE("Temperature 2.0")
+    {
+      double diff(0.0), length(0.0);
+      prob.params.evolution.p_mutation = 0.5;
+
+      const unsigned trials(2000);
+      for (unsigned i(0); i < trials; ++i)
+      {
+        const team<individual> t1{t};
+
+        t.mutation(prob, 2.0);
+        diff += distance(t, t1);
+        length += active_slots(t1);
+      }
+
+      // Expected rate: 1.0 - (1.0 - 0.5)^2 = 75.0%
+      const double perc(100.0 * diff / length);
+      CHECK(perc >= 70.0);
+      CHECK(perc <= 80.0);
+      CHECK(t.is_valid());
+    }
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
+{
+  using namespace ultra;
+  using namespace ultra::gp;
+  using individual = ultra::gp::individual;
+
+  SUBCASE("Repeated calls return cached hash without recomputing")
+  {
+    tracking_individual ind1;
+    ind1.sig = hash_t(111);
+    tracking_individual ind2;
+    ind2.sig = hash_t(222);
+
+    team<tracking_individual> t({ind1, ind2});
+
+    // Before signature() is called, signature cache is empty and members'
+    // signature() has not been invoked.
+    CHECK(t[0].sig_calls == 0);
+    CHECK(t[1].sig_calls == 0);
+
+    // First call computes hash from member signatures and caches it.
+    const auto s1(t.signature());
+    CHECK(!s1.empty());
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
+
+    // Repeated calls return the cached hash without recomputing.
+    const auto s2(t.signature());
+    CHECK(s2 == s1);
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
+
+    const auto s3(t.signature());
+    CHECK(s3 == s1);
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
+
+    // Also verify with `gp::individual`.
+    team<individual> real_team(prob);
+    const auto r1(real_team.signature());
+    const auto r2(real_team.signature());
+    const auto r3(real_team.signature());
+    CHECK(r1 == r2);
+    CHECK(r2 == r3);
+    CHECK(!r1.empty());
+
+    // Age increment does not invalidate the signature cache.
+    real_team.inc_age();
+    CHECK(real_team.signature() == r1);
+  }
+
+  SUBCASE("Mutation with nm > 0 clears cached signature")
+  {
+    tracking_individual ind1;
+    ind1.sig = hash_t(111);
+    ind1.mutations_to_perform = 1;
+
+    tracking_individual ind2;
+    ind2.sig = hash_t(222);
+    ind2.mutations_to_perform = 0;
+
+    team<tracking_individual> t({ind1, ind2});
+
+    const auto s1(t.signature());
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
+
+    // Mutation with `nm > 0` clears `signature_`.
+    const auto nm(t.mutation(prob));
+    CHECK(nm == 1);
+
+    // Next `signature()` call must recompute and invoke member signatures.
+    const auto s2(t.signature());
+    CHECK(s2 != s1);
+    CHECK(t[0].sig_calls == 2);
+    CHECK(t[1].sig_calls == 2);
+
+    // Subsequent call uses newly cached signature without recomputing.
+    const auto s3(t.signature());
+    CHECK(s3 == s2);
+    CHECK(t[0].sig_calls == 2);
+    CHECK(t[1].sig_calls == 2);
+
+    // Mutation with `nm == 0` does NOT clear the cached signature.
+    tracking_individual ind_zero1;
+    ind_zero1.sig = hash_t(333);
+    ind_zero1.mutations_to_perform = 0;
+
+    tracking_individual ind_zero2;
+    ind_zero2.sig = hash_t(444);
+    ind_zero2.mutations_to_perform = 0;
+
+    team<tracking_individual> tz({ind_zero1, ind_zero2});
+
+    const auto sz1(tz.signature());
+    CHECK(tz[0].sig_calls == 1);
+    CHECK(tz[1].sig_calls == 1);
+
+    const auto nm0(tz.mutation(prob));
+    CHECK(nm0 == 0);
+
+    // `signature_` was not cleared, so no recomputation happens.
+    const auto sz2(tz.signature());
+    CHECK(sz2 == sz1);
+    CHECK(tz[0].sig_calls == 1);
+    CHECK(tz[1].sig_calls == 1);
+
+    // Also verify with `gp::individual`.
+    prob.params.slp.code_length = 32;
+    prob.params.evolution.p_mutation = 0.0;
+    team<individual> real_team(prob);
+    const auto orig_sig(real_team.signature());
+
+    // When `nm == 0`, cached signature remains unchanged.
+    const auto zero_nm(real_team.mutation(prob));
+    CHECK(zero_nm == 0);
+    CHECK(real_team.signature() == orig_sig);
+
+    // When `nm > 0`, cached signature is cleared and recomputed.
+    prob.params.evolution.p_mutation = 1.0;
+    const auto real_nm(real_team.mutation(prob));
+    CHECK(real_nm > 0);
+    CHECK(real_team.is_valid());
+    CHECK(real_team.signature() != orig_sig);
+  }
+
+  SUBCASE("Mutation with non-default temperature values")
+  {
+    tracking_individual ind1;
+    ind1.sig = hash_t(555);
+    ind1.mutations_to_perform = 1;
+
+    tracking_individual ind2;
+    ind2.sig = hash_t(666);
+    ind2.mutations_to_perform = 1;
+
+    team<tracking_individual> t({ind1, ind2});
+
+    const auto s1(t.signature());
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
+
+    // Temperature 0.5 passes temperature to members and clears cache if nm > 0.
+    const auto nm_half(t.mutation(prob, 0.5));
+    CHECK(nm_half == 2);
+    CHECK(t[0].last_temperature == doctest::Approx(0.5));
+    CHECK(t[1].last_temperature == doctest::Approx(0.5));
+
+    const auto s2(t.signature());
+    CHECK(s2 != s1);
+    CHECK(t[0].sig_calls == 2);
+    CHECK(t[1].sig_calls == 2);
+
+    // Temperature 2.0 passes temperature to members and clears cache if nm > 0.
+    const auto nm_double(t.mutation(prob, 2.0));
+    CHECK(nm_double == 2);
+    CHECK(t[0].last_temperature == doctest::Approx(2.0));
+    CHECK(t[1].last_temperature == doctest::Approx(2.0));
+
+    const auto s3(t.signature());
+    CHECK(s3 != s2);
+    CHECK(t[0].sig_calls == 3);
+    CHECK(t[1].sig_calls == 3);
+
+    // Also verify with `gp::individual`.
+    prob.params.evolution.p_mutation = 0.5;
+    team<individual> real_team(prob);
+    const auto r_sig1(real_team.signature());
+
+    // Temperature 0.0 produces nm == 0, preserving cached signature.
+    const auto r_nm0(real_team.mutation(prob, 0.0));
+    CHECK(r_nm0 == 0);
+    CHECK(real_team.signature() == r_sig1);
+
+    // Temperature 0.5 with nm > 0 clears cached signature.
+    prob.params.evolution.p_mutation = 1.0;
+    const auto r_nm_half(real_team.mutation(prob, 0.5));
+    CHECK(r_nm_half > 0);
+    CHECK(real_team.is_valid());
+    const auto r_sig2(real_team.signature());
+    CHECK(r_sig2 != r_sig1);
+
+    // Temperature 2.0 with nm > 0 clears cached signature.
+    const auto r_nm_double(real_team.mutation(prob, 2.0));
+    CHECK(r_nm_double > 0);
+    CHECK(real_team.is_valid());
+    const auto r_sig3(real_team.signature());
+    CHECK(r_sig3 != r_sig2);
+  }
+}
+
+TEST_CASE_FIXTURE(fixture1, "Active slots")
+{
+  using namespace ultra;
+  using namespace ultra::gp;
+  using individual = ultra::gp::individual;
+
+  SUBCASE("Empty team")
+  {
+    const team<individual> t;
+    const team<individual> t0(0);
+    const team<individual> tv(std::vector<individual>{});
+
+    CHECK(active_slots(t) == 0);
+    CHECK(active_slots(t0) == 0);
+    CHECK(active_slots(tv) == 0);
+  }
+
+  SUBCASE("Exact return values against known individual active slot counts")
+  {
+    // ind1: 1 active slot, no introns (size 1).
+    const individual ind1({
+      {f_add, {1.0, 2.0}}
+    });
+    REQUIRE(ind1.is_valid());
+    CHECK(ind1.size() == 1);
+    CHECK(active_slots(ind1) == 1);
+
+    // ind1_intron: 1 active slot, 1 intron at locus 0 (size 2).
+    const individual ind1_intron({
+      {f_add, {1.0, 2.0}},       // [0] intron
+      {f_sub, {3.0, 4.0}}        // [1] root
+    });
+    REQUIRE(ind1_intron.is_valid());
+    CHECK(ind1_intron.size() == 2);
+    CHECK(active_slots(ind1_intron) == 1);
+
+    // ind2: 2 active slots, no introns (size 2).
+    const individual ind2({
+      {f_add, {1.0, 2.0}},       // [0] active
+      {f_sub, {0_addr, 3.0}}     // [1] active root
+    });
+    REQUIRE(ind2.is_valid());
+    CHECK(ind2.size() == 2);
+    CHECK(active_slots(ind2) == 2);
+
+    // ind2_intron: 2 active slots, 1 intron at locus 0 (size 3).
+    const individual ind2_intron({
+      {f_mul, {5.0, 6.0}},       // [0] intron
+      {f_add, {1.0, 2.0}},       // [1] active
+      {f_sub, {1_addr, 3.0}}     // [2] active root
+    });
+    REQUIRE(ind2_intron.is_valid());
+    CHECK(ind2_intron.size() == 3);
+    CHECK(active_slots(ind2_intron) == 2);
+
+    // ind3: 3 active slots, no introns (size 3).
+    const individual ind3({
+      {f_add, {1.0, 2.0}},       // [0] active
+      {f_sub, {3.0, 4.0}},       // [1] active
+      {f_mul, {0_addr, 1_addr}}  // [2] active root
+    });
+    REQUIRE(ind3.is_valid());
+    CHECK(ind3.size() == 3);
+    CHECK(active_slots(ind3) == 3);
+
+    // ind3_intron: 3 active slots, 1 intron at locus 0 (size 4).
+    const individual ind3_intron({
+      {f_add, {9.0, 9.0}},       // [0] intron
+      {f_add, {1.0, 2.0}},       // [1] active
+      {f_sub, {3.0, 4.0}},       // [2] active
+      {f_mul, {1_addr, 2_addr}}  // [3] active root
+    });
+    REQUIRE(ind3_intron.is_valid());
+    CHECK(ind3_intron.size() == 4);
+    CHECK(active_slots(ind3_intron) == 3);
+
+    // Single-member teams.
+    const team<individual> t_single1({ind1});
+    CHECK(active_slots(t_single1) == 1);
+    CHECK(active_slots(t_single1) == active_slots(ind1));
+
+    const team<individual> t_single2({ind2});
+    CHECK(active_slots(t_single2) == 2);
+    CHECK(active_slots(t_single2) == active_slots(ind2));
+
+    const team<individual> t_single2_intron({ind2_intron});
+    CHECK(active_slots(t_single2_intron) == 2);
+    CHECK(active_slots(t_single2_intron) == active_slots(ind2_intron));
+
+    // Two-member team.
+    const team<individual> t_pair({ind1, ind2});
+    CHECK(active_slots(t_pair) == 3);
+    CHECK(active_slots(t_pair) == active_slots(ind1) + active_slots(ind2));
+
+    // Two-member team with introns.
+    const team<individual> t_pair_introns({ind1_intron, ind3_intron});
+    CHECK(active_slots(t_pair_introns) == 4);
+    CHECK(active_slots(t_pair_introns) == active_slots(ind1_intron)
+                                        + active_slots(ind3_intron));
+
+    // Six-member team with mixed introns and active slots.
+    const team<individual> t_all(
+      {ind1, ind1_intron, ind2, ind2_intron, ind3, ind3_intron});
+    // Expected sum: 1 + 1 + 2 + 2 + 3 + 3 = 12
+    // Total lines (size): 1 + 2 + 2 + 3 + 3 + 4 = 15
+    CHECK(active_slots(t_all) == 12);
+    CHECK(active_slots(t_all) == active_slots(ind1)
+                               + active_slots(ind1_intron)
+                               + active_slots(ind2)
+                               + active_slots(ind2_intron)
+                               + active_slots(ind3)
+                               + active_slots(ind3_intron));
+  }
+
+  SUBCASE("Generic individual with exact slot counts")
+  {
+    tracking_individual m1;
+    m1.active_slots_count = 5;
+    tracking_individual m2;
+    m2.active_slots_count = 11;
+    tracking_individual m3;
+    m3.active_slots_count = 26;
+
+    CHECK(active_slots(m1) == 5);
+    CHECK(active_slots(m2) == 11);
+    CHECK(active_slots(m3) == 26);
+
+    const team<tracking_individual> tm({m1, m2, m3});
+    CHECK(active_slots(tm) == 42);
+    CHECK(active_slots(tm) == active_slots(m1)
+                            + active_slots(m2)
+                            + active_slots(m3));
+  }
+
+  SUBCASE("Randomly generated teams match sum of member active slots")
+  {
+    for (unsigned i(0); i < 100; ++i)
+    {
+      const team<individual> tr(prob);
+      const unsigned expected(
+        std::accumulate(tr.begin(), tr.end(), 0u,
+                        [](unsigned sum, const individual &ind)
+                        {
+                          return sum + active_slots(ind);
+                        }));
+      CHECK(active_slots(tr) == expected);
+    }
   }
 }
 
