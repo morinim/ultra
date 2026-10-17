@@ -15,7 +15,10 @@
 #include "monitor.h"
 #include "results.h"
 
+#include <SDL3/SDL_video.h>
+
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <utility>
 #include <variant>
@@ -42,19 +45,22 @@ using namespace ultra::wopr;
 
 [[nodiscard]] int execute(monitor::options options)
 {
-  monitor::start(make_settings(options.imgui_demo), std::move(options));
+  const auto demo(options.imgui_demo);
+  monitor::start(make_settings(demo), std::move(options));
   return EXIT_SUCCESS;
 }
 
 [[nodiscard]] int execute(rs::run::options options)
 {
-  return rs::run::start(make_settings(options.imgui_demo), std::move(options))
+  const auto demo(options.imgui_demo);
+  return rs::run::start(make_settings(demo), std::move(options))
          ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 [[nodiscard]] int execute(rs::summary::options options)
 {
-  rs::summary::start(make_settings(options.imgui_demo), std::move(options));
+  const auto demo(options.imgui_demo);
+  rs::summary::start(make_settings(demo), std::move(options));
   return EXIT_SUCCESS;
 }
 
@@ -63,20 +69,33 @@ using namespace ultra::wopr;
 
 int main(int argc, char *argv[])
 {
-  auto result(ultra::wopr::parse_args(argc, argv));
-
-  if (!result)
+  try
   {
-    std::cerr << result.error() << "\n\n"
-              << "Use `--help` switch for command line description.\n\n"
-              << "People sometimes make mistakes.\n";
+    auto result(ultra::wopr::parse_args(argc, argv));
+
+    if (!result)
+    {
+      std::cerr << result.error() << "\n\n"
+                << "Use `--help` switch for command line description.\n\n"
+                << "People sometimes make mistakes.\n";
+      return EXIT_FAILURE;
+    }
+
+    return std::visit(
+      [](auto options)
+      {
+        return execute(std::move(options));
+      },
+      std::move(*result));
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "Error: " << e.what() << '\n';
     return EXIT_FAILURE;
   }
-
-  return std::visit(
-    [](auto options)
-    {
-      return execute(std::move(options));
-    },
-    std::move(*result));
+  catch (...)
+  {
+    std::cerr << "Fatal error: unexpected exception.\n";
+    return EXIT_FAILURE;
+  }
 }
