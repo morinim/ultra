@@ -862,39 +862,38 @@ unsigned individual::mutation(const problem &prb, double temperature)
   const auto frontier(exons());
 
   auto gen_i(frontier.begin());
+
   while (gen_i != frontier.end())
   {
     // When mutation modifies a gene, the iterator discovers dependencies from
     // the mutated gene, so a structural mutation can skip exons active at entry
     // and visit newly activated introns instead. We advance the iterator before
     // mutating to ensure mutation applies to the original exon set.
-    auto snap_i(gen_i++);
+    const auto c_idx(gen_i.locus().index);
+    gene &c_gene(*gen_i);
+    ++gen_i;
 
     if (random::boolean(pgm))
     {
-      const auto idx(snap_i.locus().index);
-      const auto p_address(address_probability(idx, size(), sampled_end));
+      const auto p_address(address_probability(c_idx, size(), sampled_end));
 
-      if (const auto pos(random::sup(snap_i->args.size() + 1));
-          pos == snap_i->args.size())
+      if (const auto pos(random::sup(c_gene.args.size() + 1));
+          pos == c_gene.args.size())  // entire function
       {
-        gene g;
-        g.func = prb.sset.roulette_function(snap_i->category());
-        g.args.reserve(g.func->arity());
+        c_gene.func = prb.sset.roulette_function(c_gene.category());
+        c_gene.args.resize(c_gene.func->arity());
 
         std::ranges::transform(
-          g.func->categories(), std::back_inserter(g.args),
+          c_gene.func->categories(), c_gene.args.begin(),
           [&](symbol::category_t c)
           {
-            return prb.sset.random_argument(idx, c, p_address);
+            return prb.sset.random_argument(c_idx, c, p_address);
           });
-
-        *snap_i = g;
       }
-      else  // input parameter
+      else  // just input parameter
       {
-        const auto c(snap_i->func->param_category(pos));
-        snap_i->args[pos] = prb.sset.random_argument(idx, c, p_address);
+        const auto c(c_gene.func->param_category(pos));
+        c_gene.args[pos] = prb.sset.random_argument(c_idx, c, p_address);
       }
 
       ++n;
