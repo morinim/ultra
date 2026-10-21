@@ -387,6 +387,7 @@ void problem::setup_symbols(symbol_init init_flags)
         add_symbol(insert<real::div>(
                      category, function::param_data_types{category, category}));
         add_symbol(insert<real::ln>(category));
+        add_symbol(insert<real::exp>(category));
         add_symbol(insert<real::mul>(
                      category, function::param_data_types{category, category}));
         add_symbol(insert<real::sin>(category));

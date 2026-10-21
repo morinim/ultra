@@ -569,6 +569,47 @@ public:
 };
 
 ///
+/// Exponential function.
+///
+/// \remark
+/// The argument of a transcendental function must be dimensionless and
+/// dimensionless is the return type (so same category). For a possible
+/// explanation see https://math.stackexchange.com/a/238400
+///
+class exp : public function
+{
+public:
+  explicit exp(category_t c = symbol::default_category)
+    : function("FEXP", c, {c}) {}
+
+  [[nodiscard]] std::string to_string(format f) const final
+  {
+    switch (f)
+    {
+    case cpp_format:     return "std::exp({0})";
+    case python_format:  return "math.exp({0})";
+    default:             return      "exp({0})";
+    }
+  }
+
+  ///
+  /// \param[in] pars input parameters (lazy eval)
+  /// \return         the exponential of its argument or an empty value
+  ///                 in case of invalid argument / infinite result
+  ///
+  [[nodiscard]] value_t eval(const params &pars) const final
+  {
+    const auto p0(pars[0]);
+    if (!has_value(p0))  return p0;
+
+    const auto ret(std::exp(base(p0)));
+    if (!std::isfinite(ret))  return {};
+
+    return ret;
+  }
+};
+
+///
 /// "Less Then" operator.
 ///
 class lt : public function

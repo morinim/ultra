@@ -7,7 +7,7 @@ $$$
 Dataset characteristics:
 - 200 uniformly sampled input pairs;
 - $\(x,y \in [-3,3]\)$;
-- columns: `x`, `y`, `target`;
+- columns: `target`, `x`, `y`;
 - full floating-point precision;
 - no measurement noise;
 
