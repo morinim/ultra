@@ -569,8 +569,23 @@ void render_elite(const results_snapshot &snapshot)
       // the top.
       ImPlot::SetupAxis(ImAxis_X2, "Run", ImPlotAxisFlags_Opposite);
 
-      const double max_x(std::max(current.elite[i].id.size(),
-                                  reference.elite[i].id.size()));
+      const auto rank_count(std::max(current.elite[i].id.size(),
+                                     reference.elite[i].id.size()));
+      const double max_x(rank_count);
+
+      std::vector<double> rank_positions;
+      std::vector<std::string> rank_text;
+      if (rank_count)
+      {
+        rank_positions = make_positions(rank_count);
+        rank_text.reserve(rank_count);
+        for (std::size_t rank(1); rank <= rank_count; ++rank)
+          rank_text.push_back(std::to_string(rank));
+      }
+      const auto rank_labels(to_cstr_vector(rank_text));
+      ImPlot::SetupAxisTicks(ImAxis_X1, rank_positions.data(),
+                             static_cast<int>(rank_positions.size()),
+                             rank_labels.data(), false);
 
       double x_from(-0.5), x_to(max_x + 0.5);
       ImPlot::SetupAxisLimits(ImAxis_X1, x_from, x_to, ImGuiCond_Always);
