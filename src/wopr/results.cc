@@ -488,6 +488,15 @@ void render_success_rate(const results_snapshot &snapshot)
   ImPlot::EndPlot();
 }
 
+void render_fitness_series(const char *label, const double x, const double mean,
+                           const double std_dev, const double best)
+{
+  ImPlot::PlotErrorBars(label, &x, &mean, &std_dev, 1);
+  ImPlot::PlotScatter(label, &x, &mean, 1);
+  ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
+  ImPlot::PlotScatter(label, &x, &best, 1);
+}
+
 void render_fitness_across_datasets(const results_snapshot &snapshot)
 {
   const std::size_t size(snapshot.labels.size());
@@ -546,20 +555,9 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
       ImPlot::SetupAxisLimits(ImAxis_X1, min_x, max_x, ImGuiCond_Always);
 
       // Current data.
-      {
-        const auto xs(current.runs[i]);
-        const auto ys(current.mean[i]);
-        const auto ys_dev(current.std_dev[i]);
-        const auto ys_best(current.best[i]);
-
-        ImPlot::PlotErrorBars((current_str + "##FAD" + labels[i]).c_str(),
-                              &xs, &ys, &ys_dev, 1);
-        ImPlot::PlotScatter((current_str + "##FAD" + labels[i]).c_str(),
-                            &xs, &ys, 1);
-        ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
-        ImPlot::PlotScatter((current_str + "##FAD" + labels[i]).c_str(),
-                            &xs, &ys_best, 1);
-      }
+      render_fitness_series((current_str + "##FAD" + labels[i]).c_str(),
+                             current.runs[i], current.mean[i],
+                             current.std_dev[i], current.best[i]);
 
       // Reference data.
       if (show_reference_values)
@@ -568,17 +566,9 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
           reference.runs[i]
           + (ultra::almost_equal(current.runs[i],reference.runs[i])
              ? 0.1 : 0.0));
-        const auto ys(reference.mean[i]);
-        const auto ys_dev(reference.std_dev[i]);
-        const auto ys_best(reference.best[i]);
-
-        ImPlot::PlotErrorBars((reference_str + "##FAD" + labels[i]).c_str(),
-                              &xs, &ys, &ys_dev, 1);
-        ImPlot::PlotScatter((reference_str + "##FAD" + labels[i]).c_str(),
-                            &xs, &ys, 1);
-        ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
-        ImPlot::PlotScatter((reference_str + "##FAD" + labels[i]).c_str(),
-                            &xs, &ys_best, 1);
+        render_fitness_series((reference_str + "##FAD" + labels[i]).c_str(),
+                               xs, reference.mean[i], reference.std_dev[i],
+                               reference.best[i]);
       }
 
       ImPlot::EndPlot();
@@ -589,6 +579,19 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
   }
 
   ImPlot::EndSubplots();
+}
+
+void render_accuracy_labels(const elite_data::run &series, double shift = 0.0)
+{
+  const ImVec2 offset_upward(0, -10);
+
+  for (std::size_t k(0); k < series.fit.size(); ++k)
+    if (std::isfinite(series.acc[k]))
+    {
+      const std::string text(std::format("{:.2f}%", series.acc[k]*100.0));
+      ImPlot::PlotText(text.c_str(), static_cast<double>(k) + shift,
+                       series.fit[k], offset_upward);
+    }
 }
 
 void render_elite(const results_snapshot &snapshot)
@@ -654,31 +657,20 @@ void render_elite(const results_snapshot &snapshot)
                                static_cast<int>(ids.size()),
                                current.elite[i].tick_labels.data());
 
-      const ImVec2 offset_upward(0, -10);
-
       // Current data.
       {
         const auto &fit(current.elite[i].fit);
-        const auto &acc(current.elite[i].acc);
 
         ImPlot::PlotBars((current_str + "##ELITE" + labels[i]).c_str(),
                          fit.data(), fit.size(), 0.4);
 
-        // Accuracy labels.
-        for (std::size_t k(0); k < fit.size(); ++k)
-          if (std::isfinite(acc[k]))
-          {
-            const std::string text(std::format("{:.2f}%", acc[k]*100.0));
-            ImPlot::PlotText(text.c_str(), static_cast<double>(k),
-                             fit[k], offset_upward);
-          }
+        render_accuracy_labels(current.elite[i]);
       }
 
       // Reference data.
       if (show_reference_values)
       {
         const auto &fit(reference.elite[i].fit);
-        const auto &acc(reference.elite[i].acc);
         const double bar_shift(0.1);
 
         auto bar_col(ImPlot::GetColormapColor(1));
@@ -694,15 +686,7 @@ void render_elite(const results_snapshot &snapshot)
         text_col.w *= 0.55f;
         ImGui::PushStyleColor(ImGuiCol_Text, text_col);
 
-        for (std::size_t k(0); k < fit.size(); ++k)
-          if (std::isfinite(acc[k]))
-          {
-            const std::string text(std::format("{:.2f}%", acc[k]*100.0));
-            ImPlot::PlotText(text.c_str(),
-                             static_cast<double>(k) + bar_shift,
-                             fit[k],
-                             offset_upward);
-          }
+        render_accuracy_labels(reference.elite[i], bar_shift);
 
         ImGui::PopStyleColor();
       }
