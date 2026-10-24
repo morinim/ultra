@@ -525,16 +525,9 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
         && std::isfinite(current.best[i]) && std::isfinite(reference.best[i])
         && current.best[i] < reference.best[i])
     {
-      if (current.mean[i] < reference.mean[i])
-      {
-        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.4));
-        style_pushed = true;
-      }
-      else
-      {
-        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0, 0.0, 0.0, 0.2));
-        style_pushed = true;
-      }
+      const float alpha(current.mean[i] < reference.mean[i] ? 0.4f : 0.2f);
+      ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0f, 0.0f, 0.0f, alpha));
+      style_pushed = true;
     }
 
     int flags(0);

@@ -26,7 +26,6 @@
 #include <iostream>
 #include <iterator>
 #include <ranges>
-#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -613,11 +612,6 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
 
   cmdl.parse(argc, argv);
 
-  const std::string cmd_monitor("monitor");
-  const std::string cmd_run("run");
-  const std::string cmd_summary("summary");
-  const std::set<std::string> cmds({cmd_monitor, cmd_run, cmd_summary});
-
   const auto &pos_args(cmdl.pos_args());
 
   if (pos_args.size() <= 1 || cmdl[{"-h", "--help"}])
@@ -627,15 +621,14 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
   std::ranges::transform(pos_args[1], std::back_inserter(cmd),
                          [](unsigned char c){ return std::tolower(c); });
 
-  if (!cmds.contains(cmd))
-    return std::unexpected("Unknown command `" + cmd + "`.");
-
-  if (cmd == cmd_summary)
+  if (cmd == "summary")
     return parse_summary(cmdl);
-  if (cmd == cmd_monitor)
+  if (cmd == "monitor")
     return parse_monitor(cmdl);
+  if (cmd == "run")
+    return parse_run(cmdl);
 
-  return parse_run(cmdl);
+  return std::unexpected("Unknown command `" + cmd + "`.");
 }
 
 }  // namespace ultra::wopr
