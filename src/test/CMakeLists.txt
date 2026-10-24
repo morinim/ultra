@@ -20,6 +20,22 @@ foreach (test_src ${TESTS_SRC})
   endif()
 endforeach()
 
+if (TARGET implot)
+  add_executable(wopr_results
+    wopr/results.cc
+    ../wopr/dashboard.cc
+    ../wopr/gui_helpers.cc
+    ../wopr/imgui_app.cc
+  )
+  target_include_directories(wopr_results SYSTEM PRIVATE
+    ${PROJECT_SOURCE_DIR}/third_party/imgui
+  )
+  target_link_libraries(wopr_results PRIVATE
+    ultra implot SDL3::SDL3 Threads::Threads
+  )
+  add_test(NAME wopr_results COMMAND wopr_results)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   message("libc++ and TSAN, enabling ${PROJECT_SOURCE_DIR}/utility/tsan.supp")
 endif()

@@ -51,7 +51,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_subdirectory(third_party/tinyxml2)
 add_subdirectory(kernel)
 add_subdirectory(examples)
-add_subdirectory(test)
 
 find_package(SDL3 CONFIG COMPONENTS SDL3)
 if (SDL3_FOUND)
@@ -59,3 +58,5 @@ if (SDL3_FOUND)
   add_subdirectory(third_party/implot)
   add_subdirectory(wopr)
 endif()
+
+add_subdirectory(test)

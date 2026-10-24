@@ -107,8 +107,6 @@ struct results_snapshot
   unsigned max_runs {0};
   unsigned max_runs_with_reference {0};
   std::vector<double> success_rates;
-  double best_success_rate {0.0};
-  double best_success_rate_with_reference {0.0};
   fit_data current_fitness;
   fit_data reference_fitness;
   elite_data current_elite;
@@ -284,10 +282,10 @@ results_snapshot::results_snapshot(results_state &state)
     labels.push_back(label);
     capacity_runs.push_back(data.conf.runs);
     runs.push_back(data.current.runs);
-    success_rates.push_back(data.current.success_rate * 100.0);
+    success_rates.push_back(data.current.empty()
+                            ? std::numeric_limits<double>::quiet_NaN()
+                            : data.current.success_rate * 100.0);
     max_runs = std::max({max_runs, data.conf.runs, data.current.runs});
-    best_success_rate = std::max(best_success_rate,
-                                 data.current.success_rate);
     add_fit_data(current_fitness, data.current);
     add_fit_data(reference_fitness, data.reference);
     add_elite_data(current_elite, data.current);
@@ -295,15 +293,14 @@ results_snapshot::results_snapshot(results_state &state)
   }
 
   max_runs_with_reference = max_runs;
-  best_success_rate_with_reference = best_success_rate;
   for (const auto &[_, data] : state.collection)
   {
     runs.push_back(data.reference.runs);
-    success_rates.push_back(data.reference.success_rate * 100.0);
+    success_rates.push_back(data.reference.empty()
+                            ? std::numeric_limits<double>::quiet_NaN()
+                            : data.reference.success_rate * 100.0);
     max_runs_with_reference = std::max(max_runs_with_reference,
                                        data.reference.runs);
-    best_success_rate_with_reference = std::max(
-      best_success_rate_with_reference, data.reference.success_rate);
   }
 
   label_data = to_cstr_vector(labels);
@@ -385,6 +382,37 @@ void render_number_of_runs(const results_snapshot &snapshot)
   ImPlot::EndPlot();
 }
 
+[[nodiscard]] std::string success_rate_tooltip(
+  const results_snapshot &snapshot, std::size_t i, bool show_reference_values)
+{
+  Expects(i < snapshot.labels.size());
+
+  std::string text(snapshot.labels[i]);
+  if (snapshot.runs[i])
+    text += std::format("\nCurrent: {:.1f}% ({} completed runs)",
+                        snapshot.success_rates[i], snapshot.runs[i]);
+  else
+    text += "\nCurrent: awaiting results";
+
+  if (show_reference_values)
+  {
+    const auto reference(snapshot.labels.size() + i);
+    if (snapshot.runs[reference])
+      text += std::format("\nReference: {:.1f}% ({} completed runs)",
+                          snapshot.success_rates[reference],
+                          snapshot.runs[reference]);
+    else
+      text += "\nReference: no reference";
+
+    if (snapshot.runs[i] && snapshot.runs[reference])
+      text += std::format("\nDifference: {:+.1f} percentage points",
+                          snapshot.success_rates[i]
+                          - snapshot.success_rates[reference]);
+  }
+
+  return text;
+}
+
 void render_success_rate(const results_snapshot &snapshot)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
@@ -393,17 +421,15 @@ void render_success_rate(const results_snapshot &snapshot)
   if (!size)
     return;
 
-  static bool show_reference_values {snapshot.references_available};
+  static bool compare_reference {true};
   if (snapshot.references_available)
     ImGui::Checkbox("Reference values##Run##Success rate",
-                    &show_reference_values);
+                    &compare_reference);
+  const bool show_reference_values(snapshot.references_available
+                                   && compare_reference);
   const std::size_t group_count(1 + show_reference_values);
 
-  const double best_success_rate(
-    show_reference_values ? snapshot.best_success_rate_with_reference
-                          : snapshot.best_success_rate);
-
-  int flags(ImPlotFlags_NoTitle);
+  int flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText);
   if (!snapshot.references_available || !show_reference_values)
     flags |= ImPlotFlags_NoLegend;
 
@@ -413,22 +439,52 @@ void render_success_rate(const results_snapshot &snapshot)
   if (show_reference_values)
     ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
 
-  ImPlot::SetupAxes("Dataset", "Success rate");
+  ImPlot::SetupAxes("Dataset", "Success rate", 0, ImPlotAxisFlags_Lock);
 
   constexpr auto padding(0.75);
   ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
   ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.positions.data(), size,
                          snapshot.label_data.data());
 
-  if (best_success_rate > 0.0)
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0,
-                            std::min(100.0, 100.0 * best_success_rate + 5.0),
-                            ImGuiCond_Always);
-  else
-    ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
+  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
+  ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f%%");
 
-  ImPlot::PlotBarGroups(ilabels.data(), snapshot.success_rates.data(),
-                        group_count, size, 0.5);
+  const double bar_width(0.5 / group_count);
+  for (std::size_t series(0); series < group_count; ++series)
+  {
+    std::vector<double> xs, ys;
+    xs.reserve(size);
+    ys.reserve(size);
+    const double shift((series + 0.5) * bar_width - 0.25);
+    for (std::size_t i(0); i < size; ++i)
+    {
+      const auto index(series * size + i);
+      const double x(snapshot.positions[i] + shift);
+      if (snapshot.runs[index])
+      {
+        xs.push_back(x);
+        ys.push_back(snapshot.success_rates[index]);
+      }
+      else
+        ImPlot::PlotText(series ? "N/A" : "Pending", x, 0.0,
+                         ImVec2(0, series ? -26 : -10));
+    }
+    ImPlot::PlotBars(ilabels[series], xs.data(), ys.data(), xs.size(), bar_width);
+  }
+
+  if (ImPlot::IsPlotHovered())
+  {
+    const double x(ImPlot::GetPlotMousePos().x);
+    if (x >= -0.5 && x < size - 0.5)
+    {
+      const auto i(static_cast<std::size_t>(std::floor(x + 0.5)));
+      ImGui::BeginTooltip();
+      const auto text(success_rate_tooltip(snapshot, i, show_reference_values));
+      ImGui::TextUnformatted(text.c_str());
+      ImGui::EndTooltip();
+    }
+  }
+
   ImPlot::EndPlot();
 }
 
