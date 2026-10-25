@@ -161,13 +161,17 @@ void render_dynamic(int monitoring_window)
           dr.best_idx = 0;
         else
         {
-          std::string best_prg;
-          for (std::size_t i(dr.best_prg.size()); i; --i)
-            best_prg += dr.best_prg[i - 1] + std::string(1, '\0');
-
           dr.best_idx = std::clamp(
             dr.best_idx, 0, static_cast<int>(dr.best_prg.size() - 1));
-          ImGui::Combo("Best programs", &dr.best_idx, best_prg.data());
+          ImGui::Combo(
+            "Best programs", &dr.best_idx,
+            [](void *data, int index) -> const char *
+            {
+              const auto &programs(
+                *static_cast<const std::vector<std::string> *>(data));
+              return programs[programs.size() - 1 - index].c_str();
+            },
+            &dr.best_prg, static_cast<int>(dr.best_prg.size()));
         }
 
         ImGui::SameLine();
