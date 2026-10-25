@@ -369,14 +369,6 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
     const std::size_t ind_max(std::ranges::max(lr.individuals));
     const std::size_t parts(std::min<std::size_t>(ind_max, 100));
 
-    std::vector<double> fit;
-    fit.resize(max_layers * parts);
-
-    g.seed(lr.generation);
-
-    const double fit_max(std::ranges::max(lr.fit_max));
-    const double fit_min(std::ranges::min(lr.fit_min));
-
     std::vector<std::string> x_labels(parts);
     x_labels.front() = std::to_string(ind_max);
     x_labels.back() = "1";
@@ -394,30 +386,26 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
     std::ranges::transform(y_labels, y_labels_chr.begin(),
                            [](const auto &str) { return str.data(); });
 
+    g.seed(lr.generation);
+
+    const double fit_max(std::ranges::max(lr.fit_max));
+    const double fit_min(std::ranges::min(lr.fit_min));
+
+    std::vector<double> fit(max_layers * parts, fit_min);
+
     for (std::size_t layer(0); layer < max_layers; ++layer)
     {
-      if (layer < lr.size())
+      degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
+                                            lr.fit_std_dev[layer]);
+
+      const std::size_t full(parts * lr.individuals[layer] / ind_max);
+
+      for (std::size_t p(0); p < full; ++p)
       {
-        degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
-                                              lr.fit_std_dev[layer]);
+        const auto rv(fit_nd(g));
+        const auto pos(layer * parts + p);
 
-        const std::size_t full(parts * lr.individuals[layer] / ind_max);
-
-        for (std::size_t p(0); p < full; ++p)
-        {
-          const auto rv(fit_nd(g));
-          const auto pos(layer * parts + p);
-
-          fit[pos] = std::clamp(rv, lr.fit_min[layer], lr.fit_max[layer]);
-        }
-
-        for (std::size_t p(full); p < parts; ++p)
-          fit[layer * parts + p] = fit_min;
-      }
-      else
-      {
-        for (std::size_t p(0); p < parts; ++p)
-          fit[layer * parts + p] = fit_min;
+        fit[pos] = std::clamp(rv, lr.fit_min[layer], lr.fit_max[layer]);
       }
     }
 
