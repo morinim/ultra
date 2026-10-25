@@ -328,6 +328,62 @@ TEST_CASE_FIXTURE(plot_context, "Time per run plots use a non-negative time axis
   }
 }
 
+TEST_CASE_FIXTURE(plot_context, "Pending timing annotations keep stable visible axes")
+{
+  bool with_reference(false);
+  SUBCASE("No reference results") {}
+  SUBCASE("Reference results hidden") { with_reference = true; }
+
+  auto state(make_state(with_reference, rs::exec_mode::run));
+  for (auto &[label, data] : state.collection)
+    data.current.runs = 0;
+
+  for (unsigned frame(0); frame < 64; ++frame)
+  {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(900, 600));
+    ImGui::Begin("Pending run timings");
+    if (with_reference && (frame == 0 || frame == 60))
+      ImGui::ActivateItemByID(ImGui::GetID("Reference values##Run##Time per run"));
+    if (frame == 40)
+    {
+      state.collection[0].second.current.runs = 1;
+      state.collection[0].second.current.elapsed_time = 5s;
+    }
+    const results_snapshot snapshot(state);
+    render_time_per_run(snapshot);
+
+    const auto *plot(ImPlot::GetPlot("##Time per run##Run"));
+    REQUIRE(plot);
+    if (frame >= 4 && frame < 40)
+    {
+      CHECK((plot->Flags & ImPlotFlags_NoLegend) != 0);
+      const auto &axis(plot->Axes[ImAxis_X1]);
+      CHECK(axis.Range.Min == doctest::Approx(0.0));
+      CHECK(axis.Range.Max == doctest::Approx(1.0));
+
+      const auto text_size(ImGui::CalcTextSize("Pending"));
+      for (std::size_t i(0); i < snapshot.labels.size(); ++i)
+      {
+        const float x(axis.PlotToPixels(0.0) + 35 - text_size.x / 2);
+        const float y(plot->Axes[ImAxis_Y1].PlotToPixels(i) - text_size.y / 2);
+        CHECK(plot->PlotRect.Contains(ImRect(x, y, x + text_size.x,
+                                            y + text_size.y)));
+      }
+    }
+    if (frame >= 42 && frame < 61)
+    {
+      const auto &axis(plot->Axes[ImAxis_X1]);
+      CHECK_FALSE(axis.IsLocked());
+      CHECK(axis.Range.Min == doctest::Approx(0.0));
+      CHECK(axis.Range.Max >= 5.0);
+    }
+
+    ImGui::End();
+    ImGui::Render();
+  }
+}
+
 TEST_CASE_FIXTURE(plot_context, "Run capacity lines stay opaque yellow")
 {
   rs::settings settings;
