@@ -171,20 +171,21 @@ void render_dynamic(int monitoring_window)
           ImPlot::SetupAxes("Generation", "Fit",
                             ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
-          ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
           constexpr const char *avg_stddev("Avg & StdDev");
           ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
                                 get_window(dr.fit_mean),
-                                get_window(dr.fit_std_dev), window);
-          ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+                                get_window(dr.fit_std_dev), window,
+                                {ImPlotProp_LineColor,
+                                 ImPlot::GetColormapColor(1),
+                                 ImPlotProp_Size, 0.0f});
           ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.fit_mean),
-                           window);
+                           window, {ImPlotProp_Marker, ImPlotMarker_Square});
 
           if (show_best)
           {
-            ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
             ImPlot::PlotLine("Best", get_window(xs), get_window(dr.fit_best),
-                             window);
+                             window, {ImPlotProp_LineColor,
+                                      ImPlot::GetColormapColor(2)});
           }
 
           ImPlot::EndPlot();
@@ -208,19 +209,20 @@ void render_dynamic(int monitoring_window)
             ImPlotAxisFlags_AutoFit);
 
           constexpr const char *avg_stddev("Len Avg & StdDev");
-          ImPlot::SetNextErrorBarStyle(ImPlot::GetColormapColor(1), 0);
           ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
                                 get_window(dr.len_mean),
-                                get_window(dr.len_std_dev), window);
-          ImPlot::SetNextMarkerStyle(ImPlotMarker_Square);
+                                get_window(dr.len_std_dev), window,
+                                {ImPlotProp_LineColor,
+                                 ImPlot::GetColormapColor(1),
+                                 ImPlotProp_Size, 0.0f});
           ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.len_mean),
-                           window);
+                           window, {ImPlotProp_Marker, ImPlotMarker_Square});
 
           if (show_longest)
           {
-            ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
             ImPlot::PlotLine("Longest", get_window(xs), get_window(dr.len_max),
-                             window);
+                             window, {ImPlotProp_LineColor,
+                                      ImPlot::GetColormapColor(2)});
           }
 
           ImPlot::EndPlot();
@@ -240,7 +242,6 @@ void render_dynamic(int monitoring_window)
             "Generation", "Crossover spreading",
             ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
-          // ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(2));
           for (const auto &[ct, nums] : dr.crossover_types)
           {
             const std::string type("CT" + std::to_string(ct));
@@ -325,13 +326,12 @@ void render_population()
           ImPlot::SetupAxes("Generation", "Entropy",
                             ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
-          ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
           ImPlot::PlotShaded("Entropy", pr.xs.data(), pr.fit_entropy.data(),
                              pr.xs.size(),
-                             -std::numeric_limits<double>::infinity());
+                             -std::numeric_limits<double>::infinity(),
+                             {ImPlotProp_FillAlpha, 0.25f});
           ImPlot::PlotLine("Entropy", pr.xs.data(), pr.fit_entropy.data(),
                            pr.xs.size());
-          ImPlot::PopStyleVar();
 
           ImPlot::EndPlot();
         }
@@ -490,12 +490,11 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
                         ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
       ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
-      ImPlot::PushStyleVar(ImPlotStyleVar_ErrorBarWeight, 6.0f);
-      ImPlot::PushStyleVar(ImPlotStyleVar_ErrorBarSize, 12.0f);
       ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
                             bottom.data(), top.data(), ys.size(),
-                            ImPlotErrorBarsFlags_Horizontal);
-      ImPlot::PopStyleVar(2);
+                            {ImPlotProp_LineWeight, 6.0f,
+                             ImPlotProp_Size, 12.0f,
+                             ImPlotProp_Flags, ImPlotErrorBarsFlags_Horizontal});
       ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
                           ys.size());
       ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(), ys.size());

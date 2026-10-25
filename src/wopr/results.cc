@@ -375,8 +375,9 @@ void render_number_of_runs(const results_snapshot &snapshot)
 
       const double ys[] = { dcp, dcp };
 
-      ImPlot::SetNextLineStyle(ImVec4(1, 1, 0, 1), 2.5f); // yellow, thick
-      ImPlot::PlotLine("##TotalRuns", xs, ys, 2);
+      ImPlot::PlotLine("##TotalRuns", xs, ys, 2,
+                       {ImPlotProp_LineColor, ImVec4(1, 1, 0, 1),
+                        ImPlotProp_LineWeight, 2.5f});
     }
 
   ImPlot::EndPlot();
@@ -492,9 +493,10 @@ void render_fitness_series(const char *label, const double x, const double mean,
                            const double std_dev, const double best)
 {
   ImPlot::PlotErrorBars(label, &x, &mean, &std_dev, 1);
-  ImPlot::PlotScatter(label, &x, &mean, 1);
-  ImPlot::SetNextMarkerStyle(ImPlotMarker_Up);
-  ImPlot::PlotScatter(label, &x, &best, 1);
+  ImPlot::PlotScatter(label, &x, &mean, 1,
+                      {ImPlotProp_Marker, ImPlotMarker_Circle});
+  ImPlot::PlotScatter(label, &x, &best, 1,
+                      {ImPlotProp_Marker, ImPlotMarker_Up});
 }
 
 void render_fitness_across_datasets(const results_snapshot &snapshot)
@@ -668,12 +670,10 @@ void render_elite(const results_snapshot &snapshot)
 
         auto bar_col(ImPlot::GetColormapColor(1));
         bar_col.w *= 0.7f;
-        ImPlot::PushStyleColor(ImPlotCol_Fill, bar_col);
 
         ImPlot::PlotBars((reference_str + "##ELITE" + labels[i]).c_str(),
-                          fit.data(), fit.size(), 0.4, bar_shift);
-
-        ImPlot::PopStyleColor();
+                          fit.data(), fit.size(), 0.4, bar_shift,
+                          {ImPlotProp_FillColor, bar_col});
 
         auto text_col(ImGui::GetStyleColorVec4(ImGuiCol_Text));
         text_col.w *= 0.55f;

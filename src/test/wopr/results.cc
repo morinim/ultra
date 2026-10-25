@@ -121,6 +121,186 @@ TEST_CASE("Success rate tooltips describe comparisons and missing results")
   CHECK_FALSE(awaiting_text.contains("Difference:"));
 }
 
+TEST_CASE_FIXTURE(plot_context, "Run capacity lines stay opaque yellow")
+{
+  rs::settings settings;
+  settings.runs = 20;
+  rs::collection_t collection;
+  collection.emplace_back("Dataset", rs::data{"", "", settings, {}});
+  collection.back().second.current.runs = 10;
+  results_state state(std::move(collection));
+  const results_snapshot snapshot(state);
+
+  for (unsigned frame(0); frame < 3; ++frame)
+  {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(900, 600));
+    ImGui::Begin("Run counts");
+    render_number_of_runs(snapshot);
+    ImGui::End();
+    ImGui::Render();
+
+    std::vector<ImVec2> line_uvs;
+    for (const auto *list : ImGui::GetDrawData()->CmdLists)
+      for (const auto &vertex : list->VtxBuffer)
+        if (vertex.col == IM_COL32(255, 255, 0, 255))
+          line_uvs.push_back(vertex.uv);
+
+    REQUIRE(line_uvs.size() == 4);
+    const auto *atlas(ImGui::GetIO().Fonts);
+    auto *texture(atlas->TexData);
+    REQUIRE(texture->Format == ImTextureFormat_RGBA32);
+    const int x(static_cast<int>((line_uvs[0].x + line_uvs[2].x)
+                                  * 0.5f * texture->Width));
+    const int y(static_cast<int>((line_uvs[0].y + line_uvs[2].y)
+                                  * 0.5f * texture->Height));
+    REQUIRE(x >= 0);
+    REQUIRE(x < texture->Width);
+    REQUIRE(y >= 0);
+    REQUIRE(y < texture->Height);
+    const auto *pixel(static_cast<const unsigned char *>(
+      texture->GetPixelsAt(x, y)));
+    CHECK(pixel[0] == 255);
+    CHECK(pixel[1] == 255);
+    CHECK(pixel[2] == 255);
+    CHECK(pixel[3] == 255);
+  }
+}
+
+TEST_CASE_FIXTURE(plot_context, "Uniform heatmaps render with either axis direction")
+{
+  for (const auto x_flags : {ImPlotAxisFlags_None, ImPlotAxisFlags_Invert})
+    for (const auto y_flags : {ImPlotAxisFlags_None, ImPlotAxisFlags_Invert})
+    {
+      ImGui::NewFrame();
+      ImGui::SetNextWindowSize(ImVec2(900, 600));
+      ImGui::Begin("Uniform fitness");
+      if (ImPlot::BeginPlot("Heatmap"))
+      {
+        ImPlot::SetupAxes(nullptr, nullptr, x_flags, y_flags);
+        ImPlot::SetupAxesLimits(0, 1, 0, 1, ImPlotCond_Always);
+        ImPlot::SetupFinish();
+
+        const double values[] = {1, 1, 1, 1};
+        auto *draw_list(ImPlot::GetPlotDrawList());
+        const int start(draw_list->VtxBuffer.Size);
+        ImPlot::PlotHeatmap("Fitness", values, 2, 2, 1, 1, nullptr);
+        CHECK(draw_list->VtxBuffer.Size > start);
+        ImPlot::EndPlot();
+      }
+      else
+        FAIL("Heatmap plot is not visible");
+      ImGui::End();
+      ImGui::Render();
+    }
+}
+
+TEST_CASE_FIXTURE(plot_context, "Mean and best fitness markers stay distinct")
+{
+  int first_mean_count(0);
+  for (unsigned frame(0); frame < 3; ++frame)
+  {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(900, 600));
+    ImGui::Begin("Fitness markers");
+    if (ImPlot::BeginPlot("Fitness"))
+    {
+      ImPlot::SetupAxesLimits(0, 2, 0, 4, ImPlotCond_Always);
+      ImPlot::SetupFinish();
+
+      auto *draw_list(ImPlot::GetPlotDrawList());
+      const int start(draw_list->VtxBuffer.Size);
+      render_fitness_series("Current", 1, 1, 0.25, 3);
+      const auto colour(ImPlot::GetItem("Current")->Color);
+      const float middle_y(ImPlot::PlotToPixels(1, 2).y);
+      int mean_count(0), best_count(0);
+      for (int i(start); i < draw_list->VtxBuffer.Size; ++i)
+        if (const auto &vertex(draw_list->VtxBuffer[i]); vertex.col == colour)
+        {
+          if (vertex.pos.y > middle_y)
+            ++mean_count;
+          else
+            ++best_count;
+        }
+      CHECK(best_count > 0);
+      CHECK(mean_count > best_count);
+      if (!frame)
+        first_mean_count = mean_count;
+      CHECK(mean_count == first_mean_count);
+      ImPlot::EndPlot();
+    }
+    else
+      FAIL("Fitness plot is not visible");
+    ImGui::End();
+    ImGui::Render();
+  }
+}
+
+TEST_CASE_FIXTURE(plot_context, "Plot fills apply opacity once")
+{
+  unsigned item(0);
+  SUBCASE("Shaded region") { item = 0; }
+  SUBCASE("Shaded line")   { item = 1; }
+  SUBCASE("Shaded stairs") { item = 2; }
+  SUBCASE("Bars")          { item = 3; }
+  SUBCASE("Horizontal bars") { item = 4; }
+  SUBCASE("Pre-step shaded stairs") { item = 5; }
+
+  for (const bool per_point : {false, true})
+  {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(900, 600));
+    ImGui::Begin("Fill opacity");
+    if (ImPlot::BeginPlot("Fill"))
+    {
+      ImPlot::SetupAxesLimits(-1, 3, -1, 3);
+      ImPlot::SetupFinish();
+      const double xs[] = {0, 1, 2}, ys[] = {1, 2, 1};
+      ImU32 colours[] = {IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_WHITE};
+      ImPlotSpec spec(ImPlotProp_FillColor, ImVec4(1, 1, 1, 1),
+                      ImPlotProp_FillAlpha, 0.25f,
+                      ImPlotProp_LineWeight, 0.0f);
+      if (per_point)
+        spec.FillColors = colours;
+      auto *draw_list(ImPlot::GetPlotDrawList());
+      const int start(draw_list->VtxBuffer.Size);
+      switch (item)
+      {
+      case 0:
+        ImPlot::PlotShaded("Fill", xs, ys, 3, 0, spec);
+        break;
+      case 1:
+        spec.Flags = ImPlotLineFlags_Shaded;
+        ImPlot::PlotLine("Fill", xs, ys, 3, spec);
+        break;
+      case 2:
+        spec.Flags = ImPlotStairsFlags_Shaded;
+        ImPlot::PlotStairs("Fill", xs, ys, 3, spec);
+        break;
+      case 3:
+        ImPlot::PlotBars("Fill", xs, ys, 3, 0.5, spec);
+        break;
+      case 4:
+        spec.Flags = ImPlotBarsFlags_Horizontal;
+        ImPlot::PlotBars("Fill", xs, ys, 3, 0.5, spec);
+        break;
+      case 5:
+        spec.Flags = ImPlotStairsFlags_Shaded | ImPlotStairsFlags_PreStep;
+        ImPlot::PlotStairs("Fill", xs, ys, 3, spec);
+        break;
+      }
+      REQUIRE(draw_list->VtxBuffer.Size > start);
+      for (int i(start); i < draw_list->VtxBuffer.Size; ++i)
+        CHECK(draw_list->VtxBuffer[i].col == IM_COL32(255, 255, 255, 64));
+      ImPlot::EndPlot();
+    }
+    else
+      FAIL("Fill plot is not visible");
+    ImGui::End();
+    ImGui::Render();
+  }
+}
+
 TEST_CASE_FIXTURE(plot_context, "Success rate scale stays at zero to 100 percent")
 {
   for (const bool with_reference : {true, false})
