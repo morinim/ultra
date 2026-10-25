@@ -279,32 +279,14 @@ layers_line::layers_line(const std::string &line) : new_run(line.empty())
   }
 }
 
-bool layers_sequence::empty() const noexcept
+bool layers_line::empty() const noexcept
 {
   return age_sup.empty();
 }
 
-std::size_t layers_sequence::size() const noexcept
+std::size_t layers_line::size() const noexcept
 {
   return age_sup.size();
-}
-
-void layers_sequence::update(layers_line &ld)
-{
-  generation = ld.generation;
-
-  age_sup = std::move(ld.age_sup);
-  age_mean = std::move(ld.age_mean);
-  age_std_dev = std::move(ld.age_std_dev);
-  age_min = std::move(ld.age_min);
-  age_max = std::move(ld.age_max);
-
-  fit_mean = std::move(ld.fit_mean);
-  fit_std_dev = std::move(ld.fit_std_dev);
-  fit_min = std::move(ld.fit_min);
-  fit_max = std::move(ld.fit_max);
-
-  individuals = std::move(ld.individuals);
 }
 
 }  // namespace ultra::wopr

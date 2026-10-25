@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -344,7 +345,7 @@ void render_population()
   }
 }
 
-void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
+void render_layers_fit(const std::vector<layers_line> &layers_runs)
 {
   static std::minstd_rand g;
 
@@ -439,7 +440,7 @@ void render_layers_fit(const std::vector<layers_sequence> &layers_runs)
   }
 }
 
-void render_layers_age(const std::vector<layers_sequence> &layers_runs)
+void render_layers_age(const std::vector<layers_line> &layers_runs)
 {
   const float avail(ImGui::GetContentRegionAvail().y * 0.90f);
 
@@ -504,7 +505,7 @@ void render_layers_age(const std::vector<layers_sequence> &layers_runs)
 enum class layer_info {age, fitness};
 void render_layers(layer_info li)
 {
-  static std::vector<layers_sequence> layers_runs;
+  static std::vector<layers_line> layers_runs;
 
   while (auto data = layers_queue.try_pop())
   {
@@ -519,7 +520,7 @@ void render_layers(layer_info li)
       if (layers_runs.empty())  // just to land on one's feet
         layers_runs.push_back({});
 
-      layers_runs.back().update(*data);
+      layers_runs.back() = std::move(*data);
     }
   }
 

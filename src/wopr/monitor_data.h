@@ -106,6 +106,7 @@ struct population_sequence
 
 struct layers_line
 {
+  layers_line() = default;
   explicit layers_line(const std::string &);
 
   bool new_run {false};
@@ -123,29 +124,9 @@ struct layers_line
   std::vector<double> fit_max {};
 
   std::vector<std::size_t> individuals {};
-};
-
-struct layers_sequence
-{
-  std::vector<ultra::individual::age_t> age_sup {};
-  std::vector<double> age_mean {};
-  std::vector<double> age_std_dev {};
-  std::vector<ultra::individual::age_t> age_min {};
-  std::vector<ultra::individual::age_t> age_max {};
-
-  std::vector<double> fit_mean {};
-  std::vector<double> fit_std_dev {};
-  std::vector<double> fit_min {};
-  std::vector<double> fit_max {};
-
-  std::vector<std::size_t> individuals {};
-
-  unsigned generation {0};
 
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
-
-  void update(layers_line &);
 };
 
 }  // namespace ultra::wopr
