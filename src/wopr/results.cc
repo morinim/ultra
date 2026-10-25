@@ -115,16 +115,20 @@ struct results_snapshot
 
 bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
 {
-  if (doc.LoadFile(xml_fn.c_str()) != tinyxml2::XML_SUCCESS
-      || !doc.FirstChild())
+  std::ifstream in(xml_fn, std::ios::binary);
+  if (!in)
     return false;
 
-  std::ifstream in(xml_fn, std::ios::binary);
   std::ostringstream ss;
-  ss << in.rdbuf();
+  if (!(ss << in.rdbuf()))
+    return false;
+
   const std::string xml_content(ss.str());
 
-  return ultra::crc32::verify_xml_signature(xml_content);
+  return ultra::crc32::verify_xml_signature(xml_content)
+         && doc.Parse(xml_content.data(), xml_content.size())
+            == tinyxml2::XML_SUCCESS
+         && doc.FirstChild();
 }
 
 summary_data::summary_data(const fs::path &path)

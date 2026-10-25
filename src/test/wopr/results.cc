@@ -66,6 +66,56 @@ struct plot_context
 TEST_SUITE("WOPR RESULTS")
 {
 
+TEST_CASE("Summary files require valid XML and matching checksums")
+{
+  const fs::path path("wopr_summary_check.xml");
+  struct cleanup
+  {
+    const fs::path &path;
+    ~cleanup()
+    {
+      std::error_code error;
+      fs::remove(path, error);
+    }
+  } guard{path};
+
+  std::string xml(ultra::crc32::embed_xml_signature(
+    "<ultra><summary><runs>2</runs><best><code>x &lt; y</code></best>"
+    "</summary><checksum>00000000</checksum></ultra>"));
+  bool valid(false);
+  bool missing(false);
+
+  SUBCASE("Valid summary") { valid = true; }
+  SUBCASE("Tampered summary") { xml.replace(xml.find("<runs>2"), 7, "<runs>3"); }
+  SUBCASE("Missing checksum") { xml = "<ultra><summary/></ultra>"; }
+  SUBCASE("Malformed XML with a valid checksum")
+  {
+    xml = ultra::crc32::embed_xml_signature(
+      "<ultra><summary></ultra><checksum>00000000</checksum>");
+  }
+  SUBCASE("Empty file") { xml.clear(); }
+  SUBCASE("Missing file") { missing = true; }
+
+  if (missing)
+    fs::remove(path);
+  else
+  {
+    std::ofstream out(path, std::ios::binary);
+    REQUIRE(out);
+    out << xml;
+    REQUIRE(out);
+  }
+
+  tinyxml2::XMLDocument doc;
+  CHECK(summary_data::check(path, doc) == valid);
+  if (valid)
+  {
+    const summary_data summary(doc);
+    CHECK(summary.runs == 2);
+    CHECK(summary.best_prg == "x < y");
+  }
+}
+
 TEST_CASE("Missing success rates remain distinct from measured zero")
 {
   auto state(make_state());
