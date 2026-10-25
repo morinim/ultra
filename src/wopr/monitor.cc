@@ -116,6 +116,22 @@ void drain_runs(ultra::ts_queue<Data> &queue, std::vector<Run> &runs,
   }
 }
 
+void render_dynamic_series(const char *mean_label, const char *max_label,
+                           const double *xs, const double *mean,
+                           const double *std_dev, const double *max,
+                           std::size_t count, bool show_max)
+{
+  ImPlot::PlotErrorBars(mean_label, xs, mean, std_dev, count,
+                        {ImPlotProp_LineColor, ImPlot::GetColormapColor(1),
+                         ImPlotProp_Size, 0.0f});
+  ImPlot::PlotLine(mean_label, xs, mean, count,
+                   {ImPlotProp_Marker, ImPlotMarker_Square});
+
+  if (show_max)
+    ImPlot::PlotLine(max_label, xs, max, count,
+                     {ImPlotProp_LineColor, ImPlot::GetColormapColor(2)});
+}
+
 void render_dynamic(int monitoring_window)
 {
   static std::vector<dynamic_sequence> dynamic_runs;
@@ -185,22 +201,10 @@ void render_dynamic(int monitoring_window)
           ImPlot::SetupAxes("Generation", "Fit",
                             ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
-          constexpr const char *avg_stddev("Avg & StdDev");
-          ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
-                                get_window(dr.fit_mean),
-                                get_window(dr.fit_std_dev), window,
-                                {ImPlotProp_LineColor,
-                                 ImPlot::GetColormapColor(1),
-                                 ImPlotProp_Size, 0.0f});
-          ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.fit_mean),
-                           window, {ImPlotProp_Marker, ImPlotMarker_Square});
-
-          if (show_best)
-          {
-            ImPlot::PlotLine("Best", get_window(xs), get_window(dr.fit_best),
-                             window, {ImPlotProp_LineColor,
-                                      ImPlot::GetColormapColor(2)});
-          }
+          render_dynamic_series(
+            "Avg & StdDev", "Best", get_window(xs), get_window(dr.fit_mean),
+            get_window(dr.fit_std_dev), get_window(dr.fit_best),
+            window, show_best);
 
           ImPlot::EndPlot();
         }
@@ -222,22 +226,10 @@ void render_dynamic(int monitoring_window)
             ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
             ImPlotAxisFlags_AutoFit);
 
-          constexpr const char *avg_stddev("Len Avg & StdDev");
-          ImPlot::PlotErrorBars(avg_stddev, get_window(xs),
-                                get_window(dr.len_mean),
-                                get_window(dr.len_std_dev), window,
-                                {ImPlotProp_LineColor,
-                                 ImPlot::GetColormapColor(1),
-                                 ImPlotProp_Size, 0.0f});
-          ImPlot::PlotLine(avg_stddev, get_window(xs), get_window(dr.len_mean),
-                           window, {ImPlotProp_Marker, ImPlotMarker_Square});
-
-          if (show_longest)
-          {
-            ImPlot::PlotLine("Longest", get_window(xs), get_window(dr.len_max),
-                             window, {ImPlotProp_LineColor,
-                                      ImPlot::GetColormapColor(2)});
-          }
+          render_dynamic_series(
+            "Len Avg & StdDev", "Longest", get_window(xs),
+            get_window(dr.len_mean), get_window(dr.len_std_dev),
+            get_window(dr.len_max), window, show_longest);
 
           ImPlot::EndPlot();
         }
