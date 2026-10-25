@@ -93,26 +93,35 @@ struct id_scope
   id_scope &operator=(const id_scope &) = delete;
 };
 
-void render_dynamic(int monitoring_window)
+/// Drains available log entries, separating runs at empty lines.
+template<class Data, class Run, class Update>
+void drain_runs(ultra::ts_queue<Data> &queue, std::vector<Run> &runs,
+                Update update)
 {
-  static std::vector<dynamic_sequence> dynamic_runs;
-
-  while (const auto data = dynamic_queue.try_pop())
+  while (auto data = queue.try_pop())
   {
     if (data->new_run)
     {
       // Skip multiple empty lines.
-      if (dynamic_runs.empty() || !dynamic_runs.back().empty())
-        dynamic_runs.push_back({});
+      if (runs.empty() || !runs.back().empty())
+        runs.push_back({});
     }
     else
     {
-      if (dynamic_runs.empty())  // just to land on one's feet
-        dynamic_runs.push_back({});
+      if (runs.empty())
+        runs.push_back({});
 
-      dynamic_runs.back().push_back(*data);
+      update(runs.back(), *data);
     }
   }
+}
+
+void render_dynamic(int monitoring_window)
+{
+  static std::vector<dynamic_sequence> dynamic_runs;
+
+  drain_runs(dynamic_queue, dynamic_runs,
+             [](auto &run, const auto &data) { run.push_back(data); });
 
   static bool show_best(true);
   static bool show_longest(true);
@@ -265,22 +274,8 @@ void render_population()
 {
   static std::vector<population_sequence> population_runs;
 
-  while (auto data = population_queue.try_pop())
-  {
-    if (data->new_run)
-    {
-      // Skip multiple empty lines.
-      if (population_runs.empty() || !population_runs.back().empty())
-        population_runs.push_back({});
-    }
-    else
-    {
-      if (population_runs.empty())  // just to land on one's feet
-        population_runs.push_back({});
-
-      population_runs.back().update(*data);
-    }
-  }
+  drain_runs(population_queue, population_runs,
+             [](auto &run, auto &data) { run.update(data); });
 
   const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
 
@@ -507,22 +502,8 @@ void render_layers(layer_info li)
 {
   static std::vector<layers_line> layers_runs;
 
-  while (auto data = layers_queue.try_pop())
-  {
-    if (data->new_run)
-    {
-      // Skip multiple empty lines.
-      if (layers_runs.empty() || !layers_runs.back().empty())
-        layers_runs.push_back({});
-    }
-    else
-    {
-      if (layers_runs.empty())  // just to land on one's feet
-        layers_runs.push_back({});
-
-      layers_runs.back() = std::move(*data);
-    }
-  }
+  drain_runs(layers_queue, layers_runs,
+             [](auto &run, auto &data) { run = std::move(data); });
 
   if (li == layer_info::age)
     render_layers_age(layers_runs);
