@@ -21,6 +21,10 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-06: Fixed querying framebuffer scale when using Metal. (#5592)
+//  2026-07-15: Inputs: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support on Android/mobile. (#7636, #9474)
+//  2026-04-16: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value and this breaks scaling border size. (#9369)
+//  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL2_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
 //  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_MOUSEMOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
@@ -30,7 +34,7 @@
 //  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
-//  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
+//  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
 //  2025-02-24: Avoid calling SDL_GetGlobalMouseState() when mouse is in relative mode.
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-02-10: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn handler.
@@ -132,9 +136,17 @@
 #endif
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
+#if defined(__APPLE__)
+#define SDL_HAS_METAL                       SDL_VERSION_ATLEAST(2,0,14)
+#else
+#define SDL_HAS_METAL                       0
+#endif
 #define SDL_HAS_OPEN_URL                    SDL_VERSION_ATLEAST(2,0,14)
 #if SDL_HAS_VULKAN
 #include <SDL_vulkan.h>
+#endif
+#if SDL_HAS_METAL
+#include <SDL_metal.h>
 #endif
 
 // SDL Data
@@ -145,7 +157,8 @@ struct ImGui_ImplSDL2_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
-    char                    BackendPlatformName[48];
+    char                    BackendPlatformName[64];
+    bool                    IsWayland;
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -154,7 +167,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MouseLastLeaveFrame;
     bool                    MouseCanUseGlobalState;
-    bool                    MouseCanUseCapture;
+    ImGui_ImplSDL2_MouseCaptureMode MouseCaptureMode;
 
     // Gamepad handling
     ImVector<SDL_GameController*> Gamepads;
@@ -202,6 +215,18 @@ static void ImGui_ImplSDL2_PlatformSetImeData(ImGuiContext*, ImGuiViewport*, ImG
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
+
+#ifdef __ANDROID__
+        // SDL_StartTextInput() is needed on Android (and some other platforms) to show the on-screen keyboard. (#7636, #9474, #6306)
+        // It was removed in a7703fe6 due to concerns about its relation to desktop IME, but is required on mobile.
+        SDL_StartTextInput();
+#endif
+    }
+    else
+    {
+#ifdef __ANDROID__
+        SDL_StopTextInput();
+#endif
     }
 }
 
@@ -497,11 +522,12 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     SDL_version ver_runtime;
     SDL_VERSION(&ver_compiled);
     SDL_GetVersion(&ver_runtime);
+    const char* sdl_video_driver = SDL_GetCurrentVideoDriver();
 
     // Setup backend capabilities flags
     ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
-    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u)",
-        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch);
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u) (%s)",
+        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch, sdl_video_driver);
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
@@ -510,17 +536,20 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
+    bd->IsWayland = strcmp(sdl_video_driver, "Wayland") == 0;
 
     // Check and store if we are on a SDL backend that supports SDL_GetGlobalMouseState() and SDL_CaptureMouse()
     // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
     bd->MouseCanUseGlobalState = false;
-    bd->MouseCanUseCapture = false;
+    bd->MouseCaptureMode = ImGui_ImplSDL2_MouseCaptureMode_Disabled;
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    const char* sdl_backend = SDL_GetCurrentVideoDriver();
     const char* capture_and_global_state_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
     for (const char* item : capture_and_global_state_whitelist)
-        if (strncmp(sdl_backend, item, strlen(item)) == 0)
-            bd->MouseCanUseGlobalState = bd->MouseCanUseCapture = true;
+        if (strncmp(sdl_video_driver, item, strlen(item)) == 0)
+        {
+            bd->MouseCanUseGlobalState = true;
+            bd->MouseCaptureMode = (strcmp(item, "x11") == 0) ? ImGui_ImplSDL2_MouseCaptureMode_EnabledAfterDrag : ImGui_ImplSDL2_MouseCaptureMode_Enabled;
+        }
 #endif
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -650,6 +679,14 @@ void ImGui_ImplSDL2_Shutdown()
     IM_DELETE(bd);
 }
 
+void ImGui_ImplSDL2_SetMouseCaptureMode(ImGui_ImplSDL2_MouseCaptureMode mode)
+{
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    if (mode == ImGui_ImplSDL2_MouseCaptureMode_Disabled && bd->MouseCaptureMode != ImGui_ImplSDL2_MouseCaptureMode_Disabled)
+        SDL_CaptureMouse(SDL_FALSE);
+    bd->MouseCaptureMode = mode;
+}
+
 static void ImGui_ImplSDL2_UpdateMouseData()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -658,8 +695,12 @@ static void ImGui_ImplSDL2_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
-    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
-    if (bd->MouseCanUseCapture)
+    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue on X11 we we wait until mouse has moved to begin capture.
+    if (bd->MouseCaptureMode == ImGui_ImplSDL2_MouseCaptureMode_Enabled)
+    {
+        SDL_CaptureMouse((bd->MouseButtonsDown != 0) ? SDL_TRUE : SDL_FALSE);
+    }
+    else if (bd->MouseCaptureMode == ImGui_ImplSDL2_MouseCaptureMode_EnabledAfterDrag)
     {
         bool want_capture = false;
         for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
@@ -732,6 +773,7 @@ float ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window)
     return ImGui_ImplSDL2_GetContentScaleForDisplay(SDL_GetWindowDisplayIndex(window));
 }
 
+// SDL_GetDisplayDPI() seems rather unreliable on Linux.
 float ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index)
 {
     const char* sdl_driver = SDL_GetCurrentVideoDriver();
@@ -741,7 +783,11 @@ float ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index)
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
     float dpi = 0.0f;
     if (SDL_GetDisplayDPI(display_index, &dpi, nullptr, nullptr) == 0)
+    {
+        if (dpi < 96.0f)
+            dpi = 96.0f;
         return dpi / 96.0f;
+    }
 #endif
 #endif
     IM_UNUSED(display_index);
@@ -863,12 +909,16 @@ static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, 
     else if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
         SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
 #endif
+#if SDL_HAS_METAL
+    else if (SDL_GetWindowFlags(window) & SDL_WINDOW_METAL)
+        SDL_Metal_GetDrawableSize(window, &display_w, &display_h);
+#endif
     else
         SDL_GL_GetDrawableSize(window, &display_w, &display_h);
     if (out_size != nullptr)
         *out_size = ImVec2((float)w, (float)h);
     if (out_framebuffer_scale != nullptr)
-        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / w, (float)display_h / h) : ImVec2(1.0f, 1.0f);
+        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / (float)w, (float)display_h / (float)h) : ImVec2(1.0f, 1.0f);
 }
 
 void ImGui_ImplSDL2_NewFrame()
@@ -886,7 +936,7 @@ void ImGui_ImplSDL2_NewFrame()
     Uint64 current_time = SDL_GetPerformanceCounter();
     if (current_time <= bd->Time)
         current_time = bd->Time + 1;
-    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
+    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / (double)frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
     if (bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)

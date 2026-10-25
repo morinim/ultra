@@ -3,20 +3,22 @@
 // (Please note that WebGPU is a recent API, may not be supported by all browser, and its ecosystem is generally a mess)
 
 // When targeting native platforms:
-//  - One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU *must* be provided.
+//  - One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN, IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_WGVK *must* be provided.
 // When targeting Emscripten:
-//  - We now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN is Emscripten version is 4.0.10+, which correspond to using Emscripten '--use-port=emdawnwebgpu'.
+//  - We now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN and requires Emscripten 4.0.10+, which correspond to using Emscripten '--use-port=emdawnwebgpu'.
+//  - Emscripten < 4.0.10 is not supported anymore (old '-sUSE_WEBGPU=1' option).
 //  - We can still define IMGUI_IMPL_WEBGPU_BACKEND_WGPU to use Emscripten '-s USE_WEBGPU=1' which is marked as obsolete by Emscripten.
 // Add #define to your imconfig.h file, or as a compilation flag in your build system.
 // This requirement may be removed once WebGPU stabilizes and backends converge on a unified interface.
 //#define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 //#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
+//#define IMGUI_IMPL_WEBGPU_BACKEND_WGVK
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Texture updates support for dynamic font system (ImGuiBackendFlags_RendererHasTextures).
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplWGPU_GetRenderState().
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -33,11 +35,7 @@
 // Setup Emscripten default if not specified.
 #if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #include <emscripten/version.h>
-#if (__EMSCRIPTEN_major__ >= 4) && (__EMSCRIPTEN_minor__ >= 0) && (__EMSCRIPTEN_tiny__ >= 10)
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-#else
-#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
-#endif
 #endif
 
 #include <webgpu/webgpu.h>
@@ -83,6 +81,7 @@ struct ImGui_ImplWGPU_RenderState
     WGPUDevice                  Device;
     WGPURenderPassEncoder       RenderPassEncoder;
 };
+IMGUI_IMPL_API ImGui_ImplWGPU_RenderState* ImGui_ImplWGPU_GetRenderState();
 
 //-------------------------------------------------------------------------
 // Internal Helpers
@@ -97,10 +96,9 @@ bool        ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextur
 void        ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter);
 const char* ImGui_ImplWGPU_GetBackendTypeName(WGPUBackendType type);
 const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type);
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type);
 const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type);
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
 #endif
 

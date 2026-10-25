@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL3_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
 //  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
 //  2025-11-05: Fixed an issue with missing characters events when an already active text field changes viewports. (#9054)
 //  2025-10-22: Fixed Platform_OpenInShellFn() return value (unused in core).
@@ -32,7 +33,7 @@
 //  2025-03-30: Update for SDL3 api changes: Revert SDL_GetClipboardText() memory ownership change. (#8530, #7801)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
-//  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
+//  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
 //  2025-02-24: Avoid calling SDL_GetGlobalMouseState() when mouse is in relative mode.
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-02-10: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn handler.
@@ -110,7 +111,8 @@ struct ImGui_ImplSDL3_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
-    char                    BackendPlatformName[48];
+    char                    BackendPlatformName[64];
+    bool                    IsWayland;
 
     // IME handling
     SDL_Window*             ImeWindow;
@@ -124,7 +126,7 @@ struct ImGui_ImplSDL3_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MousePendingLeaveFrame;
     bool                    MouseCanUseGlobalState;
-    bool                    MouseCanUseCapture;
+    ImGui_ImplSDL3_MouseCaptureMode MouseCaptureMode;
 
     // Gamepad handling
     ImVector<SDL_Gamepad*>      Gamepads;
@@ -501,11 +503,13 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     //SDL_SetHint(SDL_HINT_EVENT_LOGGING, "2");
 
     const int ver_linked = SDL_GetVersion();
+    const char* sdl_video_driver = SDL_GetCurrentVideoDriver();
 
     // Setup backend capabilities flags
     ImGui_ImplSDL3_Data* bd = IM_NEW(ImGui_ImplSDL3_Data)();
-    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl3 (%d.%d.%d; %d.%d.%d)",
-        SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION, SDL_VERSIONNUM_MAJOR(ver_linked), SDL_VERSIONNUM_MINOR(ver_linked), SDL_VERSIONNUM_MICRO(ver_linked));
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl3 (%d.%d.%d; %d.%d.%d) (%s)",
+        SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION, SDL_VERSIONNUM_MAJOR(ver_linked), SDL_VERSIONNUM_MINOR(ver_linked), SDL_VERSIONNUM_MICRO(ver_linked),
+        sdl_video_driver);
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
@@ -514,17 +518,20 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
+    bd->IsWayland = strcmp(sdl_video_driver, "wayland") == 0;
 
     // Check and store if we are on a SDL backend that supports SDL_GetGlobalMouseState() and SDL_CaptureMouse()
     // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
     bd->MouseCanUseGlobalState = false;
-    bd->MouseCanUseCapture = false;
+    bd->MouseCaptureMode = ImGui_ImplSDL3_MouseCaptureMode_Disabled;
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    const char* sdl_backend = SDL_GetCurrentVideoDriver();
     const char* capture_and_global_state_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
     for (const char* item : capture_and_global_state_whitelist)
-        if (strncmp(sdl_backend, item, strlen(item)) == 0)
-            bd->MouseCanUseGlobalState = bd->MouseCanUseCapture = true;
+        if (strncmp(sdl_video_driver, item, strlen(item)) == 0)
+        {
+            bd->MouseCanUseGlobalState = true;
+            bd->MouseCaptureMode = (strcmp(item, "x11") == 0) ? ImGui_ImplSDL3_MouseCaptureMode_EnabledAfterDrag : ImGui_ImplSDL3_MouseCaptureMode_Enabled;
+        }
 #endif
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -629,6 +636,14 @@ void ImGui_ImplSDL3_Shutdown()
     IM_DELETE(bd);
 }
 
+void ImGui_ImplSDL3_SetMouseCaptureMode(ImGui_ImplSDL3_MouseCaptureMode mode)
+{
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+    if (mode == ImGui_ImplSDL3_MouseCaptureMode_Disabled && bd->MouseCaptureMode != ImGui_ImplSDL3_MouseCaptureMode_Disabled)
+        SDL_CaptureMouse(false);
+    bd->MouseCaptureMode = mode;
+}
+
 static void ImGui_ImplSDL3_UpdateMouseData()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -637,8 +652,12 @@ static void ImGui_ImplSDL3_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_EVENT_MOUSE_MOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
-    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
-    if (bd->MouseCanUseCapture)
+    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue on X11 we we wait until mouse has moved to begin capture.
+    if (bd->MouseCaptureMode == ImGui_ImplSDL3_MouseCaptureMode_Enabled)
+    {
+        SDL_CaptureMouse(bd->MouseButtonsDown != 0);
+    }
+    else if (bd->MouseCaptureMode == ImGui_ImplSDL3_MouseCaptureMode_EnabledAfterDrag)
     {
         bool want_capture = false;
         for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
@@ -670,8 +689,8 @@ static void ImGui_ImplSDL3_UpdateMouseData()
             int window_x, window_y;
             SDL_GetGlobalMouseState(&mouse_x, &mouse_y);
             SDL_GetWindowPosition(focused_window, &window_x, &window_y);
-            mouse_x -= window_x;
-            mouse_y -= window_y;
+            mouse_x -= (float)window_x;
+            mouse_y -= (float)window_y;
             io.AddMousePosEvent(mouse_x, mouse_y);
         }
     }
@@ -844,7 +863,7 @@ void ImGui_ImplSDL3_NewFrame()
     Uint64 current_time = SDL_GetPerformanceCounter();
     if (current_time <= bd->Time)
         current_time = bd->Time + 1;
-    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
+    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / (double)frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
     if (bd->MousePendingLeaveFrame && bd->MousePendingLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
