@@ -121,6 +121,7 @@ struct options
 {
   collection_t collection {};
   bool imgui_demo {false};
+  exec_mode mode {exec_mode::summary};
 };
 
 void start(const imgui_app::program::settings &, options);

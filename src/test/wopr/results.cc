@@ -23,20 +23,29 @@ namespace
 
 using namespace ultra::wopr;
 
-[[nodiscard]] results_state make_state(bool with_reference = true)
+[[nodiscard]] results_state make_state(
+  bool with_reference = true, rs::exec_mode mode = rs::exec_mode::summary,
+  bool with_threshold = false)
 {
   summary_data reference;
   reference.runs = with_reference ? 20 : 0;
   reference.success_rate = 0.5;
+  reference.elapsed_time = 90s;
+
+  rs::settings settings;
+  settings.runs = 20;
+  if (with_threshold)
+    settings.threshold.fitness = 0.0;
 
   rs::collection_t collection;
-  collection.emplace_back("Measured", rs::data{"", "", {}, reference});
+  collection.emplace_back("Measured", rs::data{"", "", settings, reference});
   collection.back().second.current.runs = 10;
   collection.back().second.current.success_rate = 0.2;
+  collection.back().second.current.elapsed_time = 12500ms;
   collection.emplace_back("Pending", rs::data{"", "", {}, {}});
   collection.emplace_back("Zero", rs::data{"", "", {}, reference});
   collection.back().second.current.runs = 5;
-  return results_state(std::move(collection));
+  return results_state(std::move(collection), mode);
 }
 
 struct plot_context
@@ -169,6 +178,154 @@ TEST_CASE("Success rate tooltips describe comparisons and missing results")
   CHECK(awaiting_text.contains("Current: awaiting results"));
   CHECK(awaiting_text.contains("Reference: 50.0% (20 completed runs)"));
   CHECK_FALSE(awaiting_text.contains("Difference:"));
+}
+
+TEST_CASE("Runs without success thresholds use time per completed run")
+{
+  const auto check([](rs::exec_mode mode, bool with_threshold)
+  {
+    auto state(make_state(true, mode, with_threshold));
+    const results_snapshot snapshot(state);
+
+    CHECK(snapshot.show_success_rate
+          == (mode == rs::exec_mode::summary || with_threshold));
+    REQUIRE(snapshot.time_per_run.size() == 6);
+    CHECK(snapshot.time_per_run[0] == doctest::Approx(1.25));
+    CHECK(std::isnan(snapshot.time_per_run[1]));
+    CHECK(snapshot.time_per_run[2] == doctest::Approx(0.0));
+    CHECK(snapshot.time_per_run[3] == doctest::Approx(4.5));
+    CHECK(std::isnan(snapshot.time_per_run[4]));
+
+    if (mode == rs::exec_mode::run && with_threshold)
+    {
+      CHECK(snapshot.success_thresholds[0]);
+      CHECK_FALSE(snapshot.success_thresholds[2]);
+      CHECK(success_rate_tooltip(snapshot, 2, true)
+            .contains("No success threshold defined"));
+    }
+  });
+
+  check(rs::exec_mode::run, false);
+  check(rs::exec_mode::run, true);
+  check(rs::exec_mode::summary, false);
+
+  rs::settings settings;
+  settings.threshold.accuracy = 0.9;
+  rs::collection_t collection;
+  collection.emplace_back("Accuracy", rs::data{"", "", settings, {}});
+  results_state state(std::move(collection), rs::exec_mode::run);
+  CHECK(results_snapshot(state).show_success_rate);
+}
+
+TEST_CASE("Time per run tooltips describe timings and pending results")
+{
+  auto state(make_state());
+  const results_snapshot snapshot(state);
+
+  const auto measured(time_per_run_tooltip(snapshot, 0, true));
+  CHECK(measured.starts_with("Measured\n"));
+  CHECK(measured.contains("Current: 1.250 s/run (10 completed runs)"));
+  CHECK(measured.contains("Reference: 4.500 s/run (20 completed runs)"));
+
+  const auto pending(time_per_run_tooltip(snapshot, 1, true));
+  CHECK(pending.contains("Current: awaiting results"));
+  CHECK(pending.contains("Reference: no reference"));
+  CHECK(time_per_run_tooltip(snapshot, 2, false)
+        .contains("Current: 0.000 s/run (5 completed runs)"));
+  CHECK_FALSE(time_per_run_tooltip(snapshot, 0, false).contains("Reference:"));
+}
+
+TEST_CASE("Remaining time estimates use each dataset's planned runs")
+{
+  rs::settings settings;
+  settings.runs = 20;
+  summary_data reference;
+  reference.runs = 100;
+  reference.elapsed_time = 100h;
+  rs::collection_t collection;
+  collection.emplace_back("Fast", rs::data{"", "", settings, reference});
+  collection.emplace_back("Slow", rs::data{"", "", settings, {}});
+  collection.emplace_back("Pending", rs::data{"", "", settings, {}});
+  collection[0].second.current.runs = 10;
+  collection[0].second.current.elapsed_time = 12500ms;
+  collection[1].second.current.runs = 5;
+  collection[1].second.current.elapsed_time = 2h;
+  results_state state(std::move(collection), rs::exec_mode::run);
+  const results_snapshot snapshot(state);
+
+  REQUIRE(estimated_time_remaining(snapshot, 0));
+  CHECK(*estimated_time_remaining(snapshot, 0) == doctest::Approx(12.5));
+  CHECK(remaining_time_label(snapshot, 0) == "~13s");
+  CHECK(remaining_time_label(snapshot, 1) == "~6h 0m 0s");
+  CHECK_FALSE(estimated_time_remaining(snapshot, 2));
+  CHECK(remaining_time_label(snapshot, 2) == "Pending");
+  CHECK(time_per_run_tooltip(snapshot, 0, true)
+        .contains("Runs left: 10\nEstimated time remaining: ~13s"));
+
+  state.collection[0].second.current.runs = 15;
+  state.collection[0].second.current.elapsed_time = 3min;
+  const results_snapshot updated(state);
+  CHECK(remaining_time_label(updated, 0) == "~1m 0s");
+
+  for (const unsigned runs : {20u, 21u})
+  {
+    state.collection[0].second.current.runs = runs;
+    const results_snapshot completed(state);
+    REQUIRE(estimated_time_remaining(completed, 0));
+    CHECK(*estimated_time_remaining(completed, 0) == doctest::Approx(0.0));
+    CHECK(remaining_time_label(completed, 0) == "Complete");
+    CHECK(time_per_run_tooltip(completed, 0, false).contains("Runs left: 0"));
+  }
+}
+
+TEST_CASE_FIXTURE(plot_context, "Time per run plots use a non-negative time axis")
+{
+  for (const bool with_reference : {true, false})
+  {
+    auto state(make_state(with_reference, rs::exec_mode::run));
+    SUBCASE("Completed results") {}
+    SUBCASE("All results pending")
+    {
+      for (auto &[label, data] : state.collection)
+        data.current.runs = 0;
+    }
+    const results_snapshot snapshot(state);
+    for (unsigned frame(0); frame < 3; ++frame)
+    {
+      ImGui::NewFrame();
+      ImGui::SetNextWindowSize(ImVec2(900, 600));
+      ImGui::Begin("Run timings");
+      render_time_per_run(snapshot);
+
+      const auto *plot(ImPlot::GetPlot("##Time per run##Run"));
+      REQUIRE(plot);
+      CHECK(plot->Axes[ImAxis_X1].Range.Min >= 0.0);
+      CHECK(plot->Axes[ImAxis_X1].Range.Max > 0.0);
+      CHECK(plot->Axes[ImAxis_Y1].IsLocked());
+      CHECK(plot->Axes[ImAxis_Y1].IsInverted());
+      const auto &remaining_axis(plot->Axes[ImAxis_Y2]);
+      CHECK(remaining_axis.Enabled);
+      CHECK(remaining_axis.IsLocked());
+      CHECK(remaining_axis.IsInverted());
+      CHECK(remaining_axis.Range.Min
+            == doctest::Approx(plot->Axes[ImAxis_Y1].Range.Min));
+      CHECK(remaining_axis.Range.Max
+            == doctest::Approx(plot->Axes[ImAxis_Y1].Range.Max));
+      REQUIRE(remaining_axis.Ticker.TickCount() == snapshot.labels.size());
+      for (std::size_t i(0); i < snapshot.labels.size(); ++i)
+        CHECK(std::string(remaining_axis.Ticker.GetText(i))
+              == remaining_time_label(snapshot, i));
+
+      ImGui::End();
+      ImGui::Render();
+      for (const auto *list : ImGui::GetDrawData()->CmdLists)
+        for (const auto &vertex : list->VtxBuffer)
+        {
+          CHECK(std::isfinite(vertex.pos.x));
+          CHECK(std::isfinite(vertex.pos.y));
+        }
+    }
+  }
 }
 
 TEST_CASE_FIXTURE(plot_context, "Run capacity lines stay opaque yellow")

@@ -90,7 +90,8 @@ bool rs::run::start(const imgui_app::program::settings &settings,
   if (!options.nogui)
   {
     rs::summary::start(
-      settings, rs::summary::options{std::move(options.collection)});
+      settings, rs::summary::options{std::move(options.collection), false,
+                                     rs::exec_mode::run});
     source.request_stop();
   }
 

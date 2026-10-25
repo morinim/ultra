@@ -26,6 +26,7 @@
 #include <format>
 #include <fstream>
 #include <mutex>
+#include <optional>
 #include <ranges>
 #include <shared_mutex>
 #include <sstream>
@@ -50,9 +51,12 @@ using labels_data = std::vector<const char *>;
 
 struct results_state
 {
-  explicit results_state(rs::collection_t c) : collection(std::move(c)) {}
+  explicit results_state(rs::collection_t c,
+                         rs::exec_mode m = rs::exec_mode::summary)
+    : collection(std::move(c)), mode(m) {}
 
   rs::collection_t collection;
+  const rs::exec_mode mode;
   std::shared_mutex current_mutex;
 };
 
@@ -106,7 +110,10 @@ struct results_snapshot
   std::vector<unsigned> runs;
   unsigned max_runs {0};
   unsigned max_runs_with_reference {0};
+  bool show_success_rate {false};
+  std::vector<bool> success_thresholds;
   std::vector<double> success_rates;
+  std::vector<double> time_per_run;
   fit_data current_fitness;
   fit_data reference_fitness;
   elite_data current_elite;
@@ -276,6 +283,8 @@ results_snapshot::results_snapshot(results_state &state)
   capacity_runs.reserve(size);
   runs.reserve(size * 2);
   success_rates.reserve(size * 2);
+  success_thresholds.reserve(size);
+  time_per_run.reserve(size * 2);
 
   references_available = std::ranges::any_of(
     state.collection,
@@ -285,10 +294,19 @@ results_snapshot::results_snapshot(results_state &state)
   {
     labels.push_back(label);
     capacity_runs.push_back(data.conf.runs);
+    const bool has_threshold(state.mode == rs::exec_mode::summary
+                             || !data.conf.threshold.empty());
+    success_thresholds.push_back(has_threshold);
+    show_success_rate |= has_threshold;
     runs.push_back(data.current.runs);
     success_rates.push_back(data.current.empty()
                             ? std::numeric_limits<double>::quiet_NaN()
                             : data.current.success_rate * 100.0);
+    time_per_run.push_back(data.current.empty()
+                           ? std::numeric_limits<double>::quiet_NaN()
+                           : std::chrono::duration<double>(
+                               data.current.elapsed_time).count()
+                             / data.current.runs);
     max_runs = std::max({max_runs, data.conf.runs, data.current.runs});
     add_fit_data(current_fitness, data.current);
     add_fit_data(reference_fitness, data.reference);
@@ -303,6 +321,11 @@ results_snapshot::results_snapshot(results_state &state)
     success_rates.push_back(data.reference.empty()
                             ? std::numeric_limits<double>::quiet_NaN()
                             : data.reference.success_rate * 100.0);
+    time_per_run.push_back(data.reference.empty()
+                           ? std::numeric_limits<double>::quiet_NaN()
+                           : std::chrono::duration<double>(
+                               data.reference.elapsed_time).count()
+                             / data.reference.runs);
     max_runs_with_reference = std::max(max_runs_with_reference,
                                        data.reference.runs);
   }
@@ -393,6 +416,9 @@ void render_number_of_runs(const results_snapshot &snapshot)
   Expects(i < snapshot.labels.size());
 
   std::string text(snapshot.labels[i]);
+  if (!snapshot.success_thresholds[i])
+    return text + "\nNo success threshold defined";
+
   if (snapshot.runs[i])
     text += std::format("\nCurrent: {:.1f}% ({} completed runs)",
                         snapshot.success_rates[i], snapshot.runs[i]);
@@ -465,7 +491,13 @@ void render_success_rate(const results_snapshot &snapshot)
     {
       const auto index(series * size + i);
       const double x(snapshot.positions[i] + shift);
-      if (snapshot.runs[index])
+      if (!snapshot.success_thresholds[i])
+      {
+        if (!series)
+          ImPlot::PlotText("No threshold", snapshot.positions[i], 0.0,
+                           ImVec2(0, -10));
+      }
+      else if (snapshot.runs[index])
       {
         xs.push_back(x);
         ys.push_back(snapshot.success_rates[index]);
@@ -485,6 +517,171 @@ void render_success_rate(const results_snapshot &snapshot)
       const auto i(static_cast<std::size_t>(std::floor(x + 0.5)));
       ImGui::BeginTooltip();
       const auto text(success_rate_tooltip(snapshot, i, show_reference_values));
+      ImGui::TextUnformatted(text.c_str());
+      ImGui::EndTooltip();
+    }
+  }
+
+  ImPlot::EndPlot();
+}
+
+[[nodiscard]] std::optional<double> estimated_time_remaining(
+  const results_snapshot &snapshot, std::size_t i)
+{
+  Expects(i < snapshot.labels.size());
+
+  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+    return 0.0;
+  if (!snapshot.runs[i])
+    return std::nullopt;
+
+  return snapshot.time_per_run[i]
+         * (snapshot.capacity_runs[i] - snapshot.runs[i]);
+}
+
+[[nodiscard]] std::string remaining_time_label(
+  const results_snapshot &snapshot, std::size_t i)
+{
+  const auto estimate(estimated_time_remaining(snapshot, i));
+  if (!estimate)
+    return "Pending";
+  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+    return "Complete";
+
+  using namespace std::chrono;
+  const auto total(ceil<seconds>(duration<double>(*estimate)));
+  const auto h(duration_cast<hours>(total));
+  const auto m(duration_cast<minutes>(total - h));
+  const auto s(total - h - m);
+  if (h.count())
+    return std::format("~{}h {}m {}s", h.count(), m.count(), s.count());
+  if (m.count())
+    return std::format("~{}m {}s", m.count(), s.count());
+  return std::format("~{}s", s.count());
+}
+
+[[nodiscard]] std::string time_per_run_tooltip(
+  const results_snapshot &snapshot, std::size_t i, bool show_reference_values)
+{
+  Expects(i < snapshot.labels.size());
+
+  std::string text(snapshot.labels[i]);
+  if (snapshot.runs[i])
+    text += std::format("\nCurrent: {:.3f} s/run ({} completed runs)",
+                        snapshot.time_per_run[i], snapshot.runs[i]);
+  else
+    text += "\nCurrent: awaiting results";
+
+  const unsigned remaining(std::max(snapshot.capacity_runs[i], snapshot.runs[i])
+                           - snapshot.runs[i]);
+  text += std::format("\nRuns left: {}\nEstimated time remaining: {}",
+                      remaining, remaining_time_label(snapshot, i));
+
+  if (show_reference_values)
+  {
+    const auto reference(snapshot.labels.size() + i);
+    if (snapshot.runs[reference])
+      text += std::format("\nReference: {:.3f} s/run ({} completed runs)",
+                          snapshot.time_per_run[reference],
+                          snapshot.runs[reference]);
+    else
+      text += "\nReference: no reference";
+  }
+
+  return text;
+}
+
+void render_time_per_run(const results_snapshot &snapshot)
+{
+  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
+
+  const std::size_t size(snapshot.labels.size());
+  if (!size)
+    return;
+
+  static bool compare_reference {true};
+  if (snapshot.references_available)
+    ImGui::Checkbox("Reference values##Run##Time per run", &compare_reference);
+  const bool show_reference_values(snapshot.references_available
+                                   && compare_reference);
+  const std::size_t group_count(1 + show_reference_values);
+
+  std::vector<std::string> remaining_labels;
+  remaining_labels.reserve(size);
+  for (std::size_t i(0); i < size; ++i)
+    remaining_labels.push_back(remaining_time_label(snapshot, i));
+  const auto remaining_label_data(to_cstr_vector(remaining_labels));
+
+  ImGui::TextDisabled("Remaining times update after each completed run.");
+
+  int flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText);
+  if (!show_reference_values)
+    flags |= ImPlotFlags_NoLegend;
+
+  if (!ImPlot::BeginPlot("##Time per run##Run", ImVec2(-1, -1), flags))
+    return;
+
+  if (show_reference_values)
+    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+
+  const bool has_timing_data(std::ranges::any_of(
+    snapshot.runs | std::views::take(size * group_count),
+    [](unsigned runs) { return runs > 0; }));
+  ImPlot::SetupAxes("Time per run (s)", "Dataset",
+                    has_timing_data ? ImPlotAxisFlags_AutoFit
+                                    : ImPlotAxisFlags_Lock,
+                    ImPlotAxisFlags_Lock | ImPlotAxisFlags_Invert);
+  if (!has_timing_data)
+    ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 1.0, ImGuiCond_Always);
+  ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0.0,
+                                    std::numeric_limits<double>::infinity());
+  ImPlot::SetupAxisFormat(ImAxis_X1, "%.3f");
+
+  constexpr auto padding(0.75);
+  ImPlot::SetupAxisLimits(ImAxis_Y1, -padding, (size - 1) + padding,
+                          ImGuiCond_Always);
+  ImPlot::SetupAxisTicks(ImAxis_Y1, snapshot.positions.data(), size,
+                         snapshot.label_data.data());
+  ImPlot::SetupAxis(ImAxis_Y2, "Estimated time remaining",
+                    ImPlotAxisFlags_Lock | ImPlotAxisFlags_Invert
+                    | ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoGridLines
+                    | ImPlotAxisFlags_NoTickMarks);
+  ImPlot::SetupAxisLimits(ImAxis_Y2, -padding, (size - 1) + padding,
+                          ImGuiCond_Always);
+  ImPlot::SetupAxisTicks(ImAxis_Y2, snapshot.positions.data(), size,
+                         remaining_label_data.data(), false);
+
+  const double bar_width(0.5 / group_count);
+  for (std::size_t series(0); series < group_count; ++series)
+  {
+    std::vector<double> xs, ys;
+    const double shift((series + 0.5) * bar_width - 0.25);
+    for (std::size_t i(0); i < size; ++i)
+    {
+      const auto index(series * size + i);
+      const double y(snapshot.positions[i] + shift);
+      if (snapshot.runs[index])
+      {
+        xs.push_back(snapshot.time_per_run[index]);
+        ys.push_back(y);
+      }
+      else
+        ImPlot::PlotText(series ? "N/A" : "Pending", 0.0, y,
+                         ImVec2(35, 0),
+                         {ImPlotProp_Flags, ImPlotItemFlags_NoFit});
+    }
+    ImPlot::PlotBars(ilabels[series], xs.data(), ys.data(), xs.size(), bar_width,
+                     {ImPlotProp_Flags, ImPlotBarsFlags_Horizontal});
+  }
+
+  if (ImPlot::IsPlotHovered())
+  {
+    const double y(ImPlot::GetPlotMousePos().y);
+    if (y >= -0.5 && y < size - 0.5)
+    {
+      const auto i(static_cast<std::size_t>(std::floor(y + 0.5)));
+      ImGui::BeginTooltip();
+      const auto text(time_per_run_tooltip(snapshot, i, show_reference_values));
       ImGui::TextUnformatted(text.c_str());
       ImGui::EndTooltip();
     }
@@ -718,7 +915,8 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
   {
     ImGui::Checkbox("runs", &show_runs_check);
     ImGui::SameLine();
-    ImGui::Checkbox("success rate", &show_success_rate_check);
+    ImGui::Checkbox(snapshot.show_success_rate ? "success rate" : "time per run",
+                    &show_success_rate_check);
     ImGui::SameLine();
     ImGui::Checkbox("fitness across datasets",
                     &show_fitness_across_datasets_check);
@@ -738,8 +936,16 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
       },
       dashboard_panel
       {
-        "Success rate##ChildWindow", "SUCCESS RATE", show_success_rate_check,
-        mxz_success_rate, [&snapshot] { render_success_rate(snapshot); }
+        "Success rate##ChildWindow",
+        snapshot.show_success_rate ? "SUCCESS RATE" : "TIME PER RUN",
+        show_success_rate_check, mxz_success_rate,
+        [&snapshot]
+        {
+          if (snapshot.show_success_rate)
+            render_success_rate(snapshot);
+          else
+            render_time_per_run(snapshot);
+        }
       },
       dashboard_panel
       {
@@ -800,7 +1006,7 @@ void get_summaries(std::stop_token stoken, results_state &state)
 void rs::summary::start(const imgui_app::program::settings &settings,
                         options options)
 {
-  results_state state(std::move(options.collection));
+  results_state state(std::move(options.collection), options.mode);
   std::jthread t_summaries(get_summaries, std::ref(state));
 
   imgui_app::program prg(settings);
