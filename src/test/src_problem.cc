@@ -63,6 +63,11 @@ TEST_CASE("setup_terminals")
 
     CHECK(!p.classification());
 
+    CHECK(p.sset.decode("FDIV"));
+    CHECK(p.sset.decode("FLN"));
+    CHECK(p.sset.decode("FEXP"));
+    CHECK(p.sset.decode("FSIN"));
+
     CHECK(p.data.selected().size() == debug::WINE_COUNT);
     CHECK(p.data[src::dataset_t::validation].empty());
   }
@@ -103,6 +108,11 @@ TEST_CASE("setup_terminals")
     CHECK(p.variables() == 4);
 
     CHECK(p.classification());
+
+    CHECK(p.sset.decode("FDIV"));
+    CHECK(p.sset.decode("FSIN"));
+    CHECK(p.sset.decode("FLN") == nullptr);
+    CHECK(p.sset.decode("FEXP") == nullptr);
 
     CHECK(p.data.selected().size() == debug::IRIS_COUNT);
     CHECK(p.data[src::dataset_t::validation].empty());

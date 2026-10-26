@@ -386,12 +386,18 @@ void problem::setup_symbols(symbol_init init_flags)
         add_symbol(insert<real::add>(category));
         add_symbol(insert<real::div>(
                      category, function::param_data_types{category, category}));
-        add_symbol(insert<real::ln>(category));
-        add_symbol(insert<real::exp>(category));
         add_symbol(insert<real::mul>(
                      category, function::param_data_types{category, category}));
         add_symbol(insert<real::sin>(category));
         add_symbol(insert<real::sub>(category));
+
+        // Keep the default classification set small; nonlinear functions can be
+        // added explicitly when the data calls for them.
+        if (!classification())
+        {
+          add_symbol(insert<real::ln>(category));
+          add_symbol(insert<real::exp>(category));
+        }
         break;
 
       case d_int:
