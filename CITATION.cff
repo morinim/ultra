@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use ULTRA in your research, please cite this software."
+type: software
+title: "ULTRA: Evolutionary computation framework"
+authors:
+  - family-names: Morini
+    given-names: Manlio
+repository-code: "https://github.com/morinim/ultra"
+url: "https://ultraevolution.org/"
+license: MPL-2.0
+keywords:
+  - "evolutionary computation"
+  - "genetic programming"
+  - "symbolic regression"
+  - "classification"
+  - "genetic algorithms"
+  - "differential evolution"
