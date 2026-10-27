@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(ULTRA VERSION 0.9.3 LANGUAGES CXX)
+project(ULTRA VERSION 0.9.4 LANGUAGES CXX)
 
 # Instructs CMake to generate a `compile_commands.json` file in the build
 # directory during project configuration.
