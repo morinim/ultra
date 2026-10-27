@@ -129,6 +129,20 @@ def doxygen_rule(data: str, new_version: str) -> Optional[str]:
     return result[0] if result[1] == 1 else None
 
 
+def cmake_rule(data: str, new_version: str) -> Optional[str]:
+    regex = r"^(project\s*\(\s*ULTRA\s+VERSION\s+)\S+(.*)$"
+    subst = r"\g<1>" + new_version + r"\g<2>"
+    result = re.subn(regex, subst, data, flags=re.MULTILINE | re.IGNORECASE)
+    if result[1] == 1:
+        return result[0]
+
+    regex_fallback = r"^(project\s*\(\s*ULTRA)(\s+.*)$"
+    subst_fallback = r"\g<1> VERSION " + new_version + r"\g<2>"
+    result_fallback = re.subn(regex_fallback, subst_fallback, data,
+                              flags=re.MULTILINE | re.IGNORECASE)
+    return result_fallback[0] if result_fallback[1] == 1 else None
+
+
 def get_cmd_line_options() -> argparse.ArgumentParser:
     description = "Helps to set up a new version of Ultra"
     usage = "\n1. %(prog)s [-h] [-v] version\n2. %(prog)s [-h] major minor patch"
@@ -149,6 +163,8 @@ def main() -> None:
     #              version)
     file_process(os.path.join(dirname, "../doc/doxygen/ultra"),
                  doxygen_rule, version)
+    file_process(os.path.join(dirname, "../src/CMakeLists.txt"),
+                 cmake_rule, version)
 
 
     print("\n\nRELEASE NOTE\n")

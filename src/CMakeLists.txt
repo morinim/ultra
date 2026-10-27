@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(ULTRA LANGUAGES CXX)
+project(ULTRA VERSION 0.9.3 LANGUAGES CXX)
 
 # Instructs CMake to generate a `compile_commands.json` file in the build
 # directory during project configuration.
@@ -60,3 +60,9 @@ if (SDL3_FOUND)
 endif()
 
 add_subdirectory(test)
+
+# Packaging
+set(CPACK_GENERATOR "TXZ")
+set(CPACK_PACKAGE_VENDOR "ULTRA Project")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ULTRA Evolutionary Computation Framework")
+include(CPack)
