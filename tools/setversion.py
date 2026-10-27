@@ -171,7 +171,7 @@ def main() -> None:
     print("1. Build.  cmake --preset=clang_sanitize_address src/ ; cmake --build build/")
     print("2. Check.  cd build/test ; ctest")
     print(f'3. Commit. git commit -am "docs: update version to v{version}"')
-    print(f'4. Tag.    git tag -a v{version} -m "tag message"')
+    print(f'4. Tag.    git tag -s v{version}')
     print("\nRemember to 'git push' both code and tag. For the tag:\n")
     print("   git push origin [tagname]\n")
 
