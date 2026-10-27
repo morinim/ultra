@@ -6,7 +6,7 @@
 [![Build and test all platforms](https://github.com/morinim/ultra/actions/workflows/build_release.yml/badge.svg)][build_status]
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8725/badge)][best_practices]
 [![License](https://img.shields.io/badge/license-MPLv2-blue.svg)][mpl2]
-
+[![DOI](https://zenodo.org/badge/697431443.svg)][doi]
 
 ## PREMISE
 
@@ -231,6 +231,7 @@ So, don't be afraid of a different *MAJOR* version and read the release notes fo
 [build_status]: https://github.com/morinim/ultra/actions/workflows/build_release.yml
 [classification]: https://github.com/morinim/ultra/wiki/sonar_tutorial
 [cmake]: https://cmake.org/
+[doi]: https://doi.org/10.5281/zenodo.23694787
 [download]: https://github.com/morinim/ultra/archive/master.zip
 [eos]: https://www.eosdev.it/
 [features]: https://github.com/morinim/ultra/wiki/features
