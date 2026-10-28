@@ -734,7 +734,6 @@ public:
     : function("FMUL", r, pt)
   {
     Expects(pt.size() == 2);
-    Expects(pt[0] == pt[1]);
   }
 
   [[nodiscard]] std::string to_string(format) const final
