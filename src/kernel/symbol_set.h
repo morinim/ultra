@@ -17,6 +17,8 @@
 #include "kernel/gp/function.h"
 
 #include <algorithm>
+#include <concepts>
+#include <initializer_list>
 #include <memory>
 #include <set>
 #include <string>
@@ -123,8 +125,19 @@ public:
   void clear();
 
   symbol *insert(std::unique_ptr<symbol>, weight_t = default_weight);
+
   template<Symbol S, weight_t = default_weight, class ...Args>
+  requires std::constructible_from<S, Args...>
   std::add_pointer_t<S> insert(Args &&...);
+
+  template<std::derived_from<function> F, weight_t W = default_weight,
+           std::convertible_to<symbol::category_t> C = symbol::category_t>
+  std::add_pointer_t<F> insert(symbol::category_t,
+                               std::initializer_list<C>);
+
+  template<std::derived_from<function> F, weight_t W = default_weight,
+           std::convertible_to<symbol::category_t> C = symbol::category_t>
+  std::add_pointer_t<F> insert(std::initializer_list<C>);
 
   // ---- Capacity ----
   [[nodiscard]] bool enough_terminals() const noexcept;
@@ -200,7 +213,7 @@ std::size_t symbol_set::count_if(symbol::category_t c) const noexcept
 }
 
 ///
-/// Adds a symbol to the symbol set.
+/// General factory for any Symbol directly constructible from `Args...`.
 ///
 /// \tparam    S    symbol to be added
 /// \tparam    W    weight associated to `S`
@@ -216,10 +229,28 @@ std::size_t symbol_set::count_if(symbol::category_t c) const noexcept
 /// from factory).
 ///
 template<Symbol S, symbol_set::weight_t W, class ...Args>
+requires std::constructible_from<S, Args...>
 std::add_pointer_t<S> symbol_set::insert(Args &&... args)
 {
   return static_cast<std::add_pointer_t<S>>(
     insert(std::make_unique<S>(std::forward<Args>(args)...), W));
+}
+
+/// Dedicated overload for function categories passed as a braced list.
+template<std::derived_from<function> F, symbol_set::weight_t W,
+         std::convertible_to<symbol::category_t> C>
+std::add_pointer_t<F> symbol_set::insert(symbol::category_t ret,
+                                         std::initializer_list<C> pt)
+{
+  return insert<F, W>(ret, function::param_data_types(pt.begin(), pt.end()));
+}
+
+/// Convenience overload defaulting return type to `symbol::default_category`.
+template<std::derived_from<function> F, symbol_set::weight_t W,
+         std::convertible_to<symbol::category_t> C>
+std::add_pointer_t<F> symbol_set::insert(std::initializer_list<C> pt)
+{
+  return insert<F, W>(symbol::default_category, pt);
 }
 
 std::ostream &operator<<(std::ostream &, const symbol_set &);
