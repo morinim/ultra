@@ -184,6 +184,9 @@ struct parameters
 
   struct de_parameters
   {
+    /// Minimum population size required for Differential Evolution.
+    static constexpr std::size_t min_individuals {10};
+
     /// Weighting factor range (aka differential factor range).
     ///
     /// It has been found recently that selecting the weight from the

@@ -329,9 +329,10 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
-  if (!refinement.de.individuals)
+  if (refinement.de.individuals < de.min_individuals)
   {
-    ultraERROR("`refinement.de.individuals` must be positive");
+    ultraERROR("`refinement.de.individuals` ({}) cannot be less than {}",
+               refinement.de.individuals, de.min_individuals);
     return false;
   }
 

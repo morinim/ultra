@@ -17,6 +17,8 @@
 #include "kernel/decision_vector.h"
 #include "kernel/refiner.h"
 
+#include <algorithm>
+
 namespace ultra::de
 {
 
@@ -63,7 +65,8 @@ struct numerical_refinement_backend
 
     problem de_prob(ranges);
     de_prob.params.population.init_subgroups = 1;
-    de_prob.params.population.individuals = params.de.individuals;
+    de_prob.params.population.individuals = std::max(
+      params.de.individuals, parameters::de_parameters::min_individuals);
     de_prob.params.evolution.generations  = params.de.generations;
 
     const auto de_eva([&](const de::individual &vec)

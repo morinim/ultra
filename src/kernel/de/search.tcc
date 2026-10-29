@@ -34,8 +34,10 @@ void search<E>::tune_parameters()
 {
   ultra::basic_search<de_es, E>::tune_parameters();
 
-  if (this->prob_.params.population.min_individuals < 10)
-    this->prob_.params.population.min_individuals = 10;
+  using de_par = parameters::de_parameters;
+
+  if (this->prob_.params.population.min_individuals < de_par::min_individuals)
+    this->prob_.params.population.min_individuals = de_par::min_individuals;
 
   Ensures(this->prob_.params.is_valid(true));
 }
