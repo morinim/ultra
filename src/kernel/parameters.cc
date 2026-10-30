@@ -323,9 +323,9 @@ bool parameters::is_valid(bool force_defined) const
     return false;
   }
 
-  if (refinement.de.min_radius < 0.0)
+  if (refinement.de.min_radius <= 0.0)
   {
-    ultraERROR("`refinement.de.min_radius` cannot be negative");
+    ultraERROR("`refinement.de.min_radius` must be positive");
     return false;
   }
 

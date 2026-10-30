@@ -39,6 +39,9 @@ struct numerical_refinement_backend
     evaluator_individual_t<E> &ind, const E &eva,
     const parameters::refinement_parameters &params) const
   {
+    Expects(params.de.min_radius > 0.0);
+    Expects(params.de.rel_radius >= 0.0);
+
     const auto eval([&eva](const auto &cand)
     {
       if constexpr (requires { eva.core(); })
