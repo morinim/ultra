@@ -14,18 +14,18 @@
 #define      POCKET_CSV_PARSER_H
 
 #include <algorithm>
-#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
-#include <iomanip>
-#include <iostream>
-#include <fstream>
 #include <functional>
+#include <iostream>
+#include <istream>
+#include <iterator>
 #include <map>
 #include <optional>
-#include <sstream>
+#include <string>
 #include <vector>
 
 namespace pocket_csv
