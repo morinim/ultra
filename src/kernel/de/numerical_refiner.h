@@ -87,7 +87,7 @@ struct numerical_refinement_backend
     const auto res(de_search.run());
 
     if (!res.runs() || res.best_measurements().fitness <= base)
-      return {}
+      return {};
 
     ind.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
     return res.best_measurements().fitness;
