@@ -59,11 +59,11 @@ struct numerical_refinement_backend
     std::vector<interval<double>> ranges;
     ranges.reserve(dv.size());
 
-    for (std::size_t i(0); i < dv.size(); ++i)
+    for (const auto val : dv.values)
     {
-      const auto delta(std::max(std::abs(dv.values[i]) * params.de.rel_radius,
+      const auto delta(std::max(std::abs(val) * params.de.rel_radius,
                                 params.de.min_radius));
-      ranges.emplace_back(dv.values[i] - delta, dv.values[i] + delta);
+      ranges.emplace_back(val - delta, val + delta);
     }
 
     problem de_prob(ranges);
@@ -90,12 +90,14 @@ struct numerical_refinement_backend
       return {};
 
     ind.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
+
     return res.best_measurements().fitness;
   }
 };
 
 /// Convenience API for DE-based numerical refinement.
 template<Evaluator E>
+requires NumericalOptimisable<evaluator_individual_t<E>>
 std::optional<evaluator_fitness_t<E>> optimise(const refiner &opt,
                                                evaluator_individual_t<E> &ind,
                                                const E &eva)
