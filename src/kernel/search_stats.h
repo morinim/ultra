@@ -49,7 +49,7 @@ public:
     std::size_t run {};  // run identifier
     I best_individual {};  // best individual produced by the run
     model_measurements<F> best_measurements {};  // measurements associated
-  };                                             //  with the best individual
+  };                                             // with the best individual
 
   void update(const I &, const model_measurements<F> &,
               std::chrono::milliseconds);
