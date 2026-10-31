@@ -33,12 +33,12 @@ namespace ultra
 ///
 enum class symbol_init : unsigned
 {
-  disabled   =  0,  /// No initialisation
-  variables  =  1,  /// Initialises input variables
-  attributes =  2,  /// Initialises attributes
-  ephemerals =  4,  /// Initialises ephemeral values
-  functions  =  8,  /// Initialises the function set
-  all        = 15,  /// Initialises everything
+  disabled   =  0,  ///< No initialisation
+  variables  =  1,  ///< Initialises input variables
+  attributes =  2,  ///< Initialises attributes
+  ephemerals =  4,  ///< Initialises ephemeral values
+  functions  =  8,  ///< Initialises the function set
+  all        = 15,  ///< Initialises everything
 };
 
 /// Enable bitmask operations for symbol_init.
@@ -68,11 +68,11 @@ public:
   // ---- Member types ----
   enum class readiness_error
   {
-    invalid_problem,             /// Internal consistency check failed.
-    empty_training_set,          /// No examples available for training.
-    insufficient_terminals,      /// Not enough terminals to build individuals.
-    missing_functions,           /// No functions available for evolution.
-    missing_category_terminals   /// A used category has no terminals.
+    invalid_problem,             ///< Internal consistency check failed
+    empty_training_set,          ///< No examples available for training
+    insufficient_terminals,      ///< Not enough terminals to build individuals
+    missing_functions,           ///< No functions available for evolution
+    missing_category_terminals   ///< A used category has no terminals
   };
 
   // ---- Constructors ----

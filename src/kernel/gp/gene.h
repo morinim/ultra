@@ -82,8 +82,8 @@ struct gene
   [[nodiscard]] bool is_valid() const noexcept;
 
   // Public data members.
-  const function *func {};  /// Pointer to the function symbol.
-  arg_pack        args {};  /// Arguments of the function.
+  const function *func {};  ///< Pointer to the function symbol
+  arg_pack        args {};  ///< Arguments of the function
 };
 
 }  // namespace ultra

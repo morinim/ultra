@@ -26,8 +26,8 @@ using class_t = std::size_t;
 ///
 struct classification_result
 {
-  src::class_t label;   /// class ID
-  double    sureness;   /// confidence level
+  src::class_t label;   ///< Class ID
+  double    sureness;   ///< Confidence level
 };
 
 }  // namespace ultra::src
