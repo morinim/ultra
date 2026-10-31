@@ -103,6 +103,12 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
   CHECK(t == tv);
   CHECK(distance(t, t0) == 0);
 
+  CHECK(t.signature().empty());
+  CHECK(t0.signature().empty());
+  CHECK(tv.signature().empty());
+  CHECK(t.signature() == t0.signature());
+  CHECK(t.signature() == tv.signature());
+
   SUBCASE("Aging and mutation")
   {
     team<individual> mut_t;
@@ -113,6 +119,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
 
     CHECK(mut_t.mutation(prob) == 0);
     CHECK(mut_t.is_valid());
+    CHECK(mut_t.signature().empty());
   }
 
   SUBCASE("Comparison with populated team")
@@ -126,6 +133,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     const auto crossed(crossover(prob, t, t0));
     CHECK(crossed.empty());
     CHECK(crossed.is_valid());
+    CHECK(crossed.signature().empty());
   }
 
   SUBCASE("Decision vector")
@@ -138,6 +146,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     dv_t.apply_decision_vector(dv);
     CHECK(dv_t.empty());
     CHECK(dv_t.is_valid());
+    CHECK(dv_t.signature().empty());
   }
 
   SUBCASE("Serialization")
@@ -150,6 +159,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     CHECK(loaded_empty.empty());
     CHECK(loaded_empty.is_valid());
     CHECK(loaded_empty == t);
+    CHECK(loaded_empty.signature() == t.signature());
     CHECK(loaded_empty.age() == 0);
 
     // Overwriting a pre-populated team with an empty stream
@@ -163,6 +173,7 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
     CHECK(populated.empty());
     CHECK(populated.is_valid());
     CHECK(populated == t);
+    CHECK(populated.signature() == t.signature());
     CHECK(populated.age() == 0);
   }
 
@@ -178,18 +189,29 @@ TEST_CASE_FIXTURE(fixture1, "Empty team")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Random creation")
+TEST_CASE_FIXTURE(fixture1, "Creation")
 {
   using namespace ultra::gp;
 
-  // Variable length random creation
-  for (auto l(prob.sset.categories() + 2); l < 100; ++l)
+  SUBCASE("Variable length random creation")
   {
-    prob.params.slp.code_length = l;
-    team<individual> t(prob);
+    for (auto l(prob.sset.categories() + 2); l < 100; ++l)
+    {
+      prob.params.slp.code_length = l;
+      team<individual> t(prob);
 
+      CHECK(t.is_valid());
+      CHECK(t.age() == 0);
+    }
+  }
+
+  SUBCASE("Sized constructor with n > 0")
+  {
+    const team<individual> t(3);
+    CHECK(t.size() == 3);
+    CHECK(!t.empty());
     CHECK(t.is_valid());
-    CHECK(t.age() == 0);
+    CHECK(t.signature().empty());
   }
 }
 
@@ -295,13 +317,13 @@ TEST_CASE_FIXTURE(fixture1, "Mutation")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
+TEST_CASE_FIXTURE(fixture1, "Signature validation")
 {
   using namespace ultra;
   using namespace ultra::gp;
   using individual = ultra::gp::individual;
 
-  SUBCASE("Repeated calls return cached hash without recomputing")
+  SUBCASE("Repeated calls return signature without recomputing")
   {
     tracking_individual ind1;
     ind1.sig = hash_t(111);
@@ -310,18 +332,17 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
 
     team<tracking_individual> t({ind1, ind2});
 
-    // Before signature() is called, signature cache is empty and members'
-    // signature() has not been invoked.
-    CHECK(t[0].sig_calls == 0);
-    CHECK(t[1].sig_calls == 0);
+    // Signature is computed eagerly upon construction.
+    CHECK(t[0].sig_calls == 1);
+    CHECK(t[1].sig_calls == 1);
 
-    // First call computes hash from member signatures and caches it.
+    // Accessing signature does not recompute member signatures.
     const auto s1(t.signature());
     CHECK(!s1.empty());
     CHECK(t[0].sig_calls == 1);
     CHECK(t[1].sig_calls == 1);
 
-    // Repeated calls return the cached hash without recomputing.
+    // Repeated calls return the signature without recomputing.
     const auto s2(t.signature());
     CHECK(s2 == s1);
     CHECK(t[0].sig_calls == 1);
@@ -334,19 +355,15 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
 
     // Also verify with `gp::individual`.
     team<individual> real_team(prob);
-    const auto r1(real_team.signature());
-    const auto r2(real_team.signature());
-    const auto r3(real_team.signature());
-    CHECK(r1 == r2);
-    CHECK(r2 == r3);
-    CHECK(!r1.empty());
+    const auto r(real_team.signature());
+    CHECK(!r.empty());
 
-    // Age increment does not invalidate the signature cache.
+    // Age increment does not alter the signature.
     real_team.inc_age();
-    CHECK(real_team.signature() == r1);
+    CHECK(real_team.signature() == r);
   }
 
-  SUBCASE("Mutation with nm > 0 clears cached signature")
+  SUBCASE("Mutation with nm > 0 eagerly updates signature")
   {
     tracking_individual ind1;
     ind1.sig = hash_t(111);
@@ -362,23 +379,38 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
     CHECK(t[0].sig_calls == 1);
     CHECK(t[1].sig_calls == 1);
 
-    // Mutation with `nm > 0` clears `signature_`.
+    // Mutation with `nm > 0` eagerly recomputes `signature_`.
     const auto nm(t.mutation(prob));
     CHECK(nm == 1);
+    CHECK(t[0].sig_calls == 2);
+    CHECK(t[1].sig_calls == 2);
 
-    // Next `signature()` call must recompute and invoke member signatures.
+    // Next `signature()` call returns the updated signature without recomputing.
     const auto s2(t.signature());
     CHECK(s2 != s1);
     CHECK(t[0].sig_calls == 2);
     CHECK(t[1].sig_calls == 2);
 
-    // Subsequent call uses newly cached signature without recomputing.
+    // Subsequent call uses updated signature without recomputing.
     const auto s3(t.signature());
     CHECK(s3 == s2);
     CHECK(t[0].sig_calls == 2);
     CHECK(t[1].sig_calls == 2);
 
-    // Mutation with `nm == 0` does NOT clear the cached signature.
+    // Also verify with `gp::individual`.
+    prob.params.slp.code_length = 32;
+    prob.params.evolution.p_mutation = 1.0;
+    team<individual> real_team(prob);
+    const auto orig_sig(real_team.signature());
+
+    const auto real_nm(real_team.mutation(prob));
+    CHECK(real_nm > 0);
+    CHECK(real_team.is_valid());
+    CHECK(real_team.signature() != orig_sig);
+  }
+
+  SUBCASE("Mutation with nm == 0 preserves signature")
+  {
     tracking_individual ind_zero1;
     ind_zero1.sig = hash_t(333);
     ind_zero1.mutations_to_perform = 0;
@@ -395,8 +427,10 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
 
     const auto nm0(tz.mutation(prob));
     CHECK(nm0 == 0);
+    CHECK(tz[0].sig_calls == 1);
+    CHECK(tz[1].sig_calls == 1);
 
-    // `signature_` was not cleared, so no recomputation happens.
+    // `signature_` was not recomputed, so no additional calls happen.
     const auto sz2(tz.signature());
     CHECK(sz2 == sz1);
     CHECK(tz[0].sig_calls == 1);
@@ -408,17 +442,44 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
     team<individual> real_team(prob);
     const auto orig_sig(real_team.signature());
 
-    // When `nm == 0`, cached signature remains unchanged.
+    // When `nm == 0`, signature remains unchanged.
     const auto zero_nm(real_team.mutation(prob));
     CHECK(zero_nm == 0);
     CHECK(real_team.signature() == orig_sig);
+  }
 
-    // When `nm > 0`, cached signature is cleared and recomputed.
-    prob.params.evolution.p_mutation = 1.0;
-    const auto real_nm(real_team.mutation(prob));
-    CHECK(real_nm > 0);
-    CHECK(real_team.is_valid());
-    CHECK(real_team.signature() != orig_sig);
+  SUBCASE("Copy and move preserve signature")
+  {
+    const team<individual> original(prob);
+    REQUIRE(!original.empty());
+
+    // Copy construction
+    const team<individual> copy_constructed(original);
+    CHECK(copy_constructed == original);
+    CHECK(copy_constructed.signature() == original.signature());
+    CHECK(copy_constructed.is_valid());
+
+    // Copy assignment
+    team<individual> copy_assigned;
+    copy_assigned = original;
+    CHECK(copy_assigned == original);
+    CHECK(copy_assigned.signature() == original.signature());
+    CHECK(copy_assigned.is_valid());
+
+    // Move construction
+    team<individual> to_move(original);
+    const team<individual> move_constructed(std::move(to_move));
+    CHECK(move_constructed == original);
+    CHECK(move_constructed.signature() == original.signature());
+    CHECK(move_constructed.is_valid());
+
+    // Move assignment
+    team<individual> to_move_assign(original);
+    team<individual> move_assigned;
+    move_assigned = std::move(to_move_assign);
+    CHECK(move_assigned == original);
+    CHECK(move_assigned.signature() == original.signature());
+    CHECK(move_assigned.is_valid());
   }
 
   SUBCASE("Mutation with non-default temperature values")
@@ -437,22 +498,26 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
     CHECK(t[0].sig_calls == 1);
     CHECK(t[1].sig_calls == 1);
 
-    // Temperature 0.5 passes temperature to members and clears cache if nm > 0.
+    // Temperature 0.5 passes temperature to members and updates signature if nm > 0.
     const auto nm_half(t.mutation(prob, 0.5));
     CHECK(nm_half == 2);
     CHECK(t[0].last_temperature == doctest::Approx(0.5));
     CHECK(t[1].last_temperature == doctest::Approx(0.5));
+    CHECK(t[0].sig_calls == 2);
+    CHECK(t[1].sig_calls == 2);
 
     const auto s2(t.signature());
     CHECK(s2 != s1);
     CHECK(t[0].sig_calls == 2);
     CHECK(t[1].sig_calls == 2);
 
-    // Temperature 2.0 passes temperature to members and clears cache if nm > 0.
+    // Temperature 2.0 passes temperature to members and updates signature if nm > 0.
     const auto nm_double(t.mutation(prob, 2.0));
     CHECK(nm_double == 2);
     CHECK(t[0].last_temperature == doctest::Approx(2.0));
     CHECK(t[1].last_temperature == doctest::Approx(2.0));
+    CHECK(t[0].sig_calls == 3);
+    CHECK(t[1].sig_calls == 3);
 
     const auto s3(t.signature());
     CHECK(s3 != s2);
@@ -464,12 +529,12 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
     team<individual> real_team(prob);
     const auto r_sig1(real_team.signature());
 
-    // Temperature 0.0 produces nm == 0, preserving cached signature.
+    // Temperature 0.0 produces nm == 0, preserving signature.
     const auto r_nm0(real_team.mutation(prob, 0.0));
     CHECK(r_nm0 == 0);
     CHECK(real_team.signature() == r_sig1);
 
-    // Temperature 0.5 with nm > 0 clears cached signature.
+    // Temperature 0.5 with nm > 0 eagerly updates signature.
     prob.params.evolution.p_mutation = 1.0;
     const auto r_nm_half(real_team.mutation(prob, 0.5));
     CHECK(r_nm_half > 0);
@@ -477,7 +542,7 @@ TEST_CASE_FIXTURE(fixture1, "Signature cache validation")
     const auto r_sig2(real_team.signature());
     CHECK(r_sig2 != r_sig1);
 
-    // Temperature 2.0 with nm > 0 clears cached signature.
+    // Temperature 2.0 with nm > 0 eagerly updates signature.
     const auto r_nm_double(real_team.mutation(prob, 2.0));
     CHECK(r_nm_double > 0);
     CHECK(real_team.is_valid());
@@ -895,6 +960,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
       CHECK(t2.is_valid());
 
       CHECK(t1 == t2);
+      CHECK(t2.signature() == t1.signature());
       CHECK(t2.age() == t1.age());
       for (std::size_t j(0); j < t1.size(); ++j)
         CHECK(t2[j].age() == t1[j].age());
@@ -925,6 +991,7 @@ TEST_CASE_FIXTURE(fixture1, "Serialization")
       CHECK(t2.is_valid());
 
       CHECK(t1 == t2);
+      CHECK(t2.signature() == t1.signature());
       CHECK(t2.age() == t1.age());
       for (std::size_t j(0); j < t1.size(); ++j)
         CHECK(t2[j].age() == t1[j].age());

@@ -26,6 +26,7 @@ team<I>::team(std::size_t n)
   Expects(n <= max_team_size);
 
   individuals_.resize(n);
+  signature_ = hash();
 
   Ensures(is_valid());
 }
@@ -45,6 +46,8 @@ team<I>::team(const problem &p)
   for (std::size_t i(0); i < n; ++i)
     individuals_.emplace_back(p);
 
+  signature_ = hash();
+
   Ensures(is_valid());
 }
 
@@ -56,6 +59,7 @@ team<I>::team(const problem &p)
 template<Individual I>
 team<I>::team(std::vector<I> v) : individuals_(std::move(v))
 {
+  signature_ = hash();
   Ensures(is_valid());
 }
 
@@ -84,7 +88,7 @@ unsigned team<I>::mutation(const problem &prb, double temperature)
     nm += i.mutation(prb, temperature);
 
   if (nm)
-    signature_.clear();
+    signature_ = hash();
 
   return nm;
 }
@@ -192,7 +196,7 @@ void team<I>::apply_decision_vector(const team_decision_vector &v)
     if (!per_ind[i].empty())
       individuals_[i].apply_decision_vector(per_ind[i]);
 
-  signature_.clear();
+  signature_ = hash();
   Ensures(is_valid());
 }
 
@@ -278,11 +282,8 @@ template<Individual I> unsigned active_slots(const team<I> &t)
 /// retrieval, entropy calculation...
 ///
 template<Individual I>
-hash_t team<I>::signature() const
+hash_t team<I>::signature() const noexcept
 {
-  if (signature_.empty())
-    signature_ = hash();
-
   return signature_;
 }
 
@@ -384,7 +385,7 @@ bool team<I>::is_valid() const
                           [](const I &i) { return !i.is_valid(); }))
     return false;
 
-  return signature_.empty() || signature_ == hash();
+  return signature_ == hash();
 }
 
 ///
@@ -417,7 +418,7 @@ bool team<I>::load(std::istream &in, const symbol_set &ss)
   individuals_ = std::move(v);
 
   // We don't save/load signature: it can be easily calculated on the fly.
-  signature_.clear();
+  signature_ = hash();
 
   return true;
 }

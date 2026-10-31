@@ -94,7 +94,7 @@ public:
   [[nodiscard]] std::size_t size() const noexcept;
 
   // ---- Misc ----
-  [[nodiscard]] hash_t signature() const;
+  [[nodiscard]] hash_t signature() const noexcept;
 
   [[nodiscard]] ultra::individual::age_t age() const;
   void inc_age(unsigned = 1);
@@ -119,7 +119,7 @@ private:
   // ---- Private data members ----
   members_t individuals_ {};
 
-  mutable hash_t signature_ {};
+  hash_t signature_ {};
 };
 
 // ***********************************************************************
