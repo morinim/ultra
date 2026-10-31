@@ -101,10 +101,68 @@ TEST_CASE_FIXTURE(fixture1, "No optimisable slots is a no-op")
 
   const auto eva([](const gp::individual &) { return 0.0; });
 
-  de::optimise(opt, ind, eva);
+  const auto res(de::optimise(opt, ind, eva));
 
+  CHECK(!res.has_value());
   CHECK(ind == original);
   CHECK(ind.signature() == original.signature());
+}
+
+TEST_CASE_FIXTURE(fixture1,
+                  "Non-improving refinement leaves individual unchanged and "
+                  "returns nullopt")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  gp::individual ind(
+    {
+      {f_add, {3.0, 2.0}},         // [0]
+      {f_add, {0_addr, 1.0}},      // [1]
+      {f_sub, {1_addr, 0_addr}}    // [2]
+    });
+
+  const auto original(ind);
+
+  prob.params.refinement.de.individuals = 10;
+  prob.params.refinement.de.generations = 5;
+
+  const refiner opt(prob);
+
+  SUBCASE("flat objective landscape")
+  {
+    const auto eva([](const gp::individual &) { return 0.0; });
+
+    const auto res(de::optimise(opt, ind, eva));
+
+    CHECK(!res.has_value());
+    CHECK(ind == original);
+    CHECK(ind.signature() == original.signature());
+  }
+
+  SUBCASE("already at global optimum")
+  {
+    const auto target(extract_decision_vector(ind).values);
+    const auto eva([target](const gp::individual &cand)
+    {
+      const auto dv(extract_decision_vector(cand));
+
+      double s(0.0);
+      for (std::size_t i(0); i < dv.size(); ++i)
+      {
+        const auto d(dv.values[i] - target[i]);
+        s -= d * d;
+      }
+
+      return s;
+    });
+
+    const auto res(de::optimise(opt, ind, eva));
+
+    CHECK(!res.has_value());
+    CHECK(ind == original);
+    CHECK(ind.signature() == original.signature());
+  }
 }
 
 TEST_CASE_FIXTURE(fixture1, "Optimisation preserves validity and structure")
