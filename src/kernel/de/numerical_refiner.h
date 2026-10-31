@@ -18,6 +18,10 @@
 #include "kernel/refiner.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <optional>
+#include <vector>
 
 namespace ultra::de
 {
@@ -26,6 +30,12 @@ struct numerical_refinement_backend
 {
   ///
   /// Refines the tunable scalar parameters of `ind`.
+  ///
+  /// \param[in,out] ind    individual whose scalar parameters are refined
+  /// \param[in]     eva    evaluator used to score candidate solutions
+  /// \param[in]     params refinement configuration parameters
+  /// \return               improved fitness if refinement succeeded; empty
+  ///                       `std::optional` otherwise
   ///
   /// The optimiser extracts a decision vector from `ind`, performs numerical
   /// optimisation over a bounded region around the current parameter values,
@@ -98,7 +108,18 @@ struct numerical_refinement_backend
   }
 };
 
+///
 /// Convenience API for DE-based numerical refinement.
+///
+/// \param[in]     opt refiner coordinating the refinement process
+/// \param[in,out] ind individual whose scalar parameters are refined
+/// \param[in]     eva evaluator used to score candidate solutions
+/// \return            improved fitness if refinement succeeded; empty
+///                    `std::optional` otherwise
+///
+/// Refines the tunable scalar parameters of `ind` using Differential
+/// Evolution through `opt`.
+///
 template<Evaluator E>
 requires NumericalOptimisable<evaluator_individual_t<E>>
 std::optional<evaluator_fitness_t<E>> optimise(const refiner &opt,
