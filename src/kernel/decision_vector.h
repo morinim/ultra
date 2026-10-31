@@ -41,13 +41,10 @@ template<class Coord>
 struct decision_vector
 {
   /// Metadata describing one optimisable parameter.
-  ///
-  /// `coord` identifies the parameter within the source object.
-  /// `kind` specifies how the optimised scalar must be written back.
   struct coordinate
   {
-    Coord coord;
-    dv_param_kind kind;
+    Coord coord;         ///< identifies the parameter within the source object
+    dv_param_kind kind;  ///< determines scalar write-back format
   };
 
   decision_vector() = default;
@@ -83,9 +80,7 @@ concept DecisionVector = requires(DV dv, const DV cdv)
   { cdv.size() } -> std::convertible_to<std::size_t>;
 };
 
-///
 /// Checks whether a type supports decision vector extraction.
-///
 template<class T>
 concept DecisionVectorExtractable = requires(const T &t)
 {

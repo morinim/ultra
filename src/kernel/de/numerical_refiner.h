@@ -51,7 +51,6 @@ struct numerical_refinement_backend
     });
 
     const auto dv(extract_decision_vector(ind));
-    using dv_t = decision_vector_t<evaluator_individual_t<E>>;
 
     if (dv.empty())
       return {};
@@ -72,10 +71,14 @@ struct numerical_refinement_backend
       params.de.individuals, parameters::de_parameters::min_individuals);
     de_prob.params.evolution.generations  = params.de.generations;
 
+    // Reusable working buffers to avoid allocations in the evaluation loop.
+    auto trial(ind);
+    auto trial_dv(dv);
+
     const auto de_eva([&](const de::individual &vec)
     {
-      auto trial(ind);
-      trial.apply_decision_vector(dv_t(vec, dv.coords));
+      std::ranges::copy(vec, trial_dv.values.begin());
+      trial.apply_decision_vector(trial_dv);
 
       return eval(trial);
     });
@@ -89,7 +92,8 @@ struct numerical_refinement_backend
     if (!res.runs() || res.best_measurements().fitness <= base)
       return {};
 
-    ind.apply_decision_vector(dv_t(res.best_individual(), dv.coords));
+    std::ranges::copy(res.best_individual(), trial_dv.values.begin());
+    ind.apply_decision_vector(trial_dv);
 
     return res.best_measurements().fitness;
   }
