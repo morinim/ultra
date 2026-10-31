@@ -17,6 +17,7 @@
 #include "kernel/gp/src/evaluator.h"
 #include "kernel/gp/src/problem.h"
 #include "kernel/gp/src/variable.h"
+#include "kernel/gp/team.h"
 
 #include "test/fixture1.h"
 
@@ -74,6 +75,20 @@ namespace
           return false;
       }
     }
+
+  return true;
+}
+
+template<ultra::Individual I>
+[[nodiscard]] bool same_structure_ignoring_numeric(
+  const ultra::gp::team<I> &lhs, const ultra::gp::team<I> &rhs)
+{
+  if (lhs.size() != rhs.size())
+    return false;
+
+  for (std::size_t i(0); i < lhs.size(); ++i)
+    if (!same_structure_ignoring_numeric(lhs[i], rhs[i]))
+      return false;
 
   return true;
 }
@@ -308,6 +323,119 @@ TEST_CASE_FIXTURE(fixture1,
   CHECK(ind.is_valid());
   CHECK(std::holds_alternative<D_INT>(ind[{0, 0}].args[1]));
   CHECK(std::get<D_INT>(ind[{0, 0}].args[1]) == 2);
+}
+
+TEST_CASE_FIXTURE(fixture1, "Optimisation of a team")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  prob.params.refinement.de.individuals = 40;
+  prob.params.refinement.de.generations = 60;
+  const refiner opt(prob);
+
+  SUBCASE("No optimisable slots in team is a no-op")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual({{f_add, {z, z}}, {f_sub, {0_addr, z}}}),
+        gp::individual({{f_add, {z, z}}, {f_sub, {0_addr, z}}})
+      });
+
+    const auto original(t);
+    const auto eva([](const gp::team<gp::individual> &) { return 0.0; });
+
+    const auto res(de::optimise(opt, t, eva));
+
+    CHECK(!res.has_value());
+    CHECK(t == original);
+    CHECK(t.signature() == original.signature());
+  }
+
+  SUBCASE("Non-improving refinement leaves team unchanged and returns nullopt")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_sub, {0_addr, 1.0}}
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},
+            {f_sub, {0_addr, 2.0}}
+          })
+      });
+
+    const auto original(t);
+    const auto eva([](const gp::team<gp::individual> &) { return 0.0; });
+
+    const auto res(de::optimise(opt, t, eva));
+
+    CHECK(!res.has_value());
+    CHECK(t == original);
+    CHECK(t.signature() == original.signature());
+  }
+
+  SUBCASE("Optimisation improves team objective across multiple members")
+  {
+    gp::team<gp::individual> t(
+      {
+        gp::individual(
+          {
+            {f_add, {3.0, 2.0}},
+            {f_sub, {0_addr, 1.0}}
+          }),
+        gp::individual(
+          {
+            {f_add, {4.0, 5.0}},
+            {f_sub, {0_addr, 1}}
+          })
+      });
+
+    const auto original(t);
+    const auto base_dv(extract_decision_vector(t));
+    REQUIRE(base_dv.is_valid());
+    REQUIRE(base_dv.size() == 6);
+
+    std::vector<double> target(base_dv.values);
+    for (std::size_t i(0); i < target.size(); ++i)
+      target[i] += (i % 2 == 0 ? 0.50 : -0.50);
+
+    const auto eva([target](const gp::team<gp::individual> &cand)
+    {
+      const auto dv(extract_decision_vector(cand));
+
+      double s(0.0);
+      for (std::size_t i(0); i < dv.size(); ++i)
+      {
+        const auto d(dv.values[i] - target[i]);
+        s -= d * d;
+      }
+
+      return s;
+    });
+
+    const auto before(eva(t));
+
+    const auto res(de::optimise(opt, t, eva));
+
+    REQUIRE(res.has_value());
+    CHECK(t.is_valid());
+    CHECK(eva(t) > before);
+
+    // Structure is preserved.
+    CHECK(same_structure_ignoring_numeric(t, original));
+
+    // Both members were updated.
+    CHECK(t[0] != original[0]);
+    CHECK(t[1] != original[1]);
+    CHECK(t.signature() != original.signature());
+
+    // Integer slot in member 1 remains integer.
+    CHECK(std::holds_alternative<D_INT>(t[1][{1, 0}].args[1]));
+  }
 }
 
 TEST_CASE("Optimise Petalrose")
