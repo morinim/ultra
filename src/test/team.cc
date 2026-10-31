@@ -323,6 +323,14 @@ TEST_CASE_FIXTURE(fixture1, "Signature validation")
   using namespace ultra::gp;
   using individual = ultra::gp::individual;
 
+#if defined(NDEBUG)
+  // In release mode, signature is computed eagerly once upon construction.
+  constexpr unsigned initial_sig_calls {1};
+#else
+  // In debug mode, Ensures(is_valid()) performs an additional validation call.
+  constexpr unsigned initial_sig_calls {2};
+#endif
+
   SUBCASE("Repeated calls return signature without recomputing")
   {
     tracking_individual ind1;
@@ -333,25 +341,25 @@ TEST_CASE_FIXTURE(fixture1, "Signature validation")
     team<tracking_individual> t({ind1, ind2});
 
     // Signature is computed eagerly upon construction.
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     // Accessing signature does not recompute member signatures.
     const auto s1(t.signature());
     CHECK(!s1.empty());
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     // Repeated calls return the signature without recomputing.
     const auto s2(t.signature());
     CHECK(s2 == s1);
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     const auto s3(t.signature());
     CHECK(s3 == s1);
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     // Also verify with `gp::individual`.
     team<individual> real_team(prob);
@@ -376,26 +384,26 @@ TEST_CASE_FIXTURE(fixture1, "Signature validation")
     team<tracking_individual> t({ind1, ind2});
 
     const auto s1(t.signature());
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     // Mutation with `nm > 0` eagerly recomputes `signature_`.
     const auto nm(t.mutation(prob));
     CHECK(nm == 1);
-    CHECK(t[0].sig_calls == 2);
-    CHECK(t[1].sig_calls == 2);
+    CHECK(t[0].sig_calls == initial_sig_calls + 1);
+    CHECK(t[1].sig_calls == initial_sig_calls + 1);
 
     // Next `signature()` call returns the updated signature without recomputing.
     const auto s2(t.signature());
     CHECK(s2 != s1);
-    CHECK(t[0].sig_calls == 2);
-    CHECK(t[1].sig_calls == 2);
+    CHECK(t[0].sig_calls == initial_sig_calls + 1);
+    CHECK(t[1].sig_calls == initial_sig_calls + 1);
 
     // Subsequent call uses updated signature without recomputing.
     const auto s3(t.signature());
     CHECK(s3 == s2);
-    CHECK(t[0].sig_calls == 2);
-    CHECK(t[1].sig_calls == 2);
+    CHECK(t[0].sig_calls == initial_sig_calls + 1);
+    CHECK(t[1].sig_calls == initial_sig_calls + 1);
 
     // Also verify with `gp::individual`.
     prob.params.slp.code_length = 32;
@@ -422,19 +430,19 @@ TEST_CASE_FIXTURE(fixture1, "Signature validation")
     team<tracking_individual> tz({ind_zero1, ind_zero2});
 
     const auto sz1(tz.signature());
-    CHECK(tz[0].sig_calls == 1);
-    CHECK(tz[1].sig_calls == 1);
+    CHECK(tz[0].sig_calls == initial_sig_calls);
+    CHECK(tz[1].sig_calls == initial_sig_calls);
 
     const auto nm0(tz.mutation(prob));
     CHECK(nm0 == 0);
-    CHECK(tz[0].sig_calls == 1);
-    CHECK(tz[1].sig_calls == 1);
+    CHECK(tz[0].sig_calls == initial_sig_calls);
+    CHECK(tz[1].sig_calls == initial_sig_calls);
 
     // `signature_` was not recomputed, so no additional calls happen.
     const auto sz2(tz.signature());
     CHECK(sz2 == sz1);
-    CHECK(tz[0].sig_calls == 1);
-    CHECK(tz[1].sig_calls == 1);
+    CHECK(tz[0].sig_calls == initial_sig_calls);
+    CHECK(tz[1].sig_calls == initial_sig_calls);
 
     // Also verify with `gp::individual`.
     prob.params.slp.code_length = 32;
@@ -495,34 +503,34 @@ TEST_CASE_FIXTURE(fixture1, "Signature validation")
     team<tracking_individual> t({ind1, ind2});
 
     const auto s1(t.signature());
-    CHECK(t[0].sig_calls == 1);
-    CHECK(t[1].sig_calls == 1);
+    CHECK(t[0].sig_calls == initial_sig_calls);
+    CHECK(t[1].sig_calls == initial_sig_calls);
 
     // Temperature 0.5 passes temperature to members and updates signature if nm > 0.
     const auto nm_half(t.mutation(prob, 0.5));
     CHECK(nm_half == 2);
     CHECK(t[0].last_temperature == doctest::Approx(0.5));
     CHECK(t[1].last_temperature == doctest::Approx(0.5));
-    CHECK(t[0].sig_calls == 2);
-    CHECK(t[1].sig_calls == 2);
+    CHECK(t[0].sig_calls == initial_sig_calls + 1);
+    CHECK(t[1].sig_calls == initial_sig_calls + 1);
 
     const auto s2(t.signature());
     CHECK(s2 != s1);
-    CHECK(t[0].sig_calls == 2);
-    CHECK(t[1].sig_calls == 2);
+    CHECK(t[0].sig_calls == initial_sig_calls + 1);
+    CHECK(t[1].sig_calls == initial_sig_calls + 1);
 
     // Temperature 2.0 passes temperature to members and updates signature if nm > 0.
     const auto nm_double(t.mutation(prob, 2.0));
     CHECK(nm_double == 2);
     CHECK(t[0].last_temperature == doctest::Approx(2.0));
     CHECK(t[1].last_temperature == doctest::Approx(2.0));
-    CHECK(t[0].sig_calls == 3);
-    CHECK(t[1].sig_calls == 3);
+    CHECK(t[0].sig_calls == initial_sig_calls + 2);
+    CHECK(t[1].sig_calls == initial_sig_calls + 2);
 
     const auto s3(t.signature());
     CHECK(s3 != s2);
-    CHECK(t[0].sig_calls == 3);
-    CHECK(t[1].sig_calls == 3);
+    CHECK(t[0].sig_calls == initial_sig_calls + 2);
+    CHECK(t[1].sig_calls == initial_sig_calls + 2);
 
     // Also verify with `gp::individual`.
     prob.params.evolution.p_mutation = 0.5;
