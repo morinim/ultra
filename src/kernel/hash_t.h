@@ -46,12 +46,22 @@ struct hash_t
            || (data[0] == rhs.data[0] && data[1] < rhs.data[1]);
   }
 
-  /// Used to combine multiple hashes.
+  /// Combines another hash into `this` instance.
+  ///
+  /// \param[in] h hash to be combined
+  ///
+  /// Uses prime-number multiplication (`data = data * 37 + h`), which preserves
+  /// order sensitivity (unlike commutative XOR).
   ///
   /// \note
-  /// In spite of its handy bit-mixing properties, XOR is not a good way to
-  /// combine hashes due to its commutativity (e.g. see
-  /// https://stackoverflow.com/q/5889238/3235496).
+  /// A default-constructed `hash_t` (`{0, 0}`, which evaluates to `empty()`)
+  /// acts as a left-identity: starting from an empty accumulator and combining
+  /// `h` yields `h` (`0 * 37 + h = h`).
+  ///
+  /// \note
+  /// Combining an empty hash into an empty hash leaves the result empty
+  /// (`0 * 37 + 0 = 0`). Consequently, accumulating any number of empty hashes
+  /// remains an empty hash.
   void combine(hash_t h) noexcept
   {
     // This is the simple algorithm used in `Apache.Commons.HashCodeBuilder`.
@@ -61,8 +71,14 @@ struct hash_t
     data[1] = data[1] * 37 + h.data[1];
 
     // An alternative from Boost is:
-    //data[0] ^= h.data[0] + 0x9e3779b9 + (data[0] << 6) + (data[0] >> 2);
-    //data[1] ^= h.data[1] + 0x9e3779b9 + (data[1] << 6) + (data[1] >> 2);
+    //   data[0] ^= h.data[0] + 0x9e3779b9 + (data[0] << 6) + (data[0] >> 2);
+    //   data[1] ^= h.data[1] + 0x9e3779b9 + (data[1] << 6) + (data[1] >> 2);
+    // Under Boost, combining {0, 0} into {0, 0} immediately produces 0x9e3779b9
+    // (non-empty).
+
+    // In spite of its handy bit-mixing properties, XOR is not a good way to
+    // combine hashes due to its commutativity (e.g. see
+    // https://stackoverflow.com/q/5889238/3235496).
   }
 
   /// We assume that a string of 128 zero bits means empty.
