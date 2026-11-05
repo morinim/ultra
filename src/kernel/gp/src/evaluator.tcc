@@ -229,9 +229,10 @@ rmae_error_functor<P>::operator()(const example &example) const
 
     const auto delta(std::fabs(target - approx));
 
-    // Check if the numbers are really close. Needed when comparing numbers
-    // near zero.
-    if (delta <= 10.0 * std::numeric_limits<D_DOUBLE>::min())
+    // Avoid `0 / 0` when both values are zero (uses an inequality, which never
+    // triggers a warning on any compiler. Mathematically identical to
+    // `delta==0.0` because `delta` is non-negative).
+    if (delta <= 0.0)
       return 0.0;
 
     return delta / (std::fabs(approx) + std::fabs(target));
