@@ -114,9 +114,16 @@ auto aggregate_evaluator<P, F, D, A, M>::predictor(const P &prg) const
 }
 
 ///
+/// Computes fitness from sampled examples.
+///
 /// \param[in] prg  program to evaluate
 /// \param[in] step sampling step (one example every `step`)
 /// \return         fitness value
+///
+/// Values from valid examples are averaged. Missing values incur a heuristic
+/// penalty based on the ratio of missing to valid examples. A partially valid
+/// program may still outrank a fully valid one. If all values are missing,
+/// the function returns `std::numeric_limits<double>::lowest()`.
 ///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
@@ -128,45 +135,45 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
   Expects(0 < step && step <= examples);
 
   const F f(prg);
-
-  auto it(std::begin(dat));
   const auto end(std::end(dat));
 
   double acc(0.0);
-  std::size_t n(0);
+  std::size_t sampled(0), valid(0);
 
-  if constexpr (A == aggregation_mode::average)
+  for (auto it(std::begin(dat)); it != end; std::ranges::advance(it, step, end))
   {
-    acc = f(*it);
-    ++n;
-    std::ranges::advance(it, step, end);
+    ++sampled;
 
-    while (it != end)
-    {
-      acc += (f(*it) - acc) / static_cast<double>(++n);
-      std::ranges::advance(it, step, end);
-    }
-  }
-  else
-  {
-    while (it != end)
-    {
-      acc += f(*it);
-      ++n;
-      std::ranges::advance(it, step, end);
-    }
-
-    // This keeps `fast()` comparable with `operator()` for sum evaluators.
-    if (step > 1)
-      acc *= static_cast<double>(examples) / static_cast<double>(n);
+    if (const std::optional<double> value(f(*it)); value)
+      acc += (*value - acc) / static_cast<double>(++valid);
   }
 
-  Ensures(0 < n && n <= static_cast<std::size_t>(examples));
+  Ensures(0 < sampled && sampled <= static_cast<std::size_t>(examples));
+
+  if (!valid)
+    return std::numeric_limits<double>::lowest();
+
+  if (valid < sampled)
+  {
+    // `acc` is the mean over valid examples. Penalise missing predictions in
+    // proportion to the ratio of missing to valid examples; for scores, use
+    // the magnitude of `acc` so missing predictions also lower negative scores.
+    const auto missing_per_valid(static_cast<double>(sampled - valid)
+                                 / static_cast<double>(valid));
+
+    if constexpr (M == evaluation_mode::error)
+      acc += missing_per_valid * (acc + 1.0);
+    else
+      acc -= missing_per_valid * (std::fabs(acc) + 1.0);
+  }
+
+  if constexpr (A == aggregation_mode::sum)
+    acc *= static_cast<double>(examples);
 
   if constexpr (M == evaluation_mode::error)
-    return -acc;
-  else
-    return acc;
+    acc = -acc;
+
+  return acc;
 }
 
 ///
@@ -185,13 +192,14 @@ mae_error_functor<P>::mae_error_functor(const P &prg) : oracle_(prg)
 ///                    given training case (value in the `[0;+inf[` range)
 ///
 template<Individual P>
-double mae_error_functor<P>::operator()(const example &example) const
+std::optional<double>
+mae_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
     return std::fabs(lexical_cast<D_DOUBLE>(foreseen)
                      - label_as<D_DOUBLE>(example));
 
-  return std::numeric_limits<double>::max() / 1000.0;
+  return std::nullopt;
 }
 
 ///
@@ -208,14 +216,12 @@ rmae_error_functor<P>::rmae_error_functor(const P &prg) : oracle_(prg)
 /// \param[in] example current training case
 /// \return            measurement of the error of the model/program on the
 ///                    current training case. The value returned is in the
-///                    `[0;200]` range
+///                    `[0;1]` range
 ///
 template<Individual P>
-double rmae_error_functor<P>::operator()(const example &example) const
+std::optional<double>
+rmae_error_functor<P>::operator()(const example &example) const
 {
-  constexpr double ERR_SUP(200.0);
-  double err(ERR_SUP);
-
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
     const auto approx(lexical_cast<D_DOUBLE>(foreseen));
@@ -226,9 +232,9 @@ double rmae_error_functor<P>::operator()(const example &example) const
     // Check if the numbers are really close. Needed when comparing numbers
     // near zero.
     if (delta <= 10.0 * std::numeric_limits<D_DOUBLE>::min())
-      err = 0.0;
-    else
-      err = ERR_SUP * delta / (std::fabs(approx) + std::fabs(target));
+      return 0.0;
+
+    return delta / (std::fabs(approx) + std::fabs(target));
     // Some alternatives for the error:
     // * delta / std::max(approx, target)
     // * delta / std::fabs(target)
@@ -237,7 +243,7 @@ double rmae_error_functor<P>::operator()(const example &example) const
     // in a limited range of values.
   }
 
-  return err;
+  return std::nullopt;
 }
 
 ///
@@ -257,7 +263,8 @@ mse_error_functor<P>::mse_error_functor(const P &prg) : oracle_(prg)
 ///                    `[0;+inf[` range
 ///
 template<Individual P>
-double mse_error_functor<P>::operator()(const example &example) const
+std::optional<double>
+mse_error_functor<P>::operator()(const example &example) const
 {
   if (const auto foreseen(oracle_(example.input)); has_value(foreseen))
   {
@@ -266,7 +273,7 @@ double mse_error_functor<P>::operator()(const example &example) const
     return err * err;
   }
 
-  return std::numeric_limits<double>::max() / 1000.0;
+  return std::nullopt;
 }
 
 ///

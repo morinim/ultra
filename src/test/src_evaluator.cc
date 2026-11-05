@@ -168,8 +168,8 @@ TEST_CASE("Aggregate evaluators")
   {
     src::rmae_evaluator<gp::individual> rmae(pr.data);
     CHECK(rmae(delphi) == doctest::Approx(0.0));
-    CHECK(rmae(delta1) == doctest::Approx(-0.118876));
-    CHECK(rmae(delta2) == doctest::Approx(-0.23666));
+    CHECK(rmae(delta1) == doctest::Approx(-0.00059438));
+    CHECK(rmae(delta2) == doctest::Approx(-0.0011833));
     CHECK(std::isnan(rmae(huge1)));
     CHECK(std::isnan(rmae(huge2)));
   }
@@ -193,6 +193,102 @@ TEST_CASE("Aggregate evaluators")
     CHECK(count(huge1) == doctest::Approx(-1.0));
     CHECK(count(huge2) == doctest::Approx(-2.0));
   }
+}
+
+struct partial_error_functor
+{
+  explicit partial_error_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &e) const
+  {
+    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
+    if (x < 2.0)
+      return 2.0 * x;
+
+    return std::nullopt;
+  }
+};
+
+struct partial_score_functor
+{
+  explicit partial_score_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &e) const
+  {
+    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
+    if (x < 2.0)
+      return -2.0;
+
+    return std::nullopt;
+  }
+};
+
+struct missing_score_functor
+{
+  explicit missing_score_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &) const
+  {
+    return std::nullopt;
+  }
+};
+
+TEST_CASE("aggregate evaluators penalise missing results")
+{
+  using namespace ultra;
+
+  std::istringstream is("0.0,0.0\n1.0,1.0\n2.0,2.0\n3.0,3.0\n");
+  auto pr(make_problem(is));
+
+  const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
+  REQUIRE(x1);
+
+  const function *f_add(pr.insert<real::add>());
+  const gp::individual ind({{f_add, {x1, 0.0}}});
+
+  src::avg_error_evaluator<gp::individual, partial_error_functor> avg_error(
+    pr.data);
+  src::sum_error_evaluator<gp::individual, partial_error_functor> sum_error(
+    pr.data);
+  src::avg_score_evaluator<gp::individual, partial_score_functor> avg_score(
+    pr.data);
+  src::sum_score_evaluator<gp::individual, partial_score_functor> sum_score(
+    pr.data);
+  src::avg_score_evaluator<gp::individual, missing_score_functor> all_missing(
+    pr.data);
+
+  CHECK(avg_error(ind) == doctest::Approx(-3.0));
+  CHECK(sum_error(ind) == doctest::Approx(-12.0));
+  CHECK(avg_score(ind) == doctest::Approx(-5.0));
+  CHECK(sum_score(ind) == doctest::Approx(-20.0));
+  CHECK(all_missing(ind) ==
+        doctest::Approx(std::numeric_limits<double>::lowest()));
+}
+
+TEST_CASE("fast sum evaluator scales partial coverage")
+{
+  using namespace ultra;
+
+  std::ostringstream os;
+  for (int i(0); i < 100; ++i)
+    os << i << ".0," << i << ".0\n";
+
+  std::istringstream is(os.str());
+  auto pr(make_problem(is));
+
+  const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
+  REQUIRE(x1);
+
+  const function *f_add(pr.insert<real::add>());
+  const gp::individual ind({{f_add, {x1, 0.0}}});
+
+  src::sum_score_evaluator<gp::individual, partial_score_functor> eva(pr.data);
+
+  CHECK(eva(ind) == doctest::Approx(-14900.0));
+  CHECK(eva.fast(ind) == doctest::Approx(-5900.0));
 }
 
 TEST_CASE("binary_evaluator")

@@ -18,6 +18,8 @@
 #include "kernel/gp/src/multi_dataset.h"
 #include "kernel/gp/src/oracle.h"
 
+#include <optional>
+
 namespace ultra::src
 {
 
@@ -55,13 +57,18 @@ template<class D> concept EvaluationDataset =
 /// of the returned value. The aggregation semantics are defined by the
 /// evaluator using the functor (e.g. sum vs average, error vs score).
 ///
+/// Accepts both functors returning `std::optional<double>` and functors
+/// returning `double`.
+///
 /// \note
 /// The functor is typically constructed from an individual/program and may
 /// internally use an oracle or interpreter to compute predictions.
 ///
 template<class F, class D, class P> concept ExampleEvaluator =
   EvaluationDataset<D> && Individual<P>
-  && std::invocable<F, internal::dataset_example_t<D>>;
+  && std::invocable<F, internal::dataset_example_t<D>>
+  && std::convertible_to<std::invoke_result_t<F, internal::dataset_example_t<D>>,
+                         std::optional<double>>;
 
 ///
 /// Base class for dataset-aware evaluators.
@@ -155,8 +162,6 @@ using sum_score_evaluator = aggregate_evaluator<P, F, D,
 ///
 /// Computes (\f$\frac{1}{n} \sum_{i=1}^n |target_i - actual_i|\f$).
 ///
-/// Illegal values are assigned a large penalty.
-///
 /// \see mae_evaluator
 ///
 template<Individual P>
@@ -165,7 +170,7 @@ class mae_error_functor
 public:
   mae_error_functor(const P &);
 
-  [[nodiscard]] double operator()(const example &) const;
+  [[nodiscard]] std::optional<double> operator()(const example &) const;
 
 private:
   basic_reg_oracle<P, false> oracle_;
@@ -191,7 +196,7 @@ using mae_evaluator = avg_error_evaluator<P, mae_error_functor<P>>;
 /// Computes a scaled relative difference between target and predicted values:
 ///
 /// \f[
-/// \frac{1}{n} \sum_{i=1}^n \frac{|target_i - actual_i|}{\frac{|target_i| + |actual_i|}{2}}
+/// \frac{1}{n} \sum_{i=1}^n \frac{|target_i - actual_i|}{|target_i| + |actual_i|}
 /// \f]
 ///
 /// This is similar to mae_error_functor but here we sum the *relative* errors.
@@ -211,7 +216,7 @@ class rmae_error_functor
 public:
   explicit rmae_error_functor(const P &);
 
-  [[nodiscard]] double operator()(const example &) const;
+  [[nodiscard]] std::optional<double> operator()(const example &) const;
 
 private:
   basic_reg_oracle<P, false> oracle_;
@@ -235,9 +240,6 @@ using rmae_evaluator = avg_error_evaluator<P, rmae_error_functor<P>>;
 ///
 /// Computes: (\f$\frac{1}{n} \sum_{i=1}^n (target_i - actual_i)^2\f$).
 ///
-/// There is also a penalty for illegal values (it's a function of the number
-/// of illegal values).
-///
 /// \note
 /// Real data always have noise (sampling/measurement errors) and this noise
 /// tends to follow a Gaussian distribution. It can be shown that when we have
@@ -259,7 +261,7 @@ class mse_error_functor
 public:
   explicit mse_error_functor(const P &);
 
-  [[nodiscard]] double operator()(const example &) const;
+  [[nodiscard]] std::optional<double> operator()(const example &) const;
 
 private:
   basic_reg_oracle<P, false> oracle_;
