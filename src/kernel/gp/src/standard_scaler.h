@@ -30,10 +30,10 @@ class standard_scaler
 public:
   struct column_stats
   {
-    double anchor {0.0};
-    double scale {1.0};
-    double mean {0.0};      ///< Mean offset from anchor, in scale units
-    double std_dev {1.0};   ///< Standard deviation in scale units
+    double anchor {0.0};   ///< Reference offset for numerical stability
+    double scale {1.0};    ///< Scaling factor for numerical stability
+    double mean {0.0};     ///< Mean offset from anchor, in scale units
+    double std_dev {1.0};  ///< Standard deviation in scale units
   };
 
   struct options
@@ -51,11 +51,7 @@ public:
   [[nodiscard]] double inverse_transform_target(double) const;
 
   [[nodiscard]] bool is_fitted() const noexcept { return is_fitted_; }
-  [[nodiscard]] bool is_valid() const noexcept
-  {
-    return !is_fitted_
-           || (!schema_.empty() && input_stats_.size() + 1 == schema_.size());
-  }
+  [[nodiscard]] bool is_valid() const noexcept;
 
 private:
   std::vector<std::pair<std::string, domain_t>> schema_ {};

@@ -57,50 +57,49 @@ void standard_scaler::fit(const dataframe &df)
   {
     if (opt_.scale_inputs)
       for (unsigned i(0); i < vars; ++i)
-        if (const auto *val{std::get_if<D_DOUBLE>(&ex.input[i])})
+        if (const auto *val = std::get_if<D_DOUBLE>(&ex.input[i]))
         {
-          if (in_counts[i] == 0)
-            in_ranges[i] = {*val, *val};
-          else
+          if (in_counts[i])
           {
             in_ranges[i].first = std::min(in_ranges[i].first, *val);
             in_ranges[i].second = std::max(in_ranges[i].second, *val);
           }
+          else
+            in_ranges[i] = {*val, *val};
+
           ++in_counts[i];
         }
 
     if (opt_.scale_output)
-      if (const auto *val{std::get_if<D_DOUBLE>(&ex.output)})
+      if (const auto *val = std::get_if<D_DOUBLE>(&ex.output))
       {
-        if (out_count == 0)
-          out_range = {*val, *val};
-        else
+        if (out_count)
         {
           out_range.first = std::min(out_range.first, *val);
           out_range.second = std::max(out_range.second, *val);
         }
+        else
+          out_range = {*val, *val};
+
         ++out_count;
       }
   }
 
-  for (unsigned i(0); i < vars; ++i)
-    if (in_counts[i] > 1 && in_ranges[i].first < in_ranges[i].second)
-    {
-      input_stats_[i].anchor = in_ranges[i].first;
-      input_stats_[i].scale = std::max(std::abs(in_ranges[i].first),
-                                     std::abs(in_ranges[i].second));
-    }
-    else if (in_counts[i] > 0)
-      input_stats_[i].anchor = in_ranges[i].first;
-
-  if (out_count > 1 && out_range.first < out_range.second)
+  const auto init_anchor_scale([](column_stats &stats, std::size_t count,
+                                  std::pair<double, double> range)
   {
-    output_stats_.anchor = out_range.first;
-    output_stats_.scale = std::max(std::abs(out_range.first),
-                                  std::abs(out_range.second));
-  }
-  else if (out_count > 0)
-    output_stats_.anchor = out_range.first;
+    if (count)
+    {
+      stats.anchor = range.first;
+      if (range.first < range.second)  // this also implies `count > 1`
+        stats.scale = std::max(std::abs(range.first), std::abs(range.second));
+    }
+  });
+
+  for (unsigned i(0); i < vars; ++i)
+    init_anchor_scale(input_stats_[i], in_counts[i], in_ranges[i]);
+
+  init_anchor_scale(output_stats_, out_count, out_range);
 
   // Accumulate centred, scaled variance without squaring original values.
   std::vector<std::size_t> in_seen(vars, 0);
@@ -108,34 +107,27 @@ void standard_scaler::fit(const dataframe &df)
   std::vector<double> in_m2(vars, 0.0);
   double out_m2(0.0);
 
+  const auto update_welford([](double val, column_stats &stats,
+                               std::size_t &seen, double &m2)
+  {
+    const double offset(val / stats.scale - stats.anchor / stats.scale);
+    const double delta(offset - stats.mean);
+    stats.mean += delta / static_cast<double>(++seen);
+    m2 += delta * (offset - stats.mean);
+  });
+
   for (const auto &ex : df)
   {
     if (opt_.scale_inputs)
       for (unsigned i(0); i < vars; ++i)
-        if (const auto *val{std::get_if<D_DOUBLE>(&ex.input[i])})
-        {
-          auto &stats(input_stats_[i]);
+        if (const auto *val = std::get_if<D_DOUBLE>(&ex.input[i]))
           if (in_ranges[i].first < in_ranges[i].second)
-          {
-            const double offset(*val / stats.scale - stats.anchor / stats.scale);
-            const double delta(offset - stats.mean);
-            stats.mean += delta / static_cast<double>(++in_seen[i]);
-            in_m2[i] += delta * (offset - stats.mean);
-          }
-        }
+            update_welford(*val, input_stats_[i], in_seen[i], in_m2[i]);
 
     if (opt_.scale_output)
-      if (const auto *val{std::get_if<D_DOUBLE>(&ex.output)})
-      {
+      if (const auto *val = std::get_if<D_DOUBLE>(&ex.output))
         if (out_range.first < out_range.second)
-        {
-          const double offset(*val / output_stats_.scale
-                              - output_stats_.anchor / output_stats_.scale);
-          const double delta(offset - output_stats_.mean);
-          output_stats_.mean += delta / static_cast<double>(++out_seen);
-          out_m2 += delta * (offset - output_stats_.mean);
-        }
-      }
+          update_welford(*val, output_stats_, out_seen, out_m2);
   }
 
   for (unsigned i(0); i < vars; ++i)
@@ -162,31 +154,36 @@ void standard_scaler::transform(dataframe &df) const
 
   if (!df.empty())
   {
-    if (df.columns.size() != schema_.size())
-      throw exception::data_format("Dataframe schema differs from fitted scaler");
+    const bool valid(
+      (df.columns.size() == schema_.size())
+      && std::ranges::equal(df.columns, schema_,
+                            [](const auto &col, const auto &s)
+                            {
+                              return col.name() == s.first
+                                     && col.domain() == s.second;
+                            }));
 
-    for (std::size_t i(0); i < schema_.size(); ++i)
-      if (df.columns[i].name() != schema_[i].first
-          || df.columns[i].domain() != schema_[i].second)
-        throw exception::data_format("Dataframe schema differs from fitted scaler");
+    if (!valid)
+      throw exception::data_format(
+        "Dataframe schema differs from fitted scaler");
   }
+
+  const auto standardize([](double val, const column_stats &stats)
+  {
+    return (val / stats.scale - stats.anchor / stats.scale - stats.mean)
+           / stats.std_dev;
+  });
 
   for (auto &ex : df)
   {
     if (opt_.scale_inputs)
       for (unsigned i(0); i < input_stats_.size(); ++i)
         if (double *val = std::get_if<D_DOUBLE>(&ex.input[i]))
-        {
-          const auto &stats(input_stats_[i]);
-          *val = (*val / stats.scale - stats.anchor / stats.scale - stats.mean)
-                 / stats.std_dev;
-        }
+          *val = standardize(*val, input_stats_[i]);
 
     if (opt_.scale_output)
       if (double *val = std::get_if<D_DOUBLE>(&ex.output))
-        *val = (*val / output_stats_.scale
-                - output_stats_.anchor / output_stats_.scale
-                - output_stats_.mean) / output_stats_.std_dev;
+        *val = standardize(*val, output_stats_);
   }
 }
 
@@ -205,6 +202,15 @@ double standard_scaler::inverse_transform_target(double norm_y) const
 
   return std::fma(norm_y * output_stats_.std_dev + output_stats_.mean,
                   output_stats_.scale, output_stats_.anchor);
+}
+
+///
+/// \return `true` if the object passes the internal consistency check
+///
+bool standard_scaler::is_valid() const noexcept
+{
+  return !is_fitted_
+         || (!schema_.empty() && input_stats_.size() + 1 == schema_.size());
 }
 
 }  // namespace ultra::src
