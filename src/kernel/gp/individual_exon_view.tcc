@@ -38,7 +38,7 @@ public:
   using iterator = internal::basic_exon_iterator<false>;
 
   /// Sentinel marking the end of the exon traversal.
-  using sentinel = internal::exon_sentinel;
+  using sentinel = std::default_sentinel_t;
 
   /// Constructs a view over the active genes of an individual.
   /// \param[in] ind The individual whose exons will be iterated.
@@ -65,7 +65,7 @@ class const_exon_view : public std::ranges::view_interface<const_exon_view>
 {
 public:
   using iterator = internal::basic_exon_iterator<true>;
-  using sentinel = internal::exon_sentinel;
+  using sentinel = std::default_sentinel_t;
 
   explicit const_exon_view(const gp::individual &ind) noexcept
     : ind_(std::addressof(ind))

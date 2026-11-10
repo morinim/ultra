@@ -22,6 +22,7 @@
 #include "utility/misc.h"
 
 #include <iosfwd>
+#include <iterator>
 #include <set>
 
 namespace ultra::gp

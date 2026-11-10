@@ -23,18 +23,6 @@ namespace internal
 {
 
 ///
-/// Sentinel type marking the end of exon iteration.
-///
-/// The sentinel compares equal to an exon iterator when no further active
-/// loci remain to be explored.
-///
-/// \remark
-/// This sentinel is intentionally stateless, as termination is determined
-/// solely by the iterator's internal frontier.
-///
-struct exon_sentinel {};
-
-///
 /// Input iterator over the active genes (exons) of an individual.
 ///
 /// The iterator performs a dependency-driven traversal starting from the
@@ -112,7 +100,7 @@ public:
   /// \note
   /// Since C++20, rewritten comparison candidates allow this single overload to
   /// support `it == s`, `s == it`, `it != s`, and `s != it`.
-  [[nodiscard]] bool operator==(exon_sentinel) const noexcept
+  [[nodiscard]] bool operator==(std::default_sentinel_t) const noexcept
   {
     return loci_.empty();
   }
