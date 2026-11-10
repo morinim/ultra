@@ -16,10 +16,12 @@
 
 #include "test/fixture1.h"
 
+#include <version>
 #include <algorithm>
 #if defined(__cpp_lib_flat_set)
 #  include <flat_set>
 #endif
+#include <iterator>
 #include <queue>
 
 struct common_elems
@@ -73,10 +75,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] bool operator==(const iterator1 &rhs) const noexcept
+  [[nodiscard]] bool operator==(std::default_sentinel_t) const noexcept
   {
-    return (loci_.empty() && rhs.loci_.empty())
-           || loci_.cbegin() == rhs.loci_.cbegin();
+    return loci_.empty();
   }
 
   [[nodiscard]] ref operator*() const { return ind_->operator[](locus()); }
@@ -140,9 +141,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] bool operator==(const iterator2 &rhs) const noexcept
+  [[nodiscard]] bool operator==(std::default_sentinel_t) const noexcept
   {
-    return current_ == rhs.current_;
+    return current_ == ultra::locus::npos();
   }
 
   [[nodiscard]] ref operator*() const { return ind_->operator[](locus()); }
@@ -188,10 +189,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] bool operator==(const iterator3 &rhs) const noexcept
+  [[nodiscard]] bool operator==(std::default_sentinel_t) const noexcept
   {
-    return loci_.empty() == rhs.loci_.empty()
-           && (loci_.empty() || locus() == rhs.locus());
+    return loci_.empty();
   }
 
   [[nodiscard]] ref operator*() const { return ind_->operator[](locus()); }
@@ -229,10 +229,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] bool operator==(const iterator4 &rhs) const noexcept
+  [[nodiscard]] bool operator==(std::default_sentinel_t) const noexcept
   {
-    return (loci_.empty() && rhs.loci_.empty())
-           || loci_.cbegin() == rhs.loci_.cbegin();
+    return loci_.empty();
   }
 
   [[nodiscard]] ref operator*() const { return ind_->operator[](locus()); }
@@ -260,7 +259,7 @@ inline unsigned test_alternative(
       const auto &ind(ind_db[i]);
 
       IT it(ind);
-      for (; it != IT(); ++it)
+      for (; it != std::default_sentinel; ++it)
         ++count;
     }
 
@@ -326,14 +325,27 @@ int main()
 
   // -------------------------------------------------------------------------
 
+  bool ok(out == out1 && out1 == out2 && out2 == out3);
+
   volatile std::size_t out4(0);
 #if defined(__cpp_lib_flat_set)
-  out4 = test_alternative<iterator3>("Flat set", sup, ind_db);
+  out4 = test_alternative<iterator4>("Flat set", sup, ind_db);
+
+  if (ok)
+    ok = (out3 == out4);
 #endif
 
-  const bool ok(out == out1 && out1 == out2 && out2 == out3 && out3 == out4);
-
   if (!ok)
+  {
     std::cout << "PROBLEM. Out: " << out << "  Out1: " << out1 << "  Out2: "
-              << out2 << "  Out3: " << out3 << "  Out4: " << out4 << std::endl;
+              << out2 << "  Out3: " << out3;
+
+#if defined(__cpp_lib_flat_set)
+    std::cout << "  Out4: " << out4;
+#endif
+
+    std::cout << std::endl;
+  }
+
+  return !ok;
 }
