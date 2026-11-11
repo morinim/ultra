@@ -99,11 +99,11 @@ public:
 protected:
   explicit evaluator(D &) noexcept;
 
+  bool set_parallel_evaluation(unsigned, std::size_t = 0) noexcept;
+
   [[nodiscard]] const auto &data() const noexcept;
   [[nodiscard]] std::size_t min_samples_per_thread() const noexcept;
-  void min_samples_per_thread(std::size_t) noexcept;
   [[nodiscard]] unsigned parallel_helpers() const noexcept;
-  void parallel_helpers(unsigned) noexcept;
 
 private:
   D *dat_ {nullptr};

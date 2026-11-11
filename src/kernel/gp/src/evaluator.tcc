@@ -45,6 +45,25 @@ const auto &evaluator<D>::data() const noexcept
 }
 
 ///
+/// Sets the number of helper threads and workload threshold for parallel
+/// evaluation.
+///
+/// \param[in] helpers     number of helper threads; zero disables parallel
+///                        evaluation
+/// \param[in] min_samples minimum number of samples per thread; zero uses the
+///                        default threshold
+/// \return                `true` after applying the configuration
+///
+template<EvaluationDataset D>
+bool evaluator<D>::set_parallel_evaluation(unsigned helpers,
+                                           std::size_t min_samples) noexcept
+{
+  helpers_ = helpers;
+  min_samples_ = !min_samples ? default_min_samples_per_thread : min_samples;
+  return true;
+}
+
+///
 /// Returns the configured number of helper threads for parallel evaluation.
 ///
 /// \return number of helper threads
@@ -53,12 +72,6 @@ template<EvaluationDataset D>
 unsigned evaluator<D>::parallel_helpers() const noexcept
 {
   return helpers_;
-}
-
-template<EvaluationDataset D>
-void evaluator<D>::parallel_helpers(unsigned n) noexcept
-{
-  helpers_ = n;
 }
 
 ///
@@ -71,12 +84,6 @@ template<EvaluationDataset D>
 std::size_t evaluator<D>::min_samples_per_thread() const noexcept
 {
   return min_samples_;
-}
-
-template<EvaluationDataset D>
-void evaluator<D>::min_samples_per_thread(std::size_t samples) noexcept
-{
-  min_samples_ = !samples ? default_min_samples_per_thread : samples;
 }
 
 ///
@@ -107,9 +114,7 @@ bool aggregate_evaluator<P, F, D, A, M>::set_parallel_evaluation(
   unsigned n, std::size_t min_samples) noexcept
   requires parallel_safe_example_evaluator<F>
 {
-  this->parallel_helpers(n);
-  this->min_samples_per_thread(min_samples);
-  return true;
+  return evaluator<D>::set_parallel_evaluation(n, min_samples);
 }
 
 ///
@@ -203,11 +208,9 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
   std::size_t workers(1);
   if constexpr (std::ranges::forward_range<decltype(dat)>
                 && parallel_safe_example_evaluator<F>)
-    workers = std::max(
-      1uz,
-      std::min(
-        static_cast<std::size_t>(this->parallel_helpers()) + 1,
-        sampled_count / this->min_samples_per_thread()));
+    if (this->parallel_helpers())
+      workers = std::clamp(sampled_count / this->min_samples_per_thread(),
+                           1uz, this->parallel_helpers() + 1uz);
 
   const auto stride(step * static_cast<std::ptrdiff_t>(workers));
 
@@ -216,6 +219,22 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
     double mean {0.0};
     std::size_t sampled {0};
     std::size_t valid {0};
+
+    void merge(const partial &part)
+    {
+      sampled += part.sampled;
+      if (!part.valid)
+        return;
+
+      if (valid)
+        mean += (part.mean - mean)
+                * (static_cast<double>(part.valid)
+                   / static_cast<double>(valid + part.valid));
+      else
+        mean = part.mean;
+
+      valid += part.valid;
+    }
   };
 
   const auto evaluate_strip([&](std::size_t strip)
@@ -247,22 +266,7 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
   partial total(evaluate_strip(0));  // caller handles the first strip
 
   for (auto &future : futures)
-  {
-    const auto part(future.get());
-    total.sampled += part.sampled;
-
-    if (part.valid)
-    {
-      if (total.valid)
-        total.mean += (part.mean - total.mean)
-                      * (static_cast<double>(part.valid)
-                         / static_cast<double>(total.valid + part.valid));
-      else
-        total.mean = part.mean;
-
-      total.valid += part.valid;
-    }
-  }
+    total.merge(future.get());
 
   Ensures(0 < total.sampled
           && total.sampled <= static_cast<std::size_t>(examples));
