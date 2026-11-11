@@ -62,6 +62,8 @@ public:
   [[nodiscard]] evaluator_fitness_t<E> fast(
     const evaluator_individual_t<E> &) const;
 
+  bool set_parallel_evaluation(unsigned, std::size_t = 0);
+
   [[nodiscard]] const E &core() const noexcept;
 
 private:

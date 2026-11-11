@@ -32,12 +32,17 @@ struct print_status
   timer from_start {};
   timer from_last_msg {};
 
-  void new_generation()
+  std::size_t layers {1};
+  std::size_t helpers {0};
+
+  void new_generation(std::size_t l)
   {
     run_phase = phase::evolution;
 
     planned_steps.store(0, std::memory_order_relaxed);
     completed_steps.store(0, std::memory_order_relaxed);
+
+    layers = l;
   }
 };
 
@@ -148,6 +153,25 @@ private:
   std::vector<std::future<void>> tasks_ {};
 };
 
+template<Evaluator E>
+void set_evaluator_parallelism(std::size_t allocated,
+                               std::size_t min_samples_per_eval_thread,
+                               E &eva, print_status &ps)
+{
+  if constexpr (requires { eva.set_parallel_evaluation(0, 0); })
+  {
+    const auto capacity(hardware_threads());
+    const auto helpers(allocated && allocated < capacity ?
+                       (capacity - allocated) / allocated : 0);
+
+    ultraDEBUG("Configure evaluator's parallelism to {}", helpers);
+    if (eva.set_parallel_evaluation(helpers, min_samples_per_eval_thread))
+      ps.helpers = helpers;
+    else
+      ps.helpers = 0;
+  }
+}
+
 }  // namespace internal
 
 ///
@@ -251,8 +275,10 @@ void evolution<E>::print(message m, internal::print_status &ps) const
       if (sum_.generation)
       {
         const double gph(3600.0 * sum_.generation / seconds);
-        line += std::format("  [{0}x {1:.{2}f}gph]",
-                            pop_.layers(), gph, gph > 2.0 ? 0 : 1);
+        line += std::format("  [{}L", ps.layers);
+        if (ps.helpers)
+          line += std::format(" x {}T", 1 + ps.helpers);
+        line += std::format(" | {0:.{1}f}gph]", gph, gph > 2.0 ? 0 : 1);
       }
     }
 
@@ -465,7 +491,13 @@ bool evolution<E>::perform_refinement(P &ref_pop, internal::print_status &ps)
                          std::memory_order_relaxed);
   ps.completed_steps.store(0, std::memory_order_relaxed);
 
-  internal::task_group tasks(std::min(candidates.size(), hardware_threads()));
+  const auto threads(std::min(candidates.size(), hardware_threads()));
+
+  set_evaluator_parallelism(
+    threads, pop_.problem().params.min_samples_per_eval_thread,
+    eva_, ps);
+
+  internal::task_group tasks(threads);
 
   for (std::size_t i(0); i < candidates.size(); ++i)
     tasks.submit(
@@ -602,7 +634,7 @@ summary<typename evolution<E>::individual_t,
 
   while (!source.stop_requested() && !stop_condition())
   {
-    ps.new_generation();
+    ps.new_generation(pop_.layers());
 
     if (shake_ && shake_(sum_.generation) == evaluation_context::changed)
     {
@@ -614,6 +646,10 @@ summary<typename evolution<E>::individual_t,
         progress_best = sum_.best();
       }
     }
+
+    set_evaluator_parallelism(
+      pop_.layers(), pop_.problem().params.min_samples_per_eval_thread,
+      eva_, ps);
 
     ultraDEBUG("Launching tasks for generation {}", sum_.generation);
     const auto subpops(pop_.range_of_layers());

@@ -31,9 +31,7 @@ evaluator_proxy<E>::evaluator_proxy(E eva, bitwidth ts) : eva_(std::move(eva)),
   static_assert(!std::derived_from<E, evaluator_proxy>);
 
   if (!ts)
-  {
     ultraWARNING("Evaluator proxy cache is disabled");
-  }
 }
 
 ///
@@ -197,6 +195,28 @@ template<Evaluator E>
 void evaluator_proxy<E>::clear(const hash_t &h) const
 {
   cache_.clear(h);
+}
+
+///
+/// Configures parallel evaluation for evaluators that support it.
+///
+/// \param[in] helpers     number of helper threads; zero disables parallel
+///                        evaluation
+/// \param[in] min_samples minimum number of samples per thread; zero uses the
+///                        evaluator's default
+/// \return `true`         if the underlying evaluator accepted the
+///                        configuration
+///
+/// Forwards the configuration to the underlying evaluator if supported.
+///
+template<Evaluator E>
+bool evaluator_proxy<E>::set_parallel_evaluation(unsigned helpers,
+                                                 std::size_t min_samples)
+{
+  if constexpr (requires {eva_.set_parallel_evaluation(helpers, min_samples);})
+    return eva_.set_parallel_evaluation(helpers, min_samples);
+
+  return false;
 }
 
 ///

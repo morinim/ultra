@@ -18,7 +18,9 @@
 #include "kernel/gp/src/multi_dataset.h"
 #include "kernel/gp/src/oracle.h"
 
+#include <future>
 #include <optional>
+#include <vector>
 
 namespace ultra::src
 {
@@ -71,6 +73,14 @@ template<class F, class D, class P> concept ExampleEvaluator =
                          std::optional<double>>;
 
 ///
+/// Opts an example functor into parallel evaluation.
+///
+/// A specialisation set to `true` promises that each result depends only on
+/// the current example and that separate functor instances may run concurrently.
+///
+template<class F> inline constexpr bool parallel_safe_example_evaluator = false;
+
+///
 /// Base class for dataset-aware evaluators.
 ///
 /// \tparam D dataset type
@@ -83,13 +93,22 @@ template<class F, class D, class P> concept ExampleEvaluator =
 template<EvaluationDataset D>
 class evaluator
 {
+public:
+  static constexpr std::size_t default_min_samples_per_thread = 512;
+
 protected:
   explicit evaluator(D &) noexcept;
 
   [[nodiscard]] const auto &data() const noexcept;
+  [[nodiscard]] std::size_t min_samples_per_thread() const noexcept;
+  void min_samples_per_thread(std::size_t) noexcept;
+  [[nodiscard]] unsigned parallel_helpers() const noexcept;
+  void parallel_helpers(unsigned) noexcept;
 
 private:
   D *dat_ {nullptr};
+  unsigned helpers_ {0};
+  std::size_t min_samples_ {default_min_samples_per_thread};
 };
 
 enum class aggregation_mode { sum, average };
@@ -100,7 +119,12 @@ requires ExampleEvaluator<F, D, P>
 class aggregate_evaluator : public evaluator<D>
 {
 public:
+  static constexpr std::ptrdiff_t fast_step = 5;
+
   explicit aggregate_evaluator(D &) noexcept;
+
+  bool set_parallel_evaluation(unsigned, std::size_t = 0) noexcept
+    requires parallel_safe_example_evaluator<F>;
 
   [[nodiscard]] double operator()(const P &) const;
   [[nodiscard]] double fast(const P &) const;
@@ -110,7 +134,6 @@ public:
 
 private:
   static constexpr std::ptrdiff_t fast_min_examples = 100;
-  static constexpr std::ptrdiff_t fast_step = 5;
 
   [[nodiscard]] double eval_impl(const P &, std::ptrdiff_t) const;
 };
@@ -301,6 +324,15 @@ public:
 private:
   basic_reg_oracle<P, false> oracle_;
 };
+
+template<Individual P>
+inline constexpr bool parallel_safe_example_evaluator<mae_error_functor<P>> = true;
+template<Individual P>
+inline constexpr bool parallel_safe_example_evaluator<rmae_error_functor<P>> = true;
+template<Individual P>
+inline constexpr bool parallel_safe_example_evaluator<mse_error_functor<P>> = true;
+template<Individual P>
+inline constexpr bool parallel_safe_example_evaluator<count_error_functor<P>> = true;
 
 ///
 /// Evaluator based on the number of matches.

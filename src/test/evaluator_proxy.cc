@@ -22,6 +22,25 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+struct parallel_evaluator
+{
+  [[nodiscard]] double operator()(const ultra::gp::individual &) const
+  {
+    return 0.0;
+  }
+
+  bool set_parallel_evaluation(unsigned n, std::size_t min)
+  {
+    helpers = n;
+    min_samples = min;
+    return accepted;
+  }
+
+  unsigned helpers {0};
+  std::size_t min_samples {0};
+  bool accepted {true};
+};
+
 TEST_SUITE("EVALUATOR_PROXY")
 {
 
@@ -52,6 +71,32 @@ TEST_CASE_FIXTURE(fixture1, "Fitness recall")
 
   for (const auto &si : scored_individuals)
     CHECK(proxy(si.ind) == doctest::Approx(si.fit));
+}
+
+TEST_CASE("Parallel evaluation configuration is forwarded")
+{
+  ultra::evaluator_proxy proxy(parallel_evaluator {}, 7);
+
+  CHECK(proxy.set_parallel_evaluation(3, 64));
+  CHECK(proxy.core().helpers == 3);
+  CHECK(proxy.core().min_samples == 64);
+
+  CHECK(proxy.set_parallel_evaluation(0));
+  CHECK(proxy.core().helpers == 0);
+  CHECK(proxy.core().min_samples == 0);
+
+  ultra::evaluator_proxy rejected(parallel_evaluator {.accepted = false}, 7);
+  CHECK_FALSE(rejected.set_parallel_evaluation(2, 32));
+  CHECK(rejected.core().helpers == 2);
+  CHECK(rejected.core().min_samples == 32);
+}
+
+TEST_CASE("Parallel evaluation configuration is optional")
+{
+  ultra::evaluator_proxy proxy(
+    ultra::test_evaluator<ultra::gp::individual> {}, 7);
+
+  CHECK_FALSE(proxy.set_parallel_evaluation(3, 64));
 }
 
 }  // TEST_SUITE("EVALUATOR")

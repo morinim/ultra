@@ -21,12 +21,84 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+struct partial_error_functor
+{
+  explicit partial_error_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &e) const
+  {
+    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
+    if (x < 2.0)
+      return 2.0 * x;
+
+    return std::nullopt;
+  }
+};
+
+struct partial_score_functor
+{
+  explicit partial_score_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &e) const
+  {
+    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
+    if (x < 2.0)
+      return -2.0;
+
+    return std::nullopt;
+  }
+};
+
+struct missing_score_functor
+{
+  explicit missing_score_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] std::optional<double>
+  operator()(const ultra::src::example &) const
+  {
+    return std::nullopt;
+  }
+};
+
+struct stateful_score_functor
+{
+  explicit stateful_score_functor(const ultra::gp::individual &) {}
+
+  [[nodiscard]] double operator()(const ultra::src::example &) const
+  {
+    return static_cast<double>(++calls);
+  }
+
+  mutable unsigned calls {0};
+};
+
+template<class E> concept SupportsParallelEvaluation = requires(E &eva)
+{
+  eva.set_parallel_evaluation(1, 1);
+};
+
+namespace ultra::src
+{
+template<> inline constexpr bool
+parallel_safe_example_evaluator<::partial_error_functor> = true;
+template<> inline constexpr bool
+parallel_safe_example_evaluator<::partial_score_functor> = true;
+template<> inline constexpr bool
+parallel_safe_example_evaluator<::missing_score_functor> = true;
+}
+
 TEST_SUITE("src::evaluator")
 {
 
 TEST_CASE("Concepts")
 {
   using namespace ultra;
+
+  CHECK_FALSE(SupportsParallelEvaluation<
+    src::avg_score_evaluator<gp::individual, stateful_score_functor>>);
+  CHECK(SupportsParallelEvaluation<src::mae_evaluator<gp::individual>>);
 
   CHECK(src::ExampleEvaluator<src::mae_error_functor<gp::individual>,
         src::dataframe, gp::individual>);
@@ -195,47 +267,6 @@ TEST_CASE("Aggregate evaluators")
   }
 }
 
-struct partial_error_functor
-{
-  explicit partial_error_functor(const ultra::gp::individual &) {}
-
-  [[nodiscard]] std::optional<double>
-  operator()(const ultra::src::example &e) const
-  {
-    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
-    if (x < 2.0)
-      return 2.0 * x;
-
-    return std::nullopt;
-  }
-};
-
-struct partial_score_functor
-{
-  explicit partial_score_functor(const ultra::gp::individual &) {}
-
-  [[nodiscard]] std::optional<double>
-  operator()(const ultra::src::example &e) const
-  {
-    const auto x(std::get<ultra::D_DOUBLE>(e.input.front()));
-    if (x < 2.0)
-      return -2.0;
-
-    return std::nullopt;
-  }
-};
-
-struct missing_score_functor
-{
-  explicit missing_score_functor(const ultra::gp::individual &) {}
-
-  [[nodiscard]] std::optional<double>
-  operator()(const ultra::src::example &) const
-  {
-    return std::nullopt;
-  }
-};
-
 TEST_CASE("aggregate evaluators penalise missing results")
 {
   using namespace ultra;
@@ -289,6 +320,51 @@ TEST_CASE("fast sum evaluator scales partial coverage")
 
   CHECK(eva(ind) == doctest::Approx(-14900.0));
   CHECK(eva.fast(ind) == doctest::Approx(-5900.0));
+}
+
+TEST_CASE("parallel aggregate evaluation matches serial evaluation")
+{
+  using namespace ultra;
+
+  using error_evaluator =
+    src::avg_error_evaluator<gp::individual, partial_error_functor>;
+  constexpr std::size_t N(1280);
+  constexpr unsigned helpers(3);
+  constexpr std::size_t fast_samples((N - 1) / error_evaluator::fast_step + 1);
+  constexpr std::size_t min_samples_per_thread(fast_samples / (helpers + 1));
+
+  std::ostringstream os;
+  for (unsigned i(0); i < N; ++i)
+    os << i % 4 << ".0," << i % 4 << ".0\n";
+
+  std::istringstream is(os.str());
+  auto pr(make_problem(is));
+
+  const auto *x1(static_cast<const src::variable *>(pr.sset.decode("X1")));
+  REQUIRE(x1);
+
+  const function *f_add(pr.insert<real::add>());
+  const gp::individual ind({{f_add, {x1, 0.0}}});
+
+  src::avg_error_evaluator<gp::individual, partial_error_functor> error(pr.data);
+  src::sum_score_evaluator<gp::individual, partial_score_functor> score(pr.data);
+  src::avg_score_evaluator<gp::individual, missing_score_functor> missing(pr.data);
+
+  const auto serial_error(error(ind));
+  const auto serial_fast_error(error.fast(ind));
+  const auto serial_score(score(ind));
+  const auto serial_fast_score(score.fast(ind));
+
+  error.set_parallel_evaluation(helpers, min_samples_per_thread);
+  score.set_parallel_evaluation(helpers, min_samples_per_thread);
+  missing.set_parallel_evaluation(helpers, min_samples_per_thread);
+
+  CHECK(error(ind) == doctest::Approx(serial_error));
+  CHECK(error.fast(ind) == doctest::Approx(serial_fast_error));
+  CHECK(score(ind) == doctest::Approx(serial_score));
+  CHECK(score.fast(ind) == doctest::Approx(serial_fast_score));
+  CHECK(missing(ind)
+        == doctest::Approx(std::numeric_limits<double>::lowest()));
 }
 
 TEST_CASE("binary_evaluator")

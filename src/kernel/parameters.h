@@ -302,6 +302,15 @@ struct parameters
     std::size_t individuals {3};
   } team;
 
+  /// Minimum number of dataset examples per thread during parallel evaluation.
+  ///
+  /// Evaluators supporting parallel dataset evaluation divide workloads only
+  /// when each worker thread can be assigned at least this number of samples.
+  ///
+  /// \note
+  /// `0` means auto-tune (use the evaluator's default threshold).
+  std::size_t min_samples_per_eval_thread {0};
+
   parameters &fill_undefined_from(const parameters &);
   parameters &init();
   [[nodiscard]] bool needs_init() const noexcept;

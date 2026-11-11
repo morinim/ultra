@@ -45,6 +45,41 @@ const auto &evaluator<D>::data() const noexcept
 }
 
 ///
+/// Returns the configured number of helper threads for parallel evaluation.
+///
+/// \return number of helper threads
+///
+template<EvaluationDataset D>
+unsigned evaluator<D>::parallel_helpers() const noexcept
+{
+  return helpers_;
+}
+
+template<EvaluationDataset D>
+void evaluator<D>::parallel_helpers(unsigned n) noexcept
+{
+  helpers_ = n;
+}
+
+///
+/// Returns the effective minimum number of dataset examples per evaluation
+/// thread, including the default selected when zero was configured.
+///
+/// \return minimum number of samples per thread
+///
+template<EvaluationDataset D>
+std::size_t evaluator<D>::min_samples_per_thread() const noexcept
+{
+  return min_samples_;
+}
+
+template<EvaluationDataset D>
+void evaluator<D>::min_samples_per_thread(std::size_t samples) noexcept
+{
+  min_samples_ = !samples ? default_min_samples_per_thread : samples;
+}
+
+///
 /// Constructs the evaluator.
 ///
 /// \param[in] d training dataset
@@ -54,6 +89,27 @@ requires ExampleEvaluator<F, D, P>
 aggregate_evaluator<P, F, D, A, M>::aggregate_evaluator(D &d) noexcept
   : evaluator<D>(d)
 {
+}
+
+///
+/// Sets the number of helper threads and workload threshold for parallel
+/// evaluation.
+///
+/// \param[in] n           number of helper threads; zero disables parallel
+///                        evaluation
+/// \param[in] min_samples minimum number of samples per thread; zero uses the
+///                        default threshold
+/// \return                `true` after applying the configuration
+///
+template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
+requires ExampleEvaluator<F, D, P>
+bool aggregate_evaluator<P, F, D, A, M>::set_parallel_evaluation(
+  unsigned n, std::size_t min_samples) noexcept
+  requires parallel_safe_example_evaluator<F>
+{
+  this->parallel_helpers(n);
+  this->min_samples_per_thread(min_samples);
+  return true;
 }
 
 ///
@@ -125,6 +181,13 @@ auto aggregate_evaluator<P, F, D, A, M>::predictor(const P &prg) const
 /// program may still outrank a fully valid one. If all values are missing,
 /// the function returns `std::numeric_limits<double>::lowest()`.
 ///
+/// For opted-in functors and forward-range datasets with enough sampled
+/// examples, evaluation is divided into strips across the calling thread and
+/// configured helper threads.
+/// Each strip constructs its own example functor. Their means are combined by
+/// valid-example count before the missing-value penalty and sum scaling are
+/// applied. Parallel evaluation may change floating-point rounding.
+///
 template<Individual P, class F, class D, aggregation_mode A, evaluation_mode M>
 requires ExampleEvaluator<F, D, P>
 double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
@@ -134,32 +197,85 @@ double aggregate_evaluator<P, F, D, A, M>::eval_impl(const P &prg,
   const auto examples(std::ranges::distance(dat));
   Expects(0 < step && step <= examples);
 
-  const F f(prg);
   const auto end(std::end(dat));
+  const auto sampled_count(static_cast<std::size_t>((examples - 1) / step + 1));
 
-  double acc(0.0);
-  std::size_t sampled(0), valid(0);
+  std::size_t workers(1);
+  if constexpr (std::ranges::forward_range<decltype(dat)>
+                && parallel_safe_example_evaluator<F>)
+    workers = std::max(
+      1uz,
+      std::min(
+        static_cast<std::size_t>(this->parallel_helpers()) + 1,
+        sampled_count / this->min_samples_per_thread()));
 
-  for (auto it(std::begin(dat)); it != end; std::ranges::advance(it, step, end))
+  const auto stride(step * static_cast<std::ptrdiff_t>(workers));
+
+  struct partial
   {
-    ++sampled;
+    double mean {0.0};
+    std::size_t sampled {0};
+    std::size_t valid {0};
+  };
 
-    if (const std::optional<double> value(f(*it)); value)
-      acc += (*value - acc) / static_cast<double>(++valid);
+  const auto evaluate_strip([&](std::size_t strip)
+  {
+    const F f(prg);  // each strip owns its oracle
+    partial result;
+
+    for (auto it(std::ranges::next(std::begin(dat),
+                                   static_cast<std::ptrdiff_t>(strip) * step, end));
+         it != end;
+         std::ranges::advance(it, stride, end))
+    {
+      ++result.sampled;
+
+      if (const std::optional<double> value(f(*it)); value)
+        result.mean += (*value - result.mean)
+                       / static_cast<double>(++result.valid);
+    }
+
+    return result;
+  });
+
+  std::vector<std::future<partial>> futures;
+  futures.reserve(workers - 1);
+
+  for (std::size_t strip(1); strip < workers; ++strip)
+    futures.push_back(std::async(std::launch::async, evaluate_strip, strip));
+
+  partial total(evaluate_strip(0));  // caller handles the first strip
+
+  for (auto &future : futures)
+  {
+    const auto part(future.get());
+    total.sampled += part.sampled;
+
+    if (part.valid)
+    {
+      if (total.valid)
+        total.mean += (part.mean - total.mean)
+                      * (static_cast<double>(part.valid)
+                         / static_cast<double>(total.valid + part.valid));
+      else
+        total.mean = part.mean;
+
+      total.valid += part.valid;
+    }
   }
 
-  Ensures(0 < sampled && sampled <= static_cast<std::size_t>(examples));
+  Ensures(0 < total.sampled
+          && total.sampled <= static_cast<std::size_t>(examples));
 
-  if (!valid)
+  if (!total.valid)
     return std::numeric_limits<double>::lowest();
 
-  if (valid < sampled)
+  double acc(total.mean);
+
+  if (total.valid < total.sampled)
   {
-    // `acc` is the mean over valid examples. Penalise missing predictions in
-    // proportion to the ratio of missing to valid examples; for scores, use
-    // the magnitude of `acc` so missing predictions also lower negative scores.
-    const auto missing_per_valid(static_cast<double>(sampled - valid)
-                                 / static_cast<double>(valid));
+    const auto missing_per_valid(static_cast<double>(total.sampled - total.valid)
+                                 / static_cast<double>(total.valid));
 
     if constexpr (M == evaluation_mode::error)
       acc += missing_per_valid * (acc + 1.0);
