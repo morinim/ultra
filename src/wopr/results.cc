@@ -16,15 +16,19 @@
 #include "gui_helpers.h"
 
 #include "kernel/search_log.h"
+#include "utility/misc.h"
 
 #include "implot/implot.h"
+#include "tinyxml2/tinyxml2.h"
 
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <expected>
 #include <format>
 #include <fstream>
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -41,6 +45,244 @@ using namespace std::chrono_literals;
 
 namespace rs
 {
+
+std::expected<ultra::model_measurements<double>, std::string>
+extract_threshold(std::string txt)
+{
+  if (txt.empty())
+    return {};
+
+  ultra::model_measurements<double> threshold;
+  std::size_t consumed;
+
+  const bool accuracy(txt.back() == '%');
+  if (accuracy)
+    txt = txt.substr(0, txt.size() - 1);
+
+  try
+  {
+    const double val(std::stod(txt, &consumed));
+
+    if (consumed != txt.size())
+      return std::unexpected("Invalid threshold.");
+
+    if (accuracy)
+    {
+      threshold.accuracy = val / 100.0;
+
+      if (threshold.accuracy < 0.0 || threshold.accuracy > 1.0)
+        return std::unexpected("Wrong range for accuracy.");
+    }
+    else
+      threshold.fitness = val;
+  }
+  catch (...)
+  {
+    return std::unexpected("Cannot convert threshold.");
+  }
+
+  return threshold;
+}
+
+settings read_settings(const fs::path &test_fn, const settings &defaults)
+{
+  assert(ultra::iequals(test_fn.extension(), ".csv"));
+
+  const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
+  if (!fs::exists(settings_fn))
+    return defaults;
+
+  tinyxml2::XMLDocument doc;
+  if (const auto result(doc.LoadFile(settings_fn.c_str()));
+      result != tinyxml2::XML_SUCCESS)
+  {
+    std::cerr << "Cannot open settings for " << test_fn << ".\n";
+    return defaults;
+  }
+
+  settings ret(defaults);
+
+  tinyxml2::XMLConstHandle handle(&doc);
+  const auto h_ultra(handle.FirstChildElement("ultra"));
+
+  const auto h_search(h_ultra.FirstChildElement("search"));
+  if (const auto *e = h_search.FirstChildElement("generations").ToElement())
+    ret.generations = e->UnsignedText(ret.generations);
+
+  if (const auto *e = h_search.FirstChildElement("runs").ToElement())
+    ret.runs = e->UnsignedText(ret.runs);
+
+  if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
+    if (const char *text = e->GetText())
+    {
+      if (const auto threshold(extract_threshold(std::string(text))); threshold)
+        ret.threshold = threshold.value();
+      else
+        std::cerr << threshold.error() << '\n';
+    }
+
+  const auto h_dataset(h_ultra.FirstChildElement("dataset"));
+  if (const auto *e = h_dataset.FirstChildElement("output_index").ToElement())
+    if (const char *text = e->GetText())
+    {
+      if (ultra::iequals(text, "last"))
+        ret.params.output_index = ultra::src::dataframe::params::index::back;
+      else if (unsigned output_index;
+               e->QueryUnsignedText(&output_index) == tinyxml2::XML_SUCCESS)
+        ret.params.output_index = output_index;
+    }
+
+  return ret;
+}
+
+collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
+                              const settings &defaults)
+{
+  using namespace ultra;
+
+  if (in1.empty())
+    in1 = "./";
+
+  if (in1 == in2)
+  {
+    std::cerr << "Same file or directory for comparison.\n";
+    return {};
+  }
+
+  if (!in2.empty() && !fs::is_directory(in2))
+  {
+    std::cerr << in2 << " isn't a directory.\n";
+    return {};
+  }
+
+  collection_t ret;
+
+  const auto check_and_insert([&m, &in2, &ret, &defaults](const auto &path)
+  {
+    const auto get_reference([&in2](const fs::path &base)
+    {
+      if (!in2.empty())
+      {
+        if (const auto ref(in2 / summary_from_basename(base.filename()));
+            fs::exists(ref))
+        {
+          std::cout << "\n  reference: " << ref << '\n';
+
+          try
+          {
+            return summary_data(ref);
+          }
+          catch (const std::invalid_argument &e)
+          {
+            std::cerr << e.what() << '\n';
+          }
+        }
+      }
+      else
+        std::cout << "\n  no reference\n";
+
+      return summary_data();
+    });
+
+    const auto show_settings([](std::string_view name, const settings &ts)
+    {
+      std::cout << "Settings for " << name
+                << "\n  Runs: " << ts.runs
+                << "\n  Generations: " << ts.generations
+                << "\n  Threshold:";
+
+      if (ts.threshold.accuracy || ts.threshold.fitness)
+      {
+        if (ts.threshold.accuracy)
+          std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+        if (ts.threshold.fitness)
+          std::cout << ' ' << *ts.threshold.fitness;
+      }
+      else
+        std::cout << " none";
+      std::cout << '\n';
+    });
+
+    const auto ext(path.extension());
+
+    if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
+    {
+      const auto sum(summary_from_basename(path));
+
+      std::cout << "Basename: " << path
+                << "\n  first summary: " << sum;
+
+      const auto ref(get_reference(path));
+
+      const rs::data d(path, sum, read_settings(path, defaults), ref);
+
+      ret.emplace_back(path.stem(), d);
+
+      show_settings(ret.back().first, ret.back().second.conf);
+      return true;
+    }
+
+    if (m == exec_mode::summary && ultra::iequals(ext, ".xml")
+        && path.stem().string().ends_with(".summary"))
+    {
+      const auto basename(basename_from_summary(path));
+
+      std::cout << "Basename: " << basename
+                << "\n  first summary: " << path;
+
+      const auto ref(get_reference(basename));
+
+      const rs::data d(basename, path, {}, ref);
+
+      ret.emplace_back(basename.stem(), d);
+      return true;
+    }
+
+    return false;
+  });
+
+  if (fs::is_directory(in1))
+  {
+    std::vector<fs::path> sf;
+
+    for (const auto &entry : fs::directory_iterator(in1))
+    {
+      if (!entry.is_regular_file())
+        continue;
+
+      const auto &p(entry.path());
+
+      if (const auto ext(p.extension());
+          ultra::iequals(ext, ".csv") || ultra::iequals(ext, ".xml"))
+        sf.push_back(p);
+    }
+
+    std::ranges::sort(sf, {}, &fs::path::filename);
+
+    for (const auto &entry : sf)
+      check_and_insert(entry);
+  }
+  else if (fs::exists(in1))
+    check_and_insert(in1);
+  else
+  {
+    std::cerr << in1 << " isn't a valid input.\n";
+    return {};
+  }
+
+  if (ret.empty())
+  {
+    std::cerr << "No dataset available.\n";
+    return {};
+  }
+
+  std::cout << "Datasets:";
+  for (const auto &ds : ret)
+    std::cout << ' ' << ds.first;
+  std::cout << '\n';
+
+  return ret;
+}
 
 }  // namespace rs
 

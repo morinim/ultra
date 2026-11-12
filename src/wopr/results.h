@@ -20,6 +20,7 @@
 #include "kernel/gp/src/dataframe.h"
 
 #include <chrono>
+#include <expected>
 #include <filesystem>
 #include <limits>
 #include <set>
@@ -93,6 +94,8 @@ struct data
 
 using collection_t = std::vector<std::pair<const std::string, data>>;
 
+[[nodiscard]] std::expected<ultra::model_measurements<double>, std::string>
+extract_threshold(std::string);
 [[nodiscard]] settings read_settings(const std::filesystem::path &,
                                      const settings & = {});
 [[nodiscard]] collection_t setup_collection(std::filesystem::path,

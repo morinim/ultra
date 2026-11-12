@@ -24,7 +24,10 @@
 namespace ultra::wopr
 {
 
-struct help_command {};
+struct help_command
+{
+  std::string message {};
+};
 
 using command = std::variant<help_command, monitor::options, rs::run::options,
                              rs::summary::options>;
