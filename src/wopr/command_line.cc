@@ -90,26 +90,6 @@ void cmdl_usage()
   }
 }
 
-fs::path build_path(fs::path base_dir, fs::path f,
-                    const std::string &default_filename)
-{
-  f = f.lexically_normal();
-
-  if (f.is_absolute())
-    return f;
-
-  if (base_dir.empty())
-    base_dir = "./";
-
-  if (!f.empty())
-    return base_dir / f;
-
-  if (!default_filename.empty())
-    return base_dir / default_filename;
-
-  return {};
-}
-
 namespace
 {
 

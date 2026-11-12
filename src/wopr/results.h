@@ -17,6 +17,7 @@
 
 #include "kernel/fitness.h"
 #include "kernel/model_measurements.h"
+#include "kernel/search_log.h"
 #include "kernel/gp/src/dataframe.h"
 
 #include <chrono>
@@ -32,6 +33,9 @@ namespace tinyxml2 { class XMLDocument; }
 
 namespace ultra::wopr
 {
+
+[[nodiscard]] std::filesystem::path build_path(
+  std::filesystem::path, std::filesystem::path);
 
 struct summary_data
 {
@@ -102,6 +106,9 @@ extract_threshold(std::string);
                                             std::filesystem::path,
                                             exec_mode,
                                             const settings & = {});
+
+[[nodiscard]] ultra::search_log make_search_log(
+  const std::filesystem::path &, const std::filesystem::path & = {});
 
 namespace run
 {

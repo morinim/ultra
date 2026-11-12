@@ -12,8 +12,6 @@
 
 #include "results.h"
 
-#include "command_line.h"
-
 #include "kernel/search_log.h"
 #include "kernel/gp/src/search.h"
 #include "utility/log.h"
@@ -51,18 +49,7 @@ bool rs::run::start(const imgui_app::program::settings &settings,
       prob.params.evolution.generations = test.second.conf.generations;
 
       ultra::src::search s(prob);
-
-      ultra::search_log sl;
-      const fs::path base_dir(dataset.parent_path());
-
-      sl.dynamic_file_path = build_path(
-        base_dir, ultra::dynamic_from_basename(dataset));
-      sl.layers_file_path = build_path(
-        base_dir, ultra::layers_from_basename(dataset));
-      sl.population_file_path = build_path(
-        base_dir, ultra::population_from_basename(dataset));
-      sl.summary_file_path = test.second.xml_summary;
-
+      auto sl(rs::make_search_log(dataset, test.second.xml_summary));
       s.logger(sl).stop_source(source);
 
       if (multiple_tests)

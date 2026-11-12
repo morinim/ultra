@@ -75,6 +75,36 @@ struct plot_context
 TEST_SUITE("WOPR RESULTS")
 {
 
+TEST_CASE("build_path constructs and normalizes paths correctly")
+{
+  CHECK(build_path("", "test.txt") == "./test.txt");
+  CHECK(build_path("dir", "test.txt") == "dir/test.txt");
+  CHECK(build_path("dir", "/abs/test.txt") == "/abs/test.txt");
+  CHECK(build_path("dir", "").empty());
+  CHECK(build_path("", "").empty());
+}
+
+TEST_CASE("make_search_log constructs search log paths from dataset")
+{
+  SUBCASE("default summary path")
+  {
+    const auto sl(rs::make_search_log("data/test.csv"));
+    CHECK(sl.dynamic_file_path == "data/test.dynamic.txt");
+    CHECK(sl.layers_file_path == "data/test.layers.txt");
+    CHECK(sl.population_file_path == "data/test.population.txt");
+    CHECK(sl.summary_file_path == "data/test.summary.xml");
+  }
+
+  SUBCASE("explicit summary path")
+  {
+    const auto sl(rs::make_search_log("data/test.csv", "out/custom.xml"));
+    CHECK(sl.dynamic_file_path == "data/test.dynamic.txt");
+    CHECK(sl.layers_file_path == "data/test.layers.txt");
+    CHECK(sl.population_file_path == "data/test.population.txt");
+    CHECK(sl.summary_file_path == "out/custom.xml");
+  }
+}
+
 TEST_CASE("Summary files require valid XML and matching checksums")
 {
   const fs::path path("wopr_summary_check.xml");

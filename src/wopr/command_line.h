@@ -17,7 +17,6 @@
 #include "results.h"
 
 #include <expected>
-#include <filesystem>
 #include <string>
 #include <variant>
 
@@ -33,9 +32,6 @@ using command = std::variant<help_command, monitor::options, rs::run::options,
                              rs::summary::options>;
 
 void cmdl_usage();
-[[nodiscard]] std::filesystem::path build_path(std::filesystem::path,
-                                               std::filesystem::path,
-                                               const std::string & = {});
 [[nodiscard]] std::expected<command, std::string> parse_args(int, char *[]);
 
 }  // namespace ultra::wopr

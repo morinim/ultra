@@ -48,39 +48,6 @@ ultra::ts_queue<dynamic_data> dynamic_queue;
 ultra::ts_queue<population_line> population_queue;
 ultra::ts_queue<layers_line> layers_queue;
 
-/*********************************************************************
- * A normal distribution that supports works when standard deviation is zero.
- ********************************************************************/
-template<class RealType = double>
-class degenerate_normal_distribution
-{
-public:
-  struct param_type
-  {
-    RealType mean {0.0};
-    RealType stddev {1.0};
-
-    param_type(RealType m, RealType sd) : mean(m), stddev(sd) {}
-  };
-
-  degenerate_normal_distribution(RealType mean, RealType stddev)
-    : params_(mean, stddev),
-      dist_(mean, ultra::issmall(stddev) ? RealType(1) : stddev)
-  {}
-
-  void reset() { dist_.reset(); }
-
-  template<class URNG>
-  [[nodiscard]] RealType operator()(URNG &g)
-  {
-    return ultra::issmall(params_.stddev) ? params_.mean : dist_(g);
-  }
-
-private:
-  param_type params_;
-  std::normal_distribution<RealType> dist_;
-};
-
 struct id_scope
 {
   explicit id_scope(int id) { ImGui::PushID(id); }
@@ -387,17 +354,24 @@ void render_layers_fit(const std::vector<layers_line> &layers_runs)
 
     for (std::size_t layer(0); layer < max_layers; ++layer)
     {
-      degenerate_normal_distribution fit_nd(lr.fit_mean[layer],
-                                            lr.fit_std_dev[layer]);
-
+      const auto mean(lr.fit_mean[layer]);
+      const auto stddev(lr.fit_std_dev[layer]);
+      const auto min(lr.fit_min[layer]);
+      const auto max(lr.fit_max[layer]);
       const std::size_t full(parts * lr.individuals[layer] / ind_max);
 
-      for (std::size_t p(0); p < full; ++p)
+      if (ultra::issmall(stddev))
       {
-        const auto rv(fit_nd(g));
-        const auto pos(layer * parts + p);
+        const auto val(std::clamp(mean, min, max));
+        for (std::size_t p(0); p < full; ++p)
+          fit[layer * parts + p] = val;
+      }
+      else
+      {
+        std::normal_distribution dist(mean, stddev);
 
-        fit[pos] = std::clamp(rv, lr.fit_min[layer], lr.fit_max[layer]);
+        for (std::size_t p(0); p < full; ++p)
+          fit[layer * parts + p] = std::clamp(dist(g), min, max);
       }
     }
 

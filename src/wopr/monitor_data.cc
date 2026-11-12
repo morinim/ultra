@@ -228,41 +228,11 @@ layers_line::layers_line(const std::string &line) : new_run(line.empty())
 
   while (ss >> age_sup_val)
   {
-    if (!(ss >> age_mean_val))
+    if (!(ss >> age_mean_val >> age_std_dev_val >> age_min_val >> age_max_val
+             >> fit_mean_val >> fit_std_dev_val >> fit_min_val >> fit_max_val
+             >> individuals_val))
       throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing age mean)");
-
-    if (!(ss >> age_std_dev_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing age standard deviation)");
-
-    if (!(ss >> age_min_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing age minimum)");
-
-    if (!(ss >> age_max_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing age maximum)");
-
-    if (!(ss >> fit_mean_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing fitness mean)");
-
-    if (!(ss >> fit_std_dev_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing fitness standard deviation)");
-
-    if (!(ss >> fit_min_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing fitness minimum)");
-
-    if (!(ss >> fit_max_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing fitness maximum)");
-
-    if (!(ss >> individuals_val))
-      throw ultra::exception::data_format(
-        "Cannot parse layers file line (missing number of individuals)");
+        "Cannot parse layers file line (missing layer data)");
 
     age_sup.push_back(age_sup_val);
     age_mean.push_back(age_mean_val);

@@ -43,6 +43,20 @@ namespace ultra::wopr
 
 using namespace std::chrono_literals;
 
+fs::path build_path(fs::path base_dir, fs::path f)
+{
+  if (f.empty())
+    return {};
+
+  if (f.is_absolute())
+    return f.lexically_normal();
+
+  if (base_dir.empty())
+    base_dir = "./";
+
+  return base_dir / f.lexically_normal();
+}
+
 namespace rs
 {
 
@@ -282,6 +296,24 @@ collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
   std::cout << '\n';
 
   return ret;
+}
+
+ultra::search_log make_search_log(const fs::path &dataset,
+                                  const fs::path &summary)
+{
+  ultra::search_log sl;
+  const auto base_dir(dataset.parent_path());
+
+  sl.dynamic_file_path = build_path(
+    base_dir, ultra::dynamic_from_basename(dataset.string()));
+  sl.layers_file_path = build_path(
+    base_dir, ultra::layers_from_basename(dataset.string()));
+  sl.population_file_path = build_path(
+    base_dir, ultra::population_from_basename(dataset.string()));
+  sl.summary_file_path = summary.empty() ? ultra::summary_from_basename(dataset)
+                                         : summary;
+
+  return sl;
 }
 
 }  // namespace rs

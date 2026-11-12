@@ -21,6 +21,14 @@ foreach (test_src ${TESTS_SRC})
 endforeach()
 
 if (TARGET implot)
+  add_executable(wopr_monitor_data
+    wopr/monitor_data.cc
+  )
+  target_link_libraries(wopr_monitor_data PRIVATE
+    ultra Threads::Threads
+  )
+  add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
+
   add_executable(wopr_results
     wopr/results.cc
     ../wopr/dashboard.cc
