@@ -17,12 +17,13 @@
 #include "kernel/search_log.h"
 #include "kernel/gp/src/search.h"
 #include "utility/log.h"
+#include "utility/misc.h"
+#include "utility/thread_pool.h"
 
 #include <filesystem>
 #include <future>
 #include <iostream>
-#include <thread>
-#include <tuple>
+#include <stop_token>
 #include <utility>
 #include <vector>
 
@@ -38,8 +39,11 @@ bool rs::run::start(const imgui_app::program::settings &settings,
   const bool multiple_tests(options.collection.size() > 1);
 
   const auto test_driver(
-    [source, multiple_tests](auto test)
+    [source, multiple_tests](const auto &test)
     {
+      if (source.stop_requested())
+        return;
+
       const auto &dataset(test.second.dataset);
       ultra::src::problem prob(
         ultra::src::dataframe(dataset, test.second.conf.params),
@@ -64,28 +68,31 @@ bool rs::run::start(const imgui_app::program::settings &settings,
       if (multiple_tests)
         s.tag(dataset.stem());
 
-      return s.run(test.second.conf.runs, test.second.conf.threshold);
+      s.run(test.second.conf.runs, test.second.conf.threshold);
     });
 
   if (multiple_tests)
     ultra::log::reporting_level = ultra::log::lPAROUT;
 
-  using stats_t = ultra::search_stats<ultra::gp::individual, double>;
-  using task_t = std::pair<fs::path, std::future<stats_t>>;
+  const auto thread_limit(options.threads ? options.threads
+                                          : hardware_threads());
+  ultra::thread_pool pool(std::min(thread_limit, options.collection.size()));
 
-  std::vector<task_t> tasks;
-
-  // If task launch or the GUI throws, cancels running searches before stack
-  // unwinding destroys their futures and waits for them to finish.
+  // Cancels running searches if task launch or the GUI throws, preventing
+  // the thread pool from hanging during shutdown.
   struct stop_on_exit
   {
     std::stop_source &source_ref;
     ~stop_on_exit() { source_ref.request_stop(); }
   } guard{source};
 
+  using task_t = std::pair<fs::path, std::future<void>>;
+  std::vector<task_t> tasks;
+  tasks.reserve(options.collection.size());
+
   for (const auto &test : options.collection)
     tasks.emplace_back(test.second.dataset,
-                       std::async(std::launch::async, test_driver, test));
+                       pool.submit(test_driver, test));
 
   if (!options.nogui)
   {
@@ -95,12 +102,14 @@ bool rs::run::start(const imgui_app::program::settings &settings,
     source.request_stop();
   }
 
+  pool.wait();
+
   bool successful(true);
   for (auto &[dataset, result] : tasks)
   {
     try
     {
-      std::ignore = result.get();
+      result.get();
     }
     catch (const std::exception &e)
     {

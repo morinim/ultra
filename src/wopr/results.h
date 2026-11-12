@@ -106,6 +106,7 @@ namespace run
 struct options
 {
   collection_t collection {};
+  unsigned threads {0};  // 0 = auto (`hardware_threads()`)
   bool nogui {false};
   bool imgui_demo {false};
 };

@@ -219,6 +219,9 @@ void cmdl_usage()
   "      Specify a directory containing reference results.\n"
   "  --runs <nr>\n"
   "      Perform the specified number of evolutionary runs.\n"
+  "  --threads <nr>, -j <nr>\n"
+  "      Set the maximum number of concurrent searches (defaults to\n"
+  "      hardware threads).\n"
   "  --threshold <val>\n"
   "      Set the success threshold. Values ending in '%' are treated as\n"
   "      accuracy; otherwise, as fitness value.\n"
@@ -550,6 +553,7 @@ std::expected<rs::run::options, std::string> parse_run(
   const fs::path test_input(pos_args.size() <= 2 ? "./" : pos_args[2]);
   const fs::path ref_folder(cmdl("reference", "").str());
   rs::settings defaults;
+  unsigned threads(0);
 
   try
   {
@@ -575,6 +579,16 @@ std::expected<rs::run::options, std::string> parse_run(
       std::cout << "Runs: " << defaults.runs << '\n';
     }
 
+    if (const auto v(cmdl({"threads", "j"}).str()); !v.empty())
+    {
+      const auto value(std::stoll(v));
+
+      if (value < 1 || !std::in_range<unsigned>(value))
+        return std::unexpected("Invalid number of threads.");
+
+      threads = static_cast<unsigned>(value);
+    }
+
     if (const auto v(cmdl("threshold").str()); !v.empty())
     {
       if (const auto threshold(extract_threshold(v)); threshold)
@@ -596,6 +610,7 @@ std::expected<rs::run::options, std::string> parse_run(
 
   return rs::run::options{
     .collection = std::move(collection),
+    .threads = threads,
     .nogui = cmdl["nogui"],
     .imgui_demo = cmdl["imguidemo"]
   };
@@ -609,10 +624,12 @@ std::expected<command, std::string> parse_args(int argc, char *argv[])
 
   cmdl.add_param("dynamic");
   cmdl.add_param("generations");
+  cmdl.add_param("j");
   cmdl.add_param("layers");
   cmdl.add_param("population");
   cmdl.add_param("reference");
   cmdl.add_param("runs");
+  cmdl.add_param("threads");
   cmdl.add_param("threshold");
   cmdl.add_param("window");
 
