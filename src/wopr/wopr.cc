@@ -39,10 +39,7 @@ using namespace ultra::wopr;
 
 [[nodiscard]] int execute(const help_command &help)
 {
-  if (!help.message.empty())
-    std::cout << help.message;
-  else
-    cmdl_usage();
+  std::cout << help.message;
   return EXIT_SUCCESS;
 }
 

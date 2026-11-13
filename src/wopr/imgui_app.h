@@ -77,9 +77,6 @@ public:
 
   SDL_Rect free_area() const;
 
-  void on_event(const SDL_WindowEvent &);
-  void on_close();
-
 private:
   std::unique_ptr<window> window_ {nullptr};
 

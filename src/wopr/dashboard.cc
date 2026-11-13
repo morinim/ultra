@@ -68,11 +68,8 @@ void render_dashboard(const std::array<dashboard_panel, 4> &panels)
       first = false;
 
       const auto &panel(panels[i]);
-      const auto panel_width(panel.maximised.get() ? available_width : width);
-      const auto panel_height(panel.maximised.get() ? available_height
-                                                    : height);
 
-      ImGui::BeginChild(panel.id, ImVec2(panel_width, panel_height),
+      ImGui::BeginChild(panel.id, ImVec2(width, height),
                         ImGuiChildFlags_Borders);
       ImGui::AlignTextToFramePadding();
       ImGui::TextUnformatted(panel.title);

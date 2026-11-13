@@ -77,22 +77,6 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return found;
 }
 
-}  // namespace
-
-void cmdl_usage()
-{
-  char prog_name[] = "wopr";
-  char *argv[] = {prog_name};
-  if (const auto cmd(parse_args(1, argv)); cmd)
-  {
-    if (const auto *help = std::get_if<help_command>(&*cmd))
-      std::cout << help->message;
-  }
-}
-
-namespace
-{
-
 struct monitor_cli
 {
   fs::path log_object{"./"};

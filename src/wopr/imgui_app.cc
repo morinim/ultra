@@ -92,12 +92,11 @@ void program::run(std::function<void (const program &, bool *)> render_main)
     {
       ImGui_ImplSDL3_ProcessEvent(&event);
 
-      if (event.type == SDL_EVENT_QUIT)
+      if (event.type == SDL_EVENT_QUIT
+          || (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
+              && event.window.windowID
+                 == SDL_GetWindowID(window_->get_native_window())))
         stop();
-
-      if (event.window.windowID
-          == SDL_GetWindowID(window_->get_native_window()))
-        on_event(event.window);
     }
 
     // Start the ImGui frame.
@@ -163,25 +162,6 @@ SDL_Rect program::free_area() const
 void program::stop()
 {
   running_ = false;
-}
-
-void program::on_event(const SDL_WindowEvent &event)
-{
-  switch (event.type)
-  {
-  case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-    return on_close();
-  case SDL_EVENT_WINDOW_RESIZED:
-    return;
-  default:
-    // Do nothing otherwise
-    return;
-  }
-}
-
-void program::on_close()
-{
-  stop();
 }
 
 }  // namespace imgui_app
