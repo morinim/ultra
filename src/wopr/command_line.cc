@@ -327,12 +327,21 @@ Please enter your selection:)");
     return std::unexpected(e.what());
   }
 
-  if (mon_cmd->parsed())
-    return finish_monitor(mon, imgui_demo);
   if (run_cmd->parsed())
     return finish_run(run, imgui_demo);
+#if defined(ULTRA_WOPR_GUI)
+  if (mon_cmd->parsed())
+    return finish_monitor(mon, imgui_demo);
   if (sum_cmd->parsed())
     return finish_summary(sum, imgui_demo);
+#else
+  if (mon_cmd->parsed())
+    return std::unexpected(
+      "The `monitor` subcommand requires GUI support (WOPR was compiled in headless mode).");
+  if (sum_cmd->parsed())
+    return std::unexpected(
+      "The `summary` subcommand requires GUI support (WOPR was compiled in headless mode).");
+#endif
 
   return help_command{app.help()};
 }

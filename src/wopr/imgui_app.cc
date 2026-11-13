@@ -22,39 +22,19 @@
 namespace imgui_app
 {
 
-window::window(const window::settings &s)
+program::program(const settings &s) : settings_(s)
 {
-  window_ = SDL_CreateWindow(s.title.c_str(), s.width, s.height, s.flags);
+  if (!SDL_Init(SDL_INIT_VIDEO))
+    throw std::runtime_error(SDL_GetError());
+
+  window_ = SDL_CreateWindow(settings_.title.c_str(), settings_.width,
+                             settings_.height, settings_.flags);
+  if (!window_)
+    throw std::runtime_error("Error creating SDL_Window");
 
   renderer_ = SDL_CreateRenderer(window_, nullptr);
   if (!renderer_)
     throw std::runtime_error("Error creating SDL_Renderer");
-}
-
-window::~window()
-{
-  SDL_DestroyRenderer(renderer_);
-  SDL_DestroyWindow(window_);
-}
-
-SDL_Window *window::get_native_window() const
-{
-  return window_;
-}
-
-SDL_Renderer *window::get_native_renderer() const
-{
-  return renderer_;
-}
-
-program::program(const settings &s) : settings_(s)
-{
-  const unsigned flags(SDL_INIT_VIDEO);
-
-  if (!SDL_Init(flags))
-    throw std::runtime_error(SDL_GetError());
-
-  window_ = std::make_unique<window>(settings_.w_related);
 }
 
 program::~program()
@@ -63,6 +43,11 @@ program::~program()
   ImGui_ImplSDL3_Shutdown();
   ImPlot::DestroyContext();
   ImGui::DestroyContext();
+
+  if (renderer_)
+    SDL_DestroyRenderer(renderer_);
+  if (window_)
+    SDL_DestroyWindow(window_);
 
   SDL_Quit();
 }
@@ -78,10 +63,8 @@ void program::run(std::function<void (const program &, bool *)> render_main)
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
   // Setup Platform/Renderer backends.
-  ImGui_ImplSDL3_InitForSDLRenderer(window_->get_native_window(),
-                                    window_->get_native_renderer());
-
-  ImGui_ImplSDLRenderer3_Init(window_->get_native_renderer());
+  ImGui_ImplSDL3_InitForSDLRenderer(window_, renderer_);
+  ImGui_ImplSDLRenderer3_Init(renderer_);
 
   running_ = true;
   while (running_)
@@ -94,8 +77,7 @@ void program::run(std::function<void (const program &, bool *)> render_main)
 
       if (event.type == SDL_EVENT_QUIT
           || (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
-              && event.window.windowID
-                 == SDL_GetWindowID(window_->get_native_window())))
+              && event.window.windowID == SDL_GetWindowID(window_)))
         stop();
     }
 
@@ -140,21 +122,19 @@ void program::run(std::function<void (const program &, bool *)> render_main)
     // Render and present.
     ImGui::Render();
 
-    SDL_SetRenderDrawColor(window_->get_native_renderer(), 100, 100, 100,
-                           SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(window_->get_native_renderer());
+    SDL_SetRenderDrawColor(renderer_, 100, 100, 100, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(renderer_);
 
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),
-                                          window_->get_native_renderer());
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer_);
 
-    SDL_RenderPresent(window_->get_native_renderer());
+    SDL_RenderPresent(renderer_);
   }
 }
 
 SDL_Rect program::free_area() const
 {
   int w, h;
-  SDL_GetCurrentRenderOutputSize(window_->get_native_renderer(), &w, &h);
+  SDL_GetCurrentRenderOutputSize(renderer_, &w, &h);
 
   return {0, menu_height_, w, h - menu_height_};
 }

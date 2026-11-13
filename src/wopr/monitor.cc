@@ -74,17 +74,21 @@ void render_dynamic_series(const char *mean_label, const char *max_label,
                      {ImPlotProp_LineColor, ImPlot::GetColormapColor(2)});
 }
 
-void render_dynamic(std::vector<dynamic_sequence> &dynamic_runs,
+void render_dynamic(const std::vector<dynamic_sequence> &dynamic_runs,
                     int monitoring_window)
 {
   static bool show_best(true);
   static bool show_longest(true);
+  static std::vector<int> best_idx;
+
+  if (best_idx.size() < dynamic_runs.size())
+    best_idx.resize(dynamic_runs.size(), 0);
 
   const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
 
   for (std::size_t run(dynamic_runs.size()); run--;)
   {
-    auto &dr(dynamic_runs[run]);
+    const auto &dr(dynamic_runs[run]);
     if (dr.empty())
       continue;
 
@@ -112,20 +116,21 @@ void render_dynamic(std::vector<dynamic_sequence> &dynamic_runs,
       if (ImGui::BeginTabItem("Fitness dynamic"))
       {
         if (dr.best_prg.empty())
-          dr.best_idx = 0;
+          best_idx[run] = 0;
         else
         {
-          dr.best_idx = std::clamp(
-            dr.best_idx, 0, static_cast<int>(dr.best_prg.size() - 1));
+          best_idx[run] = std::clamp(
+            best_idx[run], 0, static_cast<int>(dr.best_prg.size() - 1));
           ImGui::Combo(
-            "Best programs", &dr.best_idx,
+            "Best programs", &best_idx[run],
             [](void *data, int index) -> const char *
             {
               const auto &programs(
                 *static_cast<const std::vector<std::string> *>(data));
               return programs[programs.size() - 1 - index].c_str();
             },
-            &dr.best_prg, static_cast<int>(dr.best_prg.size()));
+            const_cast<std::vector<std::string> *>(&dr.best_prg),
+            static_cast<int>(dr.best_prg.size()));
         }
 
         ImGui::SameLine();
@@ -295,20 +300,23 @@ void render_layers_fit(const std::vector<layers_line> &layers_runs)
     const std::size_t ind_max(std::ranges::max(lr.individuals));
     const std::size_t parts(std::min<std::size_t>(ind_max, 100));
 
-    std::vector<std::string> x_labels(parts);
+    static std::vector<std::string> x_labels, y_labels;
+    static std::vector<const char *> x_labels_chr, y_labels_chr;
+    static std::vector<double> fit;
+
+    x_labels.assign(parts, {});
     x_labels.front() = std::to_string(ind_max);
     x_labels.back() = "1";
 
-    std::vector<const char *> x_labels_chr(parts);
+    x_labels_chr.resize(parts);
     std::ranges::transform(x_labels, x_labels_chr.begin(),
                            [](const auto &str) { return str.data(); });
 
-    std::vector<std::string> y_labels(max_layers);
-    std::ranges::generate(y_labels,
-                          [layer = 0u]() mutable
-                          { return "L" + std::to_string(layer++); });
+    y_labels.resize(max_layers);
+    for (std::size_t layer(0); layer < max_layers; ++layer)
+      y_labels[layer] = "L" + std::to_string(layer);
 
-    std::vector<const char *> y_labels_chr(max_layers);
+    y_labels_chr.resize(max_layers);
     std::ranges::transform(y_labels, y_labels_chr.begin(),
                            [](const auto &str) { return str.data(); });
 
@@ -317,7 +325,7 @@ void render_layers_fit(const std::vector<layers_line> &layers_runs)
     const double fit_max(std::ranges::max(lr.fit_max));
     const double fit_min(std::ranges::min(lr.fit_min));
 
-    std::vector<double> fit(max_layers * parts, fit_min);
+    fit.assign(max_layers * parts, fit_min);
 
     for (std::size_t layer(0); layer < max_layers; ++layer)
     {
@@ -390,9 +398,13 @@ void render_layers_age(const std::vector<layers_line> &layers_runs)
     if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
       continue;
 
-    std::vector<unsigned> ys(lr.size());
-    std::vector<ultra::individual::age_t> bottom(lr.size()), mean(lr.size()),
-                                          top(lr.size());
+    static std::vector<unsigned> ys;
+    static std::vector<ultra::individual::age_t> bottom, mean, top;
+
+    ys.resize(lr.size());
+    bottom.resize(lr.size());
+    mean.resize(lr.size());
+    top.resize(lr.size());
 
     for (std::size_t layer(0); layer < lr.size(); ++layer)
     {
@@ -512,6 +524,7 @@ class read_log_file
 public:
   explicit read_log_file(const fs::path &);
 
+  [[nodiscard]] bool is_open() const { return file_.is_open(); }
   std::optional<std::string> get_line();
 
 private:
@@ -522,8 +535,6 @@ private:
 read_log_file::read_log_file(const fs::path &filename)
   : file_(filename)
 {
-  if (!filename.empty() && !file_)
-    throw std::runtime_error("Failed to open file for reading");
 }
 
 //
@@ -558,15 +569,15 @@ std::optional<std::string> read_log_file::get_line()
   if (filename.empty())
     return {};
 
-  try
+  read_log_file file(filename);
+  if (!file.is_open())
   {
-    return std::optional<read_log_file>(std::in_place, filename);
-  }
-  catch (const std::runtime_error &e)
-  {
-    std::cerr << "Stopped monitoring " << filename << ": " << e.what() << '\n';
+    std::cerr << "Stopped monitoring " << filename
+              << ": Failed to open file for reading\n";
     return {};
   }
+
+  return file;
 }
 
 template<typename DataClass, typename Queue>
@@ -667,8 +678,8 @@ void monitor::start(options options)
   std::jthread t_logs(get_logs, std::cref(options.slog), std::ref(state));
 
   imgui_app::program::settings settings;
-  settings.w_related.title = "WOPR";
-  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+  settings.title = "WOPR";
+  settings.flags |= SDL_WINDOW_MAXIMIZED;
   settings.demo = options.imgui_demo;
 
   imgui_app::program prg(settings);

@@ -13,53 +13,26 @@
 #if !defined(ULTRA_IMGUI_APP_H)
 #define      ULTRA_IMGUI_APP_H
 
-#include <filesystem>
 #include <functional>
-#include <memory>
 #include <string>
-#include <string_view>
 
 #include <SDL3/SDL.h>
 
 namespace imgui_app
 {
 
-class window
+class program
 {
 public:
   struct settings
   {
     std::string title {};
 
-    int width  {1000};
-    int height  {720};
+    int width {1000};
+    int height {720};
 
     SDL_WindowFlags flags {SDL_WINDOW_RESIZABLE
                            | SDL_WINDOW_HIGH_PIXEL_DENSITY};
-  };
-
-  explicit window(const settings &settings);
-  ~window();
-
-  window(const window &) = delete;
-  window(window &&) = delete;
-  window &operator=(const window &) = delete;
-  window &operator=(window &&) = delete;
-
-  [[nodiscard]] SDL_Renderer *get_native_renderer() const;
-  [[nodiscard]] SDL_Window *get_native_window() const;
-
-private:
-  SDL_Window *window_ {nullptr};
-  SDL_Renderer *renderer_ {nullptr};
-};
-
-class program
-{
-public:
-  struct settings
-  {
-    window::settings w_related {};
 
     bool demo {false};
   };
@@ -78,9 +51,10 @@ public:
   SDL_Rect free_area() const;
 
 private:
-  std::unique_ptr<window> window_ {nullptr};
-
   settings settings_ {};
+
+  SDL_Window *window_ {nullptr};
+  SDL_Renderer *renderer_ {nullptr};
 
   int menu_height_ {0};
 

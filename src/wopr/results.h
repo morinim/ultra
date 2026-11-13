@@ -22,7 +22,6 @@
 #include <expected>
 #include <filesystem>
 #include <limits>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -55,12 +54,8 @@ struct summary_data
   ultra::fitnd fit_std_dev {};
 
   ultra::fitnd best_fit {-std::numeric_limits<double>::infinity()};
-  double best_accuracy {-std::numeric_limits<double>::infinity()};
-
-  unsigned best_run {};
   std::string best_prg {};
 
-  std::set<unsigned> good_runs {};
   std::vector<
     std::pair<unsigned, ultra::model_measurements<ultra::fitnd>>> elite {};
 };

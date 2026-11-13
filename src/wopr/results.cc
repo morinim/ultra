@@ -29,6 +29,7 @@
 #include <atomic>
 #include <cassert>
 #include <cmath>
+#include <condition_variable>
 #include <expected>
 #include <format>
 #include <fstream>
@@ -127,21 +128,8 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
       std::istringstream ss(e->GetText());
       ss >> best_fit;
     }
-    if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
-      best_accuracy = e->DoubleText(0.0);
-    if (const auto *e = h_best.FirstChildElement("run").ToElement())
-      best_run = e->UnsignedText(0);
     if (const auto *e = h_best.FirstChildElement("code").ToElement())
       best_prg = e->GetText();
-  }
-
-  {
-    const auto h_solutions(h_summary.FirstChildElement("solutions"));
-
-    for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
-         e = e->NextSiblingElement())
-      if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
-        good_runs.insert(run);
   }
 
   {
@@ -509,6 +497,9 @@ struct results_snapshot
   std::vector<double> time_per_run;
   std::vector<std::string> remaining_labels;
   labels_data remaining_label_data;
+  std::vector<double> rank_positions;
+  std::vector<std::string> rank_text;
+  labels_data rank_labels;
   fit_data current_fitness;
   fit_data reference_fitness;
   elite_data current_elite;
@@ -665,6 +656,20 @@ results_snapshot::results_snapshot(results_state &state)
   for (std::size_t i(0); i < size; ++i)
     remaining_labels.push_back(remaining_time_label(*this, i));
   remaining_label_data = to_cstr_vector(remaining_labels);
+
+  std::size_t max_rank(0);
+  for (std::size_t i(0); i < size; ++i)
+    max_rank = std::max({max_rank, current_elite.elite[i].id.size(),
+                         reference_elite.elite[i].id.size()});
+
+  if (max_rank)
+  {
+    rank_positions = make_positions(max_rank);
+    rank_text.reserve(max_rank);
+    for (std::size_t rank(1); rank <= max_rank; ++rank)
+      rank_text.push_back(std::to_string(rank));
+    rank_labels = to_cstr_vector(rank_text);
+  }
 
   for (auto &run : current_elite.elite)
   {
@@ -1139,19 +1144,10 @@ void render_elite(const results_snapshot &snapshot)
                                      reference.elite[i].id.size()));
       const double max_x(rank_count);
 
-      std::vector<double> rank_positions;
-      std::vector<std::string> rank_text;
       if (rank_count)
-      {
-        rank_positions = make_positions(rank_count);
-        rank_text.reserve(rank_count);
-        for (std::size_t rank(1); rank <= rank_count; ++rank)
-          rank_text.push_back(std::to_string(rank));
-      }
-      const auto rank_labels(to_cstr_vector(rank_text));
-      ImPlot::SetupAxisTicks(ImAxis_X1, rank_positions.data(),
-                             static_cast<int>(rank_positions.size()),
-                             rank_labels.data(), false);
+        ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.rank_positions.data(),
+                               static_cast<int>(rank_count),
+                               snapshot.rank_labels.data(), false);
 
       double x_from(-0.5), x_to(max_x + 0.5);
       ImPlot::SetupAxisLimits(ImAxis_X1, x_from, x_to, ImGuiCond_Always);
@@ -1295,21 +1291,33 @@ void get_summaries(std::stop_token stoken, results_state &state)
 {
   assert(!state.collection.empty());
 
+  std::vector<fs::file_time_type> last_write_times(state.collection.size());
+  std::condition_variable_any wake;
+  std::mutex wake_mutex;
+
   while (!stoken.stop_requested())
   {
-    for (auto &test : state.collection)
+    for (std::size_t i(0); i < state.collection.size(); ++i)
     {
-      const auto xml_fn(test.xml_summary);
+      auto &test(state.collection[i]);
+      std::error_code ec;
+      const auto mtime(fs::last_write_time(test.xml_summary, ec));
 
-      if (tinyxml2::XMLDocument summary; summary_data::check(xml_fn, summary))
+      if (!ec && mtime != last_write_times[i])
       {
-        std::lock_guard guard(state.current_mutex);
-        test.current = summary_data(summary);
-        state.version.fetch_add(1, std::memory_order_relaxed);
+        if (tinyxml2::XMLDocument summary; summary_data::check(test.xml_summary,
+                                                               summary))
+        {
+          std::lock_guard guard(state.current_mutex);
+          test.current = summary_data(summary);
+          last_write_times[i] = mtime;
+          state.version.fetch_add(1, std::memory_order_relaxed);
+        }
       }
     }
 
-    std::this_thread::sleep_for(3000ms);
+    std::unique_lock lock(wake_mutex);
+    wake.wait_for(lock, stoken, 3000ms, [] { return false; });
   }
 }
 void rs::summary::start(options options)
@@ -1318,8 +1326,8 @@ void rs::summary::start(options options)
   std::jthread t_summaries(get_summaries, std::ref(state));
 
   imgui_app::program::settings settings;
-  settings.w_related.title = "WOPR";
-  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+  settings.title = "WOPR";
+  settings.flags |= SDL_WINDOW_MAXIMIZED;
   settings.demo = options.imgui_demo;
 
   imgui_app::program prg(settings);

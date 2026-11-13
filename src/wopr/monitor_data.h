@@ -68,9 +68,6 @@ struct dynamic_sequence
 
   std::vector<std::string> best_prg {};
 
-  // This keeps track of the index of selected program inside the GUI.
-  int best_idx {};
-
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
 
