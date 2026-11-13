@@ -20,21 +20,22 @@ foreach (test_src ${TESTS_SRC})
   endif()
 endforeach()
 
-if (TARGET implot)
-  add_executable(wopr_monitor_data
-    wopr/monitor_data.cc
-  )
-  target_link_libraries(wopr_monitor_data PRIVATE
-    ultra Threads::Threads
-  )
-  add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
+add_executable(wopr_monitor_data
+  wopr/monitor_data.cc
+)
+target_link_libraries(wopr_monitor_data PRIVATE
+  ultra Threads::Threads
+)
+add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
 
+if (TARGET implot)
   add_executable(wopr_results
     wopr/results.cc
     ../wopr/dashboard.cc
     ../wopr/gui_helpers.cc
     ../wopr/imgui_app.cc
   )
+  target_compile_definitions(wopr_results PRIVATE ULTRA_WOPR_GUI)
   target_include_directories(wopr_results SYSTEM PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/imgui
   )

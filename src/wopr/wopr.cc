@@ -11,11 +11,13 @@
  */
 
 #include "command_line.h"
-#include "imgui_app.h"
 #include "monitor.h"
 #include "results.h"
 
+#if defined(ULTRA_WOPR_GUI)
+#include "imgui_app.h"
 #include <SDL3/SDL_video.h>
+#endif
 
 #include <cstdlib>
 #include <exception>
@@ -28,6 +30,7 @@ namespace
 
 using namespace ultra::wopr;
 
+#if defined(ULTRA_WOPR_GUI)
 [[nodiscard]] imgui_app::program::settings make_settings(bool imgui_demo)
 {
   imgui_app::program::settings settings;
@@ -36,6 +39,7 @@ using namespace ultra::wopr;
   settings.demo = imgui_demo;
   return settings;
 }
+#endif
 
 [[nodiscard]] int execute(const help_command &help)
 {
@@ -45,23 +49,41 @@ using namespace ultra::wopr;
 
 [[nodiscard]] int execute(monitor::options options)
 {
+#if defined(ULTRA_WOPR_GUI)
   const auto demo(options.imgui_demo);
   monitor::start(make_settings(demo), std::move(options));
   return EXIT_SUCCESS;
+#else
+  (void)options;
+  std::cerr << "The `monitor` subcommand requires GUI support (WOPR was compiled in headless mode).\n";
+  return EXIT_FAILURE;
+#endif
 }
 
 [[nodiscard]] int execute(rs::run::options options)
 {
+#if defined(ULTRA_WOPR_GUI)
   const auto demo(options.imgui_demo);
   return rs::run::start(make_settings(demo), std::move(options))
          ? EXIT_SUCCESS : EXIT_FAILURE;
+#else
+  options.nogui = true;
+  return rs::run::start(std::move(options))
+         ? EXIT_SUCCESS : EXIT_FAILURE;
+#endif
 }
 
 [[nodiscard]] int execute(rs::summary::options options)
 {
+#if defined(ULTRA_WOPR_GUI)
   const auto demo(options.imgui_demo);
   rs::summary::start(make_settings(demo), std::move(options));
   return EXIT_SUCCESS;
+#else
+  (void)options;
+  std::cerr << "The `summary` subcommand requires GUI support (WOPR was compiled in headless mode).\n";
+  return EXIT_FAILURE;
+#endif
 }
 
 }  // namespace

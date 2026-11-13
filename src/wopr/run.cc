@@ -19,6 +19,7 @@
 #include "utility/thread_pool.h"
 
 #include <filesystem>
+#include <functional>
 #include <future>
 #include <iostream>
 #include <stop_token>
@@ -30,8 +31,12 @@ namespace fs = std::filesystem;
 namespace ultra::wopr
 {
 
-bool rs::run::start(const imgui_app::program::settings &settings,
-                    options options)
+namespace
+{
+
+bool run_impl(
+  rs::run::options options,
+  const std::function<void(std::stop_source &)> &on_started = {})
 {
   std::stop_source source;
   const bool multiple_tests(options.collection.size() > 1);
@@ -81,13 +86,8 @@ bool rs::run::start(const imgui_app::program::settings &settings,
     tasks.emplace_back(test.dataset,
                        pool.submit(test_driver, test));
 
-  if (!options.nogui)
-  {
-    rs::summary::start(
-      settings, rs::summary::options{std::move(options.collection), false,
-                                     rs::exec_mode::run});
-    source.request_stop();
-  }
+  if (on_started)
+    on_started(source);
 
   pool.wait();
 
@@ -112,5 +112,32 @@ bool rs::run::start(const imgui_app::program::settings &settings,
 
   return successful;
 }
+
+}  // namespace
+
+bool rs::run::start(options options)
+{
+  return run_impl(std::move(options));
+}
+
+#if defined(ULTRA_WOPR_GUI)
+bool rs::run::start(const imgui_app::program::settings &settings,
+                    options options)
+{
+  if (options.nogui)
+    return start(std::move(options));
+
+  auto summary_collection(options.collection);
+  return run_impl(
+    std::move(options),
+    [&settings, &summary_collection](std::stop_source &source)
+    {
+      rs::summary::start(
+        settings, rs::summary::options{std::move(summary_collection), false,
+                                       rs::exec_mode::run});
+      source.request_stop();
+    });
+}
+#endif
 
 }  // namespace ultra::wopr

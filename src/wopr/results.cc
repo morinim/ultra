@@ -12,13 +12,15 @@
 
 #include "results.h"
 
+#if defined(ULTRA_WOPR_GUI)
 #include "dashboard.h"
 #include "gui_helpers.h"
+#include "implot/implot.h"
+#endif
 
 #include "kernel/search_log.h"
 #include "utility/misc.h"
 
-#include "implot/implot.h"
 #include "tinyxml2/tinyxml2.h"
 
 #include <algorithm>
@@ -55,6 +57,125 @@ fs::path build_path(fs::path base_dir, fs::path f)
     base_dir = "./";
 
   return base_dir / f.lexically_normal();
+}
+
+bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
+{
+  std::ifstream in(xml_fn, std::ios::binary);
+  if (!in)
+    return false;
+
+  std::ostringstream ss;
+  if (!(ss << in.rdbuf()))
+    return false;
+
+  const std::string xml_content(ss.str());
+
+  return ultra::crc32::verify_xml_signature(xml_content)
+         && doc.Parse(xml_content.data(), xml_content.size())
+            == tinyxml2::XML_SUCCESS
+         && doc.FirstChild();
+}
+
+summary_data::summary_data(const fs::path &path)
+{
+  if (tinyxml2::XMLDocument doc; check(path, doc))
+    *this = summary_data(doc);
+  else
+    throw std::invalid_argument("Cannot parse summary file \""
+                                + path.generic_string() + "\"");
+}
+
+summary_data::summary_data(const tinyxml2::XMLDocument &doc)
+{
+  tinyxml2::XMLConstHandle handle(&doc);
+
+  const auto h_summary(handle
+                       .FirstChildElement("ultra")
+                       .FirstChildElement("summary"));
+  if (const auto *e = h_summary.FirstChildElement("runs").ToElement())
+    runs = e->UnsignedText(0);
+  if (const auto *e = h_summary.FirstChildElement("elapsed_time").ToElement())
+    elapsed_time = std::chrono::milliseconds(e->UnsignedText(0));
+  if (const auto *e = h_summary.FirstChildElement("success_rate").ToElement())
+    success_rate = e->DoubleText(-1.0);
+
+  {
+    const auto h_distributions(h_summary
+                               .FirstChildElement("distributions"));
+    if (const auto *e = h_distributions.FirstChildElement("fitness")
+                        .FirstChildElement("mean").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> fit_mean;
+    }
+    if (const auto *e = h_distributions.FirstChildElement("fitness")
+                        .FirstChildElement("standard_deviation").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> fit_std_dev;
+    }
+  }
+
+  {
+    const auto h_best(h_summary.FirstChildElement("best"));
+    if (const auto *e = h_best.FirstChildElement("fitness").ToElement())
+    {
+      std::istringstream ss(e->GetText());
+      ss >> best_fit;
+    }
+    if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
+      best_accuracy = e->DoubleText(0.0);
+    if (const auto *e = h_best.FirstChildElement("run").ToElement())
+      best_run = e->UnsignedText(0);
+    if (const auto *e = h_best.FirstChildElement("code").ToElement())
+      best_prg = e->GetText();
+  }
+
+  {
+    const auto h_solutions(h_summary.FirstChildElement("solutions"));
+
+    for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
+         e = e->NextSiblingElement())
+      if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
+        good_runs.insert(run);
+  }
+
+  {
+    const auto h_elite(h_summary.FirstChildElement("elite"));
+
+    auto auto_id(std::numeric_limits<decltype(runs)>::max() / 2);
+
+    if (const auto *elite_el = h_elite.ToElement())
+    {
+      // unsigned percentile = elite_el->UnsignedAttribute("percentile", 0);
+
+      for (const auto *run_el(elite_el->FirstChildElement("run"));
+           run_el;
+           run_el = run_el->NextSiblingElement("run"))
+      {
+        unsigned id;
+        if (const auto id_rc(run_el->QueryUnsignedAttribute("id", &id));
+            id_rc != tinyxml2::XML_SUCCESS)
+          id = ++auto_id;  // fallback
+
+        ultra::model_measurements<ultra::fitnd> mm;
+
+        if (const auto *e = run_el->FirstChildElement("fitness"))
+          if (const char *txt = e->GetText())
+          {
+            std::istringstream ss(txt);
+            if (ultra::fitnd f; ss >> f)
+              mm.fitness = std::move(f);
+          }
+
+        if (const auto *e = run_el->FirstChildElement("accuracy"))
+          mm.accuracy = e->DoubleText(0.0);
+
+        elite.emplace_back(id, std::move(mm));
+      }
+    }
+  }
 }
 
 namespace rs
@@ -320,6 +441,7 @@ ultra::search_log make_search_log(const fs::path &dataset,
 
 }  // namespace rs
 
+#if defined(ULTRA_WOPR_GUI)
 const std::string current_str {"Current"};
 const std::string reference_str {"Reference"};
 
@@ -395,125 +517,6 @@ struct results_snapshot
   elite_data current_elite;
   elite_data reference_elite;
 };
-
-bool summary_data::check(const fs::path &xml_fn, tinyxml2::XMLDocument &doc)
-{
-  std::ifstream in(xml_fn, std::ios::binary);
-  if (!in)
-    return false;
-
-  std::ostringstream ss;
-  if (!(ss << in.rdbuf()))
-    return false;
-
-  const std::string xml_content(ss.str());
-
-  return ultra::crc32::verify_xml_signature(xml_content)
-         && doc.Parse(xml_content.data(), xml_content.size())
-            == tinyxml2::XML_SUCCESS
-         && doc.FirstChild();
-}
-
-summary_data::summary_data(const fs::path &path)
-{
-  if (tinyxml2::XMLDocument doc; check(path, doc))
-    *this = summary_data(doc);
-  else
-    throw std::invalid_argument("Cannot parse summary file \""
-                                + path.generic_string() + "\"");
-}
-
-summary_data::summary_data(const tinyxml2::XMLDocument &doc)
-{
-  tinyxml2::XMLConstHandle handle(&doc);
-
-  const auto h_summary(handle
-                       .FirstChildElement("ultra")
-                       .FirstChildElement("summary"));
-  if (const auto *e = h_summary.FirstChildElement("runs").ToElement())
-    runs = e->UnsignedText(0);
-  if (const auto *e = h_summary.FirstChildElement("elapsed_time").ToElement())
-    elapsed_time = std::chrono::milliseconds(e->UnsignedText(0));
-  if (const auto *e = h_summary.FirstChildElement("success_rate").ToElement())
-    success_rate = e->DoubleText(-1.0);
-
-  {
-    const auto h_distributions(h_summary
-                               .FirstChildElement("distributions"));
-    if (const auto *e = h_distributions.FirstChildElement("fitness")
-                        .FirstChildElement("mean").ToElement())
-    {
-      std::istringstream ss(e->GetText());
-      ss >> fit_mean;
-    }
-    if (const auto *e = h_distributions.FirstChildElement("fitness")
-                        .FirstChildElement("standard_deviation").ToElement())
-    {
-      std::istringstream ss(e->GetText());
-      ss >> fit_std_dev;
-    }
-  }
-
-  {
-    const auto h_best(h_summary.FirstChildElement("best"));
-    if (const auto *e = h_best.FirstChildElement("fitness").ToElement())
-    {
-      std::istringstream ss(e->GetText());
-      ss >> best_fit;
-    }
-    if (const auto *e = h_best.FirstChildElement("accuracy").ToElement())
-      best_accuracy = e->DoubleText(0.0);
-    if (const auto *e = h_best.FirstChildElement("run").ToElement())
-      best_run = e->UnsignedText(0);
-    if (const auto *e = h_best.FirstChildElement("code").ToElement())
-      best_prg = e->GetText();
-  }
-
-  {
-    const auto h_solutions(h_summary.FirstChildElement("solutions"));
-
-    for (const auto *e(h_solutions.FirstChildElement().ToElement()); e;
-         e = e->NextSiblingElement())
-      if (unsigned run; e->QueryUnsignedText(&run) == tinyxml2::XML_SUCCESS)
-        good_runs.insert(run);
-  }
-
-  {
-    const auto h_elite(h_summary.FirstChildElement("elite"));
-
-    auto auto_id(std::numeric_limits<decltype(runs)>::max() / 2);
-
-    if (const auto *elite_el = h_elite.ToElement())
-    {
-      // unsigned percentile = elite_el->UnsignedAttribute("percentile", 0);
-
-      for (const auto *run_el(elite_el->FirstChildElement("run"));
-           run_el;
-           run_el = run_el->NextSiblingElement("run"))
-      {
-        unsigned id;
-        if (const auto id_rc(run_el->QueryUnsignedAttribute("id", &id));
-            id_rc != tinyxml2::XML_SUCCESS)
-          id = ++auto_id;  // fallback
-
-        ultra::model_measurements<ultra::fitnd> mm;
-
-        if (const auto *e = run_el->FirstChildElement("fitness"))
-          if (const char *txt = e->GetText())
-          {
-            std::istringstream ss(txt);
-            if (ultra::fitnd f; ss >> f)
-              mm.fitness = std::move(f);
-          }
-
-        if (const auto *e = run_el->FirstChildElement("accuracy"))
-          mm.accuracy = e->DoubleText(0.0);
-
-        elite.emplace_back(id, std::move(mm));
-      }
-    }
-  }
-}
 
 void add_fit_data(fit_data &out, const summary_data &summary)
 {
@@ -1297,5 +1300,6 @@ void rs::summary::start(const imgui_app::program::settings &settings,
       render_rs(program, open, state);
     });
 }
+#endif  // ULTRA_WOPR_GUI
 
 }  // namespace ultra::wopr

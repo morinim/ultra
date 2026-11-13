@@ -13,7 +13,9 @@
 #if !defined(ULTRA_WOPR_RESULTS_H)
 #define      ULTRA_WOPR_RESULTS_H
 
+#if defined(ULTRA_WOPR_GUI)
 #include "imgui_app.h"
+#endif
 
 #include "kernel/fitness.h"
 #include "kernel/model_measurements.h"
@@ -116,7 +118,10 @@ struct options
   bool imgui_demo {false};
 };
 
+[[nodiscard]] bool start(options);
+#if defined(ULTRA_WOPR_GUI)
 [[nodiscard]] bool start(const imgui_app::program::settings &, options);
+#endif
 
 }  // namespace run
 
@@ -130,7 +135,9 @@ struct options
   exec_mode mode {exec_mode::summary};
 };
 
+#if defined(ULTRA_WOPR_GUI)
 void start(const imgui_app::program::settings &, options);
+#endif
 
 }  // namespace summary
 

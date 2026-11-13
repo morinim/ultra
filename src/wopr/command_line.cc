@@ -270,7 +270,9 @@ Please enter your selection:)");
   app.require_subcommand(1);
 
   bool imgui_demo(false);
+#if defined(ULTRA_WOPR_GUI)
   app.add_flag("--imguidemo", imgui_demo, "Enable ImGUI demo panel");
+#endif
 
   monitor_cli mon;
   auto *mon_cmd(
