@@ -29,6 +29,21 @@ target_link_libraries(wopr_monitor_data PRIVATE
 add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
 
 if (TARGET implot)
+  add_executable(wopr_monitor
+    wopr/monitor.cc
+    ../wopr/dashboard.cc
+    ../wopr/imgui_app.cc
+    ../wopr/monitor_data.cc
+  )
+  target_compile_definitions(wopr_monitor PRIVATE ULTRA_WOPR_GUI)
+  target_include_directories(wopr_monitor SYSTEM PRIVATE
+    ${PROJECT_SOURCE_DIR}/third_party/imgui
+  )
+  target_link_libraries(wopr_monitor PRIVATE
+    ultra implot SDL3::SDL3 Threads::Threads
+  )
+  add_test(NAME wopr_monitor COMMAND wopr_monitor)
+
   add_executable(wopr_results
     wopr/results.cc
     ../wopr/dashboard.cc

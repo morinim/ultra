@@ -298,23 +298,41 @@ void render_layers_fit(const std::vector<layers_line> &layers_runs)
     const auto max_layers(lr.size());
 
     const std::size_t ind_max(std::ranges::max(lr.individuals));
+    if (!ind_max)
+      continue;
+
     const std::size_t parts(std::min<std::size_t>(ind_max, 100));
 
     static std::vector<std::string> x_labels, y_labels;
     static std::vector<const char *> x_labels_chr, y_labels_chr;
+    static std::vector<double> x_positions, y_positions;
     static std::vector<double> fit;
 
-    x_labels.assign(parts, {});
-    x_labels.front() = std::to_string(ind_max);
-    x_labels.back() = "1";
+    if (parts == 1)
+    {
+      x_labels = {"1"};
+      x_positions = {0.5};
+    }
+    else
+    {
+      const auto d_parts(static_cast<double>(parts));
+      x_labels = {"1", std::to_string(ind_max)};
+      x_positions = {0.5 / d_parts, 1.0 - 0.5 / d_parts};
+    }
 
-    x_labels_chr.resize(parts);
+    x_labels_chr.resize(x_labels.size());
     std::ranges::transform(x_labels, x_labels_chr.begin(),
                            [](const auto &str) { return str.data(); });
 
+    const auto d_max_layers(static_cast<double>(max_layers));
     y_labels.resize(max_layers);
+    y_positions.resize(max_layers);
     for (std::size_t layer(0); layer < max_layers; ++layer)
+    {
       y_labels[layer] = "L" + std::to_string(layer);
+      y_positions[layer] = 1.0 - (static_cast<double>(layer) + 0.5)
+                                 / d_max_layers;
+    }
 
     y_labels_chr.resize(max_layers);
     std::ranges::transform(y_labels, y_labels_chr.begin(),
@@ -367,11 +385,15 @@ void render_layers_fit(const std::vector<layers_line> &layers_runs)
         ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks
         |ImPlotAxisFlags_NoGridLines);
 
-      ImPlot::SetupAxisTicks(ImAxis_Y1, 1 - 0.5/max_layers, 0.5/max_layers,
-                             max_layers, y_labels_chr.data());
-      ImPlot::SetupAxisTicks(ImAxis_X1, 1 - 0.5/parts, 0.5/parts,
-                             parts, x_labels_chr.data());
-      ImPlot::PlotHeatmap("Fitness by layer", fit.data(), max_layers, parts,
+      ImPlot::SetupAxisTicks(ImAxis_Y1, y_positions.data(),
+                             static_cast<int>(max_layers),
+                             y_labels_chr.data());
+      ImPlot::SetupAxisTicks(ImAxis_X1, x_positions.data(),
+                             static_cast<int>(x_positions.size()),
+                             x_labels_chr.data());
+      ImPlot::PlotHeatmap("Fitness by layer", fit.data(),
+                          static_cast<int>(max_layers),
+                          static_cast<int>(parts),
                           fit_min, fit_max, nullptr);
       ImPlot::EndPlot();
     }
