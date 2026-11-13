@@ -38,13 +38,13 @@ using namespace ultra::wopr;
     settings.threshold.fitness = 0.0;
 
   rs::collection_t collection;
-  collection.emplace_back("Measured", rs::data{"", "", settings, reference});
-  collection.back().second.current.runs = 10;
-  collection.back().second.current.success_rate = 0.2;
-  collection.back().second.current.elapsed_time = 12500ms;
-  collection.emplace_back("Pending", rs::data{"", "", {}, {}});
-  collection.emplace_back("Zero", rs::data{"", "", {}, reference});
-  collection.back().second.current.runs = 5;
+  collection.push_back({.name = "Measured", .conf = settings, .reference = reference});
+  collection.back().current.runs = 10;
+  collection.back().current.success_rate = 0.2;
+  collection.back().current.elapsed_time = 12500ms;
+  collection.push_back({.name = "Pending"});
+  collection.push_back({.name = "Zero", .reference = reference});
+  collection.back().current.runs = 5;
   return results_state(std::move(collection), mode);
 }
 
@@ -168,7 +168,7 @@ TEST_CASE("Missing success rates remain distinct from measured zero")
   CHECK(std::isnan(snapshot.success_rates[4]));
   CHECK(snapshot.success_rates[5] == doctest::Approx(50.0));
 
-  state.collection[1].second.current.runs = 1;
+  state.collection[1].current.runs = 1;
   const results_snapshot updated(state);
   CHECK(updated.success_rates[1] == doctest::Approx(0.0));
 }
@@ -197,12 +197,12 @@ TEST_CASE("Success rate tooltips describe comparisons and missing results")
   CHECK_FALSE(current_only.contains("Reference:"));
   CHECK_FALSE(current_only.contains("Difference:"));
 
-  state.collection[0].second.current.success_rate = 0.75;
+  state.collection[0].current.success_rate = 0.75;
   const results_snapshot improved(state);
   CHECK(success_rate_tooltip(improved, 0, true)
         .contains("Difference: +25.0 percentage points"));
 
-  state.collection[0].second.current.runs = 0;
+  state.collection[0].current.runs = 0;
   const results_snapshot awaiting(state);
   const auto awaiting_text(success_rate_tooltip(awaiting, 0, true));
   CHECK(awaiting_text.contains("Current: awaiting results"));
@@ -242,7 +242,7 @@ TEST_CASE("Runs without success thresholds use time per completed run")
   rs::settings settings;
   settings.threshold.accuracy = 0.9;
   rs::collection_t collection;
-  collection.emplace_back("Accuracy", rs::data{"", "", settings, {}});
+  collection.push_back({.name = "Accuracy", .conf = settings});
   results_state state(std::move(collection), rs::exec_mode::run);
   CHECK(results_snapshot(state).show_success_rate);
 }
@@ -273,13 +273,13 @@ TEST_CASE("Remaining time estimates use each dataset's planned runs")
   reference.runs = 100;
   reference.elapsed_time = 100h;
   rs::collection_t collection;
-  collection.emplace_back("Fast", rs::data{"", "", settings, reference});
-  collection.emplace_back("Slow", rs::data{"", "", settings, {}});
-  collection.emplace_back("Pending", rs::data{"", "", settings, {}});
-  collection[0].second.current.runs = 10;
-  collection[0].second.current.elapsed_time = 12500ms;
-  collection[1].second.current.runs = 5;
-  collection[1].second.current.elapsed_time = 2h;
+  collection.push_back({.name = "Fast", .conf = settings, .reference = reference});
+  collection.push_back({.name = "Slow", .conf = settings});
+  collection.push_back({.name = "Pending", .conf = settings});
+  collection[0].current.runs = 10;
+  collection[0].current.elapsed_time = 12500ms;
+  collection[1].current.runs = 5;
+  collection[1].current.elapsed_time = 2h;
   results_state state(std::move(collection), rs::exec_mode::run);
   const results_snapshot snapshot(state);
 
@@ -292,14 +292,14 @@ TEST_CASE("Remaining time estimates use each dataset's planned runs")
   CHECK(time_per_run_tooltip(snapshot, 0, true)
         .contains("Runs left: 10\nEstimated time remaining: ~13s"));
 
-  state.collection[0].second.current.runs = 15;
-  state.collection[0].second.current.elapsed_time = 3min;
+  state.collection[0].current.runs = 15;
+  state.collection[0].current.elapsed_time = 3min;
   const results_snapshot updated(state);
   CHECK(remaining_time_label(updated, 0) == "~1m 0s");
 
   for (const unsigned runs : {20u, 21u})
   {
-    state.collection[0].second.current.runs = runs;
+    state.collection[0].current.runs = runs;
     const results_snapshot completed(state);
     REQUIRE(estimated_time_remaining(completed, 0));
     CHECK(*estimated_time_remaining(completed, 0) == doctest::Approx(0.0));
@@ -316,8 +316,8 @@ TEST_CASE_FIXTURE(plot_context, "Time per run plots use a non-negative time axis
     SUBCASE("Completed results") {}
     SUBCASE("All results pending")
     {
-      for (auto &[label, data] : state.collection)
-        data.current.runs = 0;
+      for (auto &test : state.collection)
+        test.current.runs = 0;
     }
     const results_snapshot snapshot(state);
     for (unsigned frame(0); frame < 3; ++frame)
@@ -365,8 +365,8 @@ TEST_CASE_FIXTURE(plot_context, "Pending timing annotations keep stable visible 
   SUBCASE("Reference results hidden") { with_reference = true; }
 
   auto state(make_state(with_reference, rs::exec_mode::run));
-  for (auto &[label, data] : state.collection)
-    data.current.runs = 0;
+  for (auto &test : state.collection)
+    test.current.runs = 0;
 
   for (unsigned frame(0); frame < 64; ++frame)
   {
@@ -377,8 +377,8 @@ TEST_CASE_FIXTURE(plot_context, "Pending timing annotations keep stable visible 
       ImGui::ActivateItemByID(ImGui::GetID("Reference values##Run##Time per run"));
     if (frame == 40)
     {
-      state.collection[0].second.current.runs = 1;
-      state.collection[0].second.current.elapsed_time = 5s;
+      state.collection[0].current.runs = 1;
+      state.collection[0].current.elapsed_time = 5s;
     }
     const results_snapshot snapshot(state);
     render_time_per_run(snapshot);
@@ -419,8 +419,8 @@ TEST_CASE_FIXTURE(plot_context, "Run capacity lines stay opaque yellow")
   rs::settings settings;
   settings.runs = 20;
   rs::collection_t collection;
-  collection.emplace_back("Dataset", rs::data{"", "", settings, {}});
-  collection.back().second.current.runs = 10;
+  collection.push_back({.name = "Dataset", .conf = settings});
+  collection.back().current.runs = 10;
   results_state state(std::move(collection));
   const results_snapshot snapshot(state);
 
@@ -601,7 +601,7 @@ TEST_CASE_FIXTURE(plot_context, "Success rate scale stays at zero to 100 percent
     auto state(make_state(with_reference));
     for (const double rate : {0.0, 0.02, 1.0})
     {
-      state.collection[0].second.current.success_rate = rate;
+      state.collection[0].current.success_rate = rate;
       const results_snapshot snapshot(state);
       ImGui::NewFrame();
       ImGui::SetNextWindowSize(ImVec2(900, 600));

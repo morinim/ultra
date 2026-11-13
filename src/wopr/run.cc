@@ -42,20 +42,20 @@ bool rs::run::start(const imgui_app::program::settings &settings,
       if (source.stop_requested())
         return;
 
-      const auto &dataset(test.second.dataset);
+      const auto &dataset(test.dataset);
       ultra::src::problem prob(
-        ultra::src::dataframe(dataset, test.second.conf.params),
+        ultra::src::dataframe(dataset, test.conf.params),
         ultra::symbol_init::all);
-      prob.params.evolution.generations = test.second.conf.generations;
+      prob.params.evolution.generations = test.conf.generations;
 
       ultra::src::search s(prob);
-      auto sl(rs::make_search_log(dataset, test.second.xml_summary));
+      auto sl(rs::make_search_log(dataset, test.xml_summary));
       s.logger(sl).stop_source(source);
 
       if (multiple_tests)
         s.tag(dataset.stem());
 
-      s.run(test.second.conf.runs, test.second.conf.threshold);
+      s.run(test.conf.runs, test.conf.threshold);
     });
 
   if (multiple_tests)
@@ -78,7 +78,7 @@ bool rs::run::start(const imgui_app::program::settings &settings,
   tasks.reserve(options.collection.size());
 
   for (const auto &test : options.collection)
-    tasks.emplace_back(test.second.dataset,
+    tasks.emplace_back(test.dataset,
                        pool.submit(test_driver, test));
 
   if (!options.nogui)

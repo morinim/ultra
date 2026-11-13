@@ -201,13 +201,17 @@ void insert_dataset(collection_t &collection, const fs::path &basename,
   std::cout << "Basename: " << basename
             << "\n  first summary: " << summary;
 
-  const auto ref(load_reference(ref_dir, basename));
-  const rs::data d(basename, summary, conf, ref);
-
-  collection.emplace_back(basename.stem(), d);
+  collection.push_back({
+    .name = basename.stem(),
+    .dataset = basename,
+    .xml_summary = summary,
+    .conf = conf,
+    .current = {},
+    .reference = load_reference(ref_dir, basename)
+  });
 
   if (has_settings)
-    show_settings(collection.back().first, collection.back().second.conf);
+    show_settings(collection.back().name, collection.back().conf);
 }
 
 collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
@@ -290,7 +294,7 @@ collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
 
   std::cout << "Datasets:";
   for (const auto &ds : ret)
-    std::cout << ' ' << ds.first;
+    std::cout << ' ' << ds.name;
   std::cout << '\n';
 
   return ret;
@@ -574,30 +578,30 @@ results_snapshot::results_snapshot(results_state &state)
 
   references_available = std::ranges::any_of(
     state.collection,
-    [](const auto &entry) { return !entry.second.reference.empty(); });
+    [](const auto &entry) { return !entry.reference.empty(); });
 
-  for (const auto &[label, data] : state.collection)
+  for (const auto &test : state.collection)
   {
-    labels.push_back(label);
-    capacity_runs.push_back(data.conf.runs);
+    labels.push_back(test.name);
+    capacity_runs.push_back(test.conf.runs);
     const bool has_threshold(state.mode == rs::exec_mode::summary
-                             || !data.conf.threshold.empty());
+                             || !test.conf.threshold.empty());
     success_thresholds.push_back(has_threshold);
     show_success_rate |= has_threshold;
-    add_summary_metrics(*this, data.current);
-    max_runs = std::max({max_runs, data.conf.runs, data.current.runs});
-    add_fit_data(current_fitness, data.current);
-    add_fit_data(reference_fitness, data.reference);
-    add_elite_data(current_elite, data.current);
-    add_elite_data(reference_elite, data.reference);
+    add_summary_metrics(*this, test.current);
+    max_runs = std::max({max_runs, test.conf.runs, test.current.runs});
+    add_fit_data(current_fitness, test.current);
+    add_fit_data(reference_fitness, test.reference);
+    add_elite_data(current_elite, test.current);
+    add_elite_data(reference_elite, test.reference);
   }
 
   max_runs_with_reference = max_runs;
-  for (const auto &[_, data] : state.collection)
+  for (const auto &test : state.collection)
   {
-    add_summary_metrics(*this, data.reference);
+    add_summary_metrics(*this, test.reference);
     max_runs_with_reference = std::max(max_runs_with_reference,
-                                       data.reference.runs);
+                                       test.reference.runs);
   }
 
   label_data = to_cstr_vector(labels);
@@ -1261,12 +1265,12 @@ void get_summaries(std::stop_token stoken, results_state &state)
   {
     for (auto &test : state.collection)
     {
-      const auto xml_fn(test.second.xml_summary);
+      const auto xml_fn(test.xml_summary);
 
       if (tinyxml2::XMLDocument summary; summary_data::check(xml_fn, summary))
       {
         std::lock_guard guard(state.current_mutex);
-        test.second.current = summary_data(summary);
+        test.current = summary_data(summary);
       }
     }
 

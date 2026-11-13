@@ -80,23 +80,18 @@ struct settings
   ultra::model_measurements<double> threshold {};
 };
 
-struct data
+struct entry
 {
-  data(const std::filesystem::path &ds, const std::filesystem::path &xs,
-       const settings &c, const summary_data &r)
-    : dataset(ds), xml_summary(xs), conf(c), reference(r)
-  {
-  }
+  std::string name {};
+  std::filesystem::path dataset {};
+  std::filesystem::path xml_summary {};
 
-  const std::filesystem::path dataset;
-  const std::filesystem::path xml_summary;
-
-  const settings conf;
+  settings conf {};
   summary_data current {};
-  const summary_data reference;
+  summary_data reference {};
 };
 
-using collection_t = std::vector<std::pair<const std::string, data>>;
+using collection_t = std::vector<entry>;
 
 [[nodiscard]] std::expected<ultra::model_measurements<double>, std::string>
 extract_threshold(std::string);
