@@ -12,11 +12,7 @@ foreach (test_src ${TESTS_SRC})
 
   if (NOT ${test} MATCHES "^speed_")
     add_test(NAME ${test} COMMAND ${test})
-
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      set_tests_properties(${test} PROPERTIES ENVIRONMENT
-        "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/utility/tsan.supp")
-    endif()
+    list(APPEND registered_tests ${test})
   endif()
 endforeach()
 
@@ -27,6 +23,7 @@ target_link_libraries(wopr_monitor_data PRIVATE
   ultra Threads::Threads
 )
 add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
+list(APPEND registered_tests wopr_monitor_data)
 
 if (TARGET implot)
   add_executable(wopr_monitor
@@ -43,6 +40,7 @@ if (TARGET implot)
     ultra implot SDL3::SDL3 Threads::Threads
   )
   add_test(NAME wopr_monitor COMMAND wopr_monitor)
+  list(APPEND registered_tests wopr_monitor)
 
   add_executable(wopr_results
     wopr/results.cc
@@ -57,10 +55,24 @@ if (TARGET implot)
     ultra implot SDL3::SDL3 Threads::Threads
   )
   add_test(NAME wopr_results COMMAND wopr_results)
+  list(APPEND registered_tests wopr_results)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  message("libc++ and TSAN, enabling ${PROJECT_SOURCE_DIR}/utility/tsan.supp")
+get_directory_property(compile_options COMPILE_OPTIONS)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" build_type_upper)
+string(JOIN " " all_build_flags
+  "${CMAKE_CXX_FLAGS}"
+  "${CMAKE_CXX_FLAGS_${build_type_upper}}"
+  "${CMAKE_EXE_LINKER_FLAGS}"
+  "${OTHER_FLAGS}"
+  "${compile_options}"
+  "$ENV{SANITISER_FLAGS}"
+)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND all_build_flags MATCHES "-fsanitize=thread")
+  set_tests_properties(${registered_tests} PROPERTIES ENVIRONMENT
+    "TSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/utility/tsan.supp")
+  message(STATUS "libc++ and TSAN, enabling ${PROJECT_SOURCE_DIR}/utility/tsan.supp")
 endif()
 
 # Resources needed by examples
