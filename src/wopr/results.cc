@@ -149,6 +149,67 @@ settings read_settings(const fs::path &test_fn, const settings &defaults)
   return ret;
 }
 
+summary_data load_reference(const fs::path &ref_dir, const fs::path &base)
+{
+  if (ref_dir.empty())
+  {
+    std::cout << "\n  no reference\n";
+    return {};
+  }
+
+  if (const auto ref(ref_dir / ultra::summary_from_basename(base.filename()));
+      fs::exists(ref))
+  {
+    std::cout << "\n  reference: " << ref << '\n';
+
+    try
+    {
+      return summary_data(ref);
+    }
+    catch (const std::invalid_argument &e)
+    {
+      std::cerr << e.what() << '\n';
+    }
+  }
+
+  return {};
+}
+
+void show_settings(std::string_view name, const settings &ts)
+{
+  std::cout << "Settings for " << name
+            << "\n  Runs: " << ts.runs
+            << "\n  Generations: " << ts.generations
+            << "\n  Threshold:";
+
+  if (ts.threshold.accuracy || ts.threshold.fitness)
+  {
+    if (ts.threshold.accuracy)
+      std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
+    if (ts.threshold.fitness)
+      std::cout << ' ' << *ts.threshold.fitness;
+  }
+  else
+    std::cout << " none";
+  std::cout << '\n';
+}
+
+void insert_dataset(collection_t &collection, const fs::path &basename,
+                    const fs::path &summary, const settings &conf,
+                    const fs::path &ref_dir, bool has_settings)
+{
+  std::cout << "Basename: " << basename
+            << "\n  first summary: " << summary;
+
+  const auto ref(load_reference(ref_dir, basename));
+  const rs::data d(basename, summary, conf, ref);
+
+  collection.emplace_back(basename.stem(), d);
+
+  if (has_settings)
+    show_settings(collection.back().first, collection.back().second.conf);
+}
+
 collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
                               const settings &defaults)
 {
@@ -173,82 +234,19 @@ collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
 
   const auto check_and_insert([&m, &in2, &ret, &defaults](const auto &path)
   {
-    const auto get_reference([&in2](const fs::path &base)
-    {
-      if (!in2.empty())
-      {
-        if (const auto ref(in2 / summary_from_basename(base.filename()));
-            fs::exists(ref))
-        {
-          std::cout << "\n  reference: " << ref << '\n';
-
-          try
-          {
-            return summary_data(ref);
-          }
-          catch (const std::invalid_argument &e)
-          {
-            std::cerr << e.what() << '\n';
-          }
-        }
-      }
-      else
-        std::cout << "\n  no reference\n";
-
-      return summary_data();
-    });
-
-    const auto show_settings([](std::string_view name, const settings &ts)
-    {
-      std::cout << "Settings for " << name
-                << "\n  Runs: " << ts.runs
-                << "\n  Generations: " << ts.generations
-                << "\n  Threshold:";
-
-      if (ts.threshold.accuracy || ts.threshold.fitness)
-      {
-        if (ts.threshold.accuracy)
-          std::cout << ' ' << *ts.threshold.accuracy * 100.0 << '%';
-        if (ts.threshold.fitness)
-          std::cout << ' ' << *ts.threshold.fitness;
-      }
-      else
-        std::cout << " none";
-      std::cout << '\n';
-    });
-
     const auto ext(path.extension());
 
     if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
     {
-      const auto sum(summary_from_basename(path));
-
-      std::cout << "Basename: " << path
-                << "\n  first summary: " << sum;
-
-      const auto ref(get_reference(path));
-
-      const rs::data d(path, sum, read_settings(path, defaults), ref);
-
-      ret.emplace_back(path.stem(), d);
-
-      show_settings(ret.back().first, ret.back().second.conf);
+      insert_dataset(ret, path, summary_from_basename(path),
+                     read_settings(path, defaults), in2, true);
       return true;
     }
 
     if (m == exec_mode::summary && ultra::iequals(ext, ".xml")
         && path.stem().string().ends_with(".summary"))
     {
-      const auto basename(basename_from_summary(path));
-
-      std::cout << "Basename: " << basename
-                << "\n  first summary: " << path;
-
-      const auto ref(get_reference(basename));
-
-      const rs::data d(basename, path, {}, ref);
-
-      ret.emplace_back(basename.stem(), d);
+      insert_dataset(ret, basename_from_summary(path), path, {}, in2, false);
       return true;
     }
 
@@ -544,6 +542,20 @@ void add_elite_data(elite_data &out, const summary_data &summary)
   out.elite.push_back(std::move(run));
 }
 
+void add_summary_metrics(results_snapshot &out, const summary_data &summary)
+{
+  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+
+  out.runs.push_back(summary.runs);
+  out.success_rates.push_back(summary.empty() ? qnan
+                                              : summary.success_rate * 100.0);
+  out.time_per_run.push_back(summary.empty()
+                             ? qnan
+                             : std::chrono::duration<double>(
+                                 summary.elapsed_time).count()
+                               / summary.runs);
+}
+
 results_snapshot::results_snapshot(results_state &state)
   : current_fitness(state.collection.size()),
     reference_fitness(state.collection.size()),
@@ -572,15 +584,7 @@ results_snapshot::results_snapshot(results_state &state)
                              || !data.conf.threshold.empty());
     success_thresholds.push_back(has_threshold);
     show_success_rate |= has_threshold;
-    runs.push_back(data.current.runs);
-    success_rates.push_back(data.current.empty()
-                            ? std::numeric_limits<double>::quiet_NaN()
-                            : data.current.success_rate * 100.0);
-    time_per_run.push_back(data.current.empty()
-                           ? std::numeric_limits<double>::quiet_NaN()
-                           : std::chrono::duration<double>(
-                               data.current.elapsed_time).count()
-                             / data.current.runs);
+    add_summary_metrics(*this, data.current);
     max_runs = std::max({max_runs, data.conf.runs, data.current.runs});
     add_fit_data(current_fitness, data.current);
     add_fit_data(reference_fitness, data.reference);
@@ -591,15 +595,7 @@ results_snapshot::results_snapshot(results_state &state)
   max_runs_with_reference = max_runs;
   for (const auto &[_, data] : state.collection)
   {
-    runs.push_back(data.reference.runs);
-    success_rates.push_back(data.reference.empty()
-                            ? std::numeric_limits<double>::quiet_NaN()
-                            : data.reference.success_rate * 100.0);
-    time_per_run.push_back(data.reference.empty()
-                           ? std::numeric_limits<double>::quiet_NaN()
-                           : std::chrono::duration<double>(
-                               data.reference.elapsed_time).count()
-                             / data.reference.runs);
+    add_summary_metrics(*this, data.reference);
     max_runs_with_reference = std::max(max_runs_with_reference,
                                        data.reference.runs);
   }

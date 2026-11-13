@@ -259,4 +259,37 @@ std::size_t layers_line::size() const noexcept
   return age_sup.size();
 }
 
+/// Drains available log entries, separating runs at empty lines.
+template<class Data, class Run, class Update>
+void drain_runs(ultra::ts_queue<Data> &queue, std::vector<Run> &runs,
+                Update update)
+{
+  while (auto data = queue.try_pop())
+  {
+    if (data->new_run)
+    {
+      // Skip multiple empty lines.
+      if (runs.empty() || !runs.back().empty())
+        runs.push_back({});
+    }
+    else
+    {
+      if (runs.empty())
+        runs.push_back({});
+
+      update(runs.back(), *data);
+    }
+  }
+}
+
+void monitor_state::update()
+{
+  drain_runs(dynamic_queue, dynamic_runs,
+             [](auto &run, const auto &data) { run.push_back(data); });
+  drain_runs(population_queue, population_runs,
+             [](auto &run, auto &data) { run.update(data); });
+  drain_runs(layers_queue, layers_runs,
+             [](auto &run, auto &data) { run = std::move(data); });
+}
+
 }  // namespace ultra::wopr

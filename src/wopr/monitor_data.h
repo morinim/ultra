@@ -15,6 +15,7 @@
 
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
+#include "utility/ts_queue.h"
 
 #include <cstddef>
 #include <iosfwd>
@@ -127,6 +128,19 @@ struct layers_line
 
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
+};
+
+struct monitor_state
+{
+  ultra::ts_queue<dynamic_data> dynamic_queue {};
+  ultra::ts_queue<population_line> population_queue {};
+  ultra::ts_queue<layers_line> layers_queue {};
+
+  std::vector<dynamic_sequence> dynamic_runs {};
+  std::vector<population_sequence> population_runs {};
+  std::vector<layers_line> layers_runs {};
+
+  void update();
 };
 
 }  // namespace ultra::wopr

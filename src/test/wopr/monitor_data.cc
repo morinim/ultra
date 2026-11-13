@@ -133,4 +133,77 @@ TEST_CASE("dynamic_data parsing")
   }
 }
 
+TEST_CASE("monitor_state updates histories and handles runs")
+{
+  using namespace ultra::wopr;
+
+  SUBCASE("empty queues do not produce runs")
+  {
+    monitor_state state;
+    state.update();
+
+    CHECK(state.dynamic_runs.empty());
+    CHECK(state.population_runs.empty());
+    CHECK(state.layers_runs.empty());
+  }
+
+  SUBCASE("dynamic queue updates and separates runs")
+  {
+    monitor_state state;
+    state.dynamic_queue.push(dynamic_data(
+      "0 0.5 0.3 0.1 0.1 5 1.0 10 {1: 2} (x)"));
+    state.dynamic_queue.push(dynamic_data(
+      "1 0.8 0.4 0.1 0.2 6 1.2 12 {1: 3} (+ x 1)"));
+    state.dynamic_queue.push(dynamic_data(""));  // new run marker
+    state.dynamic_queue.push(dynamic_data(
+      "0 0.6 0.2 0.05 0.1 4 0.8 8 {1: 1} (y)"));
+
+    state.update();
+
+    REQUIRE(state.dynamic_runs.size() == 2);
+    CHECK(state.dynamic_runs[0].size() == 2);
+    CHECK(state.dynamic_runs[0].xs[0] == doctest::Approx(0.0));
+    CHECK(state.dynamic_runs[0].xs[1] == doctest::Approx(1.0));
+    CHECK(state.dynamic_runs[1].size() == 1);
+    CHECK(state.dynamic_runs[1].best_prg[0] == "(y)");
+  }
+
+  SUBCASE("population queue updates and separates runs")
+  {
+    monitor_state state;
+    state.population_queue.push(population_line("0 0.1 10 0.2 20"));
+    state.population_queue.push(population_line("1 0.1 15 0.2 25"));
+    state.population_queue.push(population_line(""));  // new run
+    state.population_queue.push(population_line("0 0.3 30"));
+
+    state.update();
+
+    REQUIRE(state.population_runs.size() == 2);
+    CHECK(state.population_runs[0].generation == 1);
+    CHECK(state.population_runs[0].xs.size() == 2);
+    CHECK(state.population_runs[1].generation == 0);
+    CHECK(state.population_runs[1].xs.size() == 1);
+  }
+
+  SUBCASE("layers queue keeps latest generation and separates runs")
+  {
+    monitor_state state;
+    state.layers_queue.push(layers_line(
+      "0 5 2.5 1.0 1 4 0.5 0.1 0.3 0.7 50"));
+    state.layers_queue.push(layers_line(
+      "1 5 2.5 1.0 1 4 0.8 0.05 0.7 0.9 50"));
+    state.layers_queue.push(layers_line(""));  // new run
+    state.layers_queue.push(layers_line(
+      "0 5 2.5 1.0 1 4 0.6 0.1 0.4 0.8 50"));
+
+    state.update();
+
+    REQUIRE(state.layers_runs.size() == 2);
+    CHECK(state.layers_runs[0].generation == 1);
+    CHECK(state.layers_runs[0].fit_mean[0] == doctest::Approx(0.8));
+    CHECK(state.layers_runs[1].generation == 0);
+    CHECK(state.layers_runs[1].fit_mean[0] == doctest::Approx(0.6));
+  }
+}
+
 }  // TEST_SUITE("MONITOR DATA")

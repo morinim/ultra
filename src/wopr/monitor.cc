@@ -44,10 +44,6 @@ namespace ultra::wopr
 
 using namespace std::chrono_literals;
 
-ultra::ts_queue<dynamic_data> dynamic_queue;
-ultra::ts_queue<population_line> population_queue;
-ultra::ts_queue<layers_line> layers_queue;
-
 struct id_scope
 {
   explicit id_scope(int id) { ImGui::PushID(id); }
@@ -59,29 +55,6 @@ struct id_scope
   id_scope(const id_scope &) = delete;
   id_scope &operator=(const id_scope &) = delete;
 };
-
-/// Drains available log entries, separating runs at empty lines.
-template<class Data, class Run, class Update>
-void drain_runs(ultra::ts_queue<Data> &queue, std::vector<Run> &runs,
-                Update update)
-{
-  while (auto data = queue.try_pop())
-  {
-    if (data->new_run)
-    {
-      // Skip multiple empty lines.
-      if (runs.empty() || !runs.back().empty())
-        runs.push_back({});
-    }
-    else
-    {
-      if (runs.empty())
-        runs.push_back({});
-
-      update(runs.back(), *data);
-    }
-  }
-}
 
 void render_dynamic_series(const char *mean_label, const char *max_label,
                            const double *xs, const double *mean,
@@ -99,13 +72,9 @@ void render_dynamic_series(const char *mean_label, const char *max_label,
                      {ImPlotProp_LineColor, ImPlot::GetColormapColor(2)});
 }
 
-void render_dynamic(int monitoring_window)
+void render_dynamic(std::vector<dynamic_sequence> &dynamic_runs,
+                    int monitoring_window)
 {
-  static std::vector<dynamic_sequence> dynamic_runs;
-
-  drain_runs(dynamic_queue, dynamic_runs,
-             [](auto &run, const auto &data) { run.push_back(data); });
-
   static bool show_best(true);
   static bool show_longest(true);
 
@@ -233,13 +202,9 @@ void render_dynamic(int monitoring_window)
   }
 }
 
-void render_population()
+void render_population(
+  const std::vector<population_sequence> &population_runs)
 {
-  static std::vector<population_sequence> population_runs;
-
-  drain_runs(population_queue, population_runs,
-             [](auto &run, auto &data) { run.update(data); });
-
   const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
 
   for (std::size_t run(population_runs.size()); run--;)
@@ -467,23 +432,11 @@ void render_layers_age(const std::vector<layers_line> &layers_runs)
   }
 }
 
-enum class layer_info {age, fitness};
-void render_layers(layer_info li)
-{
-  static std::vector<layers_line> layers_runs;
-
-  drain_runs(layers_queue, layers_runs,
-             [](auto &run, auto &data) { run = std::move(data); });
-
-  if (li == layer_info::age)
-    render_layers_age(layers_runs);
-  else  // layer_info::fitness
-    render_layers_fit(layers_runs);
-}
-
 void render_monitor(const imgui_app::program &prg, bool *p_open,
-                    monitor::options &options)
+                    monitor::options &options, monitor_state &state)
 {
+  state.update();
+
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
   ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
@@ -527,27 +480,29 @@ void render_monitor(const imgui_app::program &prg, bool *p_open,
         "Dynamic##ChildWindow", "DYNAMICS",
         !options.slog.dynamic_file_path.empty() && show_dynamic_check,
         mxz_dynamic,
-        [&options] { render_dynamic(options.window); }
+        [&options, &state]
+        { render_dynamic(state.dynamic_runs, options.window); }
       },
       dashboard_panel
       {
         "Population##ChildWindow", "POPULATION",
         !options.slog.population_file_path.empty() && show_population_check,
-        mxz_population, render_population
+        mxz_population,
+        [&state] { render_population(state.population_runs); }
       },
       dashboard_panel
       {
         "LayersFitness##ChildWindow", "FITNESS BY LAYER",
         !options.slog.layers_file_path.empty() && show_layers_fit_check,
         mxz_layers_fit,
-        [] { render_layers(layer_info::fitness); }
+        [&state] { render_layers_fit(state.layers_runs); }
       },
       dashboard_panel
       {
         "LayersAge##ChildWindow", "AGE BY LAYER",
         !options.slog.layers_file_path.empty() && show_layers_age_check,
         mxz_layers_age,
-        [] { render_layers(layer_info::age); }
+        [&state] { render_layers_age(state.layers_runs); }
       }
     };
     render_dashboard(panels);
@@ -619,7 +574,7 @@ std::optional<std::string> read_log_file::get_line()
   }
 }
 
-template<typename Queue, typename DataClass>
+template<typename DataClass, typename Queue>
 [[nodiscard]] bool process_log_stream(read_log_file &log_file, Queue &queue,
                                       ultra::timer &last_read,
                                       const std::stop_token &stoken,
@@ -654,7 +609,8 @@ template<typename Queue, typename DataClass>
 // Asynchronously reads all specified log files into queues for subsequent
 // processing.
 //
-void get_logs(std::stop_token stoken, const ultra::search_log &slog)
+void get_logs(std::stop_token stoken, const ultra::search_log &slog,
+              monitor_state &state)
 {
   try
   {
@@ -670,20 +626,20 @@ void get_logs(std::stop_token stoken, const ultra::search_log &slog)
     while (!stoken.stop_requested())
     {
       if (dynamic_log
-          && !process_log_stream<decltype(dynamic_queue), dynamic_data>(
-                *dynamic_log, dynamic_queue, last_read, stoken,
+          && !process_log_stream<dynamic_data>(
+                *dynamic_log, state.dynamic_queue, last_read, stoken,
                 slog.dynamic_file_path))
         dynamic_log.reset();
 
       if (population_log
-          && !process_log_stream<decltype(population_queue), population_line>(
-                *population_log, population_queue, last_read, stoken,
+          && !process_log_stream<population_line>(
+                *population_log, state.population_queue, last_read, stoken,
                 slog.population_file_path))
         population_log.reset();
 
       if (layers_log
-          && !process_log_stream<decltype(layers_queue), layers_line>(
-                *layers_log, layers_queue, last_read, stoken,
+          && !process_log_stream<layers_line>(
+                *layers_log, state.layers_queue, last_read, stoken,
                 slog.layers_file_path))
         layers_log.reset();
 
@@ -712,13 +668,14 @@ void get_logs(std::stop_token stoken, const ultra::search_log &slog)
 void monitor::start(const imgui_app::program::settings &settings,
                     options options)
 {
-  std::jthread t_logs(get_logs, std::cref(options.slog));
+  monitor_state state;
+  std::jthread t_logs(get_logs, std::cref(options.slog), std::ref(state));
 
   imgui_app::program prg(settings);
   prg.run(
-    [&options](const auto &program, bool *open)
+    [&options, &state](const auto &program, bool *open)
     {
-      render_monitor(program, open, options);
+      render_monitor(program, open, options, state);
     });
 }
 
