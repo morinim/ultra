@@ -13,10 +13,6 @@
 #if !defined(ULTRA_WOPR_RESULTS_H)
 #define      ULTRA_WOPR_RESULTS_H
 
-#if defined(ULTRA_WOPR_GUI)
-#include "imgui_app.h"
-#endif
-
 #include "kernel/fitness.h"
 #include "kernel/model_measurements.h"
 #include "kernel/search_log.h"
@@ -28,6 +24,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -96,7 +93,7 @@ struct entry
 using collection_t = std::vector<entry>;
 
 [[nodiscard]] std::expected<ultra::model_measurements<double>, std::string>
-extract_threshold(std::string);
+extract_threshold(std::string_view);
 [[nodiscard]] settings read_settings(const std::filesystem::path &,
                                      const settings & = {});
 [[nodiscard]] collection_t setup_collection(std::filesystem::path,
@@ -119,9 +116,6 @@ struct options
 };
 
 [[nodiscard]] bool start(options);
-#if defined(ULTRA_WOPR_GUI)
-[[nodiscard]] bool start(const imgui_app::program::settings &, options);
-#endif
 
 }  // namespace run
 
@@ -136,7 +130,7 @@ struct options
 };
 
 #if defined(ULTRA_WOPR_GUI)
-void start(const imgui_app::program::settings &, options);
+void start(options);
 #endif
 
 }  // namespace summary

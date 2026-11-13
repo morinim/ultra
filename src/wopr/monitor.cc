@@ -13,7 +13,7 @@
 #include "monitor.h"
 
 #include "dashboard.h"
-#include "gui_helpers.h"
+#include "imgui_app.h"
 #include "monitor_data.h"
 
 #include "kernel/gp/primitive/real.h"
@@ -21,6 +21,8 @@
 #include "utility/ts_queue.h"
 
 #include "implot/implot.h"
+
+#include <SDL3/SDL_video.h>
 
 #include <algorithm>
 #include <array>
@@ -446,10 +448,7 @@ void render_monitor(const imgui_app::program &prg, bool *p_open,
   static bool show_layers_fit_check(true);
   static bool show_layers_age_check(true);
 
-  static bool mxz_dynamic(false);
-  static bool mxz_population(false);
-  static bool mxz_layers_fit(false);
-  static bool mxz_layers_age(false);
+  static std::optional<std::size_t> maximised;
 
   if (ImGui::Begin("Monitor##Window", p_open))
   {
@@ -479,7 +478,6 @@ void render_monitor(const imgui_app::program &prg, bool *p_open,
       {
         "Dynamic##ChildWindow", "DYNAMICS",
         !options.slog.dynamic_file_path.empty() && show_dynamic_check,
-        mxz_dynamic,
         [&options, &state]
         { render_dynamic(state.dynamic_runs, options.window); }
       },
@@ -487,25 +485,22 @@ void render_monitor(const imgui_app::program &prg, bool *p_open,
       {
         "Population##ChildWindow", "POPULATION",
         !options.slog.population_file_path.empty() && show_population_check,
-        mxz_population,
         [&state] { render_population(state.population_runs); }
       },
       dashboard_panel
       {
         "LayersFitness##ChildWindow", "FITNESS BY LAYER",
         !options.slog.layers_file_path.empty() && show_layers_fit_check,
-        mxz_layers_fit,
         [&state] { render_layers_fit(state.layers_runs); }
       },
       dashboard_panel
       {
         "LayersAge##ChildWindow", "AGE BY LAYER",
         !options.slog.layers_file_path.empty() && show_layers_age_check,
-        mxz_layers_age,
         [&state] { render_layers_age(state.layers_runs); }
       }
     };
-    render_dashboard(panels);
+    render_dashboard(panels, maximised);
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
@@ -582,19 +577,20 @@ template<typename DataClass, typename Queue>
 {
   try
   {
-    if (auto line(log_file.get_line()); line)
+    bool read_any(false);
+
+    while (!stoken.stop_requested())
     {
-      do
-      {
-        if (stoken.stop_requested())
-          break;
+      const auto line(log_file.get_line());
+      if (!line)
+        break;
 
-        queue.push(DataClass(*line));
-        line = log_file.get_line();
-      } while (line);
-
-      last_read.restart();
+      queue.push(DataClass(*line));
+      read_any = true;
     }
+
+    if (read_any)
+      last_read.restart();
 
     return true;
   }
@@ -665,11 +661,15 @@ void get_logs(std::stop_token stoken, const ultra::search_log &slog,
 }
 
 // Asynchronously reads all available summary files into queues for subsequent
-void monitor::start(const imgui_app::program::settings &settings,
-                    options options)
+void monitor::start(options options)
 {
   monitor_state state;
   std::jthread t_logs(get_logs, std::cref(options.slog), std::ref(state));
+
+  imgui_app::program::settings settings;
+  settings.w_related.title = "WOPR";
+  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+  settings.demo = options.imgui_demo;
 
   imgui_app::program prg(settings);
   prg.run(

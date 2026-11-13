@@ -15,8 +15,6 @@
 #include "kernel/exceptions.h"
 
 #include <cmath>
-#include <iostream>
-#include <numbers>
 #include <numeric>
 #include <sstream>
 #include <utility>
@@ -135,11 +133,8 @@ population_line::population_line(const std::string &line)
 
   std::istringstream ss(line);
   if (!(ss >> generation))
-  {
-    std::cout << line << std::endl;
     throw ultra::exception::data_format(
       "Cannot parse population file line (missing generation)");
-  }
 
   ultra::fitnd fit_val;
   std::size_t obs_val;
@@ -187,7 +182,6 @@ double population_sequence::calculate_entropy() const
   if (!sum)
     return 0;
 
-  constexpr double c(1.0 / std::numbers::ln2_v<double>);
   const auto pop_size(static_cast<double>(sum));
 
   double h(0.0);
@@ -196,7 +190,7 @@ double population_sequence::calculate_entropy() const
     {
       const auto p(x / pop_size);
 
-      h -= p * std::log(p) * c;
+      h -= p * std::log2(p);
     }
 
   return h;
@@ -209,11 +203,8 @@ layers_line::layers_line(const std::string &line) : new_run(line.empty())
 
   std::istringstream ss(line);
   if (!(ss >> generation))
-  {
-    std::cout << line << std::endl;
     throw ultra::exception::data_format(
       "Cannot parse layers file line (missing generation)");
-  }
 
   decltype(age_sup)::value_type age_sup_val;
   decltype(age_mean)::value_type age_mean_val;

@@ -19,10 +19,12 @@
 
 #include "CLI11/CLI11.hpp"
 
+#include <array>
 #include <expected>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -83,8 +85,7 @@ struct monitor_cli
   fs::path dynamic_file;
   fs::path layers_file;
   fs::path population_file;
-  int window{0};
-  CLI::Option *opt_window{nullptr};
+  std::optional<int> window;
 };
 
 struct run_cli
@@ -95,8 +96,6 @@ struct run_cli
   unsigned threads{0};
   std::string threshold_str;
   bool nogui{false};
-  CLI::Option *opt_generations{nullptr};
-  CLI::Option *opt_runs{nullptr};
 };
 
 struct summary_cli
@@ -161,34 +160,28 @@ std::expected<monitor::options, std::string> finish_monitor(
                    search_log::default_population_file))
     return std::unexpected("Cannot select the log files.");
 
-  const std::vector log_vect =
+  const std::array log_paths =
   {
     options.slog.dynamic_file_path, options.slog.layers_file_path,
     options.slog.population_file_path
   };
 
-  bool all_empty(true);
-  for (const auto &path : log_vect)
-  {
-    if (!path.empty())
-      all_empty = false;
+  if (std::ranges::all_of(log_paths, &fs::path::empty))
+    return std::unexpected("No log file available.");
 
+  for (const auto &path : log_paths)
     if (!path.empty() && !fs::is_regular_file(path))
       return std::unexpected(
         "A configured log file (" + path.string() + ") is not available.");
-  }
-
-  if (all_empty)
-    return std::unexpected("No log file available.");
 
   std::cout << "Dynamic file path: " << options.slog.dynamic_file_path
             << "\nLayers file path: " << options.slog.layers_file_path
             << "\nPopulation file path: " << options.slog.population_file_path
             << '\n';
 
-  if (cli.opt_window && cli.opt_window->count() > 0)
+  if (cli.window)
   {
-    options.window = cli.window;
+    options.window = *cli.window;
     std::cout << "Monitoring window: " << options.window << '\n';
   }
 
@@ -215,12 +208,6 @@ std::expected<rs::run::options, std::string> finish_run(
   const run_cli &cli, bool imgui_demo)
 {
   auto defaults(cli.defaults);
-
-  if (cli.opt_generations && cli.opt_generations->count() > 0)
-    std::cout << "Generations: " << defaults.generations << '\n';
-
-  if (cli.opt_runs && cli.opt_runs->count() > 0)
-    std::cout << "Runs: " << defaults.runs << '\n';
 
   if (!cli.threshold_str.empty())
   {
@@ -285,7 +272,7 @@ Please enter your selection:)");
                       "Monitor layers log with non-default name");
   mon_cmd->add_option("--population", mon.population_file,
                       "Monitor population log with non-default name");
-  mon.opt_window = mon_cmd->add_option(
+  mon_cmd->add_option(
     "--window", mon.window,
     "Restrict the monitoring window to the last <nr> generations (0 for full history)")
     ->check(CLI::Range(0, std::numeric_limits<int>::max()));
@@ -295,11 +282,11 @@ Please enter your selection:)");
     app.add_subcommand("run", "Execute tests on dataset(s)"));
   run_cmd->add_option("path", run.test_input,
                       "Dataset file (.csv) or folder containing datasets (defaults to ./)");
-  run.opt_generations = run_cmd->add_option(
+  run_cmd->add_option(
     "--generations", run.defaults.generations,
     "Set the maximum number of generations in a run")
     ->check(CLI::Range(1u, std::numeric_limits<unsigned>::max()));
-  run.opt_runs = run_cmd->add_option(
+  run_cmd->add_option(
     "--runs", run.defaults.runs,
     "Perform the specified number of evolutionary runs")
     ->check(CLI::Range(1u, std::numeric_limits<unsigned>::max()));

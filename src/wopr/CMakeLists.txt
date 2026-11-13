@@ -13,7 +13,6 @@ set(WOPR_SRC
 if (WOPR_ENABLE_GUI)
   list(APPEND WOPR_SRC
     dashboard.cc
-    gui_helpers.cc
     imgui_app.cc
     monitor.cc
   )

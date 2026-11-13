@@ -14,8 +14,9 @@
 
 #if defined(ULTRA_WOPR_GUI)
 #include "dashboard.h"
-#include "gui_helpers.h"
+#include "imgui_app.h"
 #include "implot/implot.h"
+#include <SDL3/SDL_video.h>
 #endif
 
 #include "kernel/search_log.h"
@@ -25,6 +26,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <expected>
@@ -36,6 +38,7 @@
 #include <ranges>
 #include <shared_mutex>
 #include <sstream>
+#include <string_view>
 #include <thread>
 
 namespace fs = std::filesystem;
@@ -182,23 +185,24 @@ namespace rs
 {
 
 std::expected<ultra::model_measurements<double>, std::string>
-extract_threshold(std::string txt)
+extract_threshold(std::string_view txt)
 {
   if (txt.empty())
     return {};
 
   ultra::model_measurements<double> threshold;
-  std::size_t consumed;
 
-  const bool accuracy(txt.back() == '%');
+  const bool accuracy(txt.ends_with('%'));
   if (accuracy)
-    txt = txt.substr(0, txt.size() - 1);
+    txt.remove_suffix(1);
 
   try
   {
-    const double val(std::stod(txt, &consumed));
+    std::size_t consumed;
+    const std::string s(txt);
+    const double val(std::stod(s, &consumed));
 
-    if (consumed != txt.size())
+    if (consumed != s.size())
       return std::unexpected("Invalid threshold.");
 
     if (accuracy)
@@ -250,7 +254,7 @@ settings read_settings(const fs::path &test_fn, const settings &defaults)
   if (const auto *e = h_search.FirstChildElement("threshold").ToElement())
     if (const char *text = e->GetText())
     {
-      if (const auto threshold(extract_threshold(std::string(text))); threshold)
+      if (const auto threshold(extract_threshold(text)); threshold)
         ret.threshold = threshold.value();
       else
         std::cerr << threshold.error() << '\n';
@@ -447,16 +451,7 @@ const std::string reference_str {"Reference"};
 
 using labels_data = std::vector<const char *>;
 
-struct results_state
-{
-  explicit results_state(rs::collection_t c,
-                         rs::exec_mode m = rs::exec_mode::summary)
-    : collection(std::move(c)), mode(m) {}
-
-  rs::collection_t collection;
-  const rs::exec_mode mode;
-  std::shared_mutex current_mutex;
-};
+struct results_state;
 
 [[nodiscard]] std::vector<double> make_positions(std::size_t);
 [[nodiscard]] std::vector<const char *> to_cstr_vector(
@@ -512,10 +507,30 @@ struct results_snapshot
   std::vector<bool> success_thresholds;
   std::vector<double> success_rates;
   std::vector<double> time_per_run;
+  std::vector<std::string> remaining_labels;
+  labels_data remaining_label_data;
   fit_data current_fitness;
   fit_data reference_fitness;
   elite_data current_elite;
   elite_data reference_elite;
+};
+
+struct results_state
+{
+  explicit results_state(rs::collection_t c,
+                         rs::exec_mode m = rs::exec_mode::summary)
+    : collection(std::move(c)), mode(m) {}
+
+  rs::collection_t collection;
+  const rs::exec_mode mode;
+  std::shared_mutex current_mutex;
+  std::atomic<uint64_t> version {1};
+
+  const results_snapshot &snapshot();
+
+private:
+  std::optional<results_snapshot> cached_snapshot_ {};
+  uint64_t cached_version_ {0};
 };
 
 void add_fit_data(fit_data &out, const summary_data &summary)
@@ -561,6 +576,41 @@ void add_summary_metrics(results_snapshot &out, const summary_data &summary)
                              : std::chrono::duration<double>(
                                  summary.elapsed_time).count()
                                / summary.runs);
+}
+
+[[nodiscard]] std::optional<double> estimated_time_remaining(
+  const results_snapshot &snapshot, std::size_t i)
+{
+  Expects(i < snapshot.labels.size());
+
+  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+    return 0.0;
+  if (!snapshot.runs[i])
+    return std::nullopt;
+
+  return snapshot.time_per_run[i]
+         * (snapshot.capacity_runs[i] - snapshot.runs[i]);
+}
+
+[[nodiscard]] std::string remaining_time_label(
+  const results_snapshot &snapshot, std::size_t i)
+{
+  const auto estimate(estimated_time_remaining(snapshot, i));
+  if (!estimate)
+    return "Pending";
+  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+    return "Complete";
+
+  using namespace std::chrono;
+  const auto total(ceil<seconds>(duration<double>(*estimate)));
+  const auto h(duration_cast<hours>(total));
+  const auto m(duration_cast<minutes>(total - h));
+  const auto s(total - h - m);
+  if (h.count())
+    return std::format("~{}h {}m {}s", h.count(), m.count(), s.count());
+  if (m.count())
+    return std::format("~{}m {}s", m.count(), s.count());
+  return std::format("~{}s", s.count());
 }
 
 results_snapshot::results_snapshot(results_state &state)
@@ -611,6 +661,11 @@ results_snapshot::results_snapshot(results_state &state)
   if (size)
     positions = make_positions(size);
 
+  remaining_labels.reserve(size);
+  for (std::size_t i(0); i < size; ++i)
+    remaining_labels.push_back(remaining_time_label(*this, i));
+  remaining_label_data = to_cstr_vector(remaining_labels);
+
   for (auto &run : current_elite.elite)
   {
     run.tick_text.reserve(run.id.size());
@@ -620,6 +675,17 @@ results_snapshot::results_snapshot(results_state &state)
     if (!run.id.empty())
       run.tick_positions = make_positions(run.id.size());
   }
+}
+
+const results_snapshot &results_state::snapshot()
+{
+  const auto current_ver(version.load(std::memory_order_relaxed));
+  if (!cached_snapshot_ || cached_version_ != current_ver)
+  {
+    cached_snapshot_.emplace(*this);
+    cached_version_ = current_ver;
+  }
+  return *cached_snapshot_;
 }
 
 namespace
@@ -827,41 +893,6 @@ void render_success_rate(const results_snapshot &snapshot)
   ImPlot::EndPlot();
 }
 
-[[nodiscard]] std::optional<double> estimated_time_remaining(
-  const results_snapshot &snapshot, std::size_t i)
-{
-  Expects(i < snapshot.labels.size());
-
-  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
-    return 0.0;
-  if (!snapshot.runs[i])
-    return std::nullopt;
-
-  return snapshot.time_per_run[i]
-         * (snapshot.capacity_runs[i] - snapshot.runs[i]);
-}
-
-[[nodiscard]] std::string remaining_time_label(
-  const results_snapshot &snapshot, std::size_t i)
-{
-  const auto estimate(estimated_time_remaining(snapshot, i));
-  if (!estimate)
-    return "Pending";
-  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
-    return "Complete";
-
-  using namespace std::chrono;
-  const auto total(ceil<seconds>(duration<double>(*estimate)));
-  const auto h(duration_cast<hours>(total));
-  const auto m(duration_cast<minutes>(total - h));
-  const auto s(total - h - m);
-  if (h.count())
-    return std::format("~{}h {}m {}s", h.count(), m.count(), s.count());
-  if (m.count())
-    return std::format("~{}m {}s", m.count(), s.count());
-  return std::format("~{}s", s.count());
-}
-
 [[nodiscard]] std::string time_per_run_tooltip(
   const results_snapshot &snapshot, std::size_t i, bool show_reference_values)
 {
@@ -877,7 +908,7 @@ void render_success_rate(const results_snapshot &snapshot)
   const unsigned remaining(std::max(snapshot.capacity_runs[i], snapshot.runs[i])
                            - snapshot.runs[i]);
   text += std::format("\nRuns left: {}\nEstimated time remaining: {}",
-                      remaining, remaining_time_label(snapshot, i));
+                      remaining, snapshot.remaining_labels[i]);
 
   if (show_reference_values)
   {
@@ -906,12 +937,6 @@ void render_time_per_run(const results_snapshot &snapshot)
     "Reference values##Run##Time per run", snapshot.references_available,
     compare_reference));
   const std::size_t group_count(1 + show_reference_values);
-
-  std::vector<std::string> remaining_labels;
-  remaining_labels.reserve(size);
-  for (std::size_t i(0); i < size; ++i)
-    remaining_labels.push_back(remaining_time_label(snapshot, i));
-  const auto remaining_label_data(to_cstr_vector(remaining_labels));
 
   ImGui::TextDisabled("Remaining times update after each completed run.");
 
@@ -944,7 +969,7 @@ void render_time_per_run(const results_snapshot &snapshot)
   ImPlot::SetupAxisLimits(ImAxis_Y2, -padding, (size - 1) + padding,
                           ImGuiCond_Always);
   ImPlot::SetupAxisTicks(ImAxis_Y2, snapshot.positions.data(), size,
-                         remaining_label_data.data(), false);
+                         snapshot.remaining_label_data.data(), false);
 
   const double bar_width(0.5 / group_count);
   for (std::size_t series(0); series < group_count; ++series)
@@ -1003,9 +1028,10 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
   const auto &reference(snapshot.reference_fitness);
   const auto &labels(snapshot.label_data);
   static const char title[] = "##FAD";
-  const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
+  const auto cols(static_cast<int>(std::ceil(std::sqrt(size))));
+  const auto rows(static_cast<int>((size + cols - 1) / cols));
 
-  if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
+  if (!ImPlot::BeginSubplots(title, rows, cols, ImVec2(-1, -1),
                              ImPlotSubplotFlags_NoLegend))
     return;
 
@@ -1091,9 +1117,10 @@ void render_elite(const results_snapshot &snapshot)
   const auto &reference(snapshot.reference_elite);
   const auto &labels(snapshot.label_data);
   static const char title[] = "##ELITE";
-  const auto n(static_cast<std::size_t>(std::ceil(std::sqrt(size))));
+  const auto cols(static_cast<int>(std::ceil(std::sqrt(size))));
+  const auto rows(static_cast<int>((size + cols - 1) / cols));
 
-  if (!ImPlot::BeginSubplots(title, n, n, ImVec2(-1, -1),
+  if (!ImPlot::BeginSubplots(title, rows, cols, ImVec2(-1, -1),
                              ImPlotSubplotFlags_NoLegend))
     return;
 
@@ -1179,7 +1206,7 @@ void render_elite(const results_snapshot &snapshot)
 void render_rs(const imgui_app::program &prg, bool *p_open,
                results_state &state)
 {
-  const results_snapshot snapshot(state);
+  const auto &snapshot(state.snapshot());
 
   const auto fa(prg.free_area());
   ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
@@ -1190,10 +1217,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
   static bool show_fitness_across_datasets_check(true);
   static bool show_elite_check(true);
 
-  static bool mxz_runs(false);
-  static bool mxz_success_rate(false);
-  static bool mxz_fitness_across_datasets(false);
-  static bool mxz_elite(false);
+  static std::optional<std::size_t> maximised;
 
   if (ImGui::Begin("Run##Window", p_open))
   {
@@ -1215,14 +1239,14 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
     {
       dashboard_panel
       {
-        "Runs##ChildWindow", "RUNS", show_runs_check, mxz_runs,
+        "Runs##ChildWindow", "RUNS", show_runs_check,
         [&snapshot] { render_number_of_runs(snapshot); }
       },
       dashboard_panel
       {
         "Success rate##ChildWindow",
         snapshot.show_success_rate ? "SUCCESS RATE" : "TIME PER RUN",
-        show_success_rate_check, mxz_success_rate,
+        show_success_rate_check,
         [&snapshot]
         {
           if (snapshot.show_success_rate)
@@ -1234,16 +1258,16 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
       dashboard_panel
       {
         "FADs##ChildWindow", "FITNESS ACROSS DATASETS",
-        show_fitness_across_datasets_check, mxz_fitness_across_datasets,
+        show_fitness_across_datasets_check,
         [&snapshot] { render_fitness_across_datasets(snapshot); }
       },
       dashboard_panel
       {
-        "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check, mxz_elite,
+        "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check,
         [&snapshot] { render_elite(snapshot); }
       }
     };
-    render_dashboard(panels);
+    render_dashboard(panels, maximised);
   }
 
   // `ImGui::End` is special and must be called even if `Begin` returns false.
@@ -1281,17 +1305,22 @@ void get_summaries(std::stop_token stoken, results_state &state)
       {
         std::lock_guard guard(state.current_mutex);
         test.current = summary_data(summary);
+        state.version.fetch_add(1, std::memory_order_relaxed);
       }
     }
 
     std::this_thread::sleep_for(3000ms);
   }
 }
-void rs::summary::start(const imgui_app::program::settings &settings,
-                        options options)
+void rs::summary::start(options options)
 {
   results_state state(std::move(options.collection), options.mode);
   std::jthread t_summaries(get_summaries, std::ref(state));
+
+  imgui_app::program::settings settings;
+  settings.w_related.title = "WOPR";
+  settings.w_related.flags |= SDL_WINDOW_MAXIMIZED;
+  settings.demo = options.imgui_demo;
 
   imgui_app::program prg(settings);
   prg.run(

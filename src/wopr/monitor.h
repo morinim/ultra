@@ -13,10 +13,6 @@
 #if !defined(ULTRA_WOPR_MONITOR_H)
 #define      ULTRA_WOPR_MONITOR_H
 
-#if defined(ULTRA_WOPR_GUI)
-#include "imgui_app.h"
-#endif
-
 #include "kernel/search_log.h"
 
 namespace ultra::wopr::monitor
@@ -30,7 +26,7 @@ struct options
 };
 
 #if defined(ULTRA_WOPR_GUI)
-void start(const imgui_app::program::settings &, options);
+void start(options);
 #endif
 
 }  // namespace ultra::wopr::monitor

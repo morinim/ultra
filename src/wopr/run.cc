@@ -117,27 +117,23 @@ bool run_impl(
 
 bool rs::run::start(options options)
 {
+#if defined(ULTRA_WOPR_GUI)
+  if (!options.nogui)
+  {
+    auto summary_collection(options.collection);
+    return run_impl(
+      std::move(options),
+      [&summary_collection, demo = options.imgui_demo](std::stop_source &source)
+      {
+        rs::summary::start(
+          rs::summary::options{std::move(summary_collection), demo,
+                               rs::exec_mode::run});
+        source.request_stop();
+      });
+  }
+#endif
+
   return run_impl(std::move(options));
 }
-
-#if defined(ULTRA_WOPR_GUI)
-bool rs::run::start(const imgui_app::program::settings &settings,
-                    options options)
-{
-  if (options.nogui)
-    return start(std::move(options));
-
-  auto summary_collection(options.collection);
-  return run_impl(
-    std::move(options),
-    [&settings, &summary_collection](std::stop_source &source)
-    {
-      rs::summary::start(
-        settings, rs::summary::options{std::move(summary_collection), false,
-                                       rs::exec_mode::run});
-      source.request_stop();
-    });
-}
-#endif
 
 }  // namespace ultra::wopr

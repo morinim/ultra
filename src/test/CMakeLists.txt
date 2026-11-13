@@ -32,7 +32,6 @@ if (TARGET implot)
   add_executable(wopr_results
     wopr/results.cc
     ../wopr/dashboard.cc
-    ../wopr/gui_helpers.cc
     ../wopr/imgui_app.cc
   )
   target_compile_definitions(wopr_results PRIVATE ULTRA_WOPR_GUI)

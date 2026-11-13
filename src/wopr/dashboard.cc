@@ -14,29 +14,25 @@
 
 #include "imgui/imgui.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <optional>
+#include <random>
+#include <string>
+#include <string_view>
 
 namespace ultra::wopr
 {
 
-void render_dashboard(const std::array<dashboard_panel, 4> &panels)
+void render_dashboard(const std::array<dashboard_panel, 4> &panels,
+                      std::optional<std::size_t> &maximised)
 {
-  const auto maximised(std::ranges::find_if(
-    panels, [](const auto &panel)
-    {
-      return panel.visible && panel.maximised.get();
-    }));
+  if (maximised && (*maximised >= panels.size() || !panels[*maximised].visible))
+    maximised = std::nullopt;
 
   std::array<bool, panels.size()> show {};
-  std::ranges::transform(
-    panels, show.begin(),
-    [&maximised, &panels](const auto &panel)
-    {
-      return panel.visible
-             && (maximised == panels.end() || &panel == &*maximised);
-    });
+  for (std::size_t i(0); i < panels.size(); ++i)
+    show[i] = panels[i].visible && (!maximised || *maximised == i);
 
   const auto available(ImGui::GetContentRegionAvail());
   const float available_width(available.x - 4.0f);
@@ -74,13 +70,53 @@ void render_dashboard(const std::array<dashboard_panel, 4> &panels)
       ImGui::AlignTextToFramePadding();
       ImGui::TextUnformatted(panel.title);
       ImGui::SameLine();
-      if (ImGui::Button(panel.maximised.get() ? "Minimise" : "Maximise"))
-        panel.maximised.get() = !panel.maximised.get();
+      const bool is_maximised(maximised == i);
+      if (ImGui::Button(is_maximised ? "Minimise" : "Maximise"))
+        maximised = is_maximised ? std::nullopt : std::optional(i);
 
       panel.render();
       ImGui::EndChild();
     }
   }
+}
+
+std::string random_string()
+{
+  constexpr std::size_t length(10);
+
+  static std::string_view charset =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+
+  static std::minstd_rand g;
+
+  static std::string fixed(length, char(0));
+  static std::size_t fixed_count(0);
+
+  if (fixed_count >= length)
+  {
+    fixed = std::string(length, char(0));
+    fixed_count = 0;
+  }
+
+  std::string result;
+  result.reserve(length);
+
+  for (std::size_t i(0); i < length; ++i)
+    result += fixed[i] ? fixed[i] : charset[g() % charset.size()];
+
+  if (g() % 1000 == 0)
+  {
+    std::size_t next_fix(g() % length);
+    while (fixed[next_fix])
+      next_fix = (next_fix + 1) % length;
+
+    fixed[next_fix] = result[next_fix];
+    ++fixed_count;
+  }
+
+  return result;
 }
 
 }  // namespace ultra::wopr

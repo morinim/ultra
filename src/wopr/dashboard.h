@@ -14,7 +14,10 @@
 #define      ULTRA_WOPR_DASHBOARD_H
 
 #include <array>
+#include <cstddef>
 #include <functional>
+#include <optional>
+#include <string>
 
 namespace ultra::wopr
 {
@@ -25,12 +28,15 @@ struct dashboard_panel
   const char *id;
   const char *title;
   bool visible;
-  std::reference_wrapper<bool> maximised;
   std::function<void()> render;
 };
 
 /// Renders a two-by-two dashboard, optionally maximising one visible panel.
-void render_dashboard(const std::array<dashboard_panel, 4> &);
+void render_dashboard(const std::array<dashboard_panel, 4> &,
+                      std::optional<std::size_t> &);
+
+/// Returns a retro pseudo-random string for status displays.
+[[nodiscard]] std::string random_string();
 
 }  // namespace ultra::wopr
 
