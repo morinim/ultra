@@ -619,6 +619,54 @@ results_snapshot::results_snapshot(results_state &state)
   }
 }
 
+namespace
+{
+
+bool reference_checkbox(const char *label_id, bool available, bool &enabled)
+{
+  if (available)
+    ImGui::Checkbox(label_id, &enabled);
+  return available && enabled;
+}
+
+[[nodiscard]] int plot_flags(int base_flags, bool show_legend)
+{
+  return show_legend ? base_flags : (base_flags | ImPlotFlags_NoLegend);
+}
+
+void setup_plot_legend(bool show_legend)
+{
+  if (show_legend)
+    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+}
+
+void setup_dataset_axis(ImAxis axis, const results_snapshot &snapshot,
+                        ImGuiCond cond = ImGuiCond_Once)
+{
+  constexpr auto padding(0.75);
+  const auto size(snapshot.labels.size());
+
+  ImPlot::SetupAxisLimits(axis, -padding, (size - 1) + padding, cond);
+  ImPlot::SetupAxisTicks(axis, snapshot.positions.data(), size,
+                         snapshot.label_data.data());
+}
+
+template <typename TooltipFn>
+void render_bar_hover_tooltip(double coord, std::size_t size,
+                              TooltipFn &&tooltip_fn)
+{
+  if (ImPlot::IsPlotHovered() && coord >= -0.5 && coord < size - 0.5)
+  {
+    const auto i(static_cast<std::size_t>(std::floor(coord + 0.5)));
+    ImGui::BeginTooltip();
+    const auto text(tooltip_fn(i));
+    ImGui::TextUnformatted(text.c_str());
+    ImGui::EndTooltip();
+  }
+}
+
+}  // namespace
+
 void render_number_of_runs(const results_snapshot &snapshot)
 {
   static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
@@ -629,9 +677,10 @@ void render_number_of_runs(const results_snapshot &snapshot)
   if (!size)
     return;
 
-  static bool show_reference_values {snapshot.references_available};
-  if (snapshot.references_available)
-    ImGui::Checkbox("Reference values##Run##Runs", &show_reference_values);
+  static bool compare_reference {true};
+  const bool show_reference_values(reference_checkbox(
+    "Reference values##Run##Runs", snapshot.references_available,
+    compare_reference));
 
   const std::size_t group_count(1 + show_reference_values);
 
@@ -639,23 +688,14 @@ void render_number_of_runs(const results_snapshot &snapshot)
                           ? snapshot.max_runs_with_reference
                           : snapshot.max_runs);
 
-  int flags(ImPlotFlags_NoTitle);
-  if (!snapshot.references_available || !show_reference_values)
-    flags |= ImPlotFlags_NoLegend;
-
+  const auto flags(plot_flags(ImPlotFlags_NoTitle, show_reference_values));
   if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
     return;
 
-  if (show_reference_values)
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+  setup_plot_legend(show_reference_values);
 
   ImPlot::SetupAxes("Dataset", "Runs");
-
-  constexpr auto padding(0.75);
-  ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
-  ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.positions.data(), size,
-                         snapshot.label_data.data());
-
+  setup_dataset_axis(ImAxis_X1, snapshot);
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
 
   // Bars.
@@ -727,29 +767,20 @@ void render_success_rate(const results_snapshot &snapshot)
     return;
 
   static bool compare_reference {true};
-  if (snapshot.references_available)
-    ImGui::Checkbox("Reference values##Run##Success rate",
-                    &compare_reference);
-  const bool show_reference_values(snapshot.references_available
-                                   && compare_reference);
+  const bool show_reference_values(reference_checkbox(
+    "Reference values##Run##Success rate", snapshot.references_available,
+    compare_reference));
   const std::size_t group_count(1 + show_reference_values);
 
-  int flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText);
-  if (!snapshot.references_available || !show_reference_values)
-    flags |= ImPlotFlags_NoLegend;
-
+  const auto flags(plot_flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText,
+                              show_reference_values));
   if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
     return;
 
-  if (show_reference_values)
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+  setup_plot_legend(show_reference_values);
 
   ImPlot::SetupAxes("Dataset", "Success rate", 0, ImPlotAxisFlags_Lock);
-
-  constexpr auto padding(0.75);
-  ImPlot::SetupAxisLimits(ImAxis_X1, -padding, (size - 1) + padding);
-  ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.positions.data(), size,
-                         snapshot.label_data.data());
+  setup_dataset_axis(ImAxis_X1, snapshot);
 
   ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
   ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f%%");
@@ -783,18 +814,12 @@ void render_success_rate(const results_snapshot &snapshot)
     ImPlot::PlotBars(ilabels[series], xs.data(), ys.data(), xs.size(), bar_width);
   }
 
-  if (ImPlot::IsPlotHovered())
-  {
-    const double x(ImPlot::GetPlotMousePos().x);
-    if (x >= -0.5 && x < size - 0.5)
+  render_bar_hover_tooltip(
+    ImPlot::GetPlotMousePos().x, size,
+    [&](std::size_t i)
     {
-      const auto i(static_cast<std::size_t>(std::floor(x + 0.5)));
-      ImGui::BeginTooltip();
-      const auto text(success_rate_tooltip(snapshot, i, show_reference_values));
-      ImGui::TextUnformatted(text.c_str());
-      ImGui::EndTooltip();
-    }
-  }
+      return success_rate_tooltip(snapshot, i, show_reference_values);
+    });
 
   ImPlot::EndPlot();
 }
@@ -874,10 +899,9 @@ void render_time_per_run(const results_snapshot &snapshot)
     return;
 
   static bool compare_reference {true};
-  if (snapshot.references_available)
-    ImGui::Checkbox("Reference values##Run##Time per run", &compare_reference);
-  const bool show_reference_values(snapshot.references_available
-                                   && compare_reference);
+  const bool show_reference_values(reference_checkbox(
+    "Reference values##Run##Time per run", snapshot.references_available,
+    compare_reference));
   const std::size_t group_count(1 + show_reference_values);
 
   std::vector<std::string> remaining_labels;
@@ -888,15 +912,12 @@ void render_time_per_run(const results_snapshot &snapshot)
 
   ImGui::TextDisabled("Remaining times update after each completed run.");
 
-  int flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText);
-  if (!show_reference_values)
-    flags |= ImPlotFlags_NoLegend;
-
+  const auto flags(plot_flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText,
+                              show_reference_values));
   if (!ImPlot::BeginPlot("##Time per run##Run", ImVec2(-1, -1), flags))
     return;
 
-  if (show_reference_values)
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
+  setup_plot_legend(show_reference_values);
 
   const bool has_timing_data(std::ranges::any_of(
     snapshot.runs | std::views::take(size * group_count),
@@ -911,15 +932,12 @@ void render_time_per_run(const results_snapshot &snapshot)
                                     std::numeric_limits<double>::infinity());
   ImPlot::SetupAxisFormat(ImAxis_X1, "%.3f");
 
-  constexpr auto padding(0.75);
-  ImPlot::SetupAxisLimits(ImAxis_Y1, -padding, (size - 1) + padding,
-                          ImGuiCond_Always);
-  ImPlot::SetupAxisTicks(ImAxis_Y1, snapshot.positions.data(), size,
-                         snapshot.label_data.data());
+  setup_dataset_axis(ImAxis_Y1, snapshot, ImGuiCond_Always);
   ImPlot::SetupAxis(ImAxis_Y2, "Estimated time remaining",
                     ImPlotAxisFlags_Lock | ImPlotAxisFlags_Invert
                     | ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoGridLines
                     | ImPlotAxisFlags_NoTickMarks);
+  constexpr auto padding(0.75);
   ImPlot::SetupAxisLimits(ImAxis_Y2, -padding, (size - 1) + padding,
                           ImGuiCond_Always);
   ImPlot::SetupAxisTicks(ImAxis_Y2, snapshot.positions.data(), size,
@@ -948,18 +966,12 @@ void render_time_per_run(const results_snapshot &snapshot)
                      {ImPlotProp_Flags, ImPlotBarsFlags_Horizontal});
   }
 
-  if (ImPlot::IsPlotHovered())
-  {
-    const double y(ImPlot::GetPlotMousePos().y);
-    if (y >= -0.5 && y < size - 0.5)
+  render_bar_hover_tooltip(
+    ImPlot::GetPlotMousePos().y, size,
+    [&](std::size_t i)
     {
-      const auto i(static_cast<std::size_t>(std::floor(y + 0.5)));
-      ImGui::BeginTooltip();
-      const auto text(time_per_run_tooltip(snapshot, i, show_reference_values));
-      ImGui::TextUnformatted(text.c_str());
-      ImGui::EndTooltip();
-    }
-  }
+      return time_per_run_tooltip(snapshot, i, show_reference_values);
+    });
 
   ImPlot::EndPlot();
 }
@@ -980,9 +992,9 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
   if (!size)
     return;
 
-  static bool show_reference_values {snapshot.references_available};
-  if (snapshot.references_available)
-    ImGui::Checkbox("Reference values##FAD", &show_reference_values);
+  static bool compare_reference {true};
+  const bool show_reference_values(reference_checkbox(
+    "Reference values##FAD", snapshot.references_available, compare_reference));
 
   const auto &current(snapshot.current_fitness);
   const auto &reference(snapshot.reference_fitness);
@@ -1007,10 +1019,7 @@ void render_fitness_across_datasets(const results_snapshot &snapshot)
       style_pushed = true;
     }
 
-    int flags(0);
-    if (!snapshot.references_available || !show_reference_values)
-      flags |= ImPlotFlags_NoLegend;
-
+    const auto flags(plot_flags(0, show_reference_values));
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
     {
       ImPlot::SetupAxes("Runs", "Fitness", 0, ImPlotAxisFlags_AutoFit);
@@ -1070,9 +1079,10 @@ void render_elite(const results_snapshot &snapshot)
   if (!size)
     return;
 
-  static bool show_reference_values {snapshot.references_available};
-  if (snapshot.references_available)
-    ImGui::Checkbox("Reference values##ELITE", &show_reference_values);
+  static bool compare_reference {true};
+  const bool show_reference_values(reference_checkbox(
+    "Reference values##ELITE", snapshot.references_available,
+    compare_reference));
 
   const auto &current(snapshot.current_elite);
   const auto &reference(snapshot.reference_elite);
@@ -1086,10 +1096,7 @@ void render_elite(const results_snapshot &snapshot)
 
   for (std::size_t i(0); i < size; ++i)
   {
-    int flags(0);
-    if (!snapshot.references_available || !show_reference_values)
-      flags |= ImPlotFlags_NoLegend;
-
+    const auto flags(plot_flags(0, show_reference_values));
     if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
     {
       ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
