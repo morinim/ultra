@@ -225,14 +225,14 @@ extract_threshold(std::string_view txt)
 
 settings read_settings(const fs::path &test_fn, const settings &defaults)
 {
-  assert(ultra::iequals(test_fn.extension(), ".csv"));
+  assert(ultra::iequals(test_fn.extension().string(), ".csv"));
 
   const auto settings_fn(fs::path(test_fn).replace_extension(".xml"));
   if (!fs::exists(settings_fn))
     return defaults;
 
   tinyxml2::XMLDocument doc;
-  if (const auto result(doc.LoadFile(settings_fn.c_str()));
+  if (const auto result(doc.LoadFile(settings_fn.string().c_str()));
       result != tinyxml2::XML_SUCCESS)
   {
     std::cerr << "Cannot open settings for " << test_fn << ".\n";
@@ -327,7 +327,7 @@ void insert_dataset(collection_t &collection, const fs::path &basename,
             << "\n  first summary: " << summary;
 
   collection.push_back({
-    .name = basename.stem(),
+    .name = basename.stem().string(),
     .dataset = basename,
     .xml_summary = summary,
     .conf = conf,
@@ -363,7 +363,7 @@ collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
 
   const auto check_and_insert([&m, &in2, &ret, &defaults](const auto &path)
   {
-    const auto ext(path.extension());
+    const auto ext(path.extension().string());
 
     if (m == exec_mode::run && ultra::iequals(ext, ".csv"))
     {
@@ -393,7 +393,7 @@ collection_t setup_collection(fs::path in1, fs::path in2, exec_mode m,
 
       const auto &p(entry.path());
 
-      if (const auto ext(p.extension());
+      if (const auto ext(p.extension().string());
           ultra::iequals(ext, ".csv") || ultra::iequals(ext, ".xml"))
         sf.push_back(p);
     }

@@ -58,7 +58,7 @@ bool run_impl(
       s.logger(sl).stop_source(source);
 
       if (multiple_tests)
-        s.tag(dataset.stem());
+        s.tag(dataset.stem().string());
 
       s.run(test.conf.runs, test.conf.threshold);
     });

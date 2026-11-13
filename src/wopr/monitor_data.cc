@@ -178,11 +178,9 @@ void population_sequence::update(population_line &pl)
 // Offline algorithm: https://en.wikipedia.org/wiki/Online_algorithm.
 double population_sequence::calculate_entropy() const
 {
-  const auto sum(std::accumulate(obs.begin(), obs.end(), 0uz));
-  if (!sum)
-    return 0;
-
-  const auto pop_size(static_cast<double>(sum));
+  const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
+  if (pop_size <= 0.0)
+    return 0.0;
 
   double h(0.0);
   for (auto x : obs)

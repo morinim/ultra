@@ -117,7 +117,7 @@ std::expected<monitor::options, std::string> finish_monitor(
     log_folder = cli.log_object;
   else
   {
-    basename = cli.log_object.filename();
+    basename = cli.log_object.filename().string();
 
     log_folder = cli.log_object.parent_path();
     if (log_folder.empty())
