@@ -16,6 +16,14 @@ Sync and align documentation in `doc/ultra.wiki` with the ULTRA codebase in `src
    - Report: `"Directory 'doc/ultra.wiki' not found. Skipping documentation check."`
    - Stop execution.
 
+### Git scope
+
+Before auditing, inspect `git status --porcelain --untracked-files=all` in the source repository and the wiki repository (which may have its own `.git`). Audit only tracked files that are clean relative to `HEAD`.
+
+- Skip files with staged or unstaged changes, untracked or ignored files, and uncommitted additions, deletions or renames.
+- Apply this exclusion to source files and wiki pages: do not read skipped files for alignment checks, edit them, or report documentation gaps based on them. Defer checks whose source or link target is skipped rather than treating it as missing.
+- Record exclusions before making edits so changes made by this sync remain in scope. Briefly report skipped paths or directories.
+
 ## 2. Documentation Standards
 
 Maintain documentation that is clear, coherent, cohesive, and brief:
