@@ -281,6 +281,28 @@ TEST_CASE_FIXTURE(fixture4, "Serialization")
 {
   using namespace ultra;
 
+  SUBCASE("Existing stream format and failed load")
+  {
+    de::individual original;
+    original = std::vector{0x1.0000000000001p+0, -0x1.8p+0};
+    original.inc_age(7);
+
+    std::stringstream stream;
+    CHECK(original.save(stream));
+    CHECK(stream.str() == "7\n2\n0x1.0000000000001p+0\n-0x1.8p+0\n");
+
+    de::individual restored;
+    CHECK(restored.load(stream));
+    CHECK(restored == original);
+
+    std::istringstream incomplete("99\n2\n0x1p+3\n");
+    CHECK_FALSE(restored.load(incomplete));
+    CHECK(restored == original);
+    CHECK(restored.age() == 7);
+    CHECK(restored.signature() == original.signature());
+    CHECK(restored.is_valid());
+  }
+
   SUBCASE("Standard save/load")
   {
     for (unsigned i(0); i < 2000; ++i)

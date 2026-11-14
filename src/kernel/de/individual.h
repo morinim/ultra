@@ -13,11 +13,8 @@
 #if !defined(ULTRA_DE_INDIVIDUAL_H)
 #define      ULTRA_DE_INDIVIDUAL_H
 
-#include "kernel/individual.h"
+#include "kernel/vector_individual.h"
 #include "kernel/interval.h"
-#include "kernel/problem.h"
-
-#include <functional>
 
 namespace ultra::de
 {
@@ -35,76 +32,29 @@ namespace ultra::de
 /// - https://github.com/morinim/ultra/wiki/bibliography#4
 /// - https://github.com/morinim/ultra/wiki/bibliography#5
 ///
-class individual final : public ultra::individual
+class individual final : public vector_individual<D_DOUBLE>
 {
 public:
   // ---- Constructors ----
   individual() = default;
-  explicit individual(const ultra::problem &);
-
-  // ---- Member types ----
-  using genome_t       = std::vector<double>;
-  using const_iterator = genome_t::const_iterator;
-  using iterator       = genome_t::iterator;
-  using value_type     = genome_t::value_type;
-
-  // ---- Iterators ----
-  [[nodiscard]] const_iterator begin() const noexcept;
-  [[nodiscard]] const_iterator end() const noexcept;
-
-  // ---- Element access ----
-  [[nodiscard]] const value_type &operator[](std::size_t) const;
+  explicit individual(const ultra::problem &p) : vector_individual(p) {}
 
   // ---- Modifiers ----
-  template<class F>
-  void apply_each(std::size_t, std::size_t, F &&)
-    requires std::invocable<F &, value_type &>
-             && std::same_as<std::invoke_result_t<F &, value_type &>, void>;
-
-  template<class F>
-  void apply_each(F &&)
-    requires std::invocable<F &, value_type &>
-             && std::same_as<std::invoke_result_t<F &, value_type &>, void>;
+  using vector_individual::apply_each;
+  using vector_individual::operator=;
 
   // ---- Recombination operators ----
   [[nodiscard]] individual crossover(double, const interval<double> &,
                                      const individual &, const individual &,
                                      const individual &) const;
 
-  // ---- Capacity ----
-  [[nodiscard]] bool empty() const noexcept;
-  [[nodiscard]] std::size_t size() const noexcept;
-  [[nodiscard]] std::size_t parameters() const noexcept;
-
-  // ---- Misc ----
-  [[nodiscard]] operator const std::vector<value_type> &() const noexcept;
-  individual &operator=(const std::vector<value_type> &);
-
-  [[nodiscard]] bool is_valid() const;
-
 private:
-  // ---- Private support methods ----
-  [[nodiscard]] hash_t hash() const final;
-
-  // Serialization.
-  [[nodiscard]] bool load_impl(std::istream &, const symbol_set &) override;
-  [[nodiscard]] bool save_impl(std::ostream &) const override;
-
+  // ---- Printing ----
   void print_impl(std::ostream &, out::print_format_t) const override;
-
-  // ---- Private data members ----
-
-  // This is the genome: the entire collection of genes (the entirety of an
-  // organism's hereditary information).
-  genome_t genome_;
 };  // class individual
 
 // ---- Non-member functions ----
-[[nodiscard]] bool operator==(const individual &, const individual &) noexcept;
 [[nodiscard]] double distance(const individual &, const individual &);
-[[nodiscard]] std::size_t active_slots(const individual &) noexcept;
-
-#include "kernel/de/individual.tcc"
 
 }  // namespace ultra::de
 

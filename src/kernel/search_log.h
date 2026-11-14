@@ -14,6 +14,7 @@
 #define      ULTRA_SEARCH_LOG_H
 
 #include "kernel/evolution_summary.h"
+#include "kernel/individual_format.h"
 #include "kernel/search_stats.h"
 #include "utility/xml_tools.h"
 

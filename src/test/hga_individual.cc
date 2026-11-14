@@ -263,6 +263,28 @@ TEST_CASE_FIXTURE(fixture6, "Serialization")
 {
   using namespace ultra;
 
+  SUBCASE("Existing stream format and failed load")
+  {
+    hga::individual original;
+    original = std::vector<value_t>{D_INT{42}, D_IVECTOR{2, 0, 1}};
+    original.inc_age(7);
+
+    std::stringstream stream;
+    CHECK(original.save(stream));
+    CHECK(stream.str() == "7\n2\n1 42\n7 3 2 0 1\n");
+
+    hga::individual restored;
+    CHECK(restored.load(stream));
+    CHECK(restored == original);
+
+    std::istringstream incomplete("99\n2\n1 9\n7 3 2\n");
+    CHECK_FALSE(restored.load(incomplete));
+    CHECK(restored == original);
+    CHECK(restored.age() == 7);
+    CHECK(restored.signature() == original.signature());
+    CHECK(restored.is_valid());
+  }
+
   SUBCASE("Non-empty hga::individual serialization")
   {
     for (unsigned cycles(2000); cycles; --cycles)

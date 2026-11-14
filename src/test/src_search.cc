@@ -10,6 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/search.h"

@@ -53,9 +53,6 @@ void group_stat<I, F>::add(const I &ind, const F &f)
 {
   age.add(ind.age());
 
-  using de::active_slots;
-  using gp::active_slots;
-
   const std::size_t len(active_slots(ind));
 
   length.add(len);

@@ -10,7 +10,6 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/refiner.h"
 #include "kernel/de/numerical_refiner.h"
 #include "kernel/gp/individual.h"
 #include "kernel/gp/primitive/integer.h"

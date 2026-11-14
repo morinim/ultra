@@ -14,96 +14,12 @@
 #include "kernel/print_internal.h"
 #include "kernel/random.h"
 
-#include "utility/log.h"
 #include "utility/misc.h"
 
 #include <algorithm>
 
 namespace ultra::ga
 {
-///
-/// Constructs a new, random GA individual.
-///
-/// \param[in] p current problem
-///
-/// The process that generates the initial, random expressions has to be
-/// implemented so as to ensure that they don't violate the type system's
-/// constraints.
-///
-individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
-{
-  Expects(parameters());
-
-  std::ranges::generate(
-    genome_,
-    [&, n = 0]() mutable
-    {
-      return std::get<D_INT>(p.sset.roulette_terminal(n++));
-    });
-
-  signature_ = hash();
-  Ensures(is_valid());
-}
-
-///
-/// \return a const iterator pointing to the first gene
-///
-individual::const_iterator individual::begin() const noexcept
-{
-  return genome_.begin();
-}
-
-///
-/// \return a const iterator pointing to a end-of-genome sentry
-///
-individual::const_iterator individual::end() const noexcept
-{
-  return genome_.end();
-}
-
-///
-/// Returns the value of the gene at specified location.
-///
-/// \param[in] i position of the gene to return
-/// \return      the requested gene
-///
-/// \warning
-/// Accessing a nonexistent element through this operator is undefined
-/// behavior.
-///
-const individual::value_type &individual::operator[](std::size_t i) const
-{
-  Expects(i < parameters());
-  return genome_[i];
-}
-
-///
-/// This is sweet "syntactic sugar" to manage individuals as integer value
-/// vectors.
-///
-/// \return a vector of integer values
-///
-individual::operator const std::vector<individual::value_type> &() const noexcept
-{
-  return genome_;
-}
-
-///
-/// Sets up the individual with values from a vector.
-///
-/// \param[in] v input vector (a point in a multidimensional space)
-/// \return      a reference to `*this`
-///
-individual &individual::operator=(const std::vector<individual::value_type> &v)
-{
-  Expects(empty() || v.size() == size());
-
-  genome_ = v;
-  signature_ = hash();
-
-  Ensures(is_valid());
-  return *this;
-}
 
 ///
 /// Mutates the current individual.
@@ -144,30 +60,6 @@ unsigned individual::mutation(const problem &prb, double temperature)
 }
 
 ///
-/// \return `true` if the individual is empty, `false` otherwise
-///
-bool individual::empty() const noexcept
-{
-  return genome_.empty();
-}
-
-///
-/// \return the number of parameters stored in the individual
-///
-std::size_t individual::parameters() const noexcept
-{
-  return size();
-}
-
-///
-/// \return the number of parameters stored in the individual
-///
-std::size_t individual::size() const noexcept
-{
-  return genome_.size();
-}
-
-///
 /// Calculates the Hamming distance between two individuals.
 ///
 /// \param[in] lhs first term of comparison
@@ -182,21 +74,6 @@ unsigned distance(const individual &lhs, const individual &rhs)
   Expects(lhs.parameters() == rhs.parameters());
 
   return hamming_distance(lhs, rhs);
-}
-
-///
-/// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparison
-/// \return        `true` if the two individuals are equal
-///
-/// \note
-/// Age isn't checked.
-///
-/// \relates ga::individual
-///
-bool operator==(const individual &lhs, const individual &rhs) noexcept
-{
-  return std::ranges::equal(lhs, rhs);
 }
 
 ///
@@ -234,99 +111,6 @@ individual crossover(const problem &,
 
   Ensures(ret.is_valid());
   return ret;
-}
-
-///
-/// Hashes the current individual.
-///
-/// \return the hash value of the individual
-///
-/// Converts this individual in a packed representation (raw sequence of bytes)
-/// and performs the *MurmurHash3* algorithm on it.
-///
-hash_t individual::hash() const
-{
-  const auto len(genome_.size() * sizeof(genome_[0]));  // length in bytes
-  return len ? ultra::hash::hash128(genome_.data(), len) : hash_t();
-}
-
-///
-/// Completely equivalent to `parameters()`.
-///
-/// \param[in] ind individual we're interested in
-/// \return        number of parameters stored in the individual
-///
-std::size_t active_slots(const individual &ind) noexcept
-{
-  return ind.parameters();
-}
-
-///
-/// \return `true` if the individual passes the internal consistency check
-///
-bool individual::is_valid() const
-{
-  if (empty())
-  {
-    if (!genome_.empty())
-    {
-      ultraERROR("Inconsistent internal status for empty individual");
-      return false;
-    }
-
-    if (!signature().empty())
-    {
-      ultraERROR("Empty individual must have empty signature");
-      return false;
-    }
-
-    return true;
-  }
-  else /* !empty() */ if (signature() != hash())
-  {
-    ultraERROR("Wrong signature: {} should be {}",
-               internal::streamed(signature()),
-               internal::streamed(hash()));
-    return false;
-  }
-
-  return true;
-}
-
-///
-/// \param[in] in input stream
-/// \return       `true` if the object has been loaded correctly
-///
-/// \note
-/// If the load operation isn't successful the current individual isn't
-/// modified.
-///
-bool individual::load_impl(std::istream &in, const symbol_set &)
-{
-  std::size_t sz;
-  if (!(in >> sz))
-    return false;
-
-  genome_t v(sz);
-  for (auto &g : v)
-    if (!(in >> g))
-      return false;
-
-  genome_ = v;
-  return true;
-}
-
-///
-/// \param[out] out output stream
-/// \return         `true` if the object has been saved correctly
-///
-bool individual::save_impl(std::ostream &out) const
-{
-  out << parameters() << '\n';
-  for (const auto &g : genome_)
-    out << g << '\n';
-
-  return out.good();
 }
 
 void individual::print_impl(std::ostream &s, out::print_format_t format) const

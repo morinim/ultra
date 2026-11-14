@@ -14,98 +14,12 @@
 #include "kernel/print_internal.h"
 #include "kernel/random.h"
 
-#include "utility/log.h"
 #include "utility/misc.h"
 
 #include <algorithm>
 
 namespace ultra::de
 {
-
-///
-/// Constructs a new, random DE individual.
-///
-/// \param[in] p current problem
-///
-/// The process that generates the initial, random expressions has to be
-/// implemented so as to ensure that they don't violate the type system's
-/// constraints.
-///
-individual::individual(const ultra::problem &p) : genome_(p.sset.categories())
-{
-  Expects(parameters());
-
-  std::ranges::generate(
-    genome_,
-    [&, n = 0]() mutable
-    {
-      return std::get<D_DOUBLE>(p.sset.roulette_terminal(n++));
-    });
-
-  signature_ = hash();
-
-  Ensures(is_valid());
-}
-
-///
-/// \return a const iterator pointing to the first gene
-///
-individual::const_iterator individual::begin() const noexcept
-{
-  return genome_.begin();
-}
-
-///
-/// \return a const iterator pointing to (one) past the last gene
-///
-individual::const_iterator individual::end() const noexcept
-{
-  return genome_.end();
-}
-
-///
-/// Returns the value of the gene at specified location.
-///
-/// \param[in] i position of the gene to return
-/// \return      the requested gene
-///
-/// \warning
-/// Accessing a nonexistent element through this operator is undefined
-/// behavior.
-///
-const individual::value_type &individual::operator[](std::size_t i) const
-{
-  Expects(i < parameters());
-  return genome_[i];
-}
-
-///
-/// This is sweet "syntactic sugar" to manage individuals as real value
-/// vectors.
-///
-/// \return a vector of real values
-///
-individual::operator const std::vector<individual::value_type> &() const noexcept
-{
-  return genome_;
-}
-
-///
-/// Sets up the individual with values from a vector.
-///
-/// \param[in] v input vector (a point in a multidimensional space)
-/// \return      a reference to `*this`
-///
-individual &individual::operator=(const std::vector<individual::value_type> &v)
-{
-  Expects(empty() || v.size() == size());
-
-  genome_ = v;
-  signature_ = hash();
-
-  Ensures(is_valid());
-  return *this;
-}
 
 ///
 /// Differential evolution crossover.
@@ -180,55 +94,6 @@ individual individual::crossover(double p, const interval<double> &f,
 }
 
 ///
-/// \return `true` if the individual is empty, `false` otherwise
-///
-bool individual::empty() const noexcept
-{
-  return genome_.empty();
-}
-
-///
-/// \return the number of parameters stored in the individual
-///
-std::size_t individual::size() const noexcept
-{
-  return genome_.size();
-}
-
-///
-/// \return the number of parameters stored in the individual
-///
-std::size_t individual::parameters() const noexcept
-{
-  return size();
-}
-
-///
-/// Completely equivalent to `parameters()`.
-///
-/// \param[in] ind individual we're interested in
-/// \return        number of parameters stored in the individual
-///
-std::size_t active_slots(const individual &ind) noexcept
-{
-  return ind.parameters();
-}
-
-///
-/// Hashes the current individual.
-///
-/// \return the signature of this individual
-///
-/// The signature is obtained performing *MurmurHash3* on the individual.
-///
-hash_t individual::hash() const
-{
-  const auto len(genome_.size() * sizeof(genome_[0]));
-
-  return len ? ultra::hash::hash128(genome_.data(), len) : hash_t();
-}
-
-///
 /// \param[in] lhs first term of comparison
 /// \param[in] rhs second term of comparison
 /// \return        a numeric measurement of the difference between `lhs` and
@@ -243,93 +108,9 @@ double distance(const individual &lhs, const individual &rhs)
                             [](auto a, auto b) { return std::abs(a - b); });
 }
 
-///
-/// \return `true` if the individual passes the internal consistency check
-///
-bool individual::is_valid() const
-{
-  if (empty())
-  {
-    if (!genome_.empty())
-    {
-      ultraERROR("Inconsistent internal status for empty individual");
-      return false;
-    }
-
-    if (!signature().empty())
-    {
-      ultraERROR("Empty individual must have empty signature");
-      return false;
-    }
-
-    return true;
-  }
-  else /* !empty() */ if (signature() != hash())
-  {
-    ultraERROR("Wrong signature: {} should be {}",
-               internal::streamed(signature()),
-               internal::streamed(hash()));
-    return false;
-  }
-
-  return true;
-}
-
-///
-/// \param[in] in input stream
-/// \return       `true` if the object has been loaded correctly
-///
-/// \note
-/// If the load operation isn't successful the current individual isn't
-/// modified.
-///
-bool individual::load_impl(std::istream &in, const symbol_set &)
-{
-  std::size_t sz;
-  if (!(in >> sz))
-    return false;
-
-  genome_t v(sz);
-  for (auto &g : v)
-    if (!load_float_from_stream(in, &g))
-      return false;
-
-  genome_ = v;
-  return true;
-}
-
-///
-/// \param[out] out output stream
-/// \return         `true` if the object has been saved correctly
-///
-bool individual::save_impl(std::ostream &out) const
-{
-  out << parameters() << '\n';
-  for (const auto &v : genome_)
-  {
-    save_float_to_stream(out, v);
-    out << '\n';
-  }
-
-  return out.good();
-}
-
 void individual::print_impl(std::ostream &s, out::print_format_t format) const
 {
   internal::print_linear(s, *this, format, "de::individual");
-}
-
-///
-/// \param[in] lhs first term of comparison
-/// \param[in] rhs second term of comparison
-/// \return        `true` if the two individuals are equal
-///
-/// \note
-/// Age is not checked.
-///
-bool operator==(const individual &lhs, const individual &rhs) noexcept
-{
-  return std::ranges::equal(lhs, rhs);
 }
 
 }  // namespace ultra::de

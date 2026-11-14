@@ -12,6 +12,7 @@
 
 #include "kernel/search_log.h"
 #include "kernel/evolution.h"
+#include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
 

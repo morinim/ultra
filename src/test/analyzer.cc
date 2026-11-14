@@ -13,6 +13,7 @@
 #include <numbers>
 
 #include "kernel/analyzer.h"
+#include "kernel/de/individual.h"
 #include "kernel/gp/individual.h"
 #include "kernel/layered_population.h"
 

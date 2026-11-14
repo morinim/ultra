@@ -13,6 +13,7 @@
 #if !defined(ULTRA_DE_NUMERICAL_REFINER_H)
 #define      ULTRA_DE_NUMERICAL_REFINER_H
 
+#include "kernel/de/individual.h"
 #include "kernel/de/search.h"
 #include "kernel/decision_vector.h"
 #include "kernel/refiner.h"

@@ -323,6 +323,28 @@ TEST_CASE_FIXTURE(fixture5, "Signature")
 
 TEST_CASE_FIXTURE(fixture5, "Serialisation")
 {
+  SUBCASE("Existing stream format and failed load")
+  {
+    ultra::ga::individual original;
+    original = std::vector{-3, 7};
+    original.inc_age(7);
+
+    std::stringstream stream;
+    CHECK(original.save(stream));
+    CHECK(stream.str() == "7\n2\n-3\n7\n");
+
+    ultra::ga::individual restored;
+    CHECK(restored.load(stream));
+    CHECK(restored == original);
+
+    std::istringstream incomplete("99\n2\n8\n");
+    CHECK_FALSE(restored.load(incomplete));
+    CHECK(restored == original);
+    CHECK(restored.age() == 7);
+    CHECK(restored.signature() == original.signature());
+    CHECK(restored.is_valid());
+  }
+
   SUBCASE("Standard save/load sequence")
   {
     for (unsigned cycles(2000); cycles; --cycles)

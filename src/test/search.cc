@@ -11,8 +11,9 @@
  */
 
 #include "kernel/search.h"
-#include "kernel/gp/individual.h"
+#include "kernel/de/individual.h"
 #include "kernel/de/numerical_refiner.h"
+#include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
 
