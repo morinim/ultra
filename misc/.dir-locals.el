@@ -1,6 +1,7 @@
 ((nil
   . ((eval . (let ((root (locate-dominating-file
-                           buffer-file-name "misc/ultra-style.el")))
+                           (or buffer-file-name default-directory)
+                           "misc/ultra-style.el")))
                (load-file (expand-file-name "misc/ultra-style.el" root))))))
 
  (c++-mode
