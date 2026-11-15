@@ -20,14 +20,10 @@
 namespace internal
 {
 
-inline std::map<int, unsigned> merge_ct(const auto &ct1, const auto &ct2)
+inline void merge_ct(auto &destination, const auto &source)
 {
-  std::map<int, unsigned> ret(ct1);
-
-  for (const auto &[ct, n] : ct2)
-    ret[ct] += n;
-
-  return ret;
+  for (const auto &[ct, n] : source)
+    destination[ct] += n;
 }
 
 }  // namespace internal
@@ -72,7 +68,7 @@ void group_stat<I, F>::merge(group_stat gs)
   fitness.merge(gs.fitness);
   length.merge(gs.length);
 
-  crossover_type = internal::merge_ct(crossover_type, gs.crossover_type);
+  internal::merge_ct(crossover_type, gs.crossover_type);
 }
 
 ///
@@ -154,7 +150,7 @@ auto analyzer<I, F>::crossover_types() const
 {
   decltype(group_stat<I, F>::crossover_type) ret;
   for (const auto &gs : group_stat_)
-    ret = internal::merge_ct(ret, gs.crossover_type);
+    internal::merge_ct(ret, gs.crossover_type);
 
   return ret;
 }
