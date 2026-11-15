@@ -10,7 +10,7 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-#include "kernel/gp/individual_format.h"
+#include "kernel/gp/individual.h"
 
 #include "test/fixture1.h"
 #include "test/fixture2.h"
@@ -20,6 +20,7 @@
 #include "third_party/doctest/doctest.h"
 
 #include <expected>
+#include <format>
 #include <future>
 #include <latch>
 #include <set>
@@ -919,6 +920,11 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual std::format integration")
 {
   using namespace ultra;
 
+  struct formatting_probe : ultra::individual
+  {
+  };
+  static_assert(std::formattable<formatting_probe, char>);
+
   const gp::individual i(
     {
       {f_add, {2.0, z}},
@@ -926,7 +932,19 @@ TEST_CASE_FIXTURE(fixture1, "gp::individual std::format integration")
       {f_sub, {0_addr, 1_addr}}
     });
 
-  CHECK(std::format("{:tree}", i) == i.format(out::tree_f));
+  const auto list(i.format(out::list_f));
+  const auto tree(i.format(out::tree_f));
+  const ultra::individual &base(i);
+
+  CHECK(std::format("{}", i) == list);
+  CHECK(std::format("{:list}", i) == list);
+  CHECK(std::format("{:tree}", i) == tree);
+  CHECK(std::format("{:tree}", base) == tree);
+
+  CHECK_THROWS_AS((void)std::vformat("{:unknown}", std::make_format_args(i)),
+                  std::format_error);
+  CHECK_THROWS_AS((void)std::vformat("{:treejunk}", std::make_format_args(i)),
+                  std::format_error);
 }
 
 TEST_CASE_FIXTURE(fixture1, "Decision vector")

@@ -338,11 +338,12 @@ TEST_CASE_FIXTURE(fixture6, "Signature")
   CHECK(i1.signature() != i2.signature());
 }
 
-TEST_CASE_FIXTURE(fixture6, "std::format integration")
+TEST_CASE("std::format integration")
 {
   using namespace ultra;
 
-  const hga::individual i(prob);
+  hga::individual i;
+  i = {std::vector{2, 0, 1}, -3, 7};
 
   CHECK(std::format("{}", i) == i.format(out::list_f));
 }

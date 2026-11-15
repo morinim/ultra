@@ -57,6 +57,6 @@ private:
 
 }  // namespace ultra::ga
 
-#include "kernel/ga/individual_format.h"
+#include "kernel/individual_format.h"
 
 #endif  // include guard

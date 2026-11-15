@@ -58,6 +58,6 @@ private:
 
 }  // namespace ultra::de
 
-#include "kernel/de/individual_format.h"
+#include "kernel/individual_format.h"
 
 #endif  // include guard

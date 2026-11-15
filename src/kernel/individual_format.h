@@ -16,6 +16,7 @@
 #include "kernel/individual.h"
 
 #include <algorithm>
+#include <concepts>
 #include <format>
 #include <iosfwd>
 
@@ -114,27 +115,11 @@ template<> struct formatter<ultra::individual, char>
   }
 };
 
-}  // namespace std
-
-namespace ultra::internal
+template<std::derived_from<ultra::individual> T>
+struct formatter<T, char> : formatter<ultra::individual, char>
 {
-
-template<class Individual> struct derived_individual_formatter
-{
-  std::formatter<ultra::individual, char> formatter_;
-
-  [[nodiscard]] constexpr auto parse(std::format_parse_context &ctx)
-  {
-    return formatter_.parse(ctx);
-  }
-
-  template<class FormatContext>
-  [[nodiscard]] auto format(const Individual &ind, FormatContext &ctx) const
-  {
-    return formatter_.format(ind, ctx);
-  }
 };
 
-}  // namespace ultra::internal
+}  // namespace std
 
 #endif  // include guard

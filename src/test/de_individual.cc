@@ -342,11 +342,12 @@ TEST_CASE_FIXTURE(fixture4, "Serialization")
   }
 }
 
-TEST_CASE_FIXTURE(fixture4, "std::format integration")
+TEST_CASE("std::format integration")
 {
   using namespace ultra;
 
-  const de::individual i(prob);
+  de::individual i;
+  i = std::vector{-1.25, 2.5};
 
   CHECK(std::format("{}", i) == i.format(out::list_f));
 }

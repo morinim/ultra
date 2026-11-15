@@ -67,6 +67,6 @@ private:
 
 }  // namespace ultra::hga
 
-#include "kernel/hga/individual_format.h"
+#include "kernel/individual_format.h"
 
 #endif  // include guard

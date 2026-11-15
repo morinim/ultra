@@ -379,9 +379,10 @@ TEST_CASE_FIXTURE(fixture5, "Serialisation")
   }
 }
 
-TEST_CASE_FIXTURE(fixture5, "std::format integration")
+TEST_CASE("std::format integration")
 {
-  const ultra::ga::individual i(prob);
+  ultra::ga::individual i;
+  i = std::vector{-3, 7};
 
   CHECK(std::format("{}", i) == i.format(ultra::out::list_f));
 }
