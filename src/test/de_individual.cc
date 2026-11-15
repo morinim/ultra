@@ -289,7 +289,12 @@ TEST_CASE_FIXTURE(fixture4, "Serialization")
 
     std::stringstream stream;
     CHECK(original.save(stream));
-    CHECK(stream.str() == "7\n2\n0x1.0000000000001p+0\n-0x1.8p+0\n");
+
+    // Hexadecimal output may include trailing zeroes, depending on the library.
+    std::ostringstream expected;
+    expected << "7\n2\n" << std::hexfloat
+             << 0x1.0000000000001p+0 << '\n' << -0x1.8p+0 << '\n';
+    CHECK(stream.str() == expected.str());
 
     de::individual restored;
     CHECK(restored.load(stream));
