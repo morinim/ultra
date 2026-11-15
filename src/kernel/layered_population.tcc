@@ -198,11 +198,8 @@ auto layered_population<I>::range_of_layers()
 template<Individual I>
 void layered_population<I>::init(layer_t &l)
 {
-  l.clear();
   l.allowed(problem().params.population.individuals);
-
-  std::generate_n(std::back_inserter(l), l.allowed(),
-                  [this] {return I(problem()); });
+  l.reset(problem());
 }
 
 ///
