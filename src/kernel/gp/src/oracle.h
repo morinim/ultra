@@ -194,27 +194,29 @@ enum class team_composition
 ///
 /// The basic interface of a classification oracle.
 ///
-/// \tparam N stores the name of the classes vs doesn't store the names
-///
 /// This class:
 /// - extends the interface of class basic_oracle to handle typical
 ///   requirements of classification tasks;
 /// - factorizes out some code from specific classification schemes;
 /// - optionally stores class names.
 ///
-template<bool N>
-class basic_class_oracle : public basic_oracle,
-                           protected internal::class_names<N>
+class basic_class_oracle : public basic_oracle
 {
 public:
-  explicit basic_class_oracle(const dataframe &);
-
   [[nodiscard]] value_t operator()(const std::vector<value_t> &) const final;
 
   [[nodiscard]] std::string name(const value_t &) const final;
 
 protected:
-  basic_class_oracle() = default;
+  explicit basic_class_oracle(std::vector<std::string> = {});
+
+  [[nodiscard]] static std::vector<std::string> class_names(const dataframe &);
+
+  bool load_names(std::istream &);
+  bool save_names(std::ostream &) const;
+
+private:
+  std::vector<std::string> names_ {};
 };
 
 ///
@@ -222,16 +224,16 @@ protected:
 ///
 /// \tparam I individual
 /// \tparam S stores the individual inside vs keep a reference only
-/// \tparam N stores the name of the classes vs doesn't store the names
 ///
 /// \see
 /// ultra::src::gaussian_evaluator for further details.
 ///
-template<class I, bool S, bool N>
-class basic_gaussian_oracle : public basic_class_oracle<N>
+template<class I, bool S>
+class basic_gaussian_oracle : public basic_class_oracle
 {
 public:
-  basic_gaussian_oracle(const I &, const dataframe &);
+  basic_gaussian_oracle(const I &, const dataframe &,
+                        std::vector<std::string> = {});
   basic_gaussian_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -246,8 +248,6 @@ public:
 private:
   // ---- Private support methods ----
   void fill_vector(const dataframe &);
-  bool load_(std::istream &, const symbol_set &, std::true_type);
-  bool load_(std::istream &, const symbol_set &, std::false_type);
 
   [[nodiscard]] std::string serialize_id() const noexcept final
   { return SERIALIZE_ID; }
@@ -265,16 +265,16 @@ private:
 ///
 /// \tparam I individual
 /// \tparam S stores the individual inside vs keep a reference only
-/// \tparam N stores the name of the classes vs doesn't store the names
 ///
 /// This class transforms individuals into oracles that can be used for
 /// binary classification tasks.
 ///
-template<class I, bool S, bool N>
-class basic_binary_oracle : public basic_class_oracle<N>
+template<class I, bool S>
+class basic_binary_oracle : public basic_class_oracle
 {
 public:
-  basic_binary_oracle(const I &, const dataframe &);
+  basic_binary_oracle(const I &, const dataframe &,
+                      std::vector<std::string> = {});
   basic_binary_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -309,18 +309,14 @@ private:
 /// The adaptor is intentionally non-serializable.
 ///
 template<ClassificationPredictor O>
-class class_oracle_adaptor final : public basic_oracle
+class class_oracle_adaptor final : public basic_class_oracle
 {
 public:
   explicit class_oracle_adaptor(O, std::vector<std::string> = {});
 
-  [[nodiscard]] value_t operator()(const std::vector<value_t> &) const override;
-
   /// This adaptor does not impose additional validity constraints beyond
   /// those of the underlying predictor, therefore it always returns `true`.
   [[nodiscard]] bool is_valid() const override { return true; }
-
-  [[nodiscard]] std::string name(const value_t &) const override;
 
   [[nodiscard]] classification_result tag(
     const std::vector<value_t> &) const override;
@@ -330,7 +326,6 @@ private:
   bool save(std::ostream &) const override;
 
   O oracle_;
-  std::vector<std::string> names_;
 };
 
 // ***********************************************************************
@@ -340,20 +335,17 @@ private:
 ///
 /// An helper class for extending classification schemes to teams.
 ///
-/// \tparam I type of individual
-/// \tparam S stores the individual inside vs keep a reference only
-/// \tparam N stores the name of the classes vs doesn't store the names
-/// \tparam L the basic classificator that must be extended
+/// \tparam O member oracle type
 /// \tparam C composition method for team's member responses
 ///
-template<Individual I, bool S, bool N,
-         template<class, bool, bool> class L,
+template<ClassificationPredictor O,
          team_composition C = team_composition::standard>
-class team_class_oracle : public basic_class_oracle<N>
+class team_class_oracle : public basic_class_oracle
 {
 public:
-  template<class... Args> team_class_oracle(const gp::team<I> &,
-                                            const dataframe &, Args &&...);
+  template<Individual I>
+  team_class_oracle(const gp::team<I> &, const dataframe &,
+                   std::vector<std::string> = {});
   team_class_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -369,7 +361,7 @@ private:
 
   // The components of the team never store the names of the classes. If we
   // need the names, the master class will memorize them.
-  std::vector<L<I, S, false>> team_;
+  std::vector<O> team_;
 
   src::class_t classes_ {};
 };
@@ -379,11 +371,10 @@ private:
 ///
 /// \tparam I type of individual
 /// \tparam S stores the individual inside vs keep a reference only
-/// \tparam N stores the name of the classes vs doesn't store the names
 ///
-template<class I, bool S, bool N>
-class basic_gaussian_oracle<gp::team<I>, S, N>
-  : public team_class_oracle<I, S, N, basic_gaussian_oracle>
+template<class I, bool S>
+class basic_gaussian_oracle<gp::team<I>, S>
+  : public team_class_oracle<basic_gaussian_oracle<I, S>>
 {
 public:
   using basic_gaussian_oracle::team_class_oracle::team_class_oracle;
@@ -394,11 +385,10 @@ public:
 ///
 /// \tparam I type of individual
 /// \tparam S stores the individual inside vs keep a reference only
-/// \tparam N stores the name of the classes vs doesn't store the names
 ///
-template<class I, bool S, bool N>
-class basic_binary_oracle<gp::team<I>, S, N>
-  : public team_class_oracle<I, S, N, basic_binary_oracle>
+template<class I, bool S>
+class basic_binary_oracle<gp::team<I>, S>
+  : public team_class_oracle<basic_binary_oracle<I, S>>
 {
 public:
   using basic_binary_oracle::team_class_oracle::team_class_oracle;
@@ -416,19 +406,31 @@ public:
 template<Individual P> reg_oracle(const P &) -> reg_oracle<P>;
 
 template<Individual P>
-class gaussian_oracle : public basic_gaussian_oracle<P, true, true>
+class gaussian_oracle : public basic_gaussian_oracle<P, true>
 {
 public:
-  using gaussian_oracle::basic_gaussian_oracle::basic_gaussian_oracle;
+  gaussian_oracle(const P &ind, const dataframe &d)
+    : basic_gaussian_oracle<P, true>(ind, d, basic_class_oracle::class_names(d))
+  {}
+
+  gaussian_oracle(std::istream &in, const symbol_set &ss)
+    : basic_gaussian_oracle<P, true>(in, ss)
+  {}
 };
 template<Individual P> gaussian_oracle(const P &, const dataframe &)
   -> gaussian_oracle<P>;
 
 template<Individual P>
-class binary_oracle : public basic_binary_oracle<P, true, true>
+class binary_oracle : public basic_binary_oracle<P, true>
 {
 public:
-  using binary_oracle::basic_binary_oracle::basic_binary_oracle;
+  binary_oracle(const P &ind, const dataframe &d)
+    : basic_binary_oracle<P, true>(ind, d, basic_class_oracle::class_names(d))
+  {}
+
+  binary_oracle(std::istream &in, const symbol_set &ss)
+    : basic_binary_oracle<P, true>(in, ss)
+  {}
 };
 template<class P> binary_oracle(const P &, const dataframe &)
   -> binary_oracle<P>;

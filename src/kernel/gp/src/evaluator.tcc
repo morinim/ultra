@@ -449,7 +449,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 {
   const auto &dat(this->data());
   Expects(dat.classes() >= 2);
-  basic_gaussian_oracle<P, false, false> oracle(prg, dat);
+  basic_gaussian_oracle<P, false> oracle(prg, dat);
 
   double d(0.0);
   for (auto &example : dat)
@@ -510,7 +510,7 @@ double binary_evaluator<P>::operator()(const P &prg) const
 {
   const auto &dat(this->data());
   Expects(dat.classes() == 2);
-  basic_binary_oracle<P, false, false> oracle(prg, dat);
+  basic_binary_oracle<P, false> oracle(prg, dat);
 
   double err(0.0);
 

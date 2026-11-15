@@ -441,6 +441,163 @@ TEST_CASE_FIXTURE(fixture, "binary_oracle serialization")
   test_serialization<src::binary_oracle, gp::team<gp::individual>>(pr);
 }
 
+TEST_CASE("class_oracle_adaptor")
+{
+  using namespace ultra;
+
+  struct predictor
+  {
+    src::classification_result tag(const std::vector<value_t> &) const
+    {
+      return {1, 0.75};
+    }
+  };
+
+  const src::class_oracle_adaptor named(predictor{},
+                                       {"first class", "second class"});
+  const src::class_oracle_adaptor unnamed(predictor{});
+
+  for (const src::basic_class_oracle *oracle : {&named, &unnamed})
+  {
+    CHECK(oracle->is_valid());
+    CHECK((*oracle)({}) == value_t(D_INT(1)));
+    CHECK(oracle->tag({}).label == 1);
+    CHECK(oracle->tag({}).sureness == doctest::Approx(0.75));
+    CHECK(oracle->name(value_t(D_INT(-1))) == "-1");
+    CHECK(oracle->name(value_t(D_INT(2))) == "2");
+  }
+
+  CHECK(named.name(value_t(D_INT(0))) == "first class");
+  CHECK(named.name(value_t(D_INT(1))) == "second class");
+  CHECK(named.name(value_t(0.0)) == "first class");
+  CHECK(unnamed.name(value_t(D_INT(1))) == "1");
+
+  std::ostringstream saved;
+  CHECK_THROWS_AS(src::serialize::save(saved, named), std::logic_error);
+}
+
+TEST_CASE_TEMPLATE("Classification oracle names", P,
+                   ultra::gp::individual,
+                   ultra::gp::team<ultra::gp::individual>)
+{
+  using namespace ultra;
+
+  fixture f;
+  auto &pr(f.pr);
+  auto &data(pr.data.selected());
+  std::istringstream input(R"(
+    CLASS, X
+    negative class, -2.0
+    negative class, -1.0
+    positive class, 1.0
+    positive class, 2.0
+  )");
+  REQUIRE(data.read(input) == 4);
+  pr.setup_symbols();
+
+  const auto *x(static_cast<const src::variable *>(pr.sset.decode("X")));
+  REQUIRE(x);
+  const function *add(pr.insert<real::add>());
+  const gp::individual ind({{add, {x, x}}});
+  const P prg([&]
+  {
+    if constexpr (gp::Team<P>)
+      return P{{ind, ind}};
+    else
+      return ind;
+  }());
+
+  const auto check_names([&](const auto &oracle, bool named)
+  {
+    std::stringstream saved;
+    REQUIRE(src::serialize::save(saved, oracle));
+    const auto loaded(src::serialize::oracle::load<P>(saved, pr.sset));
+    REQUIRE(loaded);
+    CHECK(loaded->is_valid());
+
+    for (src::class_t i(0); i < data.classes(); ++i)
+    {
+      const value_t id(static_cast<D_INT>(i));
+      const auto expected(named ? data.class_name(i) : std::to_string(i));
+      CHECK(oracle.name(id) == expected);
+      CHECK(loaded->name(id) == expected);
+
+      const auto text(saved.str());
+      const auto pos(text.find(data.class_name(i)));
+      if (named)
+      {
+        REQUIRE(pos != std::string::npos);
+        CHECK(text.find(data.class_name(i), pos + data.class_name(i).size())
+              == std::string::npos);
+      }
+      else
+        CHECK(pos == std::string::npos);
+    }
+
+    for (const auto &example : data)
+    {
+      const auto expected(oracle.tag(example.input));
+      const auto actual(loaded->tag(example.input));
+      CHECK(actual.label == expected.label);
+      CHECK(actual.sureness == doctest::Approx(expected.sureness));
+    }
+
+    for (const D_INT id : {-1, static_cast<D_INT>(data.classes())})
+    {
+      const auto expected(std::to_string(id));
+      CHECK(oracle.name(value_t(id)) == expected);
+      CHECK(loaded->name(value_t(id)) == expected);
+    }
+
+    auto truncated(saved.str());
+    const auto tail_size(named ? data.class_name(data.classes() - 1).size() + 1
+                               : 2);
+    truncated.erase(truncated.size() - tail_size);
+    std::istringstream incomplete(truncated);
+    CHECK_THROWS_AS(
+      static_cast<void>(src::serialize::oracle::load<P>(incomplete, pr.sset)),
+      exception::data_format);
+  });
+
+  SUBCASE("Gaussian")
+  {
+    SUBCASE("Named")
+      check_names(src::gaussian_oracle<P>(prg, data), true);
+    SUBCASE("Unnamed")
+      check_names(src::basic_gaussian_oracle<P, true>(prg, data), false);
+    SUBCASE("Borrowed")
+      check_names(src::basic_gaussian_oracle<P, false>(prg, data), false);
+  }
+
+  SUBCASE("Binary")
+  {
+    SUBCASE("Named")
+      check_names(src::binary_oracle<P>(prg, data), true);
+    SUBCASE("Unnamed")
+      check_names(src::basic_binary_oracle<P, true>(prg, data), false);
+    SUBCASE("Borrowed")
+      check_names(src::basic_binary_oracle<P, false>(prg, data), false);
+  }
+
+  if constexpr (gp::Team<P>)
+    SUBCASE("Team composition")
+    {
+      using member = src::basic_binary_oracle<gp::individual, true>;
+      const gp::individual minority({{add, {10.0, 10.0}}});
+      const gp::team<gp::individual> ensemble{{ind, ind, minority}};
+      const src::team_class_oracle<member, src::team_composition::mv>
+        majority(ensemble, data);
+      const src::team_class_oracle<member> winner(ensemble, data);
+
+      const std::vector<value_t> example{-1.0};
+      CHECK(majority.tag(example).label == 0);
+      CHECK(majority.tag(example).sureness == doctest::Approx(2.0 / 3.0));
+      CHECK(winner.tag(example).label == 1);
+      CHECK(winner.tag(example).sureness
+            == doctest::Approx(member(minority, data).tag(example).sureness));
+    }
+}
+
 TEST_CASE_FIXTURE(fixture, "Perfect binary_oracle")
 {
   using namespace ultra;
