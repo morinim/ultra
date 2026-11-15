@@ -83,43 +83,45 @@ parameters &parameters::fill_undefined_from(const parameters &defaults)
 ///
 parameters &parameters::init()
 {
-  if (!alps.age_gap)
-    alps.age_gap = 20;
-  if (!alps.max_layers)
-    alps.max_layers = 128;
-  if (!in_0_1(alps.p_main_layer))
-    alps.p_main_layer = 0.75;
+  static const parameters defaults
+  {
+    .slp
+    {
+      .code_length = 100,
+      .p_address = 1.0
+    },
+    .population
+    {
+      .individuals = 100,
+      .init_subgroups = 1,
+      .min_individuals = 2
+    },
+    .evolution
+    {
+      .brood_recombination = 1,
+      .elitism = 1.0,
+      .generations = 100,
+      .mate_zone = 20,
+      .max_stuck_gen = std::numeric_limits<unsigned>::max(),
+      .p_cross = 0.9,
+      .p_mutation = 0.04,
+      .tournament_size = 5
+    },
+    .alps
+    {
+      .age_gap = 20,
+      .max_layers = 128,
+      .p_main_layer = 0.75
+    },
+    .de {},
+    .refinement {},
+    .cache {},
+    .team {},
+    .min_samples_per_eval_thread = 0
+  };
 
-  if (!slp.code_length)
-    slp.code_length = 100;
-  if (!in_0_1(slp.p_address))
-    slp.p_address = 1.0;
-
-  if (!population.individuals)
-    population.individuals = 100;
-  if (!population.init_subgroups)
-    population.init_subgroups = 1;
-  if (!population.min_individuals)
-    population.min_individuals = 2;
-
-  if (!evolution.brood_recombination)
-    evolution.brood_recombination = 1;
-  if (!in_0_1(evolution.elitism))
-    evolution.elitism = 1.0;
-  if (!evolution.generations)
-    evolution.generations = 100;
-  if (!evolution.mate_zone)
-    evolution.mate_zone = 20;
-  if (!evolution.max_stuck_gen)
-    evolution.max_stuck_gen = std::numeric_limits<unsigned>::max();
-  if (!in_0_1(evolution.p_cross))
-    evolution.p_cross = 0.9;
-  if (!in_0_1(evolution.p_mutation))
-    evolution.p_mutation = 0.04;
-  if (!evolution.tournament_size)
-    evolution.tournament_size = 5;
-
-  return *this;
+  // `init` must fill undefined fields in `this`, preserving user settings.
+  return fill_undefined_from(defaults);
 }
 
 bool parameters::needs_init() const noexcept
