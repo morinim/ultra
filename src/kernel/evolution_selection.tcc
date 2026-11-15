@@ -148,27 +148,29 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
 {
   Expects(!this->params_.needs_init());
 
-  const auto young([](const auto &sub_pop, const auto &prg)
-                   { return prg.age() <= sub_pop.max_age(); });
-
-  // Extends the basic fitness with the age and takes advantage of the
-  // lexicographic comparison capabilities of `std::pair`.
-  const auto alps_fit([&](const auto &sp, const auto &prg)
-                      { return std::pair(young(sp, prg), this->eva_(prg)); });
-
-  auto p0(random::individual(pops.primary()));
-  auto fit0{alps_fit(pops.primary(), p0)};
-
-  auto p1(random::individual(pops.primary()));
-  auto fit1{alps_fit(pops.primary(), p1)};
-
-  if (fit0 < fit1)
+  struct candidate
   {
-    std::swap(p0, p1);
-    std::swap(fit0, fit1);
-  }
+    evaluator_individual_t<E> ind;
 
-  assert(fit0 >= fit1);
+    // Extends the basic fitness with the age and takes advantage of the
+    // lexicographic comparison capabilities of `std::pair`.
+    std::pair<bool, evaluator_fitness_t<E>> rank;
+  };
+
+  const auto sample([this](const auto &layer)
+  {
+    auto ind(random::individual(layer));
+    const auto rank(std::pair(ind.age() <= layer.max_age(),
+                              this->eva_(ind)));
+
+    return candidate{std::move(ind), rank};
+  });
+
+  auto best(sample(pops.primary()));
+  auto second(sample(pops.primary()));
+
+  if (best.rank < second.rank)
+    std::swap(best, second);
 
   const auto ts(this->params_.evolution.tournament_size);
   assert(0<ts && ts<=parameters::evolution_parameters::max_tournament_size);
@@ -178,29 +180,22 @@ alps<E>::operator()(alps_layer_pair<const P> pops) const
 
   for (auto rounds(ts - 1); rounds; --rounds)
   {
-    const auto &sub_pop(pops.random(p_main_layer));
-    const auto tmp(random::individual(sub_pop));
-    const auto tmp_fit{alps_fit(sub_pop, tmp)};
+    auto incoming(sample(pops.random(p_main_layer)));
 
-    if (fit0 < tmp_fit)
+    if (second.rank < incoming.rank)
     {
-      p1 = p0;
-      fit1 = fit0;
+      second = std::move(incoming);
 
-      p0 = tmp;
-      fit0 = tmp_fit;
-    }
-    else if (fit1 < tmp_fit)
-    {
-      p1 = tmp;
-      fit1 = tmp_fit;
+      if (best.rank < second.rank)
+        std::swap(best, second);
     }
 
-    assert(fit0 >= fit1);
-    assert(fit0.first || !fit1.first);
+    assert(best.rank >= second.rank);
+    assert(best.rank.first || !second.rank.first);
   }
 
-  return {scored_t{p0, fit0.second}, scored_t{p1, fit1.second}};
+  return  {scored_t{std::move(best.ind), best.rank.second},
+           scored_t{std::move(second.ind), second.rank.second}};
 }
 
 ///
