@@ -212,6 +212,9 @@ protected:
 
   [[nodiscard]] static std::vector<std::string> class_names(const dataframe &);
 
+  /// \return number of stored class names
+  [[nodiscard]] std::size_t names_size() const noexcept { return names_.size(); }
+
   bool load_names(std::istream &);
   bool save_names(std::ostream &) const;
 
@@ -228,7 +231,7 @@ private:
 /// \see
 /// ultra::src::gaussian_evaluator for further details.
 ///
-template<class I, bool S>
+template<Individual I, bool S>
 class basic_gaussian_oracle : public basic_class_oracle
 {
 public:
@@ -269,7 +272,7 @@ private:
 /// This class transforms individuals into oracles that can be used for
 /// binary classification tasks.
 ///
-template<class I, bool S>
+template<Individual I, bool S>
 class basic_binary_oracle : public basic_class_oracle
 {
 public:
@@ -372,7 +375,7 @@ private:
 /// \tparam I type of individual
 /// \tparam S stores the individual inside vs keep a reference only
 ///
-template<class I, bool S>
+template<Individual I, bool S>
 class basic_gaussian_oracle<gp::team<I>, S>
   : public team_class_oracle<basic_gaussian_oracle<I, S>>
 {
@@ -386,7 +389,7 @@ public:
 /// \tparam I type of individual
 /// \tparam S stores the individual inside vs keep a reference only
 ///
-template<class I, bool S>
+template<Individual I, bool S>
 class basic_binary_oracle<gp::team<I>, S>
   : public team_class_oracle<basic_binary_oracle<I, S>>
 {
@@ -432,7 +435,7 @@ public:
     : basic_binary_oracle<P, true>(in, ss)
   {}
 };
-template<class P> binary_oracle(const P &, const dataframe &)
+template<Individual P> binary_oracle(const P &, const dataframe &)
   -> binary_oracle<P>;
 
 #include "kernel/gp/src/oracle.tcc"

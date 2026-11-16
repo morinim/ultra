@@ -563,6 +563,9 @@ TEST_CASE_TEMPLATE("Classification oracle names", P,
   {
     SUBCASE("Named")
       check_names(src::gaussian_oracle<P>(prg, data), true);
+    SUBCASE("Explicit names")
+      check_names(src::basic_gaussian_oracle<P, true>(
+                    prg, data, {"negative class", "positive class"}), true);
     SUBCASE("Unnamed")
       check_names(src::basic_gaussian_oracle<P, true>(prg, data), false);
     SUBCASE("Borrowed")
@@ -573,6 +576,9 @@ TEST_CASE_TEMPLATE("Classification oracle names", P,
   {
     SUBCASE("Named")
       check_names(src::binary_oracle<P>(prg, data), true);
+    SUBCASE("Explicit names")
+      check_names(src::basic_binary_oracle<P, true>(
+                    prg, data, {"negative class", "positive class"}), true);
     SUBCASE("Unnamed")
       check_names(src::basic_binary_oracle<P, true>(prg, data), false);
     SUBCASE("Borrowed")
