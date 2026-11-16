@@ -103,6 +103,42 @@ TEST_CASE("Element access")
   CHECK(m(3, 2) == m(std::pair{3, 2}));
 }
 
+TEST_CASE("Row views")
+{
+  ultra::matrix<int> m = { {1, 2, 3},
+                           {4, 5, 6} };
+
+  static_assert(std::same_as<decltype(m.row(0)), std::span<int>>);
+  static_assert(noexcept(m.row(0)));
+
+  for (std::size_t r(0); r < m.rows(); ++r)
+  {
+    const auto view(m.row(r));
+    CHECK(view.size() == m.cols());
+    CHECK(view.data() == &m(r, 0));
+    for (std::size_t c(0); c < m.cols(); ++c)
+      CHECK(view[c] == m(r, c));
+  }
+
+  auto view(m.row(1));
+  view[1] = 42;
+  CHECK(m(1, 1) == 42);
+  CHECK(m(0, 1) == 2);
+  m(1, 2) = 17;
+  CHECK(view[2] == 17);
+
+  const auto &cm(m);
+  static_assert(std::same_as<decltype(cm.row(0)), std::span<const int>>);
+  static_assert(noexcept(cm.row(0)));
+
+  const auto const_view(cm.row(1));
+  CHECK(const_view.size() == cm.cols());
+  CHECK(const_view.data() == &cm(1, 0));
+  CHECK(const_view[0] == 4);
+  CHECK(const_view[1] == 42);
+  CHECK(const_view[2] == 17);
+}
+
 TEST_CASE("Fliplr")
 {
   ultra::matrix<int> m = { {1, 2, 3},

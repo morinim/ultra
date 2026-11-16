@@ -16,7 +16,9 @@
 #include "utility/assert.h"
 
 #include <algorithm>
+#include <concepts>
 #include <ostream>
+#include <span>
 #include <vector>
 
 namespace ultra
@@ -61,6 +63,11 @@ public:
   [[nodiscard]] const_reference operator()(std::size_t,
                                            std::size_t) const noexcept;
   [[nodiscard]] reference operator()(std::size_t, std::size_t) noexcept;
+
+  [[nodiscard]] std::span<T> row(std::size_t) noexcept
+    requires (!std::same_as<T, bool>);
+  [[nodiscard]] std::span<const T> row(std::size_t) const noexcept
+    requires (!std::same_as<T, bool>);
 
   // ---- Capacity ----
   [[nodiscard]] bool empty() const noexcept;

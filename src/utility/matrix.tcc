@@ -142,6 +142,40 @@ typename matrix<T>::reference matrix<T>::operator()(
 }
 
 ///
+/// Returns a mutable view of a row without copying its elements.
+///
+/// \param[in] r row index, less than `rows()`
+///
+/// The view borrows the matrix storage and is unavailable for `matrix<bool>`.
+/// Operations that invalidate pointers into the storage also invalidate it.
+///
+template<class T>
+std::span<T> matrix<T>::row(std::size_t r) noexcept
+  requires (!std::same_as<T, bool>)
+{
+  Expects(r < rows());
+
+  return {data_.data() + r * cols(), cols()};
+}
+
+///
+/// Returns a read-only view of a row without copying its elements.
+///
+/// \param[in] r row index, less than `rows()`
+///
+/// The view borrows the matrix storage and is unavailable for `matrix<bool>`.
+/// Operations that invalidate pointers into the storage also invalidate it.
+///
+template<class T>
+std::span<const T> matrix<T>::row(std::size_t r) const noexcept
+  requires (!std::same_as<T, bool>)
+{
+  Expects(r < rows());
+
+  return {data_.data() + r * cols(), cols()};
+}
+
+///
 /// \return `true` if the matrix is empty (`cols() == 0`)
 ///
 template<class T>
