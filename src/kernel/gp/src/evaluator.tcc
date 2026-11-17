@@ -449,18 +449,22 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
 {
   const auto &dat(this->data());
   Expects(dat.classes() >= 2);
-  basic_gaussian_oracle<P, false> oracle(prg, dat);
+
+  std::vector<classification_result> predictions;
+  basic_gaussian_oracle<P, false> oracle(prg, dat, predictions);
 
   double d(0.0);
-  for (auto &example : dat)
-    if (const auto res(oracle.tag(example.input)); res.label == label(example))
+  const auto inv_scale(1.0 / static_cast<double>(dat.classes() - 1));
+
+  for (std::size_t i(0); const auto &example : dat)
+  {
+    if (const auto res(predictions[i++]); res.label == label(example))
     {
-      const auto scale(static_cast<double>(dat.classes() - 1));
       // Note:
-      // * `(1.0 - res.sureness)` is the sum of the errors;
-      // * `(res.sureness - 1.0)` is the opposite (standardized fitness);
-      // * `(res.sureness - 1.0) / scale` is the opposite of the average error.
-      d += (res.sureness - 1.0) / scale;
+      // * `(1.0-res.sureness)` is the sum of the errors;
+      // * `(res.sureness-1.0)` is the opposite (standardized fitness);
+      // * `(res.sureness-1.0)*inv_scale` is the opposite of the average error.
+      d += (res.sureness - 1.0) * inv_scale;
     }
     else
     {
@@ -470,6 +474,7 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
       // So `-1.0` is like to say that we have a complete failure.
       d -= 1.0;
     }
+  }
 
   return d;
 }

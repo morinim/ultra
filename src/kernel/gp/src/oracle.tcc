@@ -210,19 +210,50 @@ const std::string basic_gaussian_oracle<I, S>::SERIALIZE_ID("GAUSSIAN_ORACLE");
 
 ///
 /// \param[in] ind   program "to be transformed" into an oracle
-/// \param[in] d     the training set
+/// \param[in] d     the non-empty training set
 /// \param[in] names optional class names
 ///
 template<Individual I, bool S>
 basic_gaussian_oracle<I, S>::basic_gaussian_oracle(
   const I &ind, const dataframe &d, std::vector<std::string> names)
+  : basic_gaussian_oracle(ind, d, nullptr, std::move(names))
+{
+}
+
+///
+/// \param[in]  ind         program "to be transformed" into an oracle
+/// \param[in]  d           the non-empty training set
+/// \param[out] predictions container populated with predictions on `d`
+/// \param[in]  names       optional class names
+///
+template<Individual I, bool S>
+basic_gaussian_oracle<I, S>::basic_gaussian_oracle(
+  const I &ind, const dataframe &d,
+  std::vector<classification_result> &predictions,
+  std::vector<std::string> names)
+  : basic_gaussian_oracle(ind, d, &predictions, std::move(names))
+{
+}
+
+///
+/// \param[in]  ind         program "to be transformed" into an oracle
+/// \param[in]  d           the non-empty training set
+/// \param[out] predictions pointer to a container with predictions on `d`
+/// \param[in]  names       class names
+///
+template<Individual I, bool S>
+basic_gaussian_oracle<I, S>::basic_gaussian_oracle(
+  const I &ind, const dataframe &d,
+  std::vector<classification_result> *predictions,
+  std::vector<std::string> names)
   : basic_class_oracle(std::move(names)), oracle_(ind), gauss_dist_(d.classes())
 {
   Expects(!ind.empty());
+  Expects(!d.empty());
   Expects(d.classes() > 1);
   Expects(names_size() == 0 || names_size() == d.classes());
 
-  fill_vector(d);
+  fill_vector(d, predictions);
 
   Ensures(is_valid());
 }
@@ -260,13 +291,16 @@ basic_gaussian_oracle<I, S>::basic_gaussian_oracle(std::istream &in,
     throw exception::data_format(
       "Cannot read gaussian_oracle class_names component");
 
+  missing_fallback_ = calculate_missing_fallback();
+
   Ensures(is_valid());
 }
 
 ///
 /// Sets up the per-class Gaussian distributions used for classification.
 ///
-/// \param[in] d the training set
+/// \param[in]  d           the training set
+/// \param[out] predictions optional container populated with predictions on `d`
 ///
 /// Each class is modelled by a Gaussian distribution whose parameters are
 /// estimated from the outputs produced by the individual on the training
@@ -302,9 +336,18 @@ basic_gaussian_oracle<I, S>::basic_gaussian_oracle(std::istream &in,
 /// confidence and yields stable confidence estimates during classification.
 ///
 template<Individual I, bool S>
-void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
+void basic_gaussian_oracle<I, S>::fill_vector(
+  const dataframe &d, std::vector<classification_result> *predictions)
 {
   Expects(d.classes() > 1);
+
+  std::vector<std::optional<double>> outputs;
+  if (predictions)
+  {
+    outputs.reserve(d.size());
+    predictions->clear();
+    predictions->reserve(d.size());
+  }
 
   std::vector<unsigned> unknown_in_class(d.classes(), 0);
 
@@ -313,14 +356,16 @@ void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
   for (const auto &ex : d)
   {
     const auto cl(label(ex));
+    const auto res(oracle_(ex.input));
+    const auto out(has_value(res)
+                   ? std::optional<double>(std::get<D_DOUBLE>(res))
+                   : std::nullopt);
 
-    if (const auto res(oracle_(ex.input)); has_value(res))
-    {
-      auto val(std::get<D_DOUBLE>(res));
-      val = std::clamp(val, -cut, cut);
+    if (predictions)
+      outputs.push_back(out);
 
-      gauss_dist_[cl].add(val);
-    }
+    if (out)
+      gauss_dist_[cl].add(std::clamp(*out, -cut, cut));
     else
       ++unknown_in_class[cl];
   }
@@ -359,6 +404,12 @@ void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
     Ensures(g.variance() >= 0.0);
     Ensures(std::isfinite(g.variance()));
   }
+
+  missing_fallback_ = calculate_missing_fallback();
+
+  if (predictions)
+    for (const auto &out : outputs)
+      predictions->push_back(predict(out));
 }
 
 ///
@@ -373,7 +424,7 @@ void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
 ///
 /// This method assigns a class label to an input example by evaluating the
 /// program oracle and comparing the result against a set of per-class Gaussian
-/// distributions previously constructed by `fill_vector()`.
+/// distributions previously constructed.
 ///
 /// ### Inference modes
 ///
@@ -398,8 +449,8 @@ void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
 ///   effective sample counts stored in the Gaussian models.
 ///
 ///   These counts include both real observations and synthetic samples added
-///   during variance inflation in `fill_vector()` and therefore represent
-///   *effective* class support rather than raw dataset frequencies.
+///   during variance inflation and therefore represent *effective* class
+///   support rather than raw dataset frequencies.
 ///
 /// ### Confidence semantics
 ///
@@ -427,48 +478,62 @@ void basic_gaussian_oracle<I, S>::fill_vector(const dataframe &d)
 ///
 /// ### Special cases
 ///
-/// - If only one class is present, that class is returned with confidence `1`;
-/// - the method assumes that `fill_vector()` has been called beforehand and
-///   that each class model contains at least one sample.
-///
-/// \see fill_vector
+/// If only one class is present, that class is returned with confidence `1`.
 ///
 template<Individual I, bool S>
 classification_result basic_gaussian_oracle<I, S>::tag(
   const std::vector<value_t> &ex) const
+{
+  const auto res(oracle_(ex));
+  return has_value(res) ? predict(std::get<D_DOUBLE>(res)) : missing_fallback_;
+}
+
+///
+/// Precomputes the fallback result for missing outputs based on class priors.
+///
+/// \return predicted class label and confidence derived from effective support
+///
+template<Individual I, bool S>
+classification_result basic_gaussian_oracle<I, S>::calculate_missing_fallback() const
 {
   const std::size_t classes(gauss_dist_.size());
 
   if (classes == 1)
     return {0, 1.0};
 
-  const auto res(oracle_(ex));
+  std::size_t best(0);
+  double best_count(0.0), total(0.0);
 
-  // Missing inference: fall back to class priors.
-  if (!has_value(res))
+  for (std::size_t i(0); i < classes; ++i)
   {
-    std::size_t best(0);
-    double best_count(0.0), total(0.0);
+    // Effective sample count, including variance inflation.
+    const auto n(static_cast<double>(gauss_dist_[i].size()));
+    total += n;
 
-    for (std::size_t i(0); i < classes; ++i)
+    if (n > best_count)
     {
-      // Effective sample count, including variance inflation.
-      const auto n(static_cast<double>(gauss_dist_[i].size()));
-      total += n;
-
-      if (n > best_count)
-      {
-        best_count = n;
-        best = i;
-      }
+      best_count = n;
+      best = i;
     }
-
-    const double confidence(total > 0.0 ? best_count / total : 0.0);
-    return {best, confidence};
   }
 
-  // Normal likelihood-based inference.
-  const auto x(std::get<D_DOUBLE>(res));
+  const double confidence(total > 0.0 ? best_count / total : 0.0);
+  return {best, confidence};
+}
+
+///
+/// Classifies a single scalar output value using Gaussian class models.
+///
+/// \param[in] x scalar output value to classify
+/// \return      predicted class label and confidence level
+///
+template<Individual I, bool S>
+classification_result basic_gaussian_oracle<I, S>::predict(double x) const
+{
+  const std::size_t classes(gauss_dist_.size());
+
+  if (classes == 1)
+    return {0, 1.0};
 
   double best_p(0.0), sum_p(0.0);
   src::class_t probable_class(0);
@@ -477,17 +542,13 @@ classification_result basic_gaussian_oracle<I, S>::tag(
   {
     const auto mean(gauss_dist_[i].mean());
     const auto variance(gauss_dist_[i].variance());
-    const auto distance(std::fabs(x - mean));
+    const auto distance(x - mean);
 
     double p(0.0);
     if (issmall(variance))                // degenerate or nearly-degenerate
-    {                                     // distribution: treat as a point
-      p = issmall(distance) ? 1.0 : 0.0;  // mass at the mean
-    }
-    else                                  // standard case
+      p = issmall(distance) ? 1.0 : 0.0;  // treat as a point mass at the mean
+    else
       p = std::exp(-distance * distance / variance);
-          // std::exp(-0.5 * distance * distance / variance)
-          // / std::sqrt(2.0 * std::numbers::pi_v<double> * variance);
 
     if (p > best_p)
     {
@@ -574,7 +635,7 @@ basic_binary_oracle<I, S>::basic_binary_oracle(
 ///
 template<Individual I, bool S>
 basic_binary_oracle<I, S>::basic_binary_oracle(std::istream &in,
-                                             const symbol_set &ss)
+                                               const symbol_set &ss)
   : basic_class_oracle(), oracle_(in, ss)
 {
   static_assert(
@@ -691,7 +752,7 @@ const std::string team_class_oracle<O, C>::SERIALIZE_ID(
 
 ///
 /// \param[in] t     team "to be transformed" into an oracle
-/// \param[in] d     the training set
+/// \param[in] d     the non-empty training set
 /// \param[in] names optional class names
 ///
 template<ClassificationPredictor O, team_composition C>
@@ -700,9 +761,72 @@ team_class_oracle<O, C>::team_class_oracle(
   const gp::team<I> &t, const dataframe &d, std::vector<std::string> names)
   : basic_class_oracle(std::move(names)), classes_(d.classes())
 {
+  Expects(!t.empty());
+  Expects(!d.empty());
+  Expects(d.classes() > 1);
+  Expects(names_size() == 0 || names_size() == d.classes());
+
   team_.reserve(t.size());
   for (const auto &ind : t)
     team_.emplace_back(ind, d);
+
+  Ensures(is_valid());
+}
+
+///
+/// \param[in]  t           team "to be transformed" into an oracle
+/// \param[in]  d           the non-empty training set
+/// \param[out] predictions container populated with predictions on `d`
+/// \param[in]  names       optional class names
+///
+template<ClassificationPredictor O, team_composition C>
+template<Individual I>
+team_class_oracle<O, C>::team_class_oracle(
+  const gp::team<I> &t, const dataframe &d,
+  std::vector<classification_result> &predictions,
+  std::vector<std::string> names)
+  : basic_class_oracle(std::move(names)), classes_(d.classes())
+{
+  Expects(!t.empty());
+  Expects(!d.empty());
+  Expects(d.classes() > 1);
+  Expects(names_size() == 0 || names_size() == d.classes());
+
+  team_.reserve(t.size());
+
+  if constexpr (C == team_composition::wta)
+  {
+    team_.emplace_back(t[0], d, predictions);
+
+    std::vector<classification_result> member_pred;
+    for (std::size_t m(1); m < t.size(); ++m)
+    {
+      team_.emplace_back(t[m], d, member_pred);
+      for (std::size_t i(0); i < d.size(); ++i)
+        if (member_pred[i].sureness > predictions[i].sureness)
+          predictions[i] = member_pred[i];
+    }
+  }
+  else if constexpr (C == team_composition::mv)
+  {
+    matrix<unsigned> votes(d.size(), classes_, 0);
+
+    std::vector<classification_result> member_pred;
+    for (const auto &ind : t)
+    {
+      team_.emplace_back(ind, d, member_pred);
+      for (std::size_t i(0); i < d.size(); ++i)
+        ++votes(i, member_pred[i].label);
+    }
+
+    predictions.clear();
+    predictions.reserve(d.size());
+
+    for (std::size_t i(0); i < votes.rows(); ++i)
+      predictions.push_back(majority_vote(votes.row(i)));
+  }
+
+  Ensures(is_valid());
 }
 
 ///
@@ -775,14 +899,24 @@ classification_result team_class_oracle<O, C>::tag(
     for (const auto &oracle : team_)
       ++votes[oracle.tag(instance).label];
 
-    src::class_t max(0);
-    for (auto i(max + 1); i < classes_; ++i)
-      if (votes[i] > votes[max])
-        max = i;
-
-    return {max, static_cast<double>(votes[max])
-                 / static_cast<double>(team_.size())};
+    return majority_vote(votes);
   }
+}
+
+///
+/// Selects the class with the most votes, favouring the first class on ties.
+///
+template<ClassificationPredictor O, team_composition C>
+classification_result team_class_oracle<O, C>::majority_vote(
+  std::span<const unsigned> votes) const
+{
+  src::class_t max(0);
+  for (src::class_t i(1); i < classes_; ++i)
+    if (votes[i] > votes[max])
+      max = i;
+
+  return {max, static_cast<double>(votes[max])
+               / static_cast<double>(team_.size())};
 }
 
 ///

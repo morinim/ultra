@@ -570,6 +570,29 @@ TEST_CASE_TEMPLATE("Classification oracle names", P,
       check_names(src::basic_gaussian_oracle<P, true>(prg, data), false);
     SUBCASE("Borrowed")
       check_names(src::basic_gaussian_oracle<P, false>(prg, data), false);
+
+    if constexpr (gp::Team<P>)
+      SUBCASE("Cached majority-vote predictions")
+      {
+        using member = src::basic_gaussian_oracle<gp::individual, true>;
+        const gp::individual constant({{add, {10.0, 10.0}}});
+        const gp::team<gp::individual> ensemble{{ind, constant}};
+        std::vector<src::classification_result> predictions;
+        const src::team_class_oracle<member, src::team_composition::mv>
+          oracle(ensemble, data, predictions);
+
+        REQUIRE(predictions.size() == data.size());
+        for (std::size_t i(0); const auto &example : data)
+        {
+          const auto expected(oracle.tag(example.input));
+          CHECK(predictions[i].label == expected.label);
+          CHECK(predictions[i].sureness == doctest::Approx(expected.sureness));
+          ++i;
+        }
+
+        CHECK(predictions.back().label == 0);
+        CHECK(predictions.back().sureness == doctest::Approx(0.5));
+      }
   }
 
   SUBCASE("Binary")

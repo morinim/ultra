@@ -13,12 +13,16 @@
 #if !defined(ULTRA_ORACLE_H)
 #define      ULTRA_ORACLE_H
 
+#include "kernel/distribution.h"
 #include "kernel/exceptions.h"
-#include "kernel/gp/src/predictor.h"
 #include "kernel/gp/src/interpreter.h"
+#include "kernel/gp/src/predictor.h"
 #include "kernel/gp/team.h"
+#include "utility/matrix.h"
 
 #include <numbers>
+#include <optional>
+#include <span>
 
 namespace ultra::src
 {
@@ -237,6 +241,9 @@ class basic_gaussian_oracle : public basic_class_oracle
 public:
   basic_gaussian_oracle(const I &, const dataframe &,
                         std::vector<std::string> = {});
+  basic_gaussian_oracle(const I &, const dataframe &,
+                        std::vector<classification_result> &,
+                        std::vector<std::string> = {});
   basic_gaussian_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -249,8 +256,19 @@ public:
   bool save(std::ostream &) const final;
 
 private:
+  basic_gaussian_oracle(const I &, const dataframe &,
+                        std::vector<classification_result> *,
+                        std::vector<std::string>);
+
   // ---- Private support methods ----
-  void fill_vector(const dataframe &);
+  [[nodiscard]] classification_result calculate_missing_fallback() const;
+  [[nodiscard]] classification_result predict(double) const;
+  [[nodiscard]] classification_result predict(std::optional<double> out) const
+  {
+    return out ? predict(*out) : missing_fallback_;
+  }
+
+  void fill_vector(const dataframe &, std::vector<classification_result> *);
 
   [[nodiscard]] std::string serialize_id() const noexcept final
   { return SERIALIZE_ID; }
@@ -261,6 +279,8 @@ private:
   // `gauss_dist[i]` contains the gaussian distribution of the i-th class of
   // the classification problem.
   std::vector<distribution<double>> gauss_dist_ {};
+
+  classification_result missing_fallback_ {};
 };
 
 ///
@@ -348,7 +368,11 @@ class team_class_oracle : public basic_class_oracle
 public:
   template<Individual I>
   team_class_oracle(const gp::team<I> &, const dataframe &,
-                   std::vector<std::string> = {});
+                    std::vector<std::string> = {});
+  template<Individual I>
+  team_class_oracle(const gp::team<I> &, const dataframe &,
+                    std::vector<classification_result> &,
+                    std::vector<std::string> = {});
   team_class_oracle(std::istream &, const symbol_set &);
 
   [[nodiscard]] classification_result tag(
@@ -359,6 +383,9 @@ public:
   static const std::string SERIALIZE_ID;
 
 private:
+  [[nodiscard]] classification_result majority_vote(
+    std::span<const unsigned>) const;
+
   bool save(std::ostream &) const final;
   [[nodiscard]] std::string serialize_id() const noexcept final;
 
