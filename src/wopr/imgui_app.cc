@@ -17,7 +17,9 @@
 
 #include "implot/implot.h"
 
+#include <chrono>
 #include <stdexcept>
+#include <thread>
 
 namespace imgui_app
 {
@@ -35,6 +37,9 @@ program::program(const settings &s) : settings_(s)
   renderer_ = SDL_CreateRenderer(window_, nullptr);
   if (!renderer_)
     throw std::runtime_error("Error creating SDL_Renderer");
+
+  if (!SDL_SetRenderVSync(renderer_, 1))
+    SDL_Log("Could not enable VSync: %s", SDL_GetError());
 }
 
 program::~program()
@@ -66,9 +71,15 @@ void program::run(std::function<void (const program &, bool *)> render_main)
   ImGui_ImplSDL3_InitForSDLRenderer(window_, renderer_);
   ImGui_ImplSDLRenderer3_Init(renderer_);
 
+  using clock = std::chrono::steady_clock;
+  const auto frame_period(
+    std::chrono::duration_cast<clock::duration>(
+      std::chrono::duration<double>(1.0 / 30.0)));
+
   running_ = true;
   while (running_)
   {
+    const auto frame_start(clock::now());
     SDL_Event event;
 
     while (SDL_PollEvent(&event) == 1)
@@ -128,6 +139,7 @@ void program::run(std::function<void (const program &, bool *)> render_main)
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer_);
 
     SDL_RenderPresent(renderer_);
+    std::this_thread::sleep_until(frame_start + frame_period);
   }
 }
 
