@@ -463,16 +463,16 @@ double gaussian_evaluator<P>::operator()(const P &prg) const
       // Note:
       // * `(1.0-res.sureness)` is the sum of the errors;
       // * `(res.sureness-1.0)` is the opposite (standardized fitness);
-      // * `(res.sureness-1.0)*inv_scale` is the opposite of the average error.
+      // * `(res.sureness-1.0)*inv_scale` is the opposite of the average error
+      //   per incorrect class.
       d += (res.sureness - 1.0) * inv_scale;
     }
     else
     {
       // Note:
-      // * the maximum single class error is `1.0`;
-      // * the maximum average class error is `1.0 / dat.classes()`;
-      // So `-1.0` is like to say that we have a complete failure.
-      d -= 1.0;
+      // * `1.0` is the base penalty for a complete failure;
+      // * `res.sureness` penalises confidence in the incorrect prediction.
+      d -= 1.0 + res.sureness;
     }
   }
 
