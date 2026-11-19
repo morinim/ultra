@@ -22,6 +22,8 @@
 
 #include <cstdlib>
 #include <future>
+#include <iterator>
+#include <limits>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -404,6 +406,103 @@ TEST_CASE_FIXTURE(fixture, "gaussian_oracle missing inference fallback")
   // Missing inference fallback selects class 0 with confidence 3/4 = 0.75.
   CHECK(res.label == 0);
   CHECK(res.sureness == doctest::Approx(3.0 / 4.0));
+}
+
+TEST_CASE_FIXTURE(fixture, "gaussian_oracle output normalisation")
+{
+  using namespace ultra;
+
+  std::istringstream is(R"(
+    CLASS, X
+    C0, -2.0
+    C0, -1.0
+    C1, 1.0
+    C1, 2.0
+    C1, 3.0
+  )");
+  REQUIRE(pr.data.selected().read(is) == 5);
+  pr.setup_symbols();
+
+  const auto *var_x(static_cast<const src::variable *>(pr.sset.decode("X")));
+  REQUIRE(var_x);
+  const function *ife(pr.insert<real::ife>());
+  const gp::individual ind({{ife, {0.0, 0.0, var_x, var_x}}});
+  auto &data(pr.data.selected());
+
+  SUBCASE("Extreme finite outputs")
+  {
+    for (auto &ex : data)
+      ex.input[0] = label(ex) == 0 ? -1e300 : 1e300;
+
+    std::vector<src::classification_result> predictions;
+    const src::basic_gaussian_oracle<gp::individual, true>
+      oracle(ind, data, predictions);
+    REQUIRE(predictions.size() == data.size());
+    for (std::size_t i(0); const auto &ex : data)
+    {
+      const auto result(oracle.tag(ex.input));
+      CHECK(result.label == label(ex));
+      CHECK(result.sureness == doctest::Approx(1.0));
+      CHECK(predictions[i].label == result.label);
+      CHECK(predictions[i].sureness == doctest::Approx(result.sureness));
+      ++i;
+    }
+  }
+
+  SUBCASE("Non-finite outputs are missing")
+  {
+    data.begin()->input[0] = std::numeric_limits<double>::infinity();
+    std::next(data.begin())->input[0] =
+      std::numeric_limits<double>::quiet_NaN();
+
+    std::vector<src::classification_result> predictions;
+    const src::basic_gaussian_oracle<gp::individual, true>
+      oracle(ind, data, predictions);
+    REQUIRE(predictions.size() == data.size());
+    for (const double x : {std::numeric_limits<double>::infinity(),
+                          -std::numeric_limits<double>::infinity(),
+                          std::numeric_limits<double>::quiet_NaN()})
+    {
+      const auto result(oracle.tag({x}));
+      CHECK(result.label == 1);
+      CHECK(result.sureness == doctest::Approx(1.0));
+    }
+    for (unsigned i(0); i < 2; ++i)
+    {
+      CHECK(predictions[i].label == 1);
+      CHECK(predictions[i].sureness == doctest::Approx(1.0));
+    }
+  }
+
+  SUBCASE("Zero likelihood skips an empty class")
+  {
+    for (auto &ex : data)
+      if (label(ex) == 0)
+        ex.input[0] = value_t{};
+
+    const src::gaussian_oracle oracle(ind, data);
+    const auto result(oracle.tag({1000.0}));
+    CHECK(result.label == 1);
+    CHECK(result.sureness == doctest::Approx(0.0));
+
+    std::stringstream saved;
+    REQUIRE(src::serialize::save(saved, oracle));
+    const auto loaded(src::serialize::oracle::load<gp::individual>(saved,
+                                                                 pr.sset));
+    REQUIRE(loaded);
+    CHECK(loaded->tag({1000.0}).label == 1);
+    CHECK(loaded->tag({1000.0}).sureness == doctest::Approx(0.0));
+  }
+
+  SUBCASE("All classes empty")
+  {
+    for (auto &ex : data)
+      ex.input[0] = value_t{};
+
+    const src::gaussian_oracle oracle(ind, data);
+    CHECK(oracle.tag({1.0}).sureness == doctest::Approx(0.0));
+    CHECK(oracle.tag({value_t{}}).sureness == doctest::Approx(0.0));
+  }
 }
 
 TEST_CASE_FIXTURE(fixture, "binary_oracle")

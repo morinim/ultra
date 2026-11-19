@@ -329,8 +329,9 @@ basic_gaussian_oracle<I, S>::basic_gaussian_oracle(std::istream &in,
 ///      the effective sample count remains consistent with the number of
 ///      training examples.
 ///
-/// If a class has no valid outputs at all, it is initialised with a symmetric
-/// extreme pair, yielding a maximally uninformative distribution.
+/// Non-finite outputs are treated as missing. Finite outputs are clamped to
+/// the same bounds during fitting and prediction to keep statistics bounded.
+/// Classes with no valid outputs remain empty and receive zero likelihood.
 ///
 /// This approach avoids arbitrary value substitution, prevents spurious
 /// confidence and yields stable confidence estimates during classification.
@@ -351,21 +352,16 @@ void basic_gaussian_oracle<I, S>::fill_vector(
 
   std::vector<unsigned> unknown_in_class(d.classes(), 0);
 
-  constexpr double cut(100000000.0);
-
   for (const auto &ex : d)
   {
     const auto cl(label(ex));
-    const auto res(oracle_(ex.input));
-    const auto out(has_value(res)
-                   ? std::optional<double>(std::get<D_DOUBLE>(res))
-                   : std::nullopt);
+    const auto out(normalise_output(oracle_(ex.input)));
 
     if (predictions)
       outputs.push_back(out);
 
     if (out)
-      gauss_dist_[cl].add(std::clamp(*out, -cut, cut));
+      gauss_dist_[cl].add(*out);
     else
       ++unknown_in_class[cl];
   }
@@ -390,19 +386,9 @@ void basic_gaussian_oracle<I, S>::fill_vector(
         g.add(mean - delta);
       }
     }
-    else  // no valid outputs: maximally uninformative distribution
-    {
-      for (std::size_t i(0); i < std::max(1u, k); ++i)
-      {
-        g.add(+cut);
-        g.add(-cut);
-      }
-    }
 
-    Ensures(g.size() > 0);
-    Ensures(std::isfinite(g.mean()));
-    Ensures(g.variance() >= 0.0);
-    Ensures(std::isfinite(g.variance()));
+    Ensures(g.empty() || std::isfinite(g.mean()));
+    Ensures(g.empty() || (g.variance() >= 0.0 && std::isfinite(g.variance())));
   }
 
   missing_fallback_ = calculate_missing_fallback();
@@ -484,8 +470,25 @@ template<Individual I, bool S>
 classification_result basic_gaussian_oracle<I, S>::tag(
   const std::vector<value_t> &ex) const
 {
-  const auto res(oracle_(ex));
-  return has_value(res) ? predict(std::get<D_DOUBLE>(res)) : missing_fallback_;
+  return predict(normalise_output(oracle_(ex)));
+}
+
+///
+/// Bounds finite outputs and treats non-finite outputs as missing.
+///
+template<Individual I, bool S>
+std::optional<double> basic_gaussian_oracle<I, S>::normalise_output(
+  const value_t &res)
+{
+  if (!has_value(res))
+    return std::nullopt;
+
+  const double out(std::get<D_DOUBLE>(res));
+  if (!std::isfinite(out))
+    return std::nullopt;
+
+  constexpr double cut(100000000.0);
+  return std::clamp(out, -cut, cut);
 }
 
 ///
@@ -539,25 +542,29 @@ classification_result basic_gaussian_oracle<I, S>::predict(double x) const
   src::class_t probable_class(0);
 
   for (std::size_t i(0); i < classes; ++i)
-  {
-    const auto mean(gauss_dist_[i].mean());
-    const auto variance(gauss_dist_[i].variance());
-    const auto distance(x - mean);
-
-    double p(0.0);
-    if (issmall(variance))                // degenerate or nearly-degenerate
-      p = issmall(distance) ? 1.0 : 0.0;  // treat as a point mass at the mean
-    else
-      p = std::exp(-distance * distance / variance);
-
-    if (p > best_p)
+    if (!gauss_dist_[i].empty())  // unobserved classes receive p = 0.0
     {
-      best_p = p;
-      probable_class = i;
+      const auto mean(gauss_dist_[i].mean());
+      const auto variance(gauss_dist_[i].variance());
+      const auto distance(x - mean);
+
+      double p(0.0);
+      if (issmall(variance))                // degenerate or nearly-degenerate
+        p = issmall(distance) ? 1.0 : 0.0;  // treat as a point mass at the mean
+      else
+        p = std::exp(-distance * distance / variance);
+
+      if (p > best_p)
+      {
+        best_p = p;
+        probable_class = i;
+      }
+
+      sum_p += p;
     }
 
-    sum_p += p;
-  }
+  if (sum_p <= 0.0)
+    return {missing_fallback_.label, 0.0};
 
   // Normalized confidence value.
   // Do not change `sum_p > 0.0` with

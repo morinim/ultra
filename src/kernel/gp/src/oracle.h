@@ -261,6 +261,7 @@ private:
                         std::vector<std::string>);
 
   // ---- Private support methods ----
+  [[nodiscard]] static std::optional<double> normalise_output(const value_t &);
   [[nodiscard]] classification_result calculate_missing_fallback() const;
   [[nodiscard]] classification_result predict(double) const;
   [[nodiscard]] classification_result predict(std::optional<double> out) const
