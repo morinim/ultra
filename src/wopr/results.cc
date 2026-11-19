@@ -439,6 +439,18 @@ ultra::search_log make_search_log(const fs::path &dataset,
   return sl;
 }
 
+void dataset_activity::set(task_state state, std::string error)
+{
+  std::lock_guard guard(mutex_);
+  status_ = {state, std::move(error)};
+}
+
+task_status dataset_activity::status() const
+{
+  std::lock_guard guard(mutex_);
+  return status_;
+}
+
 }  // namespace rs
 
 #if defined(ULTRA_WOPR_GUI)
@@ -1115,7 +1127,32 @@ void render_accuracy_labels(const elite_data::run &series, double shift = 0.0)
     }
 }
 
-void render_elite(const results_snapshot &snapshot)
+struct task_indicator
+{
+  const char *label;
+  ImVec4 colour;
+};
+
+task_indicator activity_indicator(rs::task_state state)
+{
+  switch (state)
+  {
+  case rs::task_state::queued:
+    return {"Queued", {0.7f, 0.7f, 0.7f, 1.0f}};
+  case rs::task_state::running:
+    return {"Running", {0.3f, 0.8f, 1.0f, 1.0f}};
+  case rs::task_state::finished:
+    return {"Finished", {0.4f, 0.9f, 0.4f, 1.0f}};
+  case rs::task_state::failed:
+    return {"Failed", {1.0f, 0.4f, 0.4f, 1.0f}};
+  case rs::task_state::cancelled:
+    return {"Cancelled", {1.0f, 0.8f, 0.3f, 1.0f}};
+  }
+  std::unreachable();
+}
+
+void render_elite(const results_snapshot &snapshot,
+                  const rs::collection_t *collection = nullptr)
 {
   const std::size_t size(snapshot.labels.size());
   if (!size)
@@ -1139,9 +1176,20 @@ void render_elite(const results_snapshot &snapshot)
 
   for (std::size_t i(0); i < size; ++i)
   {
-    const auto flags(plot_flags(0, show_reference_values));
-    if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
+    std::optional<rs::task_status> status;
+    std::string plot_title(labels[i]);
+    if (collection && (*collection)[i].activity)
     {
+      status = (*collection)[i].activity->status();
+      const auto indicator(activity_indicator(status->state));
+      plot_title = std::format("{} [{}]###{}", labels[i], indicator.label,
+                               labels[i]);
+      ImPlot::PushStyleColor(ImPlotCol_TitleText, indicator.colour);
+    }
+    const auto flags(plot_flags(0, show_reference_values));
+    if (ImPlot::BeginPlot(plot_title.c_str(), ImVec2(-1, -1), flags))
+    {
+      const bool hovered(ImGui::IsItemHovered());
       ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
 
       // `ImPlotAxisFlags_Opposite` is the magic flag that moves the axis to
@@ -1200,11 +1248,50 @@ void render_elite(const results_snapshot &snapshot)
         ImGui::PopStyleColor();
       }
 
+      if (status && !status->error.empty() && hovered)
+      {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(status->error.c_str());
+        ImGui::EndTooltip();
+      }
       ImPlot::EndPlot();
     }
+    if (status)
+      ImPlot::PopStyleColor();
   }
 
   ImPlot::EndSubplots();
+}
+
+void render_run_status(const rs::collection_t *collection)
+{
+  const auto digits(random_string());
+  std::string running;
+  if (collection)
+  {
+    const auto count(std::ranges::count_if(*collection, [](const auto &test)
+    {
+      return test.activity
+             && test.activity->status().state == rs::task_state::running;
+    }));
+    running = std::format("{} Running", count);
+  }
+
+  const auto &style(ImGui::GetStyle());
+  const float width(ImGui::CalcTextSize(digits.c_str()).x
+                    + (running.empty() ? 0.0f
+                       : ImGui::CalcTextSize(running.c_str()).x
+                         + style.ItemSpacing.x));
+  const float next_x(ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x
+                     + style.ItemSpacing.x);
+  ImGui::SameLine(std::max(next_x, ImGui::GetWindowWidth()
+                                 - style.WindowPadding.x - width));
+  if (!running.empty())
+  {
+    ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "%s", running.c_str());
+    ImGui::SameLine();
+  }
+  ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f), "%s", digits.c_str());
 }
 
 void render_rs(const imgui_app::program &prg, bool *p_open,
@@ -1234,9 +1321,9 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
                     &show_fitness_across_datasets_check);
     ImGui::SameLine();
     ImGui::Checkbox("elite", &show_elite_check);
-    ImGui::SameLine(ImGui::GetWindowWidth() - 128);
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
-                       "%s", random_string().c_str());
+    const auto *activity(state.mode == rs::exec_mode::run
+                          ? &state.collection : nullptr);
+    render_run_status(activity);
     ImGui::Separator();
 
     std::array panels
@@ -1268,7 +1355,7 @@ void render_rs(const imgui_app::program &prg, bool *p_open,
       dashboard_panel
       {
         "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check,
-        [&snapshot] { render_elite(snapshot); }
+        [&snapshot, activity] { render_elite(snapshot, activity); }
       }
     };
     render_dashboard(panels, maximised);

@@ -12,6 +12,7 @@
 
 // Includes the implementation to exercise its private snapshot and renderer.
 #include "wopr/results.cc"
+#include "wopr/run.cc"
 
 #include "implot/implot_internal.h"
 
@@ -76,6 +77,103 @@ struct plot_context
 
 TEST_SUITE("WOPR RESULTS")
 {
+
+TEST_CASE("Dataset activity is shared without changing earlier snapshots")
+{
+  rs::entry entry{.activity = std::make_shared<rs::dataset_activity>()};
+  const auto copy(entry);
+  const auto queued(entry.activity->status());
+  CHECK(queued.state == rs::task_state::queued);
+
+  std::jthread worker([&copy]
+  {
+    copy.activity->set(rs::task_state::running);
+    copy.activity->set(rs::task_state::failed, "Cannot read dataset");
+  });
+  worker.join();
+
+  const auto failed(entry.activity->status());
+  CHECK(failed.state == rs::task_state::failed);
+  CHECK(failed.error == "Cannot read dataset");
+  CHECK(queued.state == rs::task_state::queued);
+  CHECK(queued.error.empty());
+}
+
+TEST_CASE("Failed dataset searches publish their error")
+{
+  const auto activity(std::make_shared<rs::dataset_activity>());
+  rs::run::options options;
+  options.collection.push_back({.dataset = "missing-wopr-dataset/data.csv",
+                                .activity = activity});
+  CHECK_FALSE(run_impl(std::move(options)));
+  const auto status(activity->status());
+  CHECK(status.state == rs::task_state::failed);
+  CHECK_FALSE(status.error.empty());
+}
+
+TEST_CASE_FIXTURE(plot_context, "Running count and digits share the header row")
+{
+  auto state(make_state(false, rs::exec_mode::run));
+  for (auto &entry : state.collection)
+    entry.activity = std::make_shared<rs::dataset_activity>();
+  state.collection[0].activity->set(rs::task_state::running);
+  state.collection[1].activity->set(rs::task_state::failed, "Dataset unavailable");
+  for (const float width : {900.0f, 300.0f})
+  {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(width, 300));
+    ImGui::Begin("Dataset activity");
+    ImGui::TextUnformatted("elite");
+    const float header_y(ImGui::GetItemRectMin().y);
+    render_run_status(&state.collection);
+    CHECK(ImGui::GetItemRectMin().y == doctest::Approx(header_y));
+    CHECK(ImGui::GetItemRectMax().x
+          <= ImGui::GetWindowPos().x + ImGui::GetWindowWidth());
+    ImGui::End();
+    ImGui::Render();
+    CHECK(ImGui::GetDrawData()->TotalVtxCount > 0);
+  }
+}
+
+TEST_CASE_FIXTURE(plot_context, "Elite titles update activity without recreating plots")
+{
+  auto state(make_state(false, rs::exec_mode::run));
+  for (auto &entry : state.collection)
+    entry.activity = std::make_shared<rs::dataset_activity>();
+  const results_snapshot snapshot(state);
+  ImGuiID plot_id(0);
+  for (const auto status : {rs::task_state::queued, rs::task_state::running,
+                            rs::task_state::finished, rs::task_state::failed,
+                            rs::task_state::cancelled})
+  {
+    state.collection[0].activity->set(status);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(900, 600));
+    ImGui::Begin("Elite activity");
+    render_elite(snapshot, &state.collection);
+
+    auto &plots(ImPlot::GetCurrentContext()->Plots);
+    REQUIRE(plots.GetAliveCount() == 3);
+    bool found(false);
+    for (int i(0); i < plots.GetBufSize(); ++i)
+    {
+      const auto *plot(plots.GetByIndex(i));
+      if (std::string_view(plot->GetTitle()).starts_with("Measured ["))
+      {
+        const auto expected(std::format("Measured [{}]###Measured",
+                                        activity_indicator(status).label));
+        CHECK(std::string(plot->GetTitle()) == expected);
+        if (!plot_id)
+          plot_id = plot->ID;
+        CHECK(plot->ID == plot_id);
+        found = true;
+      }
+    }
+    CHECK(found);
+    ImGui::End();
+    ImGui::Render();
+  }
+}
 
 TEST_CASE("build_path constructs and normalizes paths correctly")
 {

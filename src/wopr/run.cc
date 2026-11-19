@@ -45,23 +45,42 @@ bool run_impl(
     [source, multiple_tests](const auto &test)
     {
       if (source.stop_requested())
+      {
+        test.activity->set(rs::task_state::cancelled);
         return;
+      }
 
-      const auto &dataset(test.dataset);
-      ultra::src::problem prob(
-        ultra::src::dataframe(dataset, test.conf.params),
-        ultra::symbol_init::all);
-      prob.params.evolution.generations = test.conf.generations;
-      prob.params.common_random_numbers = test.conf.common_random_numbers;
+      test.activity->set(rs::task_state::running);
+      try
+      {
+        const auto &dataset(test.dataset);
+        ultra::src::problem prob(
+          ultra::src::dataframe(dataset, test.conf.params),
+          ultra::symbol_init::all);
+        prob.params.evolution.generations = test.conf.generations;
+        prob.params.common_random_numbers = test.conf.common_random_numbers;
 
-      ultra::src::search s(prob);
-      auto sl(rs::make_search_log(dataset, test.xml_summary));
-      s.logger(sl).stop_source(source);
+        ultra::src::search s(prob);
+        auto sl(rs::make_search_log(dataset, test.xml_summary));
+        s.logger(sl).stop_source(source);
 
-      if (multiple_tests)
-        s.tag(dataset.stem().string());
+        if (multiple_tests)
+          s.tag(dataset.stem().string());
 
-      s.run(test.conf.runs, test.conf.threshold);
+        s.run(test.conf.runs, test.conf.threshold);
+        test.activity->set(source.stop_requested() ? rs::task_state::cancelled
+                                                  : rs::task_state::finished);
+      }
+      catch (const std::exception &e)
+      {
+        test.activity->set(rs::task_state::failed, e.what());
+        throw;
+      }
+      catch (...)
+      {
+        test.activity->set(rs::task_state::failed, "Unknown error");
+        throw;
+      }
     });
 
   if (multiple_tests)
@@ -118,6 +137,9 @@ bool run_impl(
 
 bool rs::run::start(options options)
 {
+  for (auto &test : options.collection)
+    test.activity = std::make_shared<dataset_activity>();
+
 #if defined(ULTRA_WOPR_GUI)
   if (!options.nogui)
   {

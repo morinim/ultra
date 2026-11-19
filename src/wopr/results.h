@@ -22,6 +22,8 @@
 #include <expected>
 #include <filesystem>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -65,6 +67,26 @@ namespace rs
 
 enum class exec_mode {run, summary};
 
+enum class task_state {queued, running, finished, failed, cancelled};
+
+struct task_status
+{
+  task_state state {task_state::queued};
+  std::string error {};
+};
+
+/// Shares dataset task status between the search worker and the GUI.
+class dataset_activity
+{
+public:
+  void set(task_state, std::string error = {});
+  [[nodiscard]] task_status status() const;
+
+private:
+  mutable std::mutex mutex_;
+  task_status status_ {};
+};
+
 struct settings
 {
   ultra::src::dataframe::params params {};
@@ -84,6 +106,7 @@ struct entry
   settings conf {};
   summary_data current {};
   summary_data reference {};
+  std::shared_ptr<dataset_activity> activity {};
 };
 
 using collection_t = std::vector<entry>;
