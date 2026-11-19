@@ -15,17 +15,91 @@
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/src/search.h"
 #include "kernel/de/numerical_refiner.h"
+#include "kernel/random.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
 #include <atomic>
+#include <memory>
 #include <sstream>
 #include <utility>
 #include <vector>
 
+namespace
+{
+
+class initialisation_probe : public ultra::validation_strategy
+{
+public:
+  explicit initialisation_probe(std::vector<ultra::random::engine_t> &states)
+    : states_(states)
+  {
+  }
+
+  ultra::evaluation_context training_setup(unsigned) override
+  {
+    states_.push_back(ultra::random::engine());
+    return ultra::evaluation_context::unchanged;
+  }
+
+  ultra::evaluation_context shake(unsigned) noexcept override
+  { return ultra::evaluation_context::unchanged; }
+
+  bool validation_setup(unsigned) noexcept override { return false; }
+
+  std::unique_ptr<ultra::validation_strategy> clone() const override
+  { return std::make_unique<initialisation_probe>(*this); }
+
+private:
+  std::vector<ultra::random::engine_t> &states_;
+};
+
+}  // namespace
+
 TEST_SUITE("src::search")
 {
+
+TEST_CASE("Common random numbers through the search facade")
+{
+  using namespace ultra;
+
+  std::string data("-2.0, -1.0\n0.0, 0.0\n2.0, 1.0\n4.0, 2.0\n");
+  bool classification(false);
+  SUBCASE("Regression") {}
+  SUBCASE("Classification")
+  {
+    data = "A, -1.0\nA, 0.0\nB, 1.0\nB, 2.0\n";
+    classification = true;
+  }
+
+  std::vector<random::engine_t> states;
+  random::engine().seed(73);
+
+  for (unsigned i(0); i < 2; ++i)
+  {
+    random::engine().discard(17);
+
+    std::istringstream training(data);
+    src::problem prob(training);
+    REQUIRE(prob.classification() == classification);
+    prob.insert<real::add>();
+    prob.insert<real::mul>();
+    prob.params.common_random_numbers = true;
+    prob.params.evolution.generations = 1;
+    prob.params.population.individuals = 10;
+    prob.params.population.init_subgroups = 1;
+
+    src::search s(prob);
+    s.validation_strategy<initialisation_probe>(states).messages(false);
+    CHECK(s.run(2).runs() == 2);
+  }
+
+  REQUIRE(states.size() == 4);
+  CHECK(states[0] == states[2]);
+  CHECK(states[1] == states[3]);
+  CHECK(states[0] != states[1]);
+}
 
 TEST_CASE("Symbolic regression - single variable")
 {

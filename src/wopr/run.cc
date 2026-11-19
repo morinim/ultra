@@ -52,6 +52,7 @@ bool run_impl(
         ultra::src::dataframe(dataset, test.conf.params),
         ultra::symbol_init::all);
       prob.params.evolution.generations = test.conf.generations;
+      prob.params.common_random_numbers = test.conf.common_random_numbers;
 
       ultra::src::search s(prob);
       auto sl(rs::make_search_log(dataset, test.xml_summary));

@@ -298,6 +298,8 @@ Please enter your selection:)");
                       "Specify a directory containing reference results");
   run_cmd->add_option("--threshold", run.threshold_str,
                       "Set the success threshold (accuracy ending in '%' or fitness value)");
+  run_cmd->add_flag("--crn", run.defaults.common_random_numbers,
+                    "Match dataset splitting and initial populations");
   run_cmd->add_flag("--nogui", run.nogui,
                     "Disable the graphical user interface (headless mode)");
 

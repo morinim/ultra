@@ -14,6 +14,7 @@
 
 #include "kernel/gp/src/holdout_validation.h"
 #include "kernel/gp/src/problem.h"
+#include "kernel/random.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
@@ -33,6 +34,45 @@ TEST_CASE("Concepts")
   using namespace ultra;
 
   CHECK(ValidationStrategy<src::holdout_validation>);
+}
+
+TEST_CASE("Matched holdout split")
+{
+  using namespace ultra;
+
+  std::istringstream input1(debug::iris_full), input2(debug::iris_full);
+  src::problem p1(input1), p2(input2);
+  p1.params.common_random_numbers = true;
+  p2.params.common_random_numbers = true;
+
+  src::holdout_validation::params params;
+  params.training_perc = 60;
+  params.validation_perc = 20;
+  SUBCASE("Stratified") {}
+  SUBCASE("Unstratified")
+  {
+    params.stratify = false;
+  }
+  SUBCASE("Without shuffle")
+  {
+    params.shuffle = false;
+  }
+
+  random::engine().seed(42);
+  auto expected_engine(random::engine());
+  src::holdout_validation v1(p1, params);
+  CHECK(random::engine()() == expected_engine());
+
+  random::engine().seed(123);
+  src::holdout_validation v2(p2, params);
+
+  for (const auto dataset : {src::dataset_t::training,
+                             src::dataset_t::validation,
+                             src::dataset_t::test})
+  {
+    CHECK_FALSE(p1.data[dataset].empty());
+    CHECK(std::ranges::equal(p1.data[dataset], p2.data[dataset]));
+  }
 }
 
 TEST_CASE("Constructor")

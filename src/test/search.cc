@@ -25,9 +25,80 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <utility>
+#include <vector>
+
+namespace
+{
+
+template<ultra::Evaluator E>
+class initial_population_probe : public ultra::std_es<E>
+{
+public:
+  using ultra::std_es<E>::std_es;
+
+  template<ultra::Population P>
+  void init(P &pop) const
+  {
+    std::vector<ultra::hash_t> signatures;
+    for (const auto &ind : pop)
+      signatures.push_back(ind.signature());
+    populations.push_back(std::move(signatures));
+  }
+
+  inline static std::vector<std::vector<ultra::hash_t>> populations {};
+};
+
+}  // namespace
 
 TEST_SUITE("search")
 {
+
+TEST_CASE_FIXTURE(fixture1, "Matched initial populations")
+{
+  using namespace ultra;
+
+  CHECK_FALSE(prob.params.common_random_numbers);
+  SUBCASE("Enabled")
+  {
+    prob.params.common_random_numbers = true;
+  }
+  SUBCASE("Disabled") {}
+
+  prob.params.population.individuals = 10;
+  prob.params.population.init_subgroups = 1;
+  prob.params.evolution.generations = 1;
+
+  test_evaluator<gp::individual> eva(test_evaluator_type::realistic);
+  using search_t = basic_search<initial_population_probe, decltype(eva)>;
+  using probe_t = initial_population_probe<evaluator_proxy<decltype(eva)>>;
+  auto &populations(probe_t::populations);
+  populations.clear();
+
+  random::engine().seed(71);
+
+  search_t s1(prob, eva);
+  s1.messages(false).run(2);
+
+  random::engine().discard(17);
+
+  search_t s2(prob, eva);
+  s2.messages(false).run(2);
+
+  REQUIRE(populations.size() == 4);
+  CHECK(populations[0].size() == 10);
+  CHECK(populations[0] != populations[1]);
+  if (prob.params.common_random_numbers)
+  {
+    CHECK(populations[0] == populations[2]);
+    CHECK(populations[1] == populations[3]);
+  }
+  else
+  {
+    CHECK(populations[0] != populations[2]);
+    CHECK(populations[1] != populations[3]);
+  }
+}
 
 TEST_CASE_FIXTURE(fixture1, "ALPS search")
 {

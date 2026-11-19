@@ -302,6 +302,14 @@ struct parameters
     std::size_t individuals {3};
   } team;
 
+  /// Matches stochastic initialisation across comparable experiments.
+  ///
+  /// Uses a fixed holdout split and a deterministic initial population seed
+  /// per run. Subsequent evolution is not guaranteed to be reproducible.
+  /// Set before constructing validation strategies. Matching requires the
+  /// same input data order and compatible initialisation parameters.
+  bool common_random_numbers {false};
+
   /// Minimum number of dataset examples per thread during parallel evaluation.
   ///
   /// Evaluators supporting parallel dataset evaluation divide workloads only

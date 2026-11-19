@@ -236,6 +236,9 @@ basic_search<ES, E>::run(unsigned n,
 
   for (unsigned r(0); r < n && !stop_source_.stop_requested(); ++r)
   {
+    if (prob_.params.common_random_numbers)
+      ultra::random::engine().seed(r + 1); // deterministic sequence per run
+
     if (vs_->training_setup(r) == evaluation_context::changed)
       invalidate_cache_if_supported(eva_);
 

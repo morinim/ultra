@@ -232,6 +232,10 @@ settings read_settings(const fs::path &test_fn, const settings &defaults)
   tinyxml2::XMLConstHandle handle(&doc);
   const auto h_ultra(handle.FirstChildElement("ultra"));
 
+  if (const auto *e =
+      h_ultra.FirstChildElement("common_random_numbers").ToElement())
+    ret.common_random_numbers = e->BoolText(ret.common_random_numbers);
+
   const auto h_search(h_ultra.FirstChildElement("search"));
   if (const auto *e = h_search.FirstChildElement("generations").ToElement())
     ret.generations = e->UnsignedText(ret.generations);
@@ -304,6 +308,10 @@ void show_settings(std::string_view name, const settings &ts)
   }
   else
     std::cout << " none";
+
+  if (ts.common_random_numbers)
+    std::cout << "\n  Common random numbers: yes";
+
   std::cout << '\n';
 }
 

@@ -427,7 +427,7 @@ std::unique_ptr<basic_oracle> search<P>::predictor(const P &prg) const
 /// Sets a callback function executed at the end of every generation.
 ///
 /// \param[in] f callback function
-/// \return      a reference to *this* object (method chaining / fluent
+/// \return      a reference to `this` object (method chaining / fluent
 ///              interface)
 ///
 template<Individual P>

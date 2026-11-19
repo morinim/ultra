@@ -64,6 +64,8 @@ public:
     bool stratify {true};
   };
 
+  /// Splits the dataset, using a local fixed seed when
+  /// `problem::params.common_random_numbers` is enabled.
   explicit holdout_validation(src::problem &, params = {});
 
   [[nodiscard]] evaluation_context training_setup(unsigned) noexcept override;

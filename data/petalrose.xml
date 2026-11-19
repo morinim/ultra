@@ -1,0 +1,7 @@
+<ultra>
+  <common_random_numbers>true</common_random_numbers>
+  <search>
+    <generations>120</generations>
+    <runs>50</runs>
+  </search>
+</ultra>

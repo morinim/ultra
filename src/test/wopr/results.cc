@@ -15,6 +15,8 @@
 
 #include "implot/implot_internal.h"
 
+#include <fstream>
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
@@ -626,6 +628,31 @@ TEST_CASE_FIXTURE(plot_context, "Success rate scale stays at zero to 100 percent
         }
     }
   }
+}
+
+TEST_CASE("read_settings with common_random_numbers")
+{
+  const auto temp_dir(fs::temp_directory_path() / "wopr_test_crn");
+  fs::create_directories(temp_dir);
+
+  const auto csv_path(temp_dir / "test.csv");
+  const auto xml_path(temp_dir / "test.xml");
+
+  std::ofstream(csv_path) << "x,y\n1,2\n";
+  std::ofstream(xml_path) << R"(<ultra>
+  <common_random_numbers>true</common_random_numbers>
+  <search>
+    <generations>50</generations>
+    <runs>5</runs>
+  </search>
+</ultra>)";
+
+  const auto conf(rs::read_settings(csv_path));
+  CHECK(conf.generations == 50);
+  CHECK(conf.runs == 5);
+  CHECK(conf.common_random_numbers == true);
+
+  fs::remove_all(temp_dir);
 }
 
 }  // TEST_SUITE("WOPR RESULTS")

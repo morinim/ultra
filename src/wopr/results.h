@@ -72,6 +72,7 @@ struct settings
   unsigned generations {100};
   unsigned runs {1};
   ultra::model_measurements<double> threshold {};
+  bool common_random_numbers {false};
 };
 
 struct entry

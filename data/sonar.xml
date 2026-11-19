@@ -1,0 +1,11 @@
+<ultra>
+  <common_random_numbers>true</common_random_numbers>
+  <search>
+    <generations>200</generations>
+    <runs>200</runs>
+    <threshold>90%</threshold>
+  </search>
+  <dataset>
+    <output_index>last</output_index>
+  </dataset>
+</ultra>

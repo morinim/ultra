@@ -192,7 +192,15 @@ holdout_validation::holdout_validation(src::problem &prob, params par)
   input_set.swap(training_set);
 
   if (par.shuffle)
-    std::ranges::shuffle(input_set, random::engine());
+  {
+    if (prob.params.common_random_numbers)
+    {
+      random::engine_t split_engine(1973);
+      std::ranges::shuffle(input_set, split_engine);
+    }
+    else
+      std::ranges::shuffle(input_set, random::engine());
+  }
 
   const std::vector strata(
     prob.classification() && par.stratify
