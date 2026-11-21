@@ -49,6 +49,16 @@ struct plot_context
 TEST_SUITE("WOPR MONITOR")
 {
 
+TEST_CASE("population bar width follows the smallest positive fitness gap")
+{
+  CHECK(population_bar_width({0.0, 1.0, 49.0}) == doctest::Approx(0.8));
+  CHECK(population_bar_width({-2.0, -1.75, 3.0}) == doctest::Approx(0.2));
+  CHECK(population_bar_width({0.0, 2.0, 4.0}) == doctest::Approx(1.6));
+  CHECK(population_bar_width({0.0, 0.0, 2.0}) == doctest::Approx(1.6));
+  CHECK(population_bar_width({3.0}) == doctest::Approx(0.8));
+  CHECK(population_bar_width({}) == doctest::Approx(0.8));
+}
+
 TEST_CASE_FIXTURE(plot_context, "render_layers_fit handles single layer without asserting")
 {
   SUBCASE("many individuals")

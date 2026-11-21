@@ -74,9 +74,51 @@ void search_log::save_population(unsigned generation,
 
   population_file << generation;
 
-  for (const auto &[fit, freq] : fit_dist.seen())
-    population_file << ' ' << std::fixed << std::scientific << fit << ' '
-                    << freq;
+  const auto min_val(fit_dist.min());
+  const auto max_val(fit_dist.max());
+  const auto range(max_val - min_val);
+
+  // If binning is disabled or the population already has fewer unique values
+  // than the bin budget, write the exact observations.
+  if (const auto &seen(fit_dist.seen());
+      !population_bins || seen.size() <= population_bins || !isfinite(range))
+  {
+    for (const auto &[fit, freq] : fit_dist.seen())
+      population_file << ' ' << std::fixed << std::scientific << fit << ' '
+                      << freq;
+  }
+  else if (range > 0)
+  {
+    const auto step(range / static_cast<double>(population_bins));
+    std::vector<std::uintmax_t> counts(population_bins, 0);
+
+    // Distribute observations into bins.
+    for (const auto &[fit, freq] : seen)
+    {
+      if (fit <= min_val)
+        counts.front() += freq;
+      else if (fit >= max_val)
+        counts.back() += freq;
+      else
+      {
+        const auto bin(static_cast<std::size_t>((fit - min_val) / step));
+        counts[std::min(bin, population_bins - 1)] += freq;
+      }
+    }
+
+    // Output only non-empty bins (using bin midpoint as the representative
+    // fitness).
+    for (std::size_t b(0); b < population_bins; ++b)
+      if (counts[b])
+      {
+        const auto center(min_val + (static_cast<double>(b) + 0.5) * step);
+        population_file << ' ' << std::fixed << std::scientific << center
+                        << ' ' << counts[b];
+      }
+  }
+  else  // all individuals have the exact same fitness
+    population_file << ' ' << std::fixed << std::scientific << min_val
+                    << ' ' << fit_dist.size();
 
   population_file << '\n' << std::flush;
 }

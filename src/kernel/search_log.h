@@ -69,6 +69,12 @@ public:
   /// If this is an empty string, logging of summary information is disabled.
   std::filesystem::path summary_file_path {default_summary_file};
 
+  /// Maximum number of fitness histogram bins saved in the population log.
+  /// When non-zero, populations with more unique fitness values than this limit
+  /// are quantized into uniform bins before logging.
+  /// Set to `0` to disable binning and keep exact unbinned fitness values.
+  std::size_t population_bins {50};
+
 private:
   [[nodiscard]] std::filesystem::path build_path(
     const std::filesystem::path &) const;

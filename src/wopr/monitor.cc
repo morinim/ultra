@@ -209,6 +209,17 @@ void render_dynamic(const std::vector<dynamic_sequence> &dynamic_runs,
   }
 }
 
+double population_bar_width(const std::vector<double> &fitness)
+{
+  double min_gap(std::numeric_limits<double>::infinity());
+  for (std::size_t i(1); i < fitness.size(); ++i)
+    if (const double gap(fitness[i] - fitness[i - 1]); gap > 0)
+      min_gap = std::min(min_gap, gap);
+
+  return min_gap < std::numeric_limits<double>::infinity()
+         ? 0.8 * min_gap : 0.8;
+}
+
 void render_population(
   const std::vector<population_sequence> &population_runs)
 {
@@ -239,8 +250,11 @@ void render_population(
         {
           ImPlot::SetupAxes("Fitness", "Individuals",
                             ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+          const double bar_width(population_bar_width(pr.fit));
           ImPlot::PlotBars("##PopulationFitnessHistogram",
-                           pr.fit.data(), pr.obs.data(), pr.fit.size(), 0.8);
+                           pr.fit.data(), pr.obs.data(), pr.fit.size(),
+                           bar_width);
           ImPlot::EndPlot();
         }
 
