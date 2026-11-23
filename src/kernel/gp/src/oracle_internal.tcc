@@ -20,6 +20,22 @@
 namespace internal
 {
 
+/// Internal cache wrapper that resets on copy and move operations.
+template<class T>
+struct lazy_cache
+{
+  std::optional<T> value {};
+
+  lazy_cache() = default;
+  lazy_cache(const lazy_cache &) noexcept {}
+
+  lazy_cache &operator=(const lazy_cache &) noexcept
+  {
+    value.reset();
+    return *this;
+  }
+};
+
 // ***********************************************************************
 // *  reg_oracle_storage                                                 *
 // ***********************************************************************
@@ -32,13 +48,11 @@ template<class P, bool S> class reg_oracle_storage;
 /// Specialised oracle storage for GP individuals with lazy interpretation.
 ///
 /// This specialisation stores a `gp::individual` and provides execution
-/// support via a lazily constructed interpreter. The interpreter is treated as
-/// an internal cache and is not part of the observable state of the object.
+/// support via a lazily constructed interpreter.
 ///
-/// The interpreter is created on first use and rebound to the stored
-/// individual on every invocation of `run()`. This guarantees correctness even
-/// after copy or move operations, without requiring special handling in
-/// constructors or assignment operators.
+/// The interpreter is treated as an internal cache and is not part of the
+/// observable state of the object. It is created on first use and automatically
+/// discarded on copy and move operations via `lazy_cache`.
 ///
 /// \note
 /// The interpreter is only ever accessed inside `run()`. All other member
@@ -73,7 +87,7 @@ public:
     if (!ind_.load(in, ss))
       throw exception::data_format("Cannot load individual");
 
-    int_.reset();
+    int_.value.reset();
 
     Ensures(is_valid());
   }
@@ -85,25 +99,16 @@ public:
   /// \param[in] args arguments passed to the interpreter
   /// \return         the computed value
   ///
-  /// The interpreter is lazily constructed on first use. On every invocation,
-  /// the interpreter is rebound to the stored individual to restore the
-  /// required execution invariant.
-  ///
-  /// This design ensures that the class remains safely copyable and movable,
-  /// while keeping interpreter management strictly local to this method.
-  ///
   /// /warning
   /// Concurrent calls to run() are not thread-safe. This is usually acceptable:
   /// individuals are evaluated in parallel by giving each worker its own oracle or
   /// by partitioning the population.
   template<class ...Args> [[nodiscard]] value_t run(Args && ...args) const
   {
-    if (int_) [[likely]]
-      int_->rebind(ind_);
-    else
-      int_.emplace(ind_);
+    if (!int_.value) [[unlikely]]
+      int_.value.emplace(ind_);
 
-    return int_->run(std::forward<Args>(args)...);
+    return int_.value->run(std::forward<Args>(args)...);
   }
 
   /// Checks whether the stored individual is valid.
@@ -127,12 +132,11 @@ private:
 
   // Lazily initialised interpreter cache.
   //
-  // This member is mutable to allow lazy construction and rebinding in
-  // `run()`, even though execution does not conceptually modify the logical
-  // state of the object.
+  // This member is mutable to allow lazy construction in `run()`, even though
+  // execution does not conceptually modify the logical state of the object.
   //
   // The interpreter is never accessed outside `run()`.
-  mutable std::optional<src::interpreter> int_ {};
+  mutable lazy_cache<src::interpreter> int_ {};
 };
 
 // ********* Second specialization (individual not stored) *********

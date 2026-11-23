@@ -13,6 +13,7 @@
 #include "kernel/random.h"
 #include "kernel/gp/src/dataframe.h"
 #include "kernel/gp/src/evaluator.h"
+#include "kernel/gp/src/oracle.h"
 #include "kernel/gp/src/problem.h"
 
 #include "utility/timer.h"
@@ -86,7 +87,7 @@ int main()
   prob.insert<ultra::real::mul>();
 
   std::cout << std::string(14, ' ')
-            << "Embedded     On the fly       Rebind      Rebind optional\n";
+            << "Embedded     On the fly       Lazy cache     reg_oracle\n";
 
   for (const auto &e : env)
   {
@@ -123,45 +124,46 @@ int main()
           out1 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
       }
 
-    std::cout << std::setw(7) << t.elapsed().count() << "ms      "
+    std::cout << std::setw(7) << t.elapsed().count() << "ms        "
               << std::flush;
 
     // -----------------------------------------------------------------------
 
-    t.restart();
-
-    for (const auto &example : d)
-      for (std::size_t i(0); auto &intr : interpreters)
-      {
-        intr.rebind(pop[i++]);
-        if (const auto v(intr.run(example.input)); has_value(v))
-          out2 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
-      }
-
-    std::cout << std::setw(5) << t.elapsed().count() << "ms      "
-              << std::flush;
-
-    // -----------------------------------------------------------------------
-
-    std::vector<std::optional<src::interpreter>> ointerpreters(pop.size());
+    std::vector<src::internal::lazy_cache<src::interpreter>> linterpreters(
+      pop.size());
 
     t.restart();
 
     for (const auto &example : d)
-      for (std::size_t i(0); auto &ointr : ointerpreters)
+      for (std::size_t i(0); auto &lintr : linterpreters)
       {
-        if (ointr) [[likely]]
-          ointr->rebind(pop[i]);
-        else
-          ointr.emplace(pop[i]);
+        if (!lintr.value) [[unlikely]]
+          lintr.value.emplace(pop[i]);
 
         ++i;
 
-        if (const auto v(ointr->run(example.input)); has_value(v))
-          out3 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
+        if (const auto v(lintr.value->run(example.input)); has_value(v))
+          out2 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
       }
 
-    std::cout << std::setw(13) << t.elapsed().count() << "ms\n";
+    std::cout << std::setw(8) << t.elapsed().count() << "ms     "
+              << std::flush;
+
+    // -----------------------------------------------------------------------
+
+    std::vector<src::reg_oracle<gp::individual>> oracles;
+    oracles.reserve(pop.size());
+    for (const auto &ind : pop)
+      oracles.emplace_back(ind);
+
+    t.restart();
+
+    for (const auto &example : d)
+      for (const auto &ora : oracles)
+        if (const auto v(ora(example.input)); has_value(v))
+          out3 += std::clamp(std::get<D_DOUBLE>(v), -10.0, 10.0);
+
+    std::cout << std::setw(10) << t.elapsed().count() << "ms\n";
   }
 
   std::cout << out << "    " << out1 << "    " << out2 << "    " << out3

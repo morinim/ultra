@@ -68,8 +68,6 @@ public:
   [[nodiscard]] value_t fetch_arg(std::size_t) const final;
   [[nodiscard]] value_t fetch_opaque_arg(std::size_t) const final;
 
-  void rebind(const gp::individual &) noexcept;
-
   [[nodiscard]] bool is_valid() const;
 
   [[nodiscard]] const gp::individual &program() const noexcept;

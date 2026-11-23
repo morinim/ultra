@@ -197,29 +197,4 @@ TEST_CASE_FIXTURE(fixture1, "Interpreter cache")
   }
 }
 
-TEST_CASE_FIXTURE(fixture1, "Rebind compatible individual")
-{
-  using namespace ultra;
-
-  const gp::individual i1(
-  {
-    {f_add, {1.0, 2.0}},
-    {f_add, {0_addr, 0_addr}}
-  });
-
-  const gp::individual i2(
-  {
-    {f_mul, {3.0, 4.0}},
-    {f_add, {0_addr, 0_addr}}
-  });
-
-  interpreter intr(i1);
-
-  CHECK(real::base(intr.run()) == doctest::Approx(6.0));
-
-  intr.rebind(i2);
-
-  CHECK(real::base(intr.run()) == doctest::Approx(24.0));
-}
-
 }  // TEST_SUITE

@@ -98,7 +98,7 @@ namespace ultra::src::serialize
 ///
 bool save(std::ostream &out, const basic_oracle &ora)
 {
-  out << ora.serialize_id() << '\n';;
+  out << ora.serialize_id() << '\n';
   return ora.save(out);
 }
 
