@@ -187,6 +187,27 @@ public:
     Ensures(is_valid());
   }
 
+  [[nodiscard]] value_t run(const std::vector<value_t> &e) const
+  {
+    D_DOUBLE sum(0);
+    unsigned count(0);
+
+    for (const auto &ind : team_)
+    {
+      const auto res(ind.run(e));
+      if (has_value(res))
+      {
+        sum += std::get<D_DOUBLE>(res);
+        ++count;
+      }
+    }
+
+    if (!count)
+      return {};
+
+    return sum / count;
+  }
+
   [[nodiscard]] bool is_valid() const
   {
     return true;
@@ -201,7 +222,7 @@ public:
                 [&o](const auto &ind) { return ind.save(o); });
   }
 
-public:
+private:
   std::vector<reg_oracle_storage<typename T::value_type, S>> team_ {};
 };
 

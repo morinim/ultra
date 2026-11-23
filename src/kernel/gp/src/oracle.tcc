@@ -58,28 +58,7 @@ basic_reg_oracle<P, S>::basic_reg_oracle(std::istream &in,
 template<Individual P, bool S>
 value_t basic_reg_oracle<P, S>::operator()(const std::vector<value_t> &e) const
 {
-  if constexpr (!gp::Team<P>)
-    return this->run(e);
-  else
-  {
-    D_DOUBLE sum(0), count(0);
-
-    for (const auto &core : this->team_)
-    {
-      const auto res(core.run(e));
-
-      if (has_value(res))
-      {
-        sum += std::get<D_DOUBLE>(res);
-        ++count;
-      }
-    }
-
-    if (count > 0.0)
-      return sum / count;
-
-    return {};
-  }
+  return this->run(e);
 }
 
 ///
