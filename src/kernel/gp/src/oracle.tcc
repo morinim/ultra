@@ -21,10 +21,6 @@
 // *  basic_reg_oracle                                                   *
 // ***********************************************************************
 
-template<Individual P, bool S>
-const std::string basic_reg_oracle<P, S>::SERIALIZE_ID(
-  gp::Team<P> ? "TEAM_REG_ORACLE" : "REG_ORACLE");
-
 ///
 /// \param[in] prg the program (individual/team) to be lambdified
 ///
@@ -183,9 +179,6 @@ bool reg_oracle_adaptor<O>::save(std::ostream &) const
 // ***********************************************************************
 // *  basic_gaussian_oracle                                              *
 // ***********************************************************************
-
-template<Individual I, bool S>
-const std::string basic_gaussian_oracle<I, S>::SERIALIZE_ID("GAUSSIAN_ORACLE");
 
 ///
 /// \param[in] ind   program "to be transformed" into an oracle
@@ -353,7 +346,7 @@ void basic_gaussian_oracle<I, S>::fill_vector(
     auto &g(gauss_dist_[cl]);
 
     if (const unsigned k(unknown_in_class[cl] / missing_per_inflation);
-        g.size() > 0)
+        k && g.size() > 0)
     {
       const double mean(g.mean());
       const double var(std::max(g.variance(), min_variance));
@@ -589,9 +582,6 @@ bool basic_gaussian_oracle<I, S>::is_valid() const
 // *  basic_binary_oracle                                                *
 // ***********************************************************************
 
-template<Individual I, bool S>
-const std::string basic_binary_oracle<I, S>::SERIALIZE_ID("BINARY_ORACLE");
-
 ///
 /// \param[in] ind   individual "to be transformed" into an oracle
 /// \param[in] d     the training set
@@ -728,10 +718,6 @@ bool class_oracle_adaptor<O>::save(std::ostream &) const
 // ***********************************************************************
 // *  team_class_oracle                                                  *
 // ***********************************************************************
-
-template<ClassificationPredictor O, team_composition C>
-const std::string team_class_oracle<O, C>::SERIALIZE_ID(
-  "TEAM_" + O::SERIALIZE_ID);
 
 ///
 /// \param[in] t     team "to be transformed" into an oracle
@@ -972,11 +958,9 @@ bool insert(const std::string &id)
 template<Individual T>
 std::unique_ptr<basic_oracle> load(std::istream &in, const symbol_set &ss)
 {
-  if (internal::factory_.find(reg_oracle<T>::SERIALIZE_ID)
-      == internal::factory_.end())
+  if (!internal::factory_.contains(reg_oracle<T>::SERIALIZE_ID))
   {
     insert<reg_oracle<T>>(reg_oracle<T>::SERIALIZE_ID);
-    //insert<dyn_slot_lambda_f<T>>(dyn_slot_lambda_f<T>::SERIALIZE_ID);
     insert<gaussian_oracle<T>>(gaussian_oracle<T>::SERIALIZE_ID);
     insert<binary_oracle<T>>(binary_oracle<T>::SERIALIZE_ID);
   }
@@ -985,8 +969,8 @@ std::unique_ptr<basic_oracle> load(std::istream &in, const symbol_set &ss)
   if (!(in >> id))
     return nullptr;
 
-  const auto iter(internal::factory_.find(id));
-  if (iter != internal::factory_.end())
+  if (const auto iter(internal::factory_.find(id));
+      iter != internal::factory_.end())
     return iter->second(in, ss);
 
   return nullptr;

@@ -124,7 +124,9 @@ public:
   [[nodiscard]] bool is_valid() const final;
 
   // ---- Serialization ----
-  static const std::string SERIALIZE_ID;
+  static inline const std::string SERIALIZE_ID {gp::Team<P> ? "TEAM_REG_ORACLE"
+                                                            : "REG_ORACLE"};
+
   bool save(std::ostream &) const final;
 
 private:
@@ -252,7 +254,8 @@ public:
   [[nodiscard]] bool is_valid() const final;
 
   // ---- Serialization ----
-  static const std::string SERIALIZE_ID;
+  static inline const std::string SERIALIZE_ID {"GAUSSIAN_ORACLE"};
+
   bool save(std::ostream &) const final;
 
 private:
@@ -307,7 +310,7 @@ public:
   [[nodiscard]] bool is_valid() const final;
 
   // ---- Serialization ----
-  static const std::string SERIALIZE_ID;
+  static inline const std::string SERIALIZE_ID {"BINARY_ORACLE"};
   bool save(std::ostream &) const final;
 
 private:
@@ -381,7 +384,7 @@ public:
 
   [[nodiscard]] bool is_valid() const final;
 
-  static const std::string SERIALIZE_ID;
+  static inline const std::string SERIALIZE_ID { "TEAM_" + O::SERIALIZE_ID };
 
 private:
   [[nodiscard]] classification_result majority_vote(
