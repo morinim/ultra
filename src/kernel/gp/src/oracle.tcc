@@ -542,18 +542,15 @@ classification_result basic_gaussian_oracle<I, S>::predict(double x) const
       sum_p += p;
     }
 
+  // Do not change `sum_p <= 0.0` with
+  // - `issmall(sum_p)` => when `sum_p` is small, `best_p` is smaller and the
+  //   division works well.
+  // - `sum_p == 0.0` => it's the same thing but will produce a warning with
+  //   `-Wfloat-equal`
   if (sum_p <= 0.0)
     return {missing_fallback_.label, 0.0};
 
-  // Normalized confidence value.
-  // Do not change `sum_p > 0.0` with
-  // - `issmall(sum_p)` => when `sum_p` is small, `best_p` is smaller and the
-  //   division works well.
-  // - `sum_p` => it's the same thing but will produce a warning with
-  //   `-Wfloat-equal`
-  const double confidence(sum_p > 0.0 ? best_p / sum_p : 0.0);
-
-  return {probable_class, confidence};
+  return {probable_class, best_p / sum_p};
 }
 
 ///
