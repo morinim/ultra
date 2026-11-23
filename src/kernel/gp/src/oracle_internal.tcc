@@ -148,7 +148,10 @@ public:
     return int_.run(std::forward<Args>(args)...);
   }
 
-  [[nodiscard]] bool is_valid() const { return true; }
+  [[nodiscard]] bool is_valid() const
+  {
+    return int_.program().is_valid();
+  }
 
   // Serialization
   bool save(std::ostream &out) const
@@ -210,7 +213,8 @@ public:
 
   [[nodiscard]] bool is_valid() const
   {
-    return true;
+    return std::ranges::all_of(
+      team_, &reg_oracle_storage<typename T::value_type, S>::is_valid);
   }
 
   // Serialization.
