@@ -202,9 +202,9 @@ public:
     for (const auto &ind : team_)
     {
       const auto res(ind.run(e));
-      if (has_value(res))
+      if (const auto *val = std::get_if<D_DOUBLE>(&res))
       {
-        sum += std::get<D_DOUBLE>(res);
+        sum += *val;
         ++count;
       }
     }

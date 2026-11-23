@@ -452,15 +452,16 @@ template<Individual I, bool S>
 std::optional<double> basic_gaussian_oracle<I, S>::normalise_output(
   const value_t &res)
 {
-  if (!has_value(res))
-    return std::nullopt;
+  if (const auto *out = std::get_if<D_DOUBLE>(&res))
+  {
+    if (!std::isfinite(*out))
+      return std::nullopt;
 
-  const double out(std::get<D_DOUBLE>(res));
-  if (!std::isfinite(out))
-    return std::nullopt;
+    constexpr double cut(100000000.0);
+    return std::clamp(*out, -cut, cut);
+  }
 
-  constexpr double cut(100000000.0);
-  return std::clamp(out, -cut, cut);
+  return std::nullopt;
 }
 
 ///
@@ -631,10 +632,12 @@ classification_result basic_binary_oracle<I, S>::tag(
   const std::vector<value_t> &ex) const
 {
   const auto res(oracle_(ex));
-  const double val(has_value(res) ? std::get<D_DOUBLE>(res) : 0.0);
 
-  return {val > 0.0 ? 1u : 0u,
-          std::fabs(2.0 * std::numbers::inv_pi * std::atan(val))};
+  if (const auto *val = std::get_if<D_DOUBLE>(&res))
+    return {*val > 0.0 ? 1u : 0u,
+            std::fabs(2.0 * std::numbers::inv_pi * std::atan(*val))};
+
+  return {0u, 0.0};
 }
 
 ///
