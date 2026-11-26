@@ -323,4 +323,56 @@ TEST_CASE("abalone dataset integration")
   CHECK(rings_range->second <= 20.0);
 }
 
+TEST_CASE("classification dataset")
+{
+  using namespace ultra;
+  using src::categorical_stats;
+  using src::dataframe;
+  using src::dataframe_summary;
+
+  SUBCASE("string class labels")
+  {
+    const auto p(dataframe::params().output(dataframe::params::index::back));
+    const dataframe df(debug::iris_table, p);
+    const dataframe_summary summary(df);
+
+    CHECK(summary.rows() == debug::IRIS_COUNT);
+    CHECK(summary.columns() == 5);
+
+    REQUIRE(std::holds_alternative<categorical_stats>(summary[0].stats));
+    const auto &cls(std::get<categorical_stats>(summary[0].stats));
+
+    CHECK(cls.count == debug::IRIS_COUNT);
+    CHECK(cls.unique == 3);
+    CHECK(cls.mode == "Iris-virginica");
+    CHECK(cls.mode_count == 4);
+
+    CHECK(!summary.range(0).has_value());
+    CHECK(!summary.range("class").has_value());
+    CHECK(summary.range("sepal length").has_value());
+  }
+
+  SUBCASE("integer class labels without class_name mapping")
+  {
+    dataframe df;
+    df.set_schema({{"y", d_string}, {"x", d_double}});
+    df.push_back({.output = 0, .input = {1.0}});
+    df.push_back({.output = 1, .input = {2.0}});
+    df.push_back({.output = 0, .input = {3.0}});
+
+    const dataframe_summary summary(df);
+
+    REQUIRE(std::holds_alternative<categorical_stats>(summary[0].stats));
+    const auto &cls(std::get<categorical_stats>(summary[0].stats));
+
+    CHECK(cls.count == 3);
+    CHECK(cls.unique == 2);
+    CHECK(cls.mode == "0");
+    CHECK(cls.mode_count == 2);
+
+    CHECK(!summary.range(0).has_value());
+    CHECK(summary.range("x").has_value());
+  }
+}
+
 }  // TEST_SUITE("src::dataframe_summary")

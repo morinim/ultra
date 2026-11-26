@@ -39,7 +39,8 @@ dataframe_summary::dataframe_summary(const dataframe &d)
     cols_[i].name = d.columns[i].name();
     cols_[i].domain = d.columns[i].domain();
 
-    if (cols_[i].domain == d_string)
+    if (cols_[i].domain == d_string
+        || (i == 0 && d.task() == task_t::classification))
       cols_[i].stats = categorical_stats();
     else if (cols_[i].domain != d_void)
       cols_[i].stats = numeric_stats();
@@ -72,7 +73,15 @@ dataframe_summary::dataframe_summary(const dataframe &d)
   for (const auto &row : d)
   {
     if (has_output)
-      update_column(row.output, 0);
+    {
+      if (d.task() == task_t::classification)
+      {
+        const auto cname(d.class_name(label(row)));
+        update_column(cname.empty() ? row.output : value_t(cname), 0);
+      }
+      else
+        update_column(row.output, 0);
+    }
 
     for (std::size_t i(0); i < row.input.size(); ++i)
       update_column(row.input[i], i + 1);
