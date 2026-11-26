@@ -201,7 +201,7 @@ const_exon_view individual::cexons() const
 ///
 void individual::pack(const locus &l, hash_sink &sink) const
 {
-  const auto pack_span([&](const std::span<const std::byte> bytes)
+  const auto pack_span([&](const auto bytes)
   {
     sink.write(bytes);
   });

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <compare>
 #include <concepts>
 #include <cstdint>
 #include <cstring>
@@ -32,19 +33,13 @@ namespace ultra
 ///
 struct hash_t
 {
-  explicit hash_t(std::uint64_t a = 0, std::uint64_t b = 0) : data{a, b} {}
+  constexpr explicit hash_t(std::uint64_t a = 0, std::uint64_t b = 0) noexcept
+    : data{a, b} {}
 
   /// Resets the content of the object.
-  void clear() noexcept { data[0] = data[1] = 0; }
+  constexpr void clear() noexcept { data[0] = data[1] = 0; }
 
-  /// Standard equality operator for hash signature.
-  [[nodiscard]] bool operator==(const hash_t &) const noexcept = default;
-
-  [[nodiscard]] bool operator<(const hash_t &rhs) const noexcept
-  {
-    return data[0] < rhs.data[0]
-           || (data[0] == rhs.data[0] && data[1] < rhs.data[1]);
-  }
+  [[nodiscard]] auto operator<=>(const hash_t &) const noexcept = default;
 
   /// Combines another hash into `this` instance.
   ///
@@ -62,7 +57,7 @@ struct hash_t
   /// Combining an empty hash into an empty hash leaves the result empty
   /// (`0 * 37 + 0 = 0`). Consequently, accumulating any number of empty hashes
   /// remains an empty hash.
-  void combine(hash_t h) noexcept
+  constexpr void combine(hash_t h) noexcept
   {
     // This is the simple algorithm used in `Apache.Commons.HashCodeBuilder`.
     // It uses simple prime number multiplication and is a special case of
@@ -82,7 +77,10 @@ struct hash_t
   }
 
   /// We assume that a string of 128 zero bits means empty.
-  [[nodiscard]] bool empty() const noexcept { return !data[0] && !data[1]; }
+  [[nodiscard]] constexpr bool empty() const noexcept
+  {
+    return !data[0] && !data[1];
+  }
 
   // Serialization.
   bool load(std::istream &);
@@ -106,8 +104,8 @@ namespace internal
 // For MurmurHash3 x64 128-bit, the block size is 16 bytes, i.e. 128 bits.
 inline constexpr std::size_t murmurhash3_block_size {16};
 
-static constexpr std::uint64_t c1 {0x87c37b91114253d5};
-static constexpr std::uint64_t c2 {0x4cf5ad432745937f};
+inline constexpr std::uint64_t c1 {0x87c37b91114253d5};
+inline constexpr std::uint64_t c2 {0x4cf5ad432745937f};
 
 inline std::uint64_t fmix(std::uint64_t k) noexcept
 {
@@ -157,19 +155,34 @@ inline void finalize(hash_t &h, std::size_t total_len) noexcept
   h.data[1] += h.data[0];
 }
 
+template<std::unsigned_integral T>
+[[nodiscard]] T load_unaligned(const std::byte *p) noexcept
+{
+  // Loads using the host byte order. This is well-defined, but hash values are
+  // not guaranteed to be identical across endian architectures.
+  //
+  // Use memcpy() to load potentially unaligned bytes without violating
+  // strict-aliasing rules.
+
+  T tmp;
+  std::memcpy(&tmp, p, sizeof(T));
+  return tmp;
+}
+
 ///
 /// Mixes a single 128-bit block into the hash state.
 ///
-/// \param[in,out] h  current hash state
-/// \param[in]     k1 first 64-bit block
-/// \param[in]     k2 second 64-bit block
+/// \param[in,out] h    current hash state
+/// \param[in]     data pointer to a 16-byte block
 ///
-/// This function corresponds to the body mixing step of the MurmurHash3
-/// x64 128-bit algorithm.
+/// This function corresponds to the body mixing step of the MurmurHash3 x64
+/// 128-bit algorithm.
 ///
-inline void process_block(hash_t &h, std::uint64_t k1,
-                          std::uint64_t k2) noexcept
+inline void process_block(hash_t &h, const std::byte *data) noexcept
 {
+  auto k1(load_unaligned<std::uint64_t>(data));
+  auto k2(load_unaligned<std::uint64_t>(data + sizeof(k1)));
+
   k1 *= c1;
   k1  = std::rotl(k1, 31);
   k1 *= c2;
@@ -228,20 +241,6 @@ inline void process_tail(hash_t &h,
   }
 }
 
-template<std::unsigned_integral T>
-[[nodiscard]] T load_unaligned(const std::byte *p) noexcept
-{
-  // Loads using the host byte order. This is well-defined, but hash values are
-  // not guaranteed to be identical across endian architectures.
-  //
-  // Use memcpy() to load potentially unaligned bytes without violating
-  // strict-aliasing rules.
-
-  T tmp;
-  std::memcpy(&tmp, p, sizeof(T));
-  return tmp;
-}
-
 }  // namespace internal
 
 ///
@@ -282,16 +281,8 @@ inline hash_t murmurhash3::hash128(const void *const data, std::size_t len,
 
   hash_t h(seed, seed);
 
-  using internal::load_unaligned;
   for (std::size_t i(0); i < n_blocks; ++i)
-  {
-    const auto offset(i * internal::murmurhash3_block_size);
-
-    const auto k1(load_unaligned<std::uint64_t>(bytes + offset));
-    const auto k2(load_unaligned<std::uint64_t>(bytes + offset + sizeof(k1)));
-
-    internal::process_block(h, k1, k2);
-  }
+    internal::process_block(h, bytes + i * internal::murmurhash3_block_size);
 
   // Tail.
   if (const auto tail_len(len % internal::murmurhash3_block_size); tail_len)
@@ -321,14 +312,22 @@ public:
   explicit murmurhash3_sink(std::uint32_t = 1973) noexcept;
 
   void write(std::span<const std::byte>) noexcept;
+
+  template<std::size_t N>
+  requires (N != std::dynamic_extent)
+  void write(std::span<const std::byte, N>) noexcept;
+
   [[nodiscard]] hash_t final() noexcept;
 
 private:
-  void process_block(const std::byte* data) noexcept;
+  template<std::size_t N>
+  void write_impl(std::span<const std::byte, N>) noexcept;
 
-private:
   hash_t h_;
-  std::array<std::byte, internal::murmurhash3_block_size> tail_ {};
+
+  alignas(std::uint64_t)
+  std::array<std::byte, internal::murmurhash3_block_size> tail_;
+
   std::size_t tail_size_ {0};
   std::size_t total_len_ {0};
 };  // class murmurhash3_sink
@@ -354,47 +353,77 @@ inline murmurhash3_sink::murmurhash3_sink(std::uint32_t seed) noexcept
 ///
 inline void murmurhash3_sink::write(std::span<const std::byte> bytes) noexcept
 {
+  write_impl(bytes);
+}
+
+///
+/// Feeds a fixed-size sequence of bytes into the hash state.
+///
+/// \param[in] bytes fixed-extent byte span to be hashed
+///
+template<std::size_t N>
+requires (N != std::dynamic_extent)
+inline void
+murmurhash3_sink::write(std::span<const std::byte, N> bytes) noexcept
+{
+  write_impl(bytes);
+}
+
+template<std::size_t N>
+inline void murmurhash3_sink::write_impl(
+  std::span<const std::byte, N> bytes) noexcept
+{
+  if (bytes.empty())  [[unlikely]]
+    return;
+
   total_len_ += bytes.size();
 
-  // Fill tail if needed.
+  const auto space(internal::murmurhash3_block_size - tail_size_);
+
+  if (bytes.size() < space)
+  {
+    std::memcpy(tail_.data() + tail_size_, bytes.data(), bytes.size());
+    tail_size_ += bytes.size();
+    return;
+  }
+
+  const auto *ptr(bytes.data());
+  auto len(bytes.size());
+
+  // Complete the partially filled block in `tail_`.
   if (tail_size_)
   {
-    const auto n(std::min<std::size_t>(
-                   internal::murmurhash3_block_size - tail_size_,
-                   bytes.size()));
-
-    std::memcpy(tail_.data() + tail_size_, bytes.data(), n);
-    tail_size_ += n;
-    bytes = bytes.subspan(n);
-
-    if (tail_size_ == internal::murmurhash3_block_size)
-    {
-      process_block(tail_.data());
-      tail_size_ = 0;
-    }
+    std::memcpy(tail_.data() + tail_size_, ptr, space);
+    internal::process_block(h_, tail_.data());
+    tail_size_ = 0;
+    ptr += space;
+    len -= space;
   }
 
   // Process full blocks.
-  while (bytes.size() >= internal::murmurhash3_block_size)
-  {
-    process_block(bytes.data());
-    bytes = bytes.subspan(internal::murmurhash3_block_size);
-  }
+  if constexpr (N == std::dynamic_extent
+                || N >= internal::murmurhash3_block_size)
+    if (len >= internal::murmurhash3_block_size)
+    {
+      // Work on a local copy so `ptr` (`const std::byte *`) cannot alias `h_`,
+      // allowing the compiler to keep the hash state in registers across blocks.
+      auto h(h_);
+      do
+      {
+        internal::process_block(h, ptr);
+        ptr += internal::murmurhash3_block_size;
+        len -= internal::murmurhash3_block_size;
+      }
+      while (len >= internal::murmurhash3_block_size);
+      h_ = h;
+    }
 
   // Store remaining bytes as tail.
-  if (!bytes.empty())
+  if (len)
   {
-    std::memcpy(tail_.data(), bytes.data(), bytes.size());
-    tail_size_ = bytes.size();
+    std::memcpy(tail_.data(), ptr, len);
+    tail_size_ = len;
   }
-}
-
-inline void murmurhash3_sink::process_block(const std::byte *data) noexcept
-{
-  const auto k1(internal::load_unaligned<std::uint64_t>(data));
-  const auto k2(internal::load_unaligned<std::uint64_t>(data + sizeof(k1)));
-
-  internal::process_block(h_, k1, k2);
 }
 
 ///
@@ -408,8 +437,8 @@ inline void murmurhash3_sink::process_block(const std::byte *data) noexcept
 ///
 inline hash_t murmurhash3_sink::final() noexcept
 {
-  internal::process_tail(h_, reinterpret_cast<const std::byte *>(tail_.data()),
-                         tail_size_);
+  if (tail_size_)
+    internal::process_tail(h_, tail_.data(), tail_size_);
   internal::finalize(h_, total_len_);
   return h_;
 }
