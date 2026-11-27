@@ -67,7 +67,7 @@ public:
   [[nodiscard]] const E &core() const noexcept;
 
 private:
-  E eva_;  // wrapped evaluator
+  [[no_unique_address]] E eva_;  // wrapped evaluator
 
   // Cache storing fitness values indexed by individual signatures.
   mutable cache<evaluator_fitness_t<E>> cache_;

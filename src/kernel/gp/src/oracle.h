@@ -173,7 +173,7 @@ private:
   [[nodiscard]] std::string serialize_id() const override;
   bool save(std::ostream &) const override;
 
-  O oracle_;
+  [[no_unique_address]] O oracle_;
 };
 
 // ***********************************************************************
@@ -352,7 +352,7 @@ private:
   [[nodiscard]] std::string serialize_id() const override;
   bool save(std::ostream &) const override;
 
-  O oracle_;
+  [[no_unique_address]] O oracle_;
 };
 
 // ***********************************************************************
