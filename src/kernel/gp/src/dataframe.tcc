@@ -59,20 +59,31 @@ example dataframe::to_example(const R &r) const
 
   for (std::size_t i(0); auto feature : r)
   {
-    if (const auto domain(columns[i].domain()); domain != d_void)
-    {
-      assert(basic_data_type(domain));
-      internal::inplace_trim(feature);
+    const auto domain(columns[i].domain());
 
-      if (i == 0)
+    if (i == 0)
+    {
+      if (domain != d_void)
       {
+        assert(basic_data_type(domain));
+        internal::inplace_trim(feature);
+
         if (task() == task_t::classification)
           ret.output = feature;
         else
           ret.output = internal::lexical_cast(feature, domain);
       }
-      else  // input value
+    }
+    else  // input value
+    {
+      if (domain != d_void)
+      {
+        assert(basic_data_type(domain));
+        internal::inplace_trim(feature);
         ret.input.push_back(internal::lexical_cast(feature, domain));
+      }
+      else
+        ret.input.emplace_back();
     }
 
     ++i;

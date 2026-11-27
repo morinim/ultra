@@ -375,4 +375,41 @@ TEST_CASE("classification dataset")
   }
 }
 
+TEST_CASE("dataset with middle d_void feature column")
+{
+  using namespace ultra;
+  using src::categorical_stats;
+  using src::dataframe;
+  using src::dataframe_summary;
+  using src::numeric_stats;
+  using src::void_stats;
+
+  std::istringstream input("target,empty,x,y\n"
+                           "1.0,,2.5,red\n"
+                           "2.0,,4.5,blue\n"
+                           "3.0,,4.5,red\n");
+  const dataframe df(input, dataframe::params().header());
+  const dataframe_summary summary(df);
+
+  CHECK(summary.rows() == 3);
+  CHECK(summary.columns() == 4);
+
+  CHECK(summary[1].domain == d_void);
+  CHECK(std::holds_alternative<void_stats>(summary[1].stats));
+  CHECK(!summary.range(1).has_value());
+
+  REQUIRE(std::holds_alternative<numeric_stats>(summary[2].stats));
+  const auto &x_stats(std::get<numeric_stats>(summary[2].stats));
+  CHECK(x_stats.dist.size() == 3);
+  CHECK(x_stats.dist.min() == doctest::Approx(2.5));
+  CHECK(x_stats.dist.max() == doctest::Approx(4.5));
+
+  REQUIRE(std::holds_alternative<categorical_stats>(summary[3].stats));
+  const auto &y_stats(std::get<categorical_stats>(summary[3].stats));
+  CHECK(y_stats.count == 3);
+  CHECK(y_stats.unique == 2);
+  CHECK(y_stats.mode == "red");
+  CHECK(y_stats.mode_count == 2);
+}
+
 }  // TEST_SUITE("src::dataframe_summary")

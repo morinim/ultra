@@ -781,4 +781,31 @@ TEST_CASE("clone_schema and set_schema edge cases")
   }
 }
 
+TEST_CASE("middle d_void feature column with string predictor")
+{
+  using namespace ultra;
+  using ultra::src::dataframe;
+
+  std::istringstream input("target,empty,x,y\n"
+                           "1.0,,2.5,red\n"
+                           "2.0,,4.5,blue\n");
+  dataframe d;
+  CHECK(d.read(input, dataframe::params().header()) == 2);
+  CHECK(d.is_valid());
+  CHECK(d.variables() == 3);
+  CHECK(d.front().input.size() == 3);
+  CHECK(!has_value(d.front().input[0]));
+  CHECK(std::get<D_DOUBLE>(d.front().input[1]) == doctest::Approx(2.5));
+  CHECK(std::get<D_STRING>(d.front().input[2]) == "red");
+  CHECK(d.columns[1].domain() == d_void);
+  CHECK(d.columns[3].domain() == d_string);
+  CHECK(d.columns[3].states() == std::set<value_t>{D_STRING("blue"),
+                                                   D_STRING("red")});
+
+  std::ostringstream ss;
+  ss << d;
+  CHECK(ss.str().contains("red"));
+  CHECK(ss.str().contains("blue"));
+}
+
 }  // TEST_SUITE
