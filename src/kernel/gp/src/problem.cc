@@ -60,19 +60,17 @@ bool compatible(const function::param_data_types &instance,
 {
   Expects(instance.size() == pattern.size());
 
-  const auto sup(instance.size());
-  for (std::size_t i(0); i < sup; ++i)
+  for (std::size_t i(0); i < instance.size(); ++i)
   {
     const std::string &p_i(pattern[i]);
     const auto domain(from_weka(p_i));
-    const bool generic(domain != d_void);
 
-    if (generic)  // numeric, string, integer...
+    if (domain != d_void)  // numeric, string, integer...
     {
       if (columns.domain_of_category(instance[i]) != domain)
         return false;
     }
-    else
+    else  // d_void
     {
       if (instance[i] != columns[p_i].category())
         return false;
@@ -285,10 +283,7 @@ void problem::setup_terminals(symbol_init init_flags)
     }
 
     for (const auto &[category, inserted] : variables)
-      if (!inserted.empty())
-      {
-        ultraINFO("Category {} variables:{}", category, inserted);
-      }
+      ultraINFO("Category {} variables:{}", category, inserted);
   }
 
   // ********* Sets up nominal attributes *********
@@ -302,8 +297,8 @@ void problem::setup_terminals(symbol_init init_flags)
           || category == symbol::undefined_category)
         continue;
 
-      for (const auto &s : columns[i].states())
-        if (!attributes[category].contains(s))
+      for (auto &attr(attributes[category]); const auto &s : columns[i].states())
+        if (!attr.contains(s))
         {
           bool ok(false);
 
@@ -324,7 +319,7 @@ void problem::setup_terminals(symbol_init init_flags)
           }
 
           if (ok)
-            attributes[category].insert(s);
+            attr.insert(s);
         }
     }
 
@@ -438,15 +433,14 @@ void problem::setup_symbols(symbol_init init_flags)
         symbols[s->category()] += " `" + s->name() + "`";
     });
 
-    for (const auto used_categories(
-           data[dataset_t::training].columns.used_categories());
-         auto category : used_categories)
+    const auto &columns(data[dataset_t::training].columns);
+
+    for (auto category : columns.used_categories())
     {
       if (category == symbol::undefined_category)
         continue;
 
-      const auto domain(
-        data[dataset_t::training].columns.domain_of_category(category));
+      const auto domain(columns.domain_of_category(category));
 
       switch (domain)
       {
@@ -496,8 +490,7 @@ void problem::setup_symbols(symbol_init init_flags)
     }
 
     for (const auto &[category, names] : symbols)
-      if (!names.empty())
-        ultraINFO("Category {} symbols:{}", category, names);
+      ultraINFO("Category {} symbols:{}", category, names);
 
     ultraINFO("...functions ready");
   }
@@ -562,8 +555,7 @@ bool problem::is_valid() const
   if (!ultra::problem::is_valid())
     return false;
 
-  for (auto i : std::vector{dataset_t::training, dataset_t::validation,
-                            dataset_t::test})
+  for (auto i : {dataset_t::training, dataset_t::validation, dataset_t::test})
     if (!data[i].is_valid())
       return false;
 
