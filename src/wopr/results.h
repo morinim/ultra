@@ -24,6 +24,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -75,7 +76,7 @@ struct task_status
   std::string error {};
 };
 
-/// Shares dataset task status between the search worker and the GUI.
+/// Shares dataset task status between the search worker and live reports.
 class dataset_activity
 {
 public:
@@ -130,8 +131,8 @@ struct options
 {
   collection_t collection {};
   unsigned threads {0};  // 0 = auto (`hardware_threads()`)
-  bool nogui {false};
-  bool imgui_demo {false};
+  std::filesystem::path html_output {};
+  unsigned interval {10};
 };
 
 [[nodiscard]] bool start(options);
@@ -144,17 +145,64 @@ namespace summary
 struct options
 {
   collection_t collection {};
-  bool imgui_demo {false};
-  exec_mode mode {exec_mode::summary};
+  std::filesystem::path html_output {"summary.html"};
 };
 
-#if defined(ULTRA_WOPR_GUI)
-void start(options);
-#endif
+[[nodiscard]] bool start(options);
 
 }  // namespace summary
 
 }  // namespace rs
+
+struct side_snapshot
+{
+  struct elite_entry
+  {
+    unsigned id {0};
+    double fit {std::numeric_limits<double>::quiet_NaN()};
+    double acc {std::numeric_limits<double>::quiet_NaN()};
+  };
+
+  unsigned runs {0};
+  double success_rate {std::numeric_limits<double>::quiet_NaN()};
+  double time_per_run {std::numeric_limits<double>::quiet_NaN()};
+
+  double fit_best {std::numeric_limits<double>::quiet_NaN()};
+  double fit_mean {std::numeric_limits<double>::quiet_NaN()};
+  double fit_std_dev {std::numeric_limits<double>::quiet_NaN()};
+
+  std::vector<elite_entry> elite {};
+  std::string best_prg {};
+};
+
+struct dataset_snapshot
+{
+  std::string name {};
+  unsigned capacity_runs {0};
+  bool has_threshold {false};
+  std::string remaining_label {};
+  std::optional<rs::task_status> status {};
+
+  side_snapshot current {};
+  side_snapshot reference {};
+};
+
+struct results_snapshot
+{
+  explicit results_snapshot(const rs::collection_t &,
+                            rs::exec_mode = rs::exec_mode::summary);
+
+  bool references_available {false};
+  bool show_success_rate {false};
+  std::vector<dataset_snapshot> datasets {};
+};
+
+/// Estimates remaining search time in seconds for a dataset snapshot.
+[[nodiscard]] std::optional<double> estimated_time_remaining(
+  const dataset_snapshot &);
+
+/// Formats a human-readable remaining-time label for a dataset snapshot.
+[[nodiscard]] std::string remaining_time_label(const dataset_snapshot &);
 
 }  // namespace ultra::wopr
 

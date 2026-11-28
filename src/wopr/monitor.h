@@ -15,19 +15,20 @@
 
 #include "kernel/search_log.h"
 
+#include <filesystem>
+
 namespace ultra::wopr::monitor
 {
 
 struct options
 {
   ultra::search_log slog {};
-  int window {0};
-  bool imgui_demo {false};
+  unsigned window {0};
+  std::filesystem::path html_output {"monitor.html"};
+  unsigned interval {10};
 };
 
-#if defined(ULTRA_WOPR_GUI)
-void start(options);
-#endif
+[[nodiscard]] bool start(options);
 
 }  // namespace ultra::wopr::monitor
 

@@ -12,12 +12,7 @@
 
 #include "results.h"
 
-#if defined(ULTRA_WOPR_GUI)
-#include "dashboard.h"
-#include "imgui_app.h"
-#include "implot/implot.h"
-#include <SDL3/SDL_video.h>
-#endif
+#include "html_report.h"
 
 #include "kernel/search_log.h"
 #include "utility/misc.h"
@@ -25,22 +20,16 @@
 #include "tinyxml2/tinyxml2.h"
 
 #include <algorithm>
-#include <array>
-#include <atomic>
 #include <cassert>
-#include <cmath>
-#include <condition_variable>
 #include <expected>
 #include <format>
 #include <fstream>
 #include <iostream>
-#include <mutex>
+#include <limits>
 #include <optional>
 #include <ranges>
-#include <shared_mutex>
 #include <sstream>
 #include <string_view>
-#include <thread>
 
 namespace fs = std::filesystem;
 
@@ -139,8 +128,6 @@ summary_data::summary_data(const tinyxml2::XMLDocument &doc)
 
     if (const auto *elite_el = h_elite.ToElement())
     {
-      // unsigned percentile = elite_el->UnsignedAttribute("percentile", 0);
-
       for (const auto *run_el(elite_el->FirstChildElement("run"));
            run_el;
            run_el = run_el->NextSiblingElement("run"))
@@ -453,163 +440,68 @@ task_status dataset_activity::status() const
 
 }  // namespace rs
 
-#if defined(ULTRA_WOPR_GUI)
-const std::string current_str {"Current"};
-const std::string reference_str {"Reference"};
-
-using labels_data = std::vector<const char *>;
-
-struct results_state;
-
-[[nodiscard]] std::vector<double> make_positions(std::size_t);
-[[nodiscard]] std::vector<const char *> to_cstr_vector(
-  const std::vector<std::string> &);
-
-struct fit_data
+namespace
 {
-  explicit fit_data(std::size_t count)
+
+[[nodiscard]] side_snapshot make_side_snapshot(const summary_data &summary)
+{
+  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
+
+  side_snapshot out;
+  out.runs = summary.runs;
+  if (!summary.empty())
   {
-    best.reserve(count);
-    mean.reserve(count);
-    std_dev.reserve(count);
-    runs.reserve(count);
+    out.success_rate = summary.success_rate * 100.0;
+    out.time_per_run =
+      std::chrono::duration<double>(summary.elapsed_time).count()
+      / summary.runs;
   }
 
-  std::vector<double> best;
-  std::vector<double> mean;
-  std::vector<double> std_dev;
-  std::vector<double> runs;
-};
+  out.fit_best = summary.best_fit.size() ? summary.best_fit[0] : qnan;
+  out.fit_mean = summary.fit_mean.size() ? summary.fit_mean[0] : qnan;
+  out.fit_std_dev = summary.fit_std_dev.size() ? summary.fit_std_dev[0] : qnan;
+  out.best_prg = summary.best_prg;
 
-struct elite_data
-{
-  explicit elite_data(std::size_t count) { elite.reserve(count); }
-
-  struct run
-  {
-    std::vector<unsigned> id {};
-    std::vector<double> fit {};
-    std::vector<double> acc {};
-    std::vector<std::string> tick_text {};
-    labels_data tick_labels {};
-    std::vector<double> tick_positions {};
-  };
-
-  std::vector<run> elite;
-};
-
-struct results_snapshot
-{
-  explicit results_snapshot(results_state &);
-
-  std::vector<std::string> labels;
-  labels_data label_data;
-  std::vector<double> positions;
-  bool references_available {false};
-
-  std::vector<unsigned> capacity_runs;
-  std::vector<unsigned> runs;
-  unsigned max_runs {0};
-  unsigned max_runs_with_reference {0};
-  bool show_success_rate {false};
-  std::vector<bool> success_thresholds;
-  std::vector<double> success_rates;
-  std::vector<double> time_per_run;
-  std::vector<std::string> remaining_labels;
-  labels_data remaining_label_data;
-  std::vector<double> rank_positions;
-  std::vector<std::string> rank_text;
-  labels_data rank_labels;
-  fit_data current_fitness;
-  fit_data reference_fitness;
-  elite_data current_elite;
-  elite_data reference_elite;
-};
-
-struct results_state
-{
-  explicit results_state(rs::collection_t c,
-                         rs::exec_mode m = rs::exec_mode::summary)
-    : collection(std::move(c)), mode(m) {}
-
-  rs::collection_t collection;
-  const rs::exec_mode mode;
-  std::shared_mutex current_mutex;
-  std::atomic<uint64_t> version {1};
-
-  const results_snapshot &snapshot();
-
-private:
-  std::optional<results_snapshot> cached_snapshot_ {};
-  uint64_t cached_version_ {0};
-};
-
-void add_fit_data(fit_data &out, const summary_data &summary)
-{
-  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
-
-  out.best.push_back(summary.best_fit.size() ? summary.best_fit[0] : qnan);
-  out.mean.push_back(summary.fit_mean.size() ? summary.fit_mean[0] : qnan);
-  out.std_dev.push_back(summary.fit_std_dev.size()
-                        ? summary.fit_std_dev[0] : qnan);
-  out.runs.push_back(summary.runs);
-}
-
-void add_elite_data(elite_data &out, const summary_data &summary)
-{
-  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
-
-  elite_data::run run;
-  run.id.reserve(summary.elite.size());
-  run.fit.reserve(summary.elite.size());
-  run.acc.reserve(summary.elite.size());
-
+  out.elite.reserve(summary.elite.size());
   for (const auto &[id, measurements] : summary.elite)
   {
-    run.id.push_back(id);
-    run.fit.push_back(measurements.fitness
-                      ? (*measurements.fitness)[0] : qnan);
-    run.acc.push_back(measurements.accuracy ? *measurements.accuracy : qnan);
+    out.elite.push_back({
+      .id = id,
+      .fit = measurements.fitness ? (*measurements.fitness)[0] : qnan,
+      .acc = measurements.accuracy ? *measurements.accuracy : qnan
+    });
   }
 
-  out.elite.push_back(std::move(run));
+  return out;
 }
 
-void add_summary_metrics(results_snapshot &out, const summary_data &summary)
+void load_current_summaries(rs::collection_t &collection)
 {
-  constexpr double qnan(std::numeric_limits<double>::quiet_NaN());
-
-  out.runs.push_back(summary.runs);
-  out.success_rates.push_back(summary.empty() ? qnan
-                                              : summary.success_rate * 100.0);
-  out.time_per_run.push_back(summary.empty()
-                             ? qnan
-                             : std::chrono::duration<double>(
-                                 summary.elapsed_time).count()
-                               / summary.runs);
+  for (auto &test : collection)
+    if (test.current.empty() && !test.xml_summary.empty())
+      if (tinyxml2::XMLDocument summary;
+          summary_data::check(test.xml_summary, summary))
+        test.current = summary_data(summary);
 }
 
-[[nodiscard]] std::optional<double> estimated_time_remaining(
-  const results_snapshot &snapshot, std::size_t i)
-{
-  Expects(i < snapshot.labels.size());
+}  // namespace
 
-  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+std::optional<double> estimated_time_remaining(const dataset_snapshot &ds)
+{
+  if (ds.current.runs >= ds.capacity_runs)
     return 0.0;
-  if (!snapshot.runs[i])
+  if (!ds.current.runs)
     return std::nullopt;
 
-  return snapshot.time_per_run[i]
-         * (snapshot.capacity_runs[i] - snapshot.runs[i]);
+  return ds.current.time_per_run * (ds.capacity_runs - ds.current.runs);
 }
 
-[[nodiscard]] std::string remaining_time_label(
-  const results_snapshot &snapshot, std::size_t i)
+std::string remaining_time_label(const dataset_snapshot &ds)
 {
-  const auto estimate(estimated_time_remaining(snapshot, i));
+  const auto estimate(estimated_time_remaining(ds));
   if (!estimate)
     return "Pending";
-  if (snapshot.runs[i] >= snapshot.capacity_runs[i])
+  if (ds.current.runs >= ds.capacity_runs)
     return "Complete";
 
   using namespace std::chrono;
@@ -624,814 +516,45 @@ void add_summary_metrics(results_snapshot &out, const summary_data &summary)
   return std::format("~{}s", s.count());
 }
 
-results_snapshot::results_snapshot(results_state &state)
-  : current_fitness(state.collection.size()),
-    reference_fitness(state.collection.size()),
-    current_elite(state.collection.size()),
-    reference_elite(state.collection.size())
+results_snapshot::results_snapshot(const rs::collection_t &collection,
+                                   rs::exec_mode mode)
+  : references_available(std::ranges::any_of(
+      collection, [](const auto &entry) { return !entry.reference.empty(); }))
 {
-  std::shared_lock guard(state.current_mutex);
+  datasets.reserve(collection.size());
 
-  const std::size_t size(state.collection.size());
-  labels.reserve(size);
-  capacity_runs.reserve(size);
-  runs.reserve(size * 2);
-  success_rates.reserve(size * 2);
-  success_thresholds.reserve(size);
-  time_per_run.reserve(size * 2);
-
-  references_available = std::ranges::any_of(
-    state.collection,
-    [](const auto &entry) { return !entry.reference.empty(); });
-
-  for (const auto &test : state.collection)
+  for (const auto &test : collection)
   {
-    labels.push_back(test.name);
-    capacity_runs.push_back(test.conf.runs);
-    const bool has_threshold(state.mode == rs::exec_mode::summary
+    const bool has_threshold(mode == rs::exec_mode::summary
                              || !test.conf.threshold.empty());
-    success_thresholds.push_back(has_threshold);
     show_success_rate |= has_threshold;
-    add_summary_metrics(*this, test.current);
-    max_runs = std::max({max_runs, test.conf.runs, test.current.runs});
-    add_fit_data(current_fitness, test.current);
-    add_fit_data(reference_fitness, test.reference);
-    add_elite_data(current_elite, test.current);
-    add_elite_data(reference_elite, test.reference);
-  }
 
-  max_runs_with_reference = max_runs;
-  for (const auto &test : state.collection)
-  {
-    add_summary_metrics(*this, test.reference);
-    max_runs_with_reference = std::max(max_runs_with_reference,
-                                       test.reference.runs);
-  }
-
-  label_data = to_cstr_vector(labels);
-  if (size)
-    positions = make_positions(size);
-
-  remaining_labels.reserve(size);
-  for (std::size_t i(0); i < size; ++i)
-    remaining_labels.push_back(remaining_time_label(*this, i));
-  remaining_label_data = to_cstr_vector(remaining_labels);
-
-  std::size_t max_rank(0);
-  for (std::size_t i(0); i < size; ++i)
-    max_rank = std::max({max_rank, current_elite.elite[i].id.size(),
-                         reference_elite.elite[i].id.size()});
-
-  if (max_rank)
-  {
-    rank_positions = make_positions(max_rank);
-    rank_text.reserve(max_rank);
-    for (std::size_t rank(1); rank <= max_rank; ++rank)
-      rank_text.push_back(std::to_string(rank));
-    rank_labels = to_cstr_vector(rank_text);
-  }
-
-  for (auto &run : current_elite.elite)
-  {
-    run.tick_text.reserve(run.id.size());
-    std::ranges::transform(run.id, std::back_inserter(run.tick_text),
-                           [](unsigned id) { return std::to_string(id); });
-    run.tick_labels = to_cstr_vector(run.tick_text);
-    if (!run.id.empty())
-      run.tick_positions = make_positions(run.id.size());
-  }
-}
-
-const results_snapshot &results_state::snapshot()
-{
-  const auto current_ver(version.load(std::memory_order_relaxed));
-  if (!cached_snapshot_ || cached_version_ != current_ver)
-  {
-    cached_snapshot_.emplace(*this);
-    cached_version_ = current_ver;
-  }
-  return *cached_snapshot_;
-}
-
-namespace
-{
-
-bool reference_checkbox(const char *label_id, bool available, bool &enabled)
-{
-  if (available)
-    ImGui::Checkbox(label_id, &enabled);
-  return available && enabled;
-}
-
-[[nodiscard]] int plot_flags(int base_flags, bool show_legend)
-{
-  return show_legend ? base_flags : (base_flags | ImPlotFlags_NoLegend);
-}
-
-void setup_plot_legend(bool show_legend)
-{
-  if (show_legend)
-    ImPlot::SetupLegend(ImPlotLocation_East, ImPlotLegendFlags_Outside);
-}
-
-void setup_dataset_axis(ImAxis axis, const results_snapshot &snapshot,
-                        ImGuiCond cond = ImGuiCond_Once)
-{
-  constexpr auto padding(0.75);
-  const auto size(snapshot.labels.size());
-
-  ImPlot::SetupAxisLimits(axis, -padding, (size - 1) + padding, cond);
-  ImPlot::SetupAxisTicks(axis, snapshot.positions.data(), size,
-                         snapshot.label_data.data());
-}
-
-template <typename TooltipFn>
-void render_bar_hover_tooltip(double coord, std::size_t size,
-                              TooltipFn &&tooltip_fn)
-{
-  if (ImPlot::IsPlotHovered() && coord >= -0.5 && coord < size - 0.5)
-  {
-    const auto i(static_cast<std::size_t>(std::floor(coord + 0.5)));
-    ImGui::BeginTooltip();
-    const auto text(tooltip_fn(i));
-    ImGui::TextUnformatted(text.c_str());
-    ImGui::EndTooltip();
-  }
-}
-
-}  // namespace
-
-void render_number_of_runs(const results_snapshot &snapshot)
-{
-  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
-
-  constexpr double bar_width(0.5), half_width(bar_width / 2.0);
-
-  const std::size_t size(snapshot.labels.size());
-  if (!size)
-    return;
-
-  static bool compare_reference {true};
-  const bool show_reference_values(reference_checkbox(
-    "Reference values##Run##Runs", snapshot.references_available,
-    compare_reference));
-
-  const std::size_t group_count(1 + show_reference_values);
-
-  const unsigned max_runs(show_reference_values
-                          ? snapshot.max_runs_with_reference
-                          : snapshot.max_runs);
-
-  const auto flags(plot_flags(ImPlotFlags_NoTitle, show_reference_values));
-  if (!ImPlot::BeginPlot("##Runs##Run", ImVec2(-1, -1), flags))
-    return;
-
-  setup_plot_legend(show_reference_values);
-
-  ImPlot::SetupAxes("Dataset", "Runs");
-  setup_dataset_axis(ImAxis_X1, snapshot);
-  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, max_runs + 1.0);
-
-  // Bars.
-  ImPlot::PlotBarGroups(ilabels.data(), snapshot.runs.data(), group_count, size,
-                        bar_width);
-
-  // Capacity lines.
-  for (std::size_t i(0); i < size; ++i)
-    if (snapshot.capacity_runs[i] > 1)
-    {
-      const auto di(static_cast<double>(i));
-      const auto dcp(static_cast<double>(snapshot.capacity_runs[i]));
-
-      const double xs[] =
-      {
-        di - half_width, show_reference_values ? di : di + half_width
-      };
-
-      const double ys[] = { dcp, dcp };
-
-      ImPlot::PlotLine("##TotalRuns", xs, ys, 2,
-                       {ImPlotProp_LineColor, ImVec4(1, 1, 0, 1),
-                        ImPlotProp_LineWeight, 2.5f});
-    }
-
-  ImPlot::EndPlot();
-}
-
-[[nodiscard]] std::string success_rate_tooltip(
-  const results_snapshot &snapshot, std::size_t i, bool show_reference_values)
-{
-  Expects(i < snapshot.labels.size());
-
-  std::string text(snapshot.labels[i]);
-  if (!snapshot.success_thresholds[i])
-    return text + "\nNo success threshold defined";
-
-  if (snapshot.runs[i])
-    text += std::format("\nCurrent: {:.1f}% ({} completed runs)",
-                        snapshot.success_rates[i], snapshot.runs[i]);
-  else
-    text += "\nCurrent: awaiting results";
-
-  if (show_reference_values)
-  {
-    const auto reference(snapshot.labels.size() + i);
-    if (snapshot.runs[reference])
-      text += std::format("\nReference: {:.1f}% ({} completed runs)",
-                          snapshot.success_rates[reference],
-                          snapshot.runs[reference]);
-    else
-      text += "\nReference: no reference";
-
-    if (snapshot.runs[i] && snapshot.runs[reference])
-      text += std::format("\nDifference: {:+.1f} percentage points",
-                          snapshot.success_rates[i]
-                          - snapshot.success_rates[reference]);
-  }
-
-  return text;
-}
-
-void render_success_rate(const results_snapshot &snapshot)
-{
-  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
-
-  const std::size_t size(snapshot.labels.size());
-  if (!size)
-    return;
-
-  static bool compare_reference {true};
-  const bool show_reference_values(reference_checkbox(
-    "Reference values##Run##Success rate", snapshot.references_available,
-    compare_reference));
-  const std::size_t group_count(1 + show_reference_values);
-
-  const auto flags(plot_flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText,
-                              show_reference_values));
-  if (!ImPlot::BeginPlot("##Success rate##Run", ImVec2(-1, -1), flags))
-    return;
-
-  setup_plot_legend(show_reference_values);
-
-  ImPlot::SetupAxes("Dataset", "Success rate", 0, ImPlotAxisFlags_Lock);
-  setup_dataset_axis(ImAxis_X1, snapshot);
-
-  ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImGuiCond_Always);
-  ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f%%");
-
-  const double bar_width(0.5 / group_count);
-  for (std::size_t series(0); series < group_count; ++series)
-  {
-    std::vector<double> xs, ys;
-    xs.reserve(size);
-    ys.reserve(size);
-    const double shift((series + 0.5) * bar_width - 0.25);
-    for (std::size_t i(0); i < size; ++i)
-    {
-      const auto index(series * size + i);
-      const double x(snapshot.positions[i] + shift);
-      if (!snapshot.success_thresholds[i])
-      {
-        if (!series)
-          ImPlot::PlotText("No threshold", snapshot.positions[i], 0.0,
-                           ImVec2(0, -10));
-      }
-      else if (snapshot.runs[index])
-      {
-        xs.push_back(x);
-        ys.push_back(snapshot.success_rates[index]);
-      }
-      else
-        ImPlot::PlotText(series ? "N/A" : "Pending", x, 0.0,
-                         ImVec2(0, series ? -26 : -10));
-    }
-    ImPlot::PlotBars(ilabels[series], xs.data(), ys.data(), xs.size(), bar_width);
-  }
-
-  render_bar_hover_tooltip(
-    ImPlot::GetPlotMousePos().x, size,
-    [&](std::size_t i)
-    {
-      return success_rate_tooltip(snapshot, i, show_reference_values);
-    });
-
-  ImPlot::EndPlot();
-}
-
-[[nodiscard]] std::string time_per_run_tooltip(
-  const results_snapshot &snapshot, std::size_t i, bool show_reference_values)
-{
-  Expects(i < snapshot.labels.size());
-
-  std::string text(snapshot.labels[i]);
-  if (snapshot.runs[i])
-    text += std::format("\nCurrent: {:.3f} s/run ({} completed runs)",
-                        snapshot.time_per_run[i], snapshot.runs[i]);
-  else
-    text += "\nCurrent: awaiting results";
-
-  const unsigned remaining(std::max(snapshot.capacity_runs[i], snapshot.runs[i])
-                           - snapshot.runs[i]);
-  text += std::format("\nRuns left: {}\nEstimated time remaining: {}",
-                      remaining, snapshot.remaining_labels[i]);
-
-  if (show_reference_values)
-  {
-    const auto reference(snapshot.labels.size() + i);
-    if (snapshot.runs[reference])
-      text += std::format("\nReference: {:.3f} s/run ({} completed runs)",
-                          snapshot.time_per_run[reference],
-                          snapshot.runs[reference]);
-    else
-      text += "\nReference: no reference";
-  }
-
-  return text;
-}
-
-void render_time_per_run(const results_snapshot &snapshot)
-{
-  static const std::vector ilabels {current_str.c_str(), reference_str.c_str()};
-
-  const std::size_t size(snapshot.labels.size());
-  if (!size)
-    return;
-
-  static bool compare_reference {true};
-  const bool show_reference_values(reference_checkbox(
-    "Reference values##Run##Time per run", snapshot.references_available,
-    compare_reference));
-  const std::size_t group_count(1 + show_reference_values);
-
-  ImGui::TextDisabled("Remaining times update after each completed run.");
-
-  const auto flags(plot_flags(ImPlotFlags_NoTitle | ImPlotFlags_NoMouseText,
-                              show_reference_values));
-  if (!ImPlot::BeginPlot("##Time per run##Run", ImVec2(-1, -1), flags))
-    return;
-
-  setup_plot_legend(show_reference_values);
-
-  const bool has_timing_data(std::ranges::any_of(
-    snapshot.runs | std::views::take(size * group_count),
-    [](unsigned runs) { return runs > 0; }));
-  ImPlot::SetupAxes("Time per run (s)", "Dataset",
-                    has_timing_data ? ImPlotAxisFlags_AutoFit
-                                    : ImPlotAxisFlags_Lock,
-                    ImPlotAxisFlags_Lock | ImPlotAxisFlags_Invert);
-  if (!has_timing_data)
-    ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 1.0, ImGuiCond_Always);
-  ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0.0,
-                                    std::numeric_limits<double>::infinity());
-  ImPlot::SetupAxisFormat(ImAxis_X1, "%.3f");
-
-  setup_dataset_axis(ImAxis_Y1, snapshot, ImGuiCond_Always);
-  ImPlot::SetupAxis(ImAxis_Y2, "Estimated time remaining",
-                    ImPlotAxisFlags_Lock | ImPlotAxisFlags_Invert
-                    | ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoGridLines
-                    | ImPlotAxisFlags_NoTickMarks);
-  constexpr auto padding(0.75);
-  ImPlot::SetupAxisLimits(ImAxis_Y2, -padding, (size - 1) + padding,
-                          ImGuiCond_Always);
-  ImPlot::SetupAxisTicks(ImAxis_Y2, snapshot.positions.data(), size,
-                         snapshot.remaining_label_data.data(), false);
-
-  const double bar_width(0.5 / group_count);
-  for (std::size_t series(0); series < group_count; ++series)
-  {
-    std::vector<double> xs, ys;
-    const double shift((series + 0.5) * bar_width - 0.25);
-    for (std::size_t i(0); i < size; ++i)
-    {
-      const auto index(series * size + i);
-      const double y(snapshot.positions[i] + shift);
-      if (snapshot.runs[index])
-      {
-        xs.push_back(snapshot.time_per_run[index]);
-        ys.push_back(y);
-      }
-      else
-        ImPlot::PlotText(series ? "N/A" : "Pending", 0.0, y,
-                         ImVec2(35, 0),
-                         {ImPlotProp_Flags, ImPlotItemFlags_NoFit});
-    }
-    ImPlot::PlotBars(ilabels[series], xs.data(), ys.data(), xs.size(), bar_width,
-                     {ImPlotProp_Flags, ImPlotBarsFlags_Horizontal});
-  }
-
-  render_bar_hover_tooltip(
-    ImPlot::GetPlotMousePos().y, size,
-    [&](std::size_t i)
-    {
-      return time_per_run_tooltip(snapshot, i, show_reference_values);
-    });
-
-  ImPlot::EndPlot();
-}
-
-void render_fitness_series(const char *label, const double x, const double mean,
-                           const double std_dev, const double best)
-{
-  ImPlot::PlotErrorBars(label, &x, &mean, &std_dev, 1);
-  ImPlot::PlotScatter(label, &x, &mean, 1,
-                      {ImPlotProp_Marker, ImPlotMarker_Circle});
-  ImPlot::PlotScatter(label, &x, &best, 1,
-                      {ImPlotProp_Marker, ImPlotMarker_Up});
-}
-
-void render_fitness_across_datasets(const results_snapshot &snapshot)
-{
-  const std::size_t size(snapshot.labels.size());
-  if (!size)
-    return;
-
-  static bool compare_reference {true};
-  const bool show_reference_values(reference_checkbox(
-    "Reference values##FAD", snapshot.references_available, compare_reference));
-
-  const auto &current(snapshot.current_fitness);
-  const auto &reference(snapshot.reference_fitness);
-  const auto &labels(snapshot.label_data);
-  static const char title[] = "##FAD";
-  const auto cols(static_cast<int>(std::ceil(std::sqrt(size))));
-  const auto rows(static_cast<int>((size + cols - 1) / cols));
-
-  if (!ImPlot::BeginSubplots(title, rows, cols, ImVec2(-1, -1),
-                             ImPlotSubplotFlags_NoLegend))
-    return;
-
-  for (std::size_t i(0); i < size; ++i)
-  {
-    bool style_pushed(false);
-
-    if (show_reference_values
-        && std::isfinite(current.best[i]) && std::isfinite(reference.best[i])
-        && current.best[i] < reference.best[i])
-    {
-      const float alpha(current.mean[i] < reference.mean[i] ? 0.4f : 0.2f);
-      ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0f, 0.0f, 0.0f, alpha));
-      style_pushed = true;
-    }
-
-    const auto flags(plot_flags(0, show_reference_values));
-    if (ImPlot::BeginPlot(labels[i], ImVec2(-1, -1), flags))
-    {
-      ImPlot::SetupAxes("Runs", "Fitness", 0, ImPlotAxisFlags_AutoFit);
-
-      const double min_x(reference.runs[i] > 0.0 && show_reference_values
-                         ? 0.95 * std::min(current.runs[i], reference.runs[i])
-                         : 0.0);
-      const double max_x(reference.runs[i] > 0.0 && show_reference_values
-                         ? 1.05 * std::max(current.runs[i], reference.runs[i])
-                         : 2.0 * std::max(current.runs[i], 1.0));
-      //ImPlot::SetupAxesLimits(min_x, max_x, 0.0, 0.0);
-      ImPlot::SetupAxisLimits(ImAxis_X1, min_x, max_x, ImGuiCond_Always);
-
-      // Current data.
-      render_fitness_series((current_str + "##FAD" + labels[i]).c_str(),
-                             current.runs[i], current.mean[i],
-                             current.std_dev[i], current.best[i]);
-
-      // Reference data.
-      if (show_reference_values)
-      {
-        const auto xs(
-          reference.runs[i]
-          + (ultra::almost_equal(current.runs[i],reference.runs[i])
-             ? 0.1 : 0.0));
-        render_fitness_series((reference_str + "##FAD" + labels[i]).c_str(),
-                               xs, reference.mean[i], reference.std_dev[i],
-                               reference.best[i]);
-      }
-
-      ImPlot::EndPlot();
-    }
-
-    if (style_pushed)
-      ImPlot::PopStyleColor();
-  }
-
-  ImPlot::EndSubplots();
-}
-
-void render_accuracy_labels(const elite_data::run &series, double shift = 0.0)
-{
-  const ImVec2 offset_upward(0, -10);
-
-  for (std::size_t k(0); k < series.fit.size(); ++k)
-    if (std::isfinite(series.acc[k]))
-    {
-      const std::string text(std::format("{:.2f}%", series.acc[k]*100.0));
-      ImPlot::PlotText(text.c_str(), static_cast<double>(k) + shift,
-                       series.fit[k], offset_upward);
-    }
-}
-
-struct task_indicator
-{
-  const char *label;
-  ImVec4 colour;
-};
-
-task_indicator activity_indicator(rs::task_state state)
-{
-  switch (state)
-  {
-  case rs::task_state::queued:
-    return {"Queued", {0.7f, 0.7f, 0.7f, 1.0f}};
-  case rs::task_state::running:
-    return {"Running", {0.3f, 0.8f, 1.0f, 1.0f}};
-  case rs::task_state::finished:
-    return {"Finished", {0.4f, 0.9f, 0.4f, 1.0f}};
-  case rs::task_state::failed:
-    return {"Failed", {1.0f, 0.4f, 0.4f, 1.0f}};
-  case rs::task_state::cancelled:
-    return {"Cancelled", {1.0f, 0.8f, 0.3f, 1.0f}};
-  }
-  std::unreachable();
-}
-
-void render_elite(const results_snapshot &snapshot,
-                  const rs::collection_t *collection = nullptr)
-{
-  const std::size_t size(snapshot.labels.size());
-  if (!size)
-    return;
-
-  static bool compare_reference {true};
-  const bool show_reference_values(reference_checkbox(
-    "Reference values##ELITE", snapshot.references_available,
-    compare_reference));
-
-  const auto &current(snapshot.current_elite);
-  const auto &reference(snapshot.reference_elite);
-  const auto &labels(snapshot.label_data);
-  static const char title[] = "##ELITE";
-  const auto cols(static_cast<int>(std::ceil(std::sqrt(size))));
-  const auto rows(static_cast<int>((size + cols - 1) / cols));
-
-  if (!ImPlot::BeginSubplots(title, rows, cols, ImVec2(-1, -1),
-                             ImPlotSubplotFlags_NoLegend))
-    return;
-
-  for (std::size_t i(0); i < size; ++i)
-  {
-    std::optional<rs::task_status> status;
-    std::string plot_title(labels[i]);
-    if (collection && (*collection)[i].activity)
-    {
-      status = (*collection)[i].activity->status();
-      const auto indicator(activity_indicator(status->state));
-      plot_title = std::format("{} [{}]###{}", labels[i], indicator.label,
-                               labels[i]);
-      ImPlot::PushStyleColor(ImPlotCol_TitleText, indicator.colour);
-    }
-    const auto flags(plot_flags(0, show_reference_values));
-    if (ImPlot::BeginPlot(plot_title.c_str(), ImVec2(-1, -1), flags))
-    {
-      const bool hovered(ImGui::IsItemHovered());
-      ImPlot::SetupAxes("Rank", "Fitness", 0, ImPlotAxisFlags_AutoFit);
-
-      // `ImPlotAxisFlags_Opposite` is the magic flag that moves the axis to
-      // the top.
-      ImPlot::SetupAxis(ImAxis_X2, "Run", ImPlotAxisFlags_Opposite);
-
-      const auto rank_count(std::max(current.elite[i].id.size(),
-                                     reference.elite[i].id.size()));
-      const double max_x(rank_count);
-
-      if (rank_count)
-        ImPlot::SetupAxisTicks(ImAxis_X1, snapshot.rank_positions.data(),
-                               static_cast<int>(rank_count),
-                               snapshot.rank_labels.data(), false);
-
-      double x_from(-0.5), x_to(max_x + 0.5);
-      ImPlot::SetupAxisLimits(ImAxis_X1, x_from, x_to, ImGuiCond_Always);
-      ImPlot::SetupAxisLinks(ImAxis_X1, &x_from, &x_to);
-      ImPlot::SetupAxisLinks(ImAxis_X2, &x_from, &x_to);
-
-      if (const auto &ids(current.elite[i].id); !ids.empty())
-        ImPlot::SetupAxisTicks(ImAxis_X2,
-                               current.elite[i].tick_positions.data(),
-                               static_cast<int>(ids.size()),
-                               current.elite[i].tick_labels.data());
-
-      // Current data.
-      {
-        const auto &fit(current.elite[i].fit);
-
-        ImPlot::PlotBars((current_str + "##ELITE" + labels[i]).c_str(),
-                         fit.data(), fit.size(), 0.4);
-
-        render_accuracy_labels(current.elite[i]);
-      }
-
-      // Reference data.
-      if (show_reference_values)
-      {
-        const auto &fit(reference.elite[i].fit);
-        const double bar_shift(0.1);
-
-        auto bar_col(ImPlot::GetColormapColor(1));
-        bar_col.w *= 0.7f;
-
-        ImPlot::PlotBars((reference_str + "##ELITE" + labels[i]).c_str(),
-                          fit.data(), fit.size(), 0.4, bar_shift,
-                          {ImPlotProp_FillColor, bar_col});
-
-        auto text_col(ImGui::GetStyleColorVec4(ImGuiCol_Text));
-        text_col.w *= 0.55f;
-        ImGui::PushStyleColor(ImGuiCol_Text, text_col);
-
-        render_accuracy_labels(reference.elite[i], bar_shift);
-
-        ImGui::PopStyleColor();
-      }
-
-      if (status && !status->error.empty() && hovered)
-      {
-        ImGui::BeginTooltip();
-        ImGui::TextUnformatted(status->error.c_str());
-        ImGui::EndTooltip();
-      }
-      ImPlot::EndPlot();
-    }
-    if (status)
-      ImPlot::PopStyleColor();
-  }
-
-  ImPlot::EndSubplots();
-}
-
-void render_run_status(const rs::collection_t *collection)
-{
-  const auto digits(random_string());
-  std::string running;
-  if (collection)
-  {
-    const auto count(std::ranges::count_if(*collection, [](const auto &test)
-    {
-      return test.activity
-             && test.activity->status().state == rs::task_state::running;
-    }));
-    running = std::format("{} Running", count);
-  }
-
-  const auto &style(ImGui::GetStyle());
-  const float width(ImGui::CalcTextSize(digits.c_str()).x
-                    + (running.empty() ? 0.0f
-                       : ImGui::CalcTextSize(running.c_str()).x
-                         + style.ItemSpacing.x));
-  const float next_x(ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x
-                     + style.ItemSpacing.x);
-  ImGui::SameLine(std::max(next_x, ImGui::GetWindowWidth()
-                                 - style.WindowPadding.x - width));
-  if (!running.empty())
-  {
-    ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "%s", running.c_str());
-    ImGui::SameLine();
-  }
-  ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f), "%s", digits.c_str());
-}
-
-void render_rs(const imgui_app::program &prg, bool *p_open,
-               results_state &state)
-{
-  const auto &snapshot(state.snapshot());
-
-  const auto fa(prg.free_area());
-  ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
-  ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
-
-  static bool show_runs_check(true);
-  static bool show_success_rate_check(true);
-  static bool show_fitness_across_datasets_check(true);
-  static bool show_elite_check(true);
-
-  static std::optional<std::size_t> maximised;
-
-  if (ImGui::Begin("Run##Window", p_open))
-  {
-    ImGui::Checkbox("runs", &show_runs_check);
-    ImGui::SameLine();
-    ImGui::Checkbox(snapshot.show_success_rate ? "success rate" : "time per run",
-                    &show_success_rate_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("fitness across datasets",
-                    &show_fitness_across_datasets_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("elite", &show_elite_check);
-    const auto *activity(state.mode == rs::exec_mode::run
-                          ? &state.collection : nullptr);
-    render_run_status(activity);
-    ImGui::Separator();
-
-    std::array panels
-    {
-      dashboard_panel
-      {
-        "Runs##ChildWindow", "RUNS", show_runs_check,
-        [&snapshot] { render_number_of_runs(snapshot); }
-      },
-      dashboard_panel
-      {
-        "Success rate##ChildWindow",
-        snapshot.show_success_rate ? "SUCCESS RATE" : "TIME PER RUN",
-        show_success_rate_check,
-        [&snapshot]
-        {
-          if (snapshot.show_success_rate)
-            render_success_rate(snapshot);
-          else
-            render_time_per_run(snapshot);
-        }
-      },
-      dashboard_panel
-      {
-        "FADs##ChildWindow", "FITNESS ACROSS DATASETS",
-        show_fitness_across_datasets_check,
-        [&snapshot] { render_fitness_across_datasets(snapshot); }
-      },
-      dashboard_panel
-      {
-        "ELITEs##ChildWindow", "ELITE RUNS", show_elite_check,
-        [&snapshot, activity] { render_elite(snapshot, activity); }
-      }
+    dataset_snapshot ds{
+      .name = test.name,
+      .capacity_runs = test.conf.runs,
+      .has_threshold = has_threshold,
+      .status = test.activity ? std::optional(test.activity->status())
+                              : std::nullopt,
+      .current = make_side_snapshot(test.current),
+      .reference = make_side_snapshot(test.reference)
     };
-    render_dashboard(panels, maximised);
+    ds.remaining_label = remaining_time_label(ds);
+
+    datasets.push_back(std::move(ds));
   }
-
-  // `ImGui::End` is special and must be called even if `Begin` returns false.
-  ImGui::End();
 }
 
-std::vector<double> make_positions(std::size_t n)
+bool rs::summary::start(options options)
 {
-  assert(n);
-
-  return std::views::iota(0uz, n)
-       | std::views::transform([](auto i) { return static_cast<double>(i); })
-       | std::ranges::to<std::vector<double>>();
-}
-
-std::vector<const char *> to_cstr_vector(const std::vector<std::string> &v)
-{
-  return v | std::views::transform(&std::string::c_str)
-           | std::ranges::to<std::vector>();
-}
-
-// Asynchronously reads all available summary files into queues for subsequent
-// processing.
-void get_summaries(std::stop_token stoken, results_state &state)
-{
-  assert(!state.collection.empty());
-
-  std::vector<fs::file_time_type> last_write_times(state.collection.size());
-  std::condition_variable_any wake;
-  std::mutex wake_mutex;
-
-  while (!stoken.stop_requested())
+  if (options.html_output.empty())
   {
-    for (std::size_t i(0); i < state.collection.size(); ++i)
-    {
-      auto &test(state.collection[i]);
-      std::error_code ec;
-      const auto mtime(fs::last_write_time(test.xml_summary, ec));
-
-      if (!ec && mtime != last_write_times[i])
-      {
-        if (tinyxml2::XMLDocument summary; summary_data::check(test.xml_summary,
-                                                               summary))
-        {
-          std::lock_guard guard(state.current_mutex);
-          test.current = summary_data(summary);
-          last_write_times[i] = mtime;
-          state.version.fetch_add(1, std::memory_order_relaxed);
-        }
-      }
-    }
-
-    std::unique_lock lock(wake_mutex);
-    wake.wait_for(lock, stoken, 3000ms, [] { return false; });
+    std::cerr << "Missing HTML output path for `summary`.\n";
+    return false;
   }
-}
-void rs::summary::start(options options)
-{
-  results_state state(std::move(options.collection), options.mode);
-  std::jthread t_summaries(get_summaries, std::ref(state));
 
-  imgui_app::program::settings settings;
-  settings.title = "WOPR";
-  settings.flags |= SDL_WINDOW_MAXIMIZED;
-  settings.demo = options.imgui_demo;
-
-  imgui_app::program prg(settings);
-  prg.run(
-    [&state](const auto &program, bool *open)
-    {
-      render_rs(program, open, state);
-    });
+  load_current_summaries(options.collection);
+  const results_snapshot snapshot(options.collection);
+  return write_html_report(options.html_output, snapshot);
 }
-#endif  // ULTRA_WOPR_GUI
 
 }  // namespace ultra::wopr

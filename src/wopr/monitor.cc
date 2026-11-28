@@ -12,548 +12,58 @@
 
 #include "monitor.h"
 
-#include "dashboard.h"
-#include "imgui_app.h"
+#include "html_monitor.h"
 #include "monitor_data.h"
 
-#include "kernel/gp/primitive/real.h"
-#include "utility/timer.h"
-#include "utility/ts_queue.h"
-
-#include "implot/implot.h"
-
-#include <SDL3/SDL_video.h>
-
-#include <algorithm>
-#include <array>
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <fstream>
-#include <functional>
 #include <iostream>
-#include <limits>
 #include <optional>
-#include <random>
 #include <stdexcept>
 #include <string>
 #include <thread>
-#include <utility>
-#include <vector>
 
 namespace fs = std::filesystem;
 
 namespace ultra::wopr
 {
 
-using namespace std::chrono_literals;
-
-struct id_scope
+namespace
 {
-  explicit id_scope(int id) { ImGui::PushID(id); }
-  explicit id_scope(const void *p) { ImGui::PushID(p); }
-  explicit id_scope(const char *p) { ImGui::PushID(p); }
 
-  ~id_scope() { ImGui::PopID(); }
+std::atomic<std::sig_atomic_t> g_stop_requested {0};
 
-  id_scope(const id_scope &) = delete;
-  id_scope &operator=(const id_scope &) = delete;
+extern "C" void handle_stop_signal(int)
+{
+  g_stop_requested.store(1, std::memory_order_relaxed);
+}
+
+class signal_guard
+{
+public:
+  signal_guard()
+    : prev_int_(std::signal(SIGINT, handle_stop_signal)),
+      prev_term_(std::signal(SIGTERM, handle_stop_signal))
+  {
+    g_stop_requested = 0;
+  }
+
+  ~signal_guard()
+  {
+    std::signal(SIGINT, prev_int_);
+    std::signal(SIGTERM, prev_term_);
+  }
+
+  signal_guard(const signal_guard &) = delete;
+  signal_guard &operator=(const signal_guard &) = delete;
+
+private:
+  using handler_t = void (*)(int);
+  handler_t prev_int_;
+  handler_t prev_term_;
 };
-
-void render_dynamic_series(const char *mean_label, const char *max_label,
-                           const double *xs, const double *mean,
-                           const double *std_dev, const double *max,
-                           std::size_t count, bool show_max)
-{
-  ImPlot::PlotErrorBars(mean_label, xs, mean, std_dev, count,
-                        {ImPlotProp_LineColor, ImPlot::GetColormapColor(1),
-                         ImPlotProp_Size, 0.0f});
-  ImPlot::PlotLine(mean_label, xs, mean, count,
-                   {ImPlotProp_Marker, ImPlotMarker_Square});
-
-  if (show_max)
-    ImPlot::PlotLine(max_label, xs, max, count,
-                     {ImPlotProp_LineColor, ImPlot::GetColormapColor(2)});
-}
-
-void render_dynamic(const std::vector<dynamic_sequence> &dynamic_runs,
-                    int monitoring_window)
-{
-  static bool show_best(true);
-  static bool show_longest(true);
-  static std::vector<int> best_idx;
-
-  if (best_idx.size() < dynamic_runs.size())
-    best_idx.resize(dynamic_runs.size(), 0);
-
-  const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
-
-  for (std::size_t run(dynamic_runs.size()); run--;)
-  {
-    const auto &dr(dynamic_runs[run]);
-    if (dr.empty())
-      continue;
-
-    id_scope scope(run);
-
-    ImGui::SetNextItemOpen(run + 1 == dynamic_runs.size(), ImGuiCond_Once);
-
-    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
-      continue;
-
-    if (ImGui::BeginTabBar("DynamicTabBar"))
-    {
-      const auto &xs(dr.xs);
-
-      std::size_t window(monitoring_window
-                         ? static_cast<std::size_t>(monitoring_window)
-                         : std::numeric_limits<std::size_t>::max());
-      window = std::min<std::size_t>(xs.size(), window);
-
-      const auto get_window([&window](const auto &vect)
-      {
-        return vect.data() + vect.size() - window;
-      });
-
-      if (ImGui::BeginTabItem("Fitness dynamic"))
-      {
-        if (dr.best_prg.empty())
-          best_idx[run] = 0;
-        else
-        {
-          best_idx[run] = std::clamp(
-            best_idx[run], 0, static_cast<int>(dr.best_prg.size() - 1));
-          ImGui::Combo(
-            "Best programs", &best_idx[run],
-            [](void *data, int index) -> const char *
-            {
-              const auto &programs(
-                *static_cast<const std::vector<std::string> *>(data));
-              return programs[programs.size() - 1 - index].c_str();
-            },
-            const_cast<std::vector<std::string> *>(&dr.best_prg),
-            static_cast<int>(dr.best_prg.size()));
-        }
-
-        ImGui::SameLine();
-        ImGui::Checkbox("Best##show", &show_best);
-
-        if (ImPlot::BeginPlot("##Fitness by generation", ImVec2(-1, avail),
-                              ImPlotFlags_NoTitle))
-        {
-          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-          ImPlot::SetupAxes("Generation", "Fit",
-                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-          render_dynamic_series(
-            "Avg & StdDev", "Best", get_window(xs), get_window(dr.fit_mean),
-            get_window(dr.fit_std_dev), get_window(dr.fit_best),
-            window, show_best);
-
-          ImPlot::EndPlot();
-        }
-
-        ImGui::EndTabItem();
-      }
-
-      if (ImGui::BeginTabItem("Length dynamic"))
-      {
-        ImGui::Checkbox("Longest##show", &show_longest);
-
-        if (ImPlot::BeginPlot("##Length by generation", ImVec2(-1, avail),
-                              ImPlotFlags_NoTitle))
-        {
-          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-          ImPlot::SetupAxes(
-            "Generation", "Length",
-            ImPlotAxisFlags_AutoFit,  // ImPlotAxisFlags_None
-            ImPlotAxisFlags_AutoFit);
-
-          render_dynamic_series(
-            "Len Avg & StdDev", "Longest", get_window(xs),
-            get_window(dr.len_mean), get_window(dr.len_std_dev),
-            get_window(dr.len_max), window, show_longest);
-
-          ImPlot::EndPlot();
-        }
-
-        ImGui::EndTabItem();
-      }
-
-      if (ImGui::BeginTabItem("Crossover dynamics"))
-      {
-        if (ImPlot::BeginPlot("##Crossover types by generation",
-                              ImVec2(-1, avail), ImPlotFlags_NoTitle))
-        {
-          ImPlot::SetupLegend(ImPlotLocation_South | ImPlotLocation_West);
-
-          ImPlot::SetupAxes(
-            "Generation", "Crossover spreading",
-            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-          for (const auto &[ct, nums] : dr.crossover_types)
-          {
-            const std::string type("CT" + std::to_string(ct));
-            ImPlot::PlotLine(type.c_str(), get_window(xs), get_window(nums),
-                             window);
-          }
-
-          ImPlot::EndPlot();
-        }
-
-        ImGui::EndTabItem();
-      }
-
-      ImGui::EndTabBar();
-    }
-  }
-}
-
-double population_bar_width(const std::vector<double> &fitness)
-{
-  double min_gap(std::numeric_limits<double>::infinity());
-  for (std::size_t i(1); i < fitness.size(); ++i)
-    if (const double gap(fitness[i] - fitness[i - 1]); gap > 0)
-      min_gap = std::min(min_gap, gap);
-
-  return min_gap < std::numeric_limits<double>::infinity()
-         ? 0.8 * min_gap : 0.8;
-}
-
-void render_population(
-  const std::vector<population_sequence> &population_runs)
-{
-  const float avail(ImGui::GetContentRegionAvail().y * 0.85f);
-
-  for (std::size_t run(population_runs.size()); run--;)
-  {
-    const auto &pr(population_runs[run]);
-    if (pr.empty())
-      continue;
-
-    id_scope scope(run);
-
-    ImGui::SetNextItemOpen(run + 1 == population_runs.size(), ImGuiCond_Once);
-
-    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
-      continue;
-
-    if (ImGui::BeginTabBar("PopulationTabBar"))
-    {
-      if (ImGui::BeginTabItem("Fitness histogram"))
-      {
-        const std::string title("Generation " + std::to_string(pr.generation)
-                                + "##Population");
-
-        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
-                              ImPlotFlags_NoLegend))
-        {
-          ImPlot::SetupAxes("Fitness", "Individuals",
-                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-          const double bar_width(population_bar_width(pr.fit));
-          ImPlot::PlotBars("##PopulationFitnessHistogram",
-                           pr.fit.data(), pr.obs.data(), pr.fit.size(),
-                           bar_width);
-          ImPlot::EndPlot();
-        }
-
-        ImGui::EndTabItem();
-      }
-
-      if (ImGui::BeginTabItem("Fitness entropy"))
-      {
-        const std::string title("Generation " + std::to_string(pr.generation)
-                                + "##Entropy");
-        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
-                              ImPlotFlags_NoLegend))
-        {
-          ImPlot::SetupAxes("Generation", "Entropy",
-                            ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-          ImPlot::PlotShaded("Entropy", pr.xs.data(), pr.fit_entropy.data(),
-                             pr.xs.size(),
-                             -std::numeric_limits<double>::infinity(),
-                             {ImPlotProp_FillAlpha, 0.25f});
-          ImPlot::PlotLine("Entropy", pr.xs.data(), pr.fit_entropy.data(),
-                           pr.xs.size());
-
-          ImPlot::EndPlot();
-        }
-
-        ImGui::EndTabItem();
-      }
-
-      ImGui::EndTabBar();
-    }
-  }
-}
-
-void render_layers_fit(const std::vector<layers_line> &layers_runs)
-{
-  static std::minstd_rand g;
-
-  const float avail(ImGui::GetContentRegionAvail().y * 0.90f);
-
-  for (std::size_t run(layers_runs.size()); run--;)
-  {
-    const auto &lr(layers_runs[run]);
-
-    if (lr.empty())
-      continue;
-
-    id_scope scope(run);
-
-    ImGui::SetNextItemOpen(run + 1 == layers_runs.size(), ImGuiCond_Once);
-
-    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
-      continue;
-
-    const auto max_layers(lr.size());
-
-    const std::size_t ind_max(std::ranges::max(lr.individuals));
-    if (!ind_max)
-      continue;
-
-    const std::size_t parts(std::min<std::size_t>(ind_max, 100));
-
-    static std::vector<std::string> x_labels, y_labels;
-    static std::vector<const char *> x_labels_chr, y_labels_chr;
-    static std::vector<double> x_positions, y_positions;
-    static std::vector<double> fit;
-
-    if (parts == 1)
-    {
-      x_labels = {"1"};
-      x_positions = {0.5};
-    }
-    else
-    {
-      const auto d_parts(static_cast<double>(parts));
-      x_labels = {"1", std::to_string(ind_max)};
-      x_positions = {0.5 / d_parts, 1.0 - 0.5 / d_parts};
-    }
-
-    x_labels_chr.resize(x_labels.size());
-    std::ranges::transform(x_labels, x_labels_chr.begin(),
-                           [](const auto &str) { return str.data(); });
-
-    const auto d_max_layers(static_cast<double>(max_layers));
-    y_labels.resize(max_layers);
-    y_positions.resize(max_layers);
-    for (std::size_t layer(0); layer < max_layers; ++layer)
-    {
-      y_labels[layer] = "L" + std::to_string(layer);
-      y_positions[layer] = 1.0 - (static_cast<double>(layer) + 0.5)
-                                 / d_max_layers;
-    }
-
-    y_labels_chr.resize(max_layers);
-    std::ranges::transform(y_labels, y_labels_chr.begin(),
-                           [](const auto &str) { return str.data(); });
-
-    g.seed(lr.generation);
-
-    const double fit_max(std::ranges::max(lr.fit_max));
-    const double fit_min(std::ranges::min(lr.fit_min));
-
-    fit.assign(max_layers * parts, fit_min);
-
-    for (std::size_t layer(0); layer < max_layers; ++layer)
-    {
-      const auto mean(lr.fit_mean[layer]);
-      const auto stddev(lr.fit_std_dev[layer]);
-      const auto min(lr.fit_min[layer]);
-      const auto max(lr.fit_max[layer]);
-      const std::size_t full(parts * lr.individuals[layer] / ind_max);
-
-      if (ultra::issmall(stddev))
-      {
-        const auto val(std::clamp(mean, min, max));
-        for (std::size_t p(0); p < full; ++p)
-          fit[layer * parts + p] = val;
-      }
-      else
-      {
-        std::normal_distribution dist(mean, stddev);
-
-        for (std::size_t p(0); p < full; ++p)
-          fit[layer * parts + p] = std::clamp(dist(g), min, max);
-      }
-    }
-
-    static ImPlotColormap map(ImPlotColormap_Hot);
-    ImPlot::PushColormap(map);
-
-    const std::string title("Fitness by layer - Generation "
-                            + std::to_string(lr.generation));
-
-    ImPlot::ColormapScale("Fit Scale", fit_min, fit_max, ImVec2(80, avail));
-    ImGui::SameLine();
-    if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
-                          ImPlotFlags_NoLegend|ImPlotFlags_NoMouseText))
-    {
-      ImPlot::SetupAxes(
-        nullptr, nullptr,
-        ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks,
-        ImPlotAxisFlags_Lock|ImPlotAxisFlags_NoTickMarks
-        |ImPlotAxisFlags_NoGridLines);
-
-      ImPlot::SetupAxisTicks(ImAxis_Y1, y_positions.data(),
-                             static_cast<int>(max_layers),
-                             y_labels_chr.data());
-      ImPlot::SetupAxisTicks(ImAxis_X1, x_positions.data(),
-                             static_cast<int>(x_positions.size()),
-                             x_labels_chr.data());
-      ImPlot::PlotHeatmap("Fitness by layer", fit.data(),
-                          static_cast<int>(max_layers),
-                          static_cast<int>(parts),
-                          fit_min, fit_max, nullptr);
-      ImPlot::EndPlot();
-    }
-
-    ImPlot::PopColormap();
-  }
-}
-
-void render_layers_age(const std::vector<layers_line> &layers_runs)
-{
-  const float avail(ImGui::GetContentRegionAvail().y * 0.90f);
-
-  for (std::size_t run(layers_runs.size()); run--;)
-  {
-    const auto &lr(layers_runs[run]);
-
-    if (lr.empty())
-      continue;
-
-    id_scope scope(run);
-
-    ImGui::SetNextItemOpen(run + 1 == layers_runs.size(), ImGuiCond_Once);
-
-    if (!ImGui::CollapsingHeader(("Run " + std::to_string(run)).c_str()))
-      continue;
-
-    static std::vector<unsigned> ys;
-    static std::vector<ultra::individual::age_t> bottom, mean, top;
-
-    ys.resize(lr.size());
-    bottom.resize(lr.size());
-    mean.resize(lr.size());
-    top.resize(lr.size());
-
-    for (std::size_t layer(0); layer < lr.size(); ++layer)
-    {
-      ys[layer] = layer;
-      mean[layer] = static_cast<ultra::individual::age_t>(lr.age_mean[layer]);
-      bottom[layer] = mean[layer] - lr.age_min[layer];
-      top[layer] = lr.age_max[layer] - mean[layer];
-    }
-
-    const std::string title("Age by layer - Generation "
-                            + std::to_string(lr.generation));
-    if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, avail),
-                          ImPlotFlags_NoLegend))
-    {
-      ImPlot::SetupAxes("Age", "Layer",
-                        ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-
-      ImPlot::SetupAxisTicks(ImAxis_Y1, 0, ys.size(), ys.size() + 1);
-      ImPlot::PlotErrorBars("Age range by layer", mean.data(), ys.data(),
-                            bottom.data(), top.data(), ys.size(),
-                            {ImPlotProp_LineWeight, 6.0f,
-                             ImPlotProp_Size, 12.0f,
-                             ImPlotProp_Flags, ImPlotErrorBarsFlags_Horizontal});
-      ImPlot::PlotScatter("Age range by layer", mean.data(), ys.data(),
-                          ys.size());
-      ImPlot::PlotInfLines("Age limit by layer", lr.age_sup.data(), ys.size());
-
-      for (std::size_t layer(0); layer < lr.age_sup.size(); ++layer)
-        if (lr.age_sup[layer])
-        {
-          const std::string ln("L" + std::to_string(layer));
-          const std::string lt("<" + std::to_string(lr.age_sup[layer]));
-          ImPlot::TagX(lr.age_sup[layer], ImVec4(1,1,0,0.1),
-                       "\n%s\n%s", ln.c_str(), lt.c_str());
-        }
-
-      ImPlot::EndPlot();
-    }
-  }
-}
-
-void render_monitor(const imgui_app::program &prg, bool *p_open,
-                    monitor::options &options, monitor_state &state)
-{
-  state.update();
-
-  const auto fa(prg.free_area());
-  ImGui::SetNextWindowPos(ImVec2(fa.x, fa.y));
-  ImGui::SetNextWindowSize(ImVec2(fa.w, fa.h));
-
-  static bool show_dynamic_check(true);
-  static bool show_population_check(true);
-  static bool show_layers_fit_check(true);
-  static bool show_layers_age_check(true);
-
-  static std::optional<std::size_t> maximised;
-
-  if (ImGui::Begin("Monitor##Window", p_open))
-  {
-    if (ImGui::CollapsingHeader("GUI Parameters"))
-    {
-      ImGui::Checkbox("Dynamic", &show_dynamic_check);
-      ImGui::SameLine();
-      ImGui::Checkbox("Population", &show_population_check);
-      ImGui::SameLine();
-      ImGui::Checkbox("Layers fit.", &show_layers_fit_check);
-      ImGui::SameLine();
-      ImGui::Checkbox("Layers age", &show_layers_age_check);
-      ImGui::SameLine();
-      ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.33f);
-      ImGui::SliderInt("##MonitoringWindow", &options.window, 0, 8000,
-                       "window = %d");
-      ImGui::PopItemWidth();
-    }
-    ImGui::SameLine(ImGui::GetWindowWidth() - 128);
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.3f),
-                       "%s", random_string().c_str());
-    ImGui::Separator();
-
-    std::array panels
-    {
-      dashboard_panel
-      {
-        "Dynamic##ChildWindow", "DYNAMICS",
-        !options.slog.dynamic_file_path.empty() && show_dynamic_check,
-        [&options, &state]
-        { render_dynamic(state.dynamic_runs, options.window); }
-      },
-      dashboard_panel
-      {
-        "Population##ChildWindow", "POPULATION",
-        !options.slog.population_file_path.empty() && show_population_check,
-        [&state] { render_population(state.population_runs); }
-      },
-      dashboard_panel
-      {
-        "LayersFitness##ChildWindow", "FITNESS BY LAYER",
-        !options.slog.layers_file_path.empty() && show_layers_fit_check,
-        [&state] { render_layers_fit(state.layers_runs); }
-      },
-      dashboard_panel
-      {
-        "LayersAge##ChildWindow", "AGE BY LAYER",
-        !options.slog.layers_file_path.empty() && show_layers_age_check,
-        [&state] { render_layers_age(state.layers_runs); }
-      }
-    };
-    render_dashboard(panels, maximised);
-  }
-
-  // `ImGui::End` is special and must be called even if `Begin` returns false.
-  ImGui::End();
-}
 
 class read_log_file
 {
@@ -574,7 +84,7 @@ read_log_file::read_log_file(const fs::path &filename)
 }
 
 //
-// Reads a single log file into a queue buffer.
+// Reads complete lines from a single log file.
 // Takes advantage of the fact that a line is complete if a newline has been
 // reached.
 //
@@ -616,114 +126,111 @@ std::optional<std::string> read_log_file::get_line()
   return file;
 }
 
-template<typename DataClass, typename Queue>
-[[nodiscard]] bool process_log_stream(read_log_file &log_file, Queue &queue,
-                                      ultra::timer &last_read,
-                                      const std::stop_token &stoken,
-                                      const fs::path &filename)
+template<typename DataClass>
+[[nodiscard]] bool poll_log_stream(std::optional<read_log_file> &log,
+                                   monitor_state &state,
+                                   const fs::path &filename)
 {
+  if (!log)
+    return false;
+
+  bool read_any(false);
   try
   {
-    bool read_any(false);
-
-    while (!stoken.stop_requested())
+    while (true)
     {
-      const auto line(log_file.get_line());
+      const auto line(log->get_line());
       if (!line)
         break;
 
-      queue.push(DataClass(*line));
+      state.push(DataClass(*line));
       read_any = true;
     }
-
-    if (read_any)
-      last_read.restart();
-
-    return true;
   }
   catch (const std::runtime_error &e)
   {
     std::cerr << "Stopped monitoring " << filename << ": " << e.what() << '\n';
+    log.reset();
+  }
+
+  return read_any;
+}
+
+[[nodiscard]] bool poll_log_streams(std::optional<read_log_file> &dynamic_log,
+                                    std::optional<read_log_file> &population_log,
+                                    std::optional<read_log_file> &layers_log,
+                                    const ultra::search_log &slog,
+                                    monitor_state &state)
+{
+  const bool dyn(poll_log_stream<dynamic_data>(dynamic_log, state,
+                                               slog.dynamic_file_path));
+  const bool pop(poll_log_stream<population_line>(population_log, state,
+                                                  slog.population_file_path));
+  const bool lay(poll_log_stream<layers_line>(layers_log, state,
+                                              slog.layers_file_path));
+
+  return dyn || pop || lay;
+}
+
+}  // namespace
+
+bool monitor::start(options options)
+{
+  if (options.html_output.empty())
+  {
+    std::cerr << "Missing HTML output path for `monitor`.\n";
     return false;
   }
-}
 
-//
-// Asynchronously reads all specified log files into queues for subsequent
-// processing.
-//
-void get_logs(std::stop_token stoken, const ultra::search_log &slog,
-              monitor_state &state)
-{
-  try
-  {
-    auto dynamic_log(open_log_file(slog.dynamic_file_path));
-    auto population_log(open_log_file(slog.population_file_path));
-    auto layers_log(open_log_file(slog.layers_file_path));
-
-    ultra::timer last_read;
-
-    std::condition_variable_any wake;
-    std::mutex wake_mutex;
-
-    while (!stoken.stop_requested())
-    {
-      if (dynamic_log
-          && !process_log_stream<dynamic_data>(
-                *dynamic_log, state.dynamic_queue, last_read, stoken,
-                slog.dynamic_file_path))
-        dynamic_log.reset();
-
-      if (population_log
-          && !process_log_stream<population_line>(
-                *population_log, state.population_queue, last_read, stoken,
-                slog.population_file_path))
-        population_log.reset();
-
-      if (layers_log
-          && !process_log_stream<layers_line>(
-                *layers_log, state.layers_queue, last_read, stoken,
-                slog.layers_file_path))
-        layers_log.reset();
-
-      if (!dynamic_log && !population_log && !layers_log)
-        return;
-
-      const auto elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(
-                           last_read.elapsed()));
-
-      const auto delay(std::clamp(elapsed, 100ms, 3000ms));
-      std::unique_lock lock(wake_mutex);
-      wake.wait_for(lock, stoken, delay, [] { return false; });
-    }
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "Stopped all log monitoring: " << e.what() << '\n';
-  }
-  catch (...)
-  {
-    std::cerr << "Stopped all log monitoring: unknown error.\n";
-  }
-}
-
-// Asynchronously reads all available summary files into queues for subsequent
-void monitor::start(options options)
-{
   monitor_state state;
-  std::jthread t_logs(get_logs, std::cref(options.slog), std::ref(state));
+  auto dynamic_log(open_log_file(options.slog.dynamic_file_path));
+  auto population_log(open_log_file(options.slog.population_file_path));
+  auto layers_log(open_log_file(options.slog.layers_file_path));
 
-  imgui_app::program::settings settings;
-  settings.title = "WOPR";
-  settings.flags |= SDL_WINDOW_MAXIMIZED;
-  settings.demo = options.imgui_demo;
+  (void)poll_log_streams(dynamic_log, population_log, layers_log,
+                         options.slog, state);
 
-  imgui_app::program prg(settings);
-  prg.run(
-    [&options, &state](const auto &program, bool *open)
-    {
-      render_monitor(program, open, options, state);
-    });
+  const bool one_shot(options.interval == 0
+                      || (!dynamic_log && !population_log && !layers_log));
+  if (one_shot)
+    return write_monitor_html(options.html_output, state, options, false);
+
+  const signal_guard signals;
+  if (!write_monitor_html(options.html_output, state, options, true))
+    return false;
+
+  std::cout << "HTML monitor: " << options.html_output
+            << " (refreshing every " << options.interval
+            << "s, press Ctrl+C to stop)\n";
+
+  using namespace std::chrono_literals;
+  const auto period(std::chrono::seconds(options.interval));
+
+  while (!g_stop_requested.load(std::memory_order_relaxed))
+  {
+    const auto wake_at(std::chrono::steady_clock::now() + period);
+    while (!g_stop_requested.load(std::memory_order_relaxed)
+           && std::chrono::steady_clock::now() < wake_at)
+      std::this_thread::sleep_for(100ms);
+
+    if (g_stop_requested.load(std::memory_order_relaxed))
+      break;
+
+    const bool updated(poll_log_streams(dynamic_log, population_log, layers_log,
+                                        options.slog, state));
+    const bool streams_open(dynamic_log || population_log || layers_log);
+
+    if (updated || !streams_open)
+      if (!write_monitor_html(options.html_output, state, options, streams_open))
+        return false;
+
+    if (!streams_open)
+      return true;
+  }
+
+  (void)poll_log_streams(dynamic_log, population_log, layers_log,
+                         options.slog, state);
+  return write_monitor_html(options.html_output, state, options, false);
 }
 
 }  // namespace ultra::wopr

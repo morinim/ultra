@@ -15,7 +15,6 @@
 
 #include "kernel/fitness.h"
 #include "kernel/individual.h"
-#include "utility/ts_queue.h"
 
 #include <cstddef>
 #include <iosfwd>
@@ -39,7 +38,6 @@ public:
   ultra::fitnd fit_best {};
   ultra::fitnd fit_mean {};
   ultra::fitnd fit_std_dev {};
-  ultra::fitnd fit_min {};
 
   unsigned len_mean {};
   double len_std_dev {};
@@ -55,16 +53,16 @@ private:
 
 struct dynamic_sequence
 {
-  std::vector<double> xs {};
+  std::vector<unsigned> xs {};
   std::vector<double> fit_best {};
   std::vector<double> fit_mean {};
   std::vector<double> fit_std_dev {};
-  std::vector<double> len_mean {};
+  std::vector<unsigned> len_mean {};
   std::vector<double> len_std_dev {};
-  std::vector<double> len_max {};
+  std::vector<unsigned> len_max {};
 
   std::map<crossover_types_map::key_type,
-           std::vector<double>> crossover_types {};
+           std::vector<unsigned>> crossover_types {};
 
   std::vector<std::string> best_prg {};
 
@@ -82,21 +80,20 @@ struct population_line
   unsigned generation {0};
 
   std::vector<double> fit {};
-  std::vector<double> obs {};
+  std::vector<std::size_t> obs {};
 };
 
 struct population_sequence
 {
   std::vector<double> fit {};
-  std::vector<double> obs {};
+  std::vector<std::size_t> obs {};
 
-  std::vector<double> xs {};
+  std::vector<std::size_t> xs {};
   std::vector<double> fit_entropy {};
 
   unsigned generation {0};
 
   [[nodiscard]] bool empty() const noexcept;
-  [[nodiscard]] std::size_t size() const noexcept;
 
   void update(population_line &);
   [[nodiscard]] double calculate_entropy() const;
@@ -112,7 +109,6 @@ struct layers_line
 
   std::vector<ultra::individual::age_t> age_sup {};
   std::vector<double> age_mean {};
-  std::vector<double> age_std_dev {};
   std::vector<ultra::individual::age_t> age_min {};
   std::vector<ultra::individual::age_t> age_max {};
 
@@ -127,17 +123,29 @@ struct layers_line
   [[nodiscard]] std::size_t size() const noexcept;
 };
 
+struct layers_fit_matrix
+{
+  std::size_t rows {0};
+  std::size_t cols {0};
+  std::size_t ind_max {0};
+  double fit_min {0.0};
+  double fit_max {0.0};
+  std::vector<double> values {};
+
+  [[nodiscard]] bool empty() const noexcept { return values.empty(); }
+};
+
+[[nodiscard]] layers_fit_matrix build_layers_fit_matrix(const layers_line &);
+
 struct monitor_state
 {
-  ultra::ts_queue<dynamic_data> dynamic_queue {};
-  ultra::ts_queue<population_line> population_queue {};
-  ultra::ts_queue<layers_line> layers_queue {};
-
   std::vector<dynamic_sequence> dynamic_runs {};
   std::vector<population_sequence> population_runs {};
   std::vector<layers_line> layers_runs {};
 
-  void update();
+  void push(const dynamic_data &);
+  void push(population_line);
+  void push(layers_line);
 };
 
 }  // namespace ultra::wopr

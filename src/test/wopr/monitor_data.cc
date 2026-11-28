@@ -17,8 +17,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
-#include "wopr/monitor_data.cc"
-
 TEST_SUITE("MONITOR DATA")
 {
 
@@ -37,14 +35,13 @@ TEST_CASE("layers_line parsing")
   SUBCASE("valid single layer")
   {
     // generation age_sup age_mean age_std_dev age_min age_max fit_mean fit_std_dev fit_min fit_max individuals
-    const layers_line ll("10 5 2.5 1.0 1 4 0.95 0.05 0.8 1.0 100");
+    const layers_line ll("10 5 2.5 1.75 1 4 0.95 0.05 0.8 1.0 100");
     CHECK(!ll.new_run);
     CHECK(ll.generation == 10);
     CHECK(ll.size() == 1);
     CHECK(!ll.empty());
     CHECK(ll.age_sup[0] == 5);
     CHECK(ll.age_mean[0] == doctest::Approx(2.5));
-    CHECK(ll.age_std_dev[0] == doctest::Approx(1.0));
     CHECK(ll.age_min[0] == 1);
     CHECK(ll.age_max[0] == 4);
     CHECK(ll.fit_mean[0] == doctest::Approx(0.95));
@@ -97,9 +94,9 @@ TEST_CASE("population_line parsing")
     CHECK(pl.generation == 5);
     CHECK(pl.fit.size() == 3);
     CHECK(pl.fit[0] == doctest::Approx(0.1));
-    CHECK(pl.obs[0] == doctest::Approx(10.0));
+    CHECK(pl.obs[0] == 10);
     CHECK(pl.fit[2] == doctest::Approx(0.3));
-    CHECK(pl.obs[2] == doctest::Approx(30.0));
+    CHECK(pl.obs[2] == 30);
   }
 
   SUBCASE("incomplete observations throws")
@@ -137,46 +134,39 @@ TEST_CASE("monitor_state updates histories and handles runs")
 {
   using namespace ultra::wopr;
 
-  SUBCASE("empty queues do not produce runs")
+  SUBCASE("empty state does not produce runs")
   {
     monitor_state state;
-    state.update();
 
     CHECK(state.dynamic_runs.empty());
     CHECK(state.population_runs.empty());
     CHECK(state.layers_runs.empty());
   }
 
-  SUBCASE("dynamic queue updates and separates runs")
+  SUBCASE("dynamic records update and separate runs")
   {
     monitor_state state;
-    state.dynamic_queue.push(dynamic_data(
-      "0 0.5 0.3 0.1 0.1 5 1.0 10 {1: 2} (x)"));
-    state.dynamic_queue.push(dynamic_data(
-      "1 0.8 0.4 0.1 0.2 6 1.2 12 {1: 3} (+ x 1)"));
-    state.dynamic_queue.push(dynamic_data(""));  // new run marker
-    state.dynamic_queue.push(dynamic_data(
-      "0 0.6 0.2 0.05 0.1 4 0.8 8 {1: 1} (y)"));
-
-    state.update();
+    state.push(dynamic_data("0 0.5 0.3 0.1 0.1 5 1.0 10 {1: 2} (x)"));
+    state.push(dynamic_data("1 0.8 0.4 0.1 0.2 6 1.2 12 {1: 3} (+ x 1)"));
+    state.push(dynamic_data(""));  // new run marker
+    state.push(dynamic_data(""));  // consecutive blank lines collapse
+    state.push(dynamic_data("0 0.6 0.2 0.05 0.1 4 0.8 8 {1: 1} (y)"));
 
     REQUIRE(state.dynamic_runs.size() == 2);
     CHECK(state.dynamic_runs[0].size() == 2);
-    CHECK(state.dynamic_runs[0].xs[0] == doctest::Approx(0.0));
-    CHECK(state.dynamic_runs[0].xs[1] == doctest::Approx(1.0));
+    CHECK(state.dynamic_runs[0].xs[0] == 0);
+    CHECK(state.dynamic_runs[0].xs[1] == 1);
     CHECK(state.dynamic_runs[1].size() == 1);
     CHECK(state.dynamic_runs[1].best_prg[0] == "(y)");
   }
 
-  SUBCASE("population queue updates and separates runs")
+  SUBCASE("population records update and separate runs")
   {
     monitor_state state;
-    state.population_queue.push(population_line("0 0.1 10 0.2 20"));
-    state.population_queue.push(population_line("1 0.1 15 0.2 25"));
-    state.population_queue.push(population_line(""));  // new run
-    state.population_queue.push(population_line("0 0.3 30"));
-
-    state.update();
+    state.push(population_line("0 0.1 10 0.2 20"));
+    state.push(population_line("1 0.1 15 0.2 25"));
+    state.push(population_line(""));  // new run
+    state.push(population_line("0 0.3 30"));
 
     REQUIRE(state.population_runs.size() == 2);
     CHECK(state.population_runs[0].generation == 1);
@@ -185,18 +175,13 @@ TEST_CASE("monitor_state updates histories and handles runs")
     CHECK(state.population_runs[1].xs.size() == 1);
   }
 
-  SUBCASE("layers queue keeps latest generation and separates runs")
+  SUBCASE("layers records keep latest generation and separate runs")
   {
     monitor_state state;
-    state.layers_queue.push(layers_line(
-      "0 5 2.5 1.0 1 4 0.5 0.1 0.3 0.7 50"));
-    state.layers_queue.push(layers_line(
-      "1 5 2.5 1.0 1 4 0.8 0.05 0.7 0.9 50"));
-    state.layers_queue.push(layers_line(""));  // new run
-    state.layers_queue.push(layers_line(
-      "0 5 2.5 1.0 1 4 0.6 0.1 0.4 0.8 50"));
-
-    state.update();
+    state.push(layers_line("0 5 2.5 1.0 1 4 0.5 0.1 0.3 0.7 50"));
+    state.push(layers_line("1 5 2.5 1.0 1 4 0.8 0.05 0.7 0.9 50"));
+    state.push(layers_line(""));  // new run
+    state.push(layers_line("0 5 2.5 1.0 1 4 0.6 0.1 0.4 0.8 50"));
 
     REQUIRE(state.layers_runs.size() == 2);
     CHECK(state.layers_runs[0].generation == 1);

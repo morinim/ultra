@@ -49,21 +49,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # another cmake executable to run. The same process will walk through the
 # project's entire directory structure).
 add_subdirectory(third_party/tinyxml2)
+add_subdirectory(third_party/echarts)
 add_subdirectory(kernel)
 add_subdirectory(examples)
-
-option(WOPR_ENABLE_GUI "Build WOPR with GUI support (requires SDL3)" ON)
-
-if (WOPR_ENABLE_GUI)
-  find_package(SDL3 CONFIG COMPONENTS SDL3)
-  if (SDL3_FOUND)
-    add_subdirectory(third_party/imgui)
-    add_subdirectory(third_party/implot)
-  else()
-    message(STATUS "SDL3 not found: WOPR will be built in headless mode")
-    set(WOPR_ENABLE_GUI OFF)
-  endif()
-endif()
 
 add_subdirectory(wopr)
 

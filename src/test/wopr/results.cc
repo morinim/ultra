@@ -10,25 +10,60 @@
  *  You can obtain one at http://mozilla.org/MPL/2.0/
  */
 
-// Includes the implementation to exercise its private snapshot and renderer.
-#include "wopr/results.cc"
-#include "wopr/run.cc"
+#include "wopr/command_line.h"
+#include "wopr/html_report.h"
+#include "wopr/html_shell.h"
+#include "wopr/results.h"
 
-#include "implot/implot_internal.h"
+#include "tinyxml2/tinyxml2.h"
 
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <thread>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+namespace fs = std::filesystem;
+
 namespace
 {
 
+using namespace std::chrono_literals;
 using namespace ultra::wopr;
 
-[[nodiscard]] results_state make_state(
-  bool with_reference = true, rs::exec_mode mode = rs::exec_mode::summary,
-  bool with_threshold = false)
+struct temp_dir_guard
+{
+  explicit temp_dir_guard(std::string_view name)
+    : path(fs::temp_directory_path() / name)
+  {
+    fs::remove_all(path);
+    fs::create_directories(path);
+  }
+
+  ~temp_dir_guard()
+  {
+    std::error_code ec;
+    for (const auto &p : protected_files)
+      fs::permissions(p, fs::perms::owner_all, fs::perm_options::replace, ec);
+    fs::remove_all(path, ec);
+  }
+
+  fs::path path;
+  std::vector<fs::path> protected_files {};
+};
+
+[[nodiscard]] std::string read_text_file(const fs::path &path)
+{
+  std::ifstream in(path, std::ios::binary);
+  return {std::istreambuf_iterator<char>(in), {}};
+}
+
+[[nodiscard]] rs::collection_t make_collection(
+  bool with_reference = true, bool with_threshold = false)
 {
   summary_data reference;
   reference.runs = with_reference ? 20 : 0;
@@ -48,30 +83,8 @@ using namespace ultra::wopr;
   collection.push_back({.name = "Pending"});
   collection.push_back({.name = "Zero", .reference = reference});
   collection.back().current.runs = 5;
-  return results_state(std::move(collection), mode);
+  return collection;
 }
-
-struct plot_context
-{
-  plot_context()
-  {
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-    auto &io(ImGui::GetIO());
-    io.IniFilename = nullptr;
-    io.DisplaySize = ImVec2(1000, 700);
-    io.DeltaTime = 1.0f / 60.0f;
-    unsigned char *pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-  }
-
-  ~plot_context()
-  {
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
-  }
-};
 
 }  // namespace
 
@@ -105,74 +118,10 @@ TEST_CASE("Failed dataset searches publish their error")
   rs::run::options options;
   options.collection.push_back({.dataset = "missing-wopr-dataset/data.csv",
                                 .activity = activity});
-  CHECK_FALSE(run_impl(std::move(options)));
+  CHECK_FALSE(rs::run::start(std::move(options)));
   const auto status(activity->status());
   CHECK(status.state == rs::task_state::failed);
   CHECK_FALSE(status.error.empty());
-}
-
-TEST_CASE_FIXTURE(plot_context, "Running count and digits share the header row")
-{
-  auto state(make_state(false, rs::exec_mode::run));
-  for (auto &entry : state.collection)
-    entry.activity = std::make_shared<rs::dataset_activity>();
-  state.collection[0].activity->set(rs::task_state::running);
-  state.collection[1].activity->set(rs::task_state::failed, "Dataset unavailable");
-  for (const float width : {900.0f, 300.0f})
-  {
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(width, 300));
-    ImGui::Begin("Dataset activity");
-    ImGui::TextUnformatted("elite");
-    const float header_y(ImGui::GetItemRectMin().y);
-    render_run_status(&state.collection);
-    CHECK(ImGui::GetItemRectMin().y == doctest::Approx(header_y));
-    CHECK(ImGui::GetItemRectMax().x
-          <= ImGui::GetWindowPos().x + ImGui::GetWindowWidth());
-    ImGui::End();
-    ImGui::Render();
-    CHECK(ImGui::GetDrawData()->TotalVtxCount > 0);
-  }
-}
-
-TEST_CASE_FIXTURE(plot_context, "Elite titles update activity without recreating plots")
-{
-  auto state(make_state(false, rs::exec_mode::run));
-  for (auto &entry : state.collection)
-    entry.activity = std::make_shared<rs::dataset_activity>();
-  const results_snapshot snapshot(state);
-  ImGuiID plot_id(0);
-  for (const auto status : {rs::task_state::queued, rs::task_state::running,
-                            rs::task_state::finished, rs::task_state::failed,
-                            rs::task_state::cancelled})
-  {
-    state.collection[0].activity->set(status);
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(900, 600));
-    ImGui::Begin("Elite activity");
-    render_elite(snapshot, &state.collection);
-
-    auto &plots(ImPlot::GetCurrentContext()->Plots);
-    REQUIRE(plots.GetAliveCount() == 3);
-    bool found(false);
-    for (int i(0); i < plots.GetBufSize(); ++i)
-    {
-      const auto *plot(plots.GetByIndex(i));
-      if (std::string_view(plot->GetTitle()).starts_with("Measured ["))
-      {
-        const auto expected(std::format("Measured [{}]###Measured",
-                                        activity_indicator(status).label));
-        CHECK(std::string(plot->GetTitle()) == expected);
-        if (!plot_id)
-          plot_id = plot->ID;
-        CHECK(plot->ID == plot_id);
-        found = true;
-      }
-    }
-    CHECK(found);
-    ImGui::End();
-    ImGui::Render();
-  }
 }
 
 TEST_CASE("build_path constructs and normalizes paths correctly")
@@ -257,81 +206,42 @@ TEST_CASE("Summary files require valid XML and matching checksums")
 
 TEST_CASE("Missing success rates remain distinct from measured zero")
 {
-  auto state(make_state());
-  const results_snapshot snapshot(state);
+  auto collection(make_collection());
+  const results_snapshot snapshot(collection);
 
-  REQUIRE(snapshot.success_rates.size() == 6);
-  CHECK(snapshot.success_rates[0] == doctest::Approx(20.0));
-  CHECK(std::isnan(snapshot.success_rates[1]));
-  CHECK(snapshot.success_rates[2] == doctest::Approx(0.0));
-  CHECK(snapshot.success_rates[3] == doctest::Approx(50.0));
-  CHECK(std::isnan(snapshot.success_rates[4]));
-  CHECK(snapshot.success_rates[5] == doctest::Approx(50.0));
+  REQUIRE(snapshot.datasets.size() == 3);
+  CHECK(snapshot.datasets[0].current.success_rate == doctest::Approx(20.0));
+  CHECK(std::isnan(snapshot.datasets[1].current.success_rate));
+  CHECK(snapshot.datasets[2].current.success_rate == doctest::Approx(0.0));
+  CHECK(snapshot.datasets[0].reference.success_rate == doctest::Approx(50.0));
+  CHECK(std::isnan(snapshot.datasets[1].reference.success_rate));
+  CHECK(snapshot.datasets[2].reference.success_rate == doctest::Approx(50.0));
 
-  state.collection[1].current.runs = 1;
-  const results_snapshot updated(state);
-  CHECK(updated.success_rates[1] == doctest::Approx(0.0));
-}
-
-TEST_CASE("Success rate tooltips describe comparisons and missing results")
-{
-  auto state(make_state());
-  const results_snapshot snapshot(state);
-
-  const auto measured(success_rate_tooltip(snapshot, 0, true));
-  CHECK(measured.starts_with("Measured\n"));
-  CHECK(measured.contains("Current: 20.0% (10 completed runs)"));
-  CHECK(measured.contains("Reference: 50.0% (20 completed runs)"));
-  CHECK(measured.contains("Difference: -30.0 percentage points"));
-
-  const auto pending(success_rate_tooltip(snapshot, 1, true));
-  CHECK(pending.contains("Current: awaiting results"));
-  CHECK(pending.contains("Reference: no reference"));
-  CHECK_FALSE(pending.contains("Difference:"));
-
-  const auto zero(success_rate_tooltip(snapshot, 2, true));
-  CHECK(zero.contains("Current: 0.0% (5 completed runs)"));
-  CHECK(zero.contains("Difference: -50.0 percentage points"));
-
-  const auto current_only(success_rate_tooltip(snapshot, 0, false));
-  CHECK_FALSE(current_only.contains("Reference:"));
-  CHECK_FALSE(current_only.contains("Difference:"));
-
-  state.collection[0].current.success_rate = 0.75;
-  const results_snapshot improved(state);
-  CHECK(success_rate_tooltip(improved, 0, true)
-        .contains("Difference: +25.0 percentage points"));
-
-  state.collection[0].current.runs = 0;
-  const results_snapshot awaiting(state);
-  const auto awaiting_text(success_rate_tooltip(awaiting, 0, true));
-  CHECK(awaiting_text.contains("Current: awaiting results"));
-  CHECK(awaiting_text.contains("Reference: 50.0% (20 completed runs)"));
-  CHECK_FALSE(awaiting_text.contains("Difference:"));
+  collection[1].current.runs = 1;
+  const results_snapshot updated(collection);
+  CHECK(updated.datasets[1].current.success_rate == doctest::Approx(0.0));
 }
 
 TEST_CASE("Runs without success thresholds use time per completed run")
 {
   const auto check([](rs::exec_mode mode, bool with_threshold)
   {
-    auto state(make_state(true, mode, with_threshold));
-    const results_snapshot snapshot(state);
+    const auto collection(make_collection(true, with_threshold));
+    const results_snapshot snapshot(collection, mode);
 
     CHECK(snapshot.show_success_rate
           == (mode == rs::exec_mode::summary || with_threshold));
-    REQUIRE(snapshot.time_per_run.size() == 6);
-    CHECK(snapshot.time_per_run[0] == doctest::Approx(1.25));
-    CHECK(std::isnan(snapshot.time_per_run[1]));
-    CHECK(snapshot.time_per_run[2] == doctest::Approx(0.0));
-    CHECK(snapshot.time_per_run[3] == doctest::Approx(4.5));
-    CHECK(std::isnan(snapshot.time_per_run[4]));
+    REQUIRE(snapshot.datasets.size() == 3);
+    CHECK(snapshot.datasets[0].current.time_per_run == doctest::Approx(1.25));
+    CHECK(std::isnan(snapshot.datasets[1].current.time_per_run));
+    CHECK(snapshot.datasets[2].current.time_per_run == doctest::Approx(0.0));
+    CHECK(snapshot.datasets[0].reference.time_per_run == doctest::Approx(4.5));
+    CHECK(std::isnan(snapshot.datasets[1].reference.time_per_run));
 
     if (mode == rs::exec_mode::run && with_threshold)
     {
-      CHECK(snapshot.success_thresholds[0]);
-      CHECK_FALSE(snapshot.success_thresholds[2]);
-      CHECK(success_rate_tooltip(snapshot, 2, true)
-            .contains("No success threshold defined"));
+      CHECK(snapshot.datasets[0].has_threshold);
+      CHECK_FALSE(snapshot.datasets[2].has_threshold);
     }
   });
 
@@ -343,26 +253,7 @@ TEST_CASE("Runs without success thresholds use time per completed run")
   settings.threshold.accuracy = 0.9;
   rs::collection_t collection;
   collection.push_back({.name = "Accuracy", .conf = settings});
-  results_state state(std::move(collection), rs::exec_mode::run);
-  CHECK(results_snapshot(state).show_success_rate);
-}
-
-TEST_CASE("Time per run tooltips describe timings and pending results")
-{
-  auto state(make_state());
-  const results_snapshot snapshot(state);
-
-  const auto measured(time_per_run_tooltip(snapshot, 0, true));
-  CHECK(measured.starts_with("Measured\n"));
-  CHECK(measured.contains("Current: 1.250 s/run (10 completed runs)"));
-  CHECK(measured.contains("Reference: 4.500 s/run (20 completed runs)"));
-
-  const auto pending(time_per_run_tooltip(snapshot, 1, true));
-  CHECK(pending.contains("Current: awaiting results"));
-  CHECK(pending.contains("Reference: no reference"));
-  CHECK(time_per_run_tooltip(snapshot, 2, false)
-        .contains("Current: 0.000 s/run (5 completed runs)"));
-  CHECK_FALSE(time_per_run_tooltip(snapshot, 0, false).contains("Reference:"));
+  CHECK(results_snapshot(collection, rs::exec_mode::run).show_success_rate);
 }
 
 TEST_CASE("Remaining time estimates use each dataset's planned runs")
@@ -380,352 +271,174 @@ TEST_CASE("Remaining time estimates use each dataset's planned runs")
   collection[0].current.elapsed_time = 12500ms;
   collection[1].current.runs = 5;
   collection[1].current.elapsed_time = 2h;
-  results_state state(std::move(collection), rs::exec_mode::run);
-  const results_snapshot snapshot(state);
+  const results_snapshot snapshot(collection, rs::exec_mode::run);
 
-  REQUIRE(estimated_time_remaining(snapshot, 0));
-  CHECK(*estimated_time_remaining(snapshot, 0) == doctest::Approx(12.5));
-  CHECK(remaining_time_label(snapshot, 0) == "~13s");
-  CHECK(remaining_time_label(snapshot, 1) == "~6h 0m 0s");
-  CHECK_FALSE(estimated_time_remaining(snapshot, 2));
-  CHECK(remaining_time_label(snapshot, 2) == "Pending");
-  CHECK(time_per_run_tooltip(snapshot, 0, true)
-        .contains("Runs left: 10\nEstimated time remaining: ~13s"));
+  REQUIRE(estimated_time_remaining(snapshot.datasets[0]));
+  CHECK(*estimated_time_remaining(snapshot.datasets[0]) == doctest::Approx(12.5));
+  CHECK(remaining_time_label(snapshot.datasets[0]) == "~13s");
+  CHECK(remaining_time_label(snapshot.datasets[1]) == "~6h 0m 0s");
+  CHECK_FALSE(estimated_time_remaining(snapshot.datasets[2]));
+  CHECK(remaining_time_label(snapshot.datasets[2]) == "Pending");
 
-  state.collection[0].current.runs = 15;
-  state.collection[0].current.elapsed_time = 3min;
-  const results_snapshot updated(state);
-  CHECK(remaining_time_label(updated, 0) == "~1m 0s");
+  collection[0].current.runs = 15;
+  collection[0].current.elapsed_time = 3min;
+  const results_snapshot updated(collection, rs::exec_mode::run);
+  CHECK(remaining_time_label(updated.datasets[0]) == "~1m 0s");
 
   for (const unsigned runs : {20u, 21u})
   {
-    state.collection[0].current.runs = runs;
-    const results_snapshot completed(state);
-    REQUIRE(estimated_time_remaining(completed, 0));
-    CHECK(*estimated_time_remaining(completed, 0) == doctest::Approx(0.0));
-    CHECK(remaining_time_label(completed, 0) == "Complete");
-    CHECK(time_per_run_tooltip(completed, 0, false).contains("Runs left: 0"));
+    collection[0].current.runs = runs;
+    const results_snapshot completed(collection, rs::exec_mode::run);
+    REQUIRE(estimated_time_remaining(completed.datasets[0]));
+    CHECK(*estimated_time_remaining(completed.datasets[0]) == doctest::Approx(0.0));
+    CHECK(remaining_time_label(completed.datasets[0]) == "Complete");
   }
 }
 
-TEST_CASE_FIXTURE(plot_context, "Time per run plots use a non-negative time axis")
+TEST_CASE("JavaScript tooltip renderers reflect comparisons, timings and missing results")
 {
-  for (const bool with_reference : {true, false})
+  if (std::system("command -v gjs >/dev/null 2>&1") != 0)
   {
-    auto state(make_state(with_reference, rs::exec_mode::run));
-    SUBCASE("Completed results") {}
-    SUBCASE("All results pending")
-    {
-      for (auto &test : state.collection)
-        test.current.runs = 0;
-    }
-    const results_snapshot snapshot(state);
-    for (unsigned frame(0); frame < 3; ++frame)
-    {
-      ImGui::NewFrame();
-      ImGui::SetNextWindowSize(ImVec2(900, 600));
-      ImGui::Begin("Run timings");
-      render_time_per_run(snapshot);
-
-      const auto *plot(ImPlot::GetPlot("##Time per run##Run"));
-      REQUIRE(plot);
-      CHECK(plot->Axes[ImAxis_X1].Range.Min >= 0.0);
-      CHECK(plot->Axes[ImAxis_X1].Range.Max > 0.0);
-      CHECK(plot->Axes[ImAxis_Y1].IsLocked());
-      CHECK(plot->Axes[ImAxis_Y1].IsInverted());
-      const auto &remaining_axis(plot->Axes[ImAxis_Y2]);
-      CHECK(remaining_axis.Enabled);
-      CHECK(remaining_axis.IsLocked());
-      CHECK(remaining_axis.IsInverted());
-      CHECK(remaining_axis.Range.Min
-            == doctest::Approx(plot->Axes[ImAxis_Y1].Range.Min));
-      CHECK(remaining_axis.Range.Max
-            == doctest::Approx(plot->Axes[ImAxis_Y1].Range.Max));
-      REQUIRE(remaining_axis.Ticker.TickCount() == snapshot.labels.size());
-      for (std::size_t i(0); i < snapshot.labels.size(); ++i)
-        CHECK(std::string(remaining_axis.Ticker.GetText(i))
-              == remaining_time_label(snapshot, i));
-
-      ImGui::End();
-      ImGui::Render();
-      for (const auto *list : ImGui::GetDrawData()->CmdLists)
-        for (const auto &vertex : list->VtxBuffer)
-        {
-          CHECK(std::isfinite(vertex.pos.x));
-          CHECK(std::isfinite(vertex.pos.y));
-        }
-    }
+    MESSAGE("Skipping JS tooltip tests: gjs not found");
+    return;
   }
-}
 
-TEST_CASE_FIXTURE(plot_context, "Pending timing annotations keep stable visible axes")
-{
-  bool with_reference(false);
-  SUBCASE("No reference results") {}
-  SUBCASE("Reference results hidden") { with_reference = true; }
-
-  auto state(make_state(with_reference, rs::exec_mode::run));
-  for (auto &test : state.collection)
-    test.current.runs = 0;
-
-  for (unsigned frame(0); frame < 64; ++frame)
+  const temp_dir_guard temp_dir("wopr_test_js_tooltips");
+  const auto write_case([&temp_dir](std::string_view name,
+                                     const rs::collection_t &collection,
+                                     rs::exec_mode mode)
   {
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(900, 600));
-    ImGui::Begin("Pending run timings");
-    if (with_reference && (frame == 0 || frame == 60))
-      ImGui::ActivateItemByID(ImGui::GetID("Reference values##Run##Time per run"));
-    if (frame == 40)
-    {
-      state.collection[0].current.runs = 1;
-      state.collection[0].current.elapsed_time = 5s;
-    }
-    const results_snapshot snapshot(state);
-    render_time_per_run(snapshot);
+    const results_snapshot snapshot(collection, mode);
+    const auto html(render_html_report(snapshot));
+    const auto path(temp_dir.path / (std::string(name) + ".html"));
+    std::ofstream out(path, std::ios::binary);
+    REQUIRE(out);
+    out << html;
+  });
 
-    const auto *plot(ImPlot::GetPlot("##Time per run##Run"));
-    REQUIRE(plot);
-    if (frame >= 4 && frame < 40)
-    {
-      CHECK((plot->Flags & ImPlotFlags_NoLegend) != 0);
-      const auto &axis(plot->Axes[ImAxis_X1]);
-      CHECK(axis.Range.Min == doctest::Approx(0.0));
-      CHECK(axis.Range.Max == doctest::Approx(1.0));
+  auto measured_coll(make_collection());
+  write_case("sr_default", measured_coll, rs::exec_mode::summary);
+  REQUIRE(write_html_report(temp_dir.path / "sr_external.html",
+                             results_snapshot(measured_coll), true, 3));
 
-      const auto text_size(ImGui::CalcTextSize("Pending"));
-      for (std::size_t i(0); i < snapshot.labels.size(); ++i)
-      {
-        const float x(axis.PlotToPixels(0.0) + 35 - text_size.x / 2);
-        const float y(plot->Axes[ImAxis_Y1].PlotToPixels(i) - text_size.y / 2);
-        CHECK(plot->PlotRect.Contains(ImRect(x, y, x + text_size.x,
-                                            y + text_size.y)));
-      }
-    }
-    if (frame >= 42 && frame < 61)
-    {
-      const auto &axis(plot->Axes[ImAxis_X1]);
-      CHECK_FALSE(axis.IsLocked());
-      CHECK(axis.Range.Min == doctest::Approx(0.0));
-      CHECK(axis.Range.Max >= 5.0);
-    }
+  measured_coll[0].current.success_rate = 0.75;
+  write_case("sr_improved", measured_coll, rs::exec_mode::summary);
 
-    ImGui::End();
-    ImGui::Render();
-  }
-}
+  measured_coll[0].current.runs = 0;
+  write_case("sr_awaiting", measured_coll, rs::exec_mode::summary);
 
-TEST_CASE_FIXTURE(plot_context, "Run capacity lines stay opaque yellow")
-{
-  rs::settings settings;
-  settings.runs = 20;
-  rs::collection_t collection;
-  collection.push_back({.name = "Dataset", .conf = settings});
-  collection.back().current.runs = 10;
-  results_state state(std::move(collection));
-  const results_snapshot snapshot(state);
+  write_case("sr_missing_thresh", make_collection(true, true),
+             rs::exec_mode::run);
 
-  for (unsigned frame(0); frame < 3; ++frame)
+  write_case("tpr_default", make_collection(), rs::exec_mode::run);
+
+  auto single_run(make_collection());
+  single_run.resize(1);
+  single_run[0].conf.runs = 1;
+  single_run[0].current.runs = 1;
+  single_run[0].current.fit_mean = {0.8};
+  single_run[0].current.fit_std_dev = {0.1};
+  single_run[0].current.best_fit = {0.9};
+  single_run[0].reference = single_run[0].current;
+  write_case("fitness_single_run", single_run, rs::exec_mode::run);
+
+  rs::settings rem_settings;
+  rem_settings.runs = 20;
+  rs::collection_t rem_coll;
+  rem_coll.push_back({.name = "Fast", .conf = rem_settings});
+  rem_coll[0].current.runs = 10;
+  rem_coll[0].current.elapsed_time = 12500ms;
+  write_case("tpr_remaining", rem_coll, rs::exec_mode::run);
+
+  rem_coll[0].current.runs = 20;
+  write_case("tpr_done20", rem_coll, rs::exec_mode::run);
+
+  rem_coll[0].current.runs = 21;
+  write_case("tpr_done21", rem_coll, rs::exec_mode::run);
+
+  auto elite_coll(make_collection());
+  elite_coll.resize(1);
+  elite_coll[0].conf.runs = 300;
+  for (unsigned k(0); k < 15; ++k)
   {
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(900, 600));
-    ImGui::Begin("Run counts");
-    render_number_of_runs(snapshot);
-    ImGui::End();
-    ImGui::Render();
-
-    std::vector<ImVec2> line_uvs;
-    for (const auto *list : ImGui::GetDrawData()->CmdLists)
-      for (const auto &vertex : list->VtxBuffer)
-        if (vertex.col == IM_COL32(255, 255, 0, 255))
-          line_uvs.push_back(vertex.uv);
-
-    REQUIRE(line_uvs.size() == 4);
-    const auto *atlas(ImGui::GetIO().Fonts);
-    auto *texture(atlas->TexData);
-    REQUIRE(texture->Format == ImTextureFormat_RGBA32);
-    const int x(static_cast<int>((line_uvs[0].x + line_uvs[2].x)
-                                  * 0.5f * texture->Width));
-    const int y(static_cast<int>((line_uvs[0].y + line_uvs[2].y)
-                                  * 0.5f * texture->Height));
-    REQUIRE(x >= 0);
-    REQUIRE(x < texture->Width);
-    REQUIRE(y >= 0);
-    REQUIRE(y < texture->Height);
-    const auto *pixel(static_cast<const unsigned char *>(
-      texture->GetPixelsAt(x, y)));
-    CHECK(pixel[0] == 255);
-    CHECK(pixel[1] == 255);
-    CHECK(pixel[2] == 255);
-    CHECK(pixel[3] == 255);
+    const double fit(-static_cast<double>(k) * 0.01);
+    const double acc(0.99 - static_cast<double>(k) * 0.01);
+    elite_coll[0].current.elite.push_back({k + 1, {{fit}, acc}});
+    elite_coll[0].reference.elite.push_back({k + 100, {{fit - 0.02}, acc}});
   }
-}
+  write_case("elite_cap", elite_coll, rs::exec_mode::summary);
 
-TEST_CASE_FIXTURE(plot_context, "Uniform heatmaps render with either axis direction")
-{
-  for (const auto x_flags : {ImPlotAxisFlags_None, ImPlotAxisFlags_Invert})
-    for (const auto y_flags : {ImPlotAxisFlags_None, ImPlotAxisFlags_Invert})
-    {
-      ImGui::NewFrame();
-      ImGui::SetNextWindowSize(ImVec2(900, 600));
-      ImGui::Begin("Uniform fitness");
-      if (ImPlot::BeginPlot("Heatmap"))
-      {
-        ImPlot::SetupAxes(nullptr, nullptr, x_flags, y_flags);
-        ImPlot::SetupAxesLimits(0, 1, 0, 1, ImPlotCond_Always);
-        ImPlot::SetupFinish();
+  rs::settings no_ref_settings;
+  no_ref_settings.runs = 5;
+  rs::collection_t no_ref_coll;
+  no_ref_coll.push_back({.name = "Single", .conf = no_ref_settings});
+  no_ref_coll[0].current.runs = 2;
+  no_ref_coll[0].current.elapsed_time = 200ms;
+  write_case("runs_no_ref", no_ref_coll, rs::exec_mode::run);
 
-        const double values[] = {1, 1, 1, 1};
-        auto *draw_list(ImPlot::GetPlotDrawList());
-        const int start(draw_list->VtxBuffer.Size);
-        ImPlot::PlotHeatmap("Fitness", values, 2, 2, 1, 1, nullptr);
-        CHECK(draw_list->VtxBuffer.Size > start);
-        ImPlot::EndPlot();
-      }
-      else
-        FAIL("Heatmap plot is not visible");
-      ImGui::End();
-      ImGui::Render();
-    }
-}
-
-TEST_CASE_FIXTURE(plot_context, "Mean and best fitness markers stay distinct")
-{
-  int first_mean_count(0);
-  for (unsigned frame(0); frame < 3; ++frame)
   {
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(900, 600));
-    ImGui::Begin("Fitness markers");
-    if (ImPlot::BeginPlot("Fitness"))
-    {
-      ImPlot::SetupAxesLimits(0, 2, 0, 4, ImPlotCond_Always);
-      ImPlot::SetupFinish();
+    rs::settings thr_settings;
+    thr_settings.runs = 10;
+    thr_settings.threshold.accuracy = 0.9;
+    rs::collection_t live_coll;
 
-      auto *draw_list(ImPlot::GetPlotDrawList());
-      const int start(draw_list->VtxBuffer.Size);
-      render_fitness_series("Current", 1, 1, 0.25, 3);
-      const auto colour(ImPlot::GetItem("Current")->Color);
-      const float middle_y(ImPlot::PlotToPixels(1, 2).y);
-      int mean_count(0), best_count(0);
-      for (int i(start); i < draw_list->VtxBuffer.Size; ++i)
-        if (const auto &vertex(draw_list->VtxBuffer[i]); vertex.col == colour)
-        {
-          if (vertex.pos.y > middle_y)
-            ++mean_count;
-          else
-            ++best_count;
-        }
-      CHECK(best_count > 0);
-      CHECK(mean_count > best_count);
-      if (!frame)
-        first_mean_count = mean_count;
-      CHECK(mean_count == first_mean_count);
-      ImPlot::EndPlot();
-    }
-    else
-      FAIL("Fitness plot is not visible");
-    ImGui::End();
-    ImGui::Render();
+    auto act_fail(std::make_shared<rs::dataset_activity>());
+    act_fail->set(rs::task_state::failed, "boom");
+    live_coll.push_back({
+      .name = "bad",
+      .conf = thr_settings,
+      .activity = act_fail
+    });
+    live_coll[0].reference.runs = 10;
+    live_coll[0].reference.best_fit = {0.0};
+    live_coll[0].reference.best_prg = "ref_p";
+
+    auto act_run(std::make_shared<rs::dataset_activity>());
+    act_run->set(rs::task_state::running);
+    live_coll.push_back({
+      .name = "nohit",
+      .conf = thr_settings,
+      .activity = act_run
+    });
+    live_coll[1].current.runs = 5;
+    live_coll[1].current.success_rate = 0.0;
+    live_coll[1].current.best_fit = {-0.5};
+    live_coll[1].current.fit_mean = {-0.6};
+    live_coll[1].current.fit_std_dev = {0.05};
+    live_coll[1].current.best_prg = "x + 1";
+    live_coll[1].reference.runs = 10;
+    live_coll[1].reference.success_rate = 0.8;
+    live_coll[1].reference.best_fit = {-0.1};
+    live_coll[1].reference.fit_mean = {-0.2};
+    live_coll[1].reference.fit_std_dev = {0.02};
+    live_coll[1].reference.best_prg = "x";
+
+    const results_snapshot live_snap(live_coll, rs::exec_mode::run);
+    std::ofstream out(temp_dir.path / "live_ui.html", std::ios::binary);
+    REQUIRE(out);
+    out << render_html_report(live_snap, true, 3);
+
+    rs::collection_t queued_coll;
+    auto act_queued(std::make_shared<rs::dataset_activity>());
+    queued_coll.push_back({
+      .name = "queued_only",
+      .conf = thr_settings,
+      .activity = act_queued
+    });
+    const results_snapshot queued_snap(queued_coll, rs::exec_mode::run);
+    std::ofstream q_out(temp_dir.path / "queued_only.html", std::ios::binary);
+    REQUIRE(q_out);
+    q_out << render_html_report(queued_snap, true, 3);
   }
-}
 
-TEST_CASE_FIXTURE(plot_context, "Plot fills apply opacity once")
-{
-  unsigned item(0);
-  SUBCASE("Shaded region") { item = 0; }
-  SUBCASE("Shaded line")   { item = 1; }
-  SUBCASE("Shaded stairs") { item = 2; }
-  SUBCASE("Bars")          { item = 3; }
-  SUBCASE("Horizontal bars") { item = 4; }
-  SUBCASE("Pre-step shaded stairs") { item = 5; }
+  fs::path script_path("check_tooltips.js");
+  if (!fs::is_regular_file(script_path))
+    script_path = fs::path(__FILE__).parent_path() / "check_tooltips.js";
+  REQUIRE(fs::is_regular_file(script_path));
 
-  for (const bool per_point : {false, true})
-  {
-    ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(900, 600));
-    ImGui::Begin("Fill opacity");
-    if (ImPlot::BeginPlot("Fill"))
-    {
-      ImPlot::SetupAxesLimits(-1, 3, -1, 3);
-      ImPlot::SetupFinish();
-      const double xs[] = {0, 1, 2}, ys[] = {1, 2, 1};
-      ImU32 colours[] = {IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_WHITE};
-      ImPlotSpec spec(ImPlotProp_FillColor, ImVec4(1, 1, 1, 1),
-                      ImPlotProp_FillAlpha, 0.25f,
-                      ImPlotProp_LineWeight, 0.0f);
-      if (per_point)
-        spec.FillColors = colours;
-      auto *draw_list(ImPlot::GetPlotDrawList());
-      const int start(draw_list->VtxBuffer.Size);
-      switch (item)
-      {
-      case 0:
-        ImPlot::PlotShaded("Fill", xs, ys, 3, 0, spec);
-        break;
-      case 1:
-        spec.Flags = ImPlotLineFlags_Shaded;
-        ImPlot::PlotLine("Fill", xs, ys, 3, spec);
-        break;
-      case 2:
-        spec.Flags = ImPlotStairsFlags_Shaded;
-        ImPlot::PlotStairs("Fill", xs, ys, 3, spec);
-        break;
-      case 3:
-        ImPlot::PlotBars("Fill", xs, ys, 3, 0.5, spec);
-        break;
-      case 4:
-        spec.Flags = ImPlotBarsFlags_Horizontal;
-        ImPlot::PlotBars("Fill", xs, ys, 3, 0.5, spec);
-        break;
-      case 5:
-        spec.Flags = ImPlotStairsFlags_Shaded | ImPlotStairsFlags_PreStep;
-        ImPlot::PlotStairs("Fill", xs, ys, 3, spec);
-        break;
-      }
-      REQUIRE(draw_list->VtxBuffer.Size > start);
-      for (int i(start); i < draw_list->VtxBuffer.Size; ++i)
-        CHECK(draw_list->VtxBuffer[i].col == IM_COL32(255, 255, 255, 64));
-      ImPlot::EndPlot();
-    }
-    else
-      FAIL("Fill plot is not visible");
-    ImGui::End();
-    ImGui::Render();
-  }
-}
-
-TEST_CASE_FIXTURE(plot_context, "Success rate scale stays at zero to 100 percent")
-{
-  for (const bool with_reference : {true, false})
-  {
-    auto state(make_state(with_reference));
-    for (const double rate : {0.0, 0.02, 1.0})
-    {
-      state.collection[0].current.success_rate = rate;
-      const results_snapshot snapshot(state);
-      ImGui::NewFrame();
-      ImGui::SetNextWindowSize(ImVec2(900, 600));
-      ImGui::Begin("Success rates");
-      render_success_rate(snapshot);
-
-      const auto *plot(ImPlot::GetPlot("##Success rate##Run"));
-      REQUIRE(plot);
-      const auto &axis(plot->Axes[ImAxis_Y1]);
-      CHECK(axis.Range.Min == doctest::Approx(0.0));
-      CHECK(axis.Range.Max == doctest::Approx(100.0));
-      CHECK(axis.IsLocked());
-      CHECK(std::string(axis.FormatSpec) == "%.0f%%");
-
-      ImGui::End();
-      ImGui::Render();
-      for (const auto *list : ImGui::GetDrawData()->CmdLists)
-        for (const auto &vertex : list->VtxBuffer)
-        {
-          CHECK(std::isfinite(vertex.pos.x));
-          CHECK(std::isfinite(vertex.pos.y));
-        }
-    }
-  }
+  const std::string cmd("gjs \"" + script_path.string() + "\" \""
+                        + temp_dir.path.string() + "\"");
+  CHECK(std::system(cmd.c_str()) == 0);
 }
 
 TEST_CASE("read_settings with common_random_numbers")
@@ -751,6 +464,401 @@ TEST_CASE("read_settings with common_random_numbers")
   CHECK(conf.common_random_numbers == true);
 
   fs::remove_all(temp_dir);
+}
+
+TEST_CASE("HTML report serializes snapshot and escapes unsafe strings")
+{
+  auto collection(make_collection(true, true));
+  collection[0].activity = std::make_shared<rs::dataset_activity>();
+  collection[0].activity->set(rs::task_state::finished);
+  collection[0].current.best_prg = "x < 1 </script> \"quoted\"";
+  collection[0].current.fit_mean = {0.75};
+  collection[0].current.fit_std_dev = {0.125};
+  collection[0].current.best_fit = {0.95};
+  collection[0].current.elite = {{3u, {{0.95}, 0.875}}};
+
+  collection[1].activity = std::make_shared<rs::dataset_activity>();
+  collection[1].activity->set(rs::task_state::failed,
+                               "Bad </script> & \"error\"");
+
+  const results_snapshot snapshot(collection, rs::exec_mode::run);
+  const auto html(render_html_report(snapshot));
+
+  const std::string_view marker("<script id=\"wopr-data\" type=\"application/json\">");
+  const auto data_start(html.find(marker));
+  REQUIRE(data_start != std::string::npos);
+  const auto payload_start(data_start + marker.size());
+  const auto payload_end(html.find("</script>", payload_start));
+  REQUIRE(payload_end != std::string::npos);
+  const std::string_view payload(
+    html.data() + payload_start, payload_end - payload_start);
+
+  CHECK(html.starts_with("<!DOCTYPE html>"));
+  CHECK(html.contains(".panel[hidden] {\n  display: none;\n}"));
+  CHECK(payload.contains("\"name\":\"Measured\""));
+  CHECK(payload.contains("\"name\":\"Pending\""));
+  CHECK(payload.contains("\"name\":\"Zero\""));
+  CHECK(payload.contains("\"live\":false"));
+  CHECK(payload.contains("\"references_available\":true"));
+  CHECK(payload.contains("\"show_success_rate\":true"));
+  CHECK(payload.contains("\"status\":\"Finished\""));
+  CHECK(payload.contains("\"status\":\"Failed\""));
+  CHECK(html.contains("echarts"));
+  CHECK(payload.contains("null"));
+  CHECK_FALSE(payload.contains("nan"));
+  CHECK_FALSE(payload.contains("NaN"));
+  CHECK_FALSE(payload.contains("x < 1 </script>"));
+  CHECK(payload.contains("\\u003c/script\\u003e"));
+}
+
+TEST_CASE("Live HTML uses a per-report companion script and removes it on final write")
+{
+  const temp_dir_guard temp_dir("wopr_test_companion_script");
+  const auto html_path(temp_dir.path / "report.html");
+  const auto second_html_path(temp_dir.path / "second.html");
+  const results_snapshot snapshot(make_collection());
+
+  REQUIRE(write_html_report(html_path, snapshot, true, 3));
+  const auto live_html(read_text_file(html_path));
+  const std::string marker("<script src=\"");
+  const auto source_start(live_html.find(marker));
+  REQUIRE(source_start != std::string::npos);
+  const auto name_start(source_start + marker.size());
+  const auto name_end(live_html.find('"', name_start));
+  REQUIRE(name_end != std::string::npos);
+  const auto script_name(live_html.substr(name_start, name_end - name_start));
+  CHECK(script_name == "report.echarts.min.js");
+  const auto script_path(temp_dir.path / script_name);
+  REQUIRE(fs::is_regular_file(script_path));
+  const auto script(read_text_file(script_path));
+  CHECK(live_html.size() < script.size());
+  CHECK_FALSE(live_html.contains(script));
+
+  const auto old_time(fs::file_time_type::clock::now() - 24h);
+  fs::last_write_time(script_path, old_time);
+  const auto saved_time(fs::last_write_time(script_path));
+  REQUIRE(write_html_report(html_path, snapshot, true, 3));
+  CHECK(fs::last_write_time(script_path) == saved_time);
+
+  const auto second_script_path(temp_dir.path / "second.echarts.min.js");
+  REQUIRE(write_html_report(second_html_path, snapshot, true, 3));
+  CHECK(read_text_file(second_html_path)
+        .contains("<script src=\"second.echarts.min.js\">"));
+  REQUIRE(fs::is_regular_file(second_script_path));
+  CHECK(fs::last_write_time(script_path) == saved_time);
+
+  REQUIRE(write_html_report(html_path, snapshot));
+  const auto final_html(read_text_file(html_path));
+  CHECK_FALSE(final_html.contains(marker));
+  CHECK(final_html.contains(script));
+  CHECK_FALSE(fs::is_regular_file(script_path));
+  CHECK(fs::is_regular_file(second_script_path));
+
+  REQUIRE(write_html_report(second_html_path, snapshot));
+  CHECK_FALSE(fs::is_regular_file(second_script_path));
+}
+
+TEST_CASE("Companion script URLs encode special filename characters")
+{
+  const auto built(build_echarts_html("Title", "{}", "<div></div>", "",
+                                      "a#b%c?d\"e&f.js"));
+  CHECK(built.contains("<script src=\"a%23b%25c%3Fd%22e%26f.js\"></script>"));
+
+  const temp_dir_guard temp_dir("wopr_test_encoded_companion");
+  const auto html_path(temp_dir.path / "run#1%2& test.html");
+  const auto script_path(temp_dir.path / "run#1%2& test.echarts.min.js");
+  const results_snapshot snapshot(make_collection());
+
+  REQUIRE(write_html_report(html_path, snapshot, true, 3));
+  REQUIRE(fs::is_regular_file(script_path));
+  const auto live_html(read_text_file(html_path));
+  CHECK(live_html.contains(
+    "<script src=\"run%231%252%26%20test.echarts.min.js\"></script>"));
+
+  REQUIRE(write_html_report(html_path, snapshot));
+  CHECK_FALSE(fs::is_regular_file(script_path));
+  CHECK_FALSE(read_text_file(html_path).contains("<script src="));
+}
+
+TEST_CASE("Summary HTML export loads XML files and writes report")
+{
+  const temp_dir_guard temp_dir("wopr_test_html_summary");
+  const auto xml_path(temp_dir.path / "iris.summary.xml");
+  const auto html_path(temp_dir.path / "summary.html");
+
+  const std::string xml(ultra::crc32::embed_xml_signature(
+    "<ultra><summary><runs>4</runs><elapsed_time>2000</elapsed_time>"
+    "<success_rate>0.75</success_rate>"
+    "<distributions><fitness><mean>0.8</mean>"
+    "<standard_deviation>0.05</standard_deviation></fitness></distributions>"
+    "<best><fitness>0.99</fitness><code>x + 1</code></best>"
+    "<elite><run id=\"2\"><fitness>0.99</fitness>"
+    "<accuracy>0.95</accuracy></run></elite>"
+    "</summary><checksum>00000000</checksum></ultra>"));
+  std::ofstream(xml_path, std::ios::binary) << xml;
+
+  auto collection(
+    rs::setup_collection(temp_dir.path, {}, rs::exec_mode::summary));
+  REQUIRE(collection.size() == 1);
+
+  CHECK(rs::summary::start({
+    .collection = std::move(collection),
+    .html_output = html_path
+  }));
+  REQUIRE(fs::is_regular_file(html_path));
+
+  const auto written(read_text_file(html_path));
+  CHECK(written.contains("\"name\":\"iris\""));
+  CHECK(written.contains("\"current\":{\"runs\":4"));
+  CHECK(written.contains("\"best_prg\":\"x + 1\""));
+
+  CHECK_FALSE(rs::summary::start({
+    .collection = rs::setup_collection(temp_dir.path, {}, rs::exec_mode::summary),
+    .html_output = temp_dir.path / "missing_subdir" / "summary.html"
+  }));
+}
+
+TEST_CASE("Headless run exports HTML report after completion")
+{
+  const temp_dir_guard temp_dir("wopr_test_html_run");
+  const auto csv_path(temp_dir.path / "tiny.csv");
+  const auto html_path(temp_dir.path / "run_report.html");
+  std::ofstream(csv_path) << "x,y\n1,2\n2,4\n3,6\n4,8\n5,10\n6,12\n";
+
+  rs::settings settings;
+  settings.generations = 1;
+  settings.runs = 1;
+  auto collection(
+    rs::setup_collection(csv_path, {}, rs::exec_mode::run, settings));
+  REQUIRE(collection.size() == 1);
+
+  CHECK(rs::run::start({
+    .collection = std::move(collection),
+    .threads = 1,
+    .html_output = html_path,
+    .interval = 0
+  }));
+  REQUIRE(fs::is_regular_file(html_path));
+
+  const auto written(read_text_file(html_path));
+  CHECK(written.contains("\"name\":\"tiny\""));
+  CHECK(written.contains("\"status\":\"Finished\""));
+  CHECK(written.contains("\"current\":{\"runs\":1"));
+  CHECK_FALSE(fs::is_regular_file(temp_dir.path / "run_report.echarts.min.js"));
+}
+
+TEST_CASE("Failed run does not export stale summary from previous invocation")
+{
+  const temp_dir_guard temp_dir("wopr_test_stale_summary");
+  const auto bad_csv(temp_dir.path / "broken.csv");
+  const auto bad_xml(temp_dir.path / "broken.summary.xml");
+  const auto good_csv(temp_dir.path / "healthy.csv");
+  const auto html_path(temp_dir.path / "report.html");
+
+  std::ofstream(bad_csv) << "";  // triggers dataframe failure before summary
+  std::ofstream(good_csv) << "x,y\n1,2\n2,4\n3,6\n4,8\n5,10\n6,12\n";
+
+  const std::string stale_xml(ultra::crc32::embed_xml_signature(
+    "<ultra><summary><runs>4</runs><elapsed_time>4000</elapsed_time>"
+    "<success_rate>1.0</success_rate>"
+    "<distributions><fitness><mean>0.9</mean>"
+    "<standard_deviation>0.01</standard_deviation></fitness></distributions>"
+    "<best><fitness>1.0</fitness><code>old_program</code></best>"
+    "</summary><checksum>00000000</checksum></ultra>"));
+  std::ofstream(bad_xml, std::ios::binary) << stale_xml;
+
+  rs::settings settings;
+  settings.generations = 1;
+  settings.runs = 1;
+  auto collection(
+    rs::setup_collection(temp_dir.path, {}, rs::exec_mode::run, settings));
+  REQUIRE(collection.size() == 2);
+
+  CHECK_FALSE(rs::run::start({
+    .collection = std::move(collection),
+    .threads = 1,
+    .html_output = html_path,
+    .interval = 0
+  }));
+  REQUIRE(fs::is_regular_file(html_path));
+
+  const auto written(read_text_file(html_path));
+  CHECK(written.contains("\"name\":\"broken\""));
+  CHECK(written.contains("\"name\":\"healthy\""));
+  CHECK(written.contains("\"status\":\"Failed\""));
+  CHECK(written.contains("\"status\":\"Finished\""));
+  CHECK(written.contains("\"current\":{\"runs\":0"));
+  CHECK(written.contains("\"current\":{\"runs\":1"));
+  CHECK_FALSE(written.contains("old_program"));
+}
+
+TEST_CASE("Read-only existing summary does not leak stale data into run report")
+{
+  temp_dir_guard temp_dir("wopr_test_readonly_summary");
+  const auto csv_path(temp_dir.path / "tiny.csv");
+  const auto xml_path(temp_dir.path / "tiny.summary.xml");
+  const auto html_path(temp_dir.path / "report.html");
+  temp_dir.protected_files.push_back(xml_path);
+
+  std::ofstream(csv_path) << "x,y\n1,2\n2,4\n3,6\n4,8\n5,10\n6,12\n";
+
+  const std::string stale_xml(ultra::crc32::embed_xml_signature(
+    "<ultra><summary><runs>4</runs><elapsed_time>4000</elapsed_time>"
+    "<success_rate>1.0</success_rate>"
+    "<distributions><fitness><mean>0.9</mean>"
+    "<standard_deviation>0.01</standard_deviation></fitness></distributions>"
+    "<best><fitness>1.0</fitness><code>old_program</code></best>"
+    "</summary><checksum>00000000</checksum></ultra>"));
+  std::ofstream(xml_path, std::ios::binary) << stale_xml;
+  fs::permissions(xml_path, fs::perms::owner_read, fs::perm_options::replace);
+
+  rs::settings settings;
+  settings.generations = 1;
+  settings.runs = 1;
+  auto collection(
+    rs::setup_collection(csv_path, {}, rs::exec_mode::run, settings));
+  REQUIRE(collection.size() == 1);
+
+  CHECK(rs::run::start({
+    .collection = std::move(collection),
+    .threads = 1,
+    .html_output = html_path,
+    .interval = 0
+  }));
+  REQUIRE(fs::is_regular_file(html_path));
+
+  const auto written(read_text_file(html_path));
+  CHECK(written.contains("\"name\":\"tiny\""));
+  CHECK(written.contains("\"status\":\"Finished\""));
+  CHECK(written.contains("\"current\":{\"runs\":1"));
+  CHECK_FALSE(written.contains("old_program"));
+}
+
+TEST_CASE("Live run updates and finalizes HTML report")
+{
+  const temp_dir_guard temp_dir("wopr_test_live_html_run");
+  const auto csv_path(temp_dir.path / "tiny.csv");
+  const auto html_path(temp_dir.path / "live_run.html");
+  std::ofstream(csv_path) << "x,y\n1,2\n2,4\n3,6\n4,8\n5,10\n6,12\n";
+
+  rs::settings settings;
+  settings.generations = 1;
+  settings.runs = 1;
+  auto collection(
+    rs::setup_collection(csv_path, {}, rs::exec_mode::run, settings));
+  REQUIRE(collection.size() == 1);
+
+  CHECK(rs::run::start({
+    .collection = std::move(collection),
+    .threads = 1,
+    .html_output = html_path,
+    .interval = 1
+  }));
+  REQUIRE(fs::is_regular_file(html_path));
+
+  const auto written(read_text_file(html_path));
+  CHECK(written.contains("\"name\":\"tiny\""));
+  CHECK(written.contains("\"live\":false"));
+  CHECK(written.contains("\"status\":\"Finished\""));
+  CHECK(written.contains("\"current\":{\"runs\":1"));
+  CHECK_FALSE(fs::is_regular_file(temp_dir.path / "live_run.echarts.min.js"));
+}
+
+TEST_CASE("CLI defaults place HTML reports in each command directory and honor --html")
+{
+  const temp_dir_guard temp_dir("wopr_test_cli_html_defaults");
+  const auto exp_dir(temp_dir.path / "exp");
+  const auto log_dir(temp_dir.path / "logs");
+  const auto ref_dir(temp_dir.path / "ref");
+  fs::create_directories(exp_dir);
+  fs::create_directories(log_dir);
+  fs::create_directories(ref_dir);
+
+  const auto csv_path(exp_dir / "tiny.csv");
+  const auto xml_path(exp_dir / "tiny.summary.xml");
+  const auto dyn_path(log_dir / "dynamic.txt");
+  const auto custom_log(temp_dir.path / "custom_dynamic.txt");
+  std::ofstream(csv_path) << "x,y\n1,2\n2,4\n";
+  std::ofstream(xml_path) << "<ultra></ultra>\n";
+  std::ofstream(dyn_path) << "";
+  std::ofstream(custom_log) << "";
+
+  const auto parse([](std::initializer_list<const char *> args)
+  {
+    std::vector<std::string> storage;
+    std::vector<char *> argv;
+    for (const char *arg : args)
+      storage.emplace_back(arg);
+    for (auto &s : storage)
+      argv.push_back(s.data());
+    return parse_args(static_cast<int>(argv.size()), argv.data());
+  });
+
+  SUBCASE("run defaults to output directory and allows override or disabling")
+  {
+    const auto dir_cmd(parse({"wopr", "run", exp_dir.string().c_str()}));
+    REQUIRE(dir_cmd);
+    REQUIRE(std::holds_alternative<rs::run::options>(*dir_cmd));
+    CHECK(std::get<rs::run::options>(*dir_cmd).html_output
+          == (exp_dir / "run.html").lexically_normal());
+
+    const auto file_cmd(parse({"wopr", "run", csv_path.string().c_str()}));
+    REQUIRE(file_cmd);
+    CHECK(std::get<rs::run::options>(*file_cmd).html_output
+          == (exp_dir / "run.html").lexically_normal());
+
+    const auto override_cmd(
+      parse({"wopr", "run", exp_dir.string().c_str(), "--html", "custom.html"}));
+    REQUIRE(override_cmd);
+    CHECK(std::get<rs::run::options>(*override_cmd).html_output == "custom.html");
+
+    const auto disabled_cmd(
+      parse({"wopr", "run", exp_dir.string().c_str(), "--html", ""}));
+    REQUIRE(disabled_cmd);
+    CHECK(std::get<rs::run::options>(*disabled_cmd).html_output.empty());
+  }
+
+  SUBCASE("monitor defaults beside monitored logs and allows override")
+  {
+    const auto dir_cmd(parse({"wopr", "monitor", log_dir.string().c_str()}));
+    REQUIRE(dir_cmd);
+    REQUIRE(std::holds_alternative<monitor::options>(*dir_cmd));
+    CHECK(std::get<monitor::options>(*dir_cmd).html_output
+          == (log_dir / "monitor.html").lexically_normal());
+
+    const auto custom_cmd(parse({
+      "wopr", "monitor", log_dir.string().c_str(),
+      "--dynamic", custom_log.string().c_str()
+    }));
+    REQUIRE(custom_cmd);
+    CHECK(std::get<monitor::options>(*custom_cmd).html_output
+          == (temp_dir.path / "monitor.html").lexically_normal());
+
+    const auto override_cmd(parse({
+      "wopr", "monitor", log_dir.string().c_str(), "--html", "custom_mon.html"
+    }));
+    REQUIRE(override_cmd);
+    CHECK(std::get<monitor::options>(*override_cmd).html_output
+          == "custom_mon.html");
+  }
+
+  SUBCASE("summary defaults to first input directory and allows override")
+  {
+    const auto dir_cmd(parse({
+      "wopr", "summary", exp_dir.string().c_str(), ref_dir.string().c_str()
+    }));
+    REQUIRE(dir_cmd);
+    REQUIRE(std::holds_alternative<rs::summary::options>(*dir_cmd));
+    CHECK(std::get<rs::summary::options>(*dir_cmd).html_output
+          == (exp_dir / "summary.html").lexically_normal());
+
+    const auto override_cmd(parse({
+      "wopr", "summary", exp_dir.string().c_str(), "--html", "custom_sum.html"
+    }));
+    REQUIRE(override_cmd);
+    CHECK(std::get<rs::summary::options>(*override_cmd).html_output
+          == "custom_sum.html");
+  }
 }
 
 }  // TEST_SUITE("WOPR RESULTS")

@@ -33,14 +33,7 @@ using namespace ultra::wopr;
 
 [[nodiscard]] int execute(monitor::options options)
 {
-#if defined(ULTRA_WOPR_GUI)
-  monitor::start(std::move(options));
-  return EXIT_SUCCESS;
-#else
-  (void)options;
-  std::cerr << "The `monitor` subcommand requires GUI support (WOPR was compiled in headless mode).\n";
-  return EXIT_FAILURE;
-#endif
+  return monitor::start(std::move(options)) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 [[nodiscard]] int execute(rs::run::options options)
@@ -50,14 +43,7 @@ using namespace ultra::wopr;
 
 [[nodiscard]] int execute(rs::summary::options options)
 {
-#if defined(ULTRA_WOPR_GUI)
-  rs::summary::start(std::move(options));
-  return EXIT_SUCCESS;
-#else
-  (void)options;
-  std::cerr << "The `summary` subcommand requires GUI support (WOPR was compiled in headless mode).\n";
-  return EXIT_FAILURE;
-#endif
+  return rs::summary::start(std::move(options)) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 }  // namespace

@@ -1,5 +1,7 @@
 # Creates the "ultra" library.
 
+find_package(Threads REQUIRED)
+
 get_filename_component(ULTRA_REPO_ROOT
   "${PROJECT_SOURCE_DIR}/.."
   ABSOLUTE
@@ -15,7 +17,7 @@ add_library(ultra ${FRAMEWORK_SRC})
 target_include_directories(ultra PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(ultra SYSTEM PUBLIC ${PROJECT_SOURCE_DIR}/third_party)
 
-target_link_libraries(ultra PUBLIC tinyxml2)
+target_link_libraries(ultra PUBLIC tinyxml2 Threads::Threads)
 
 # Required by libstdc++ on MinGW for C++23 <print>.
 if (MINGW)

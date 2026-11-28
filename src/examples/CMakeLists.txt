@@ -1,7 +1,5 @@
 # Creates the examples.
 
-find_package(Threads REQUIRED)
-
 file(GLOB EXAMPLES_SRC CONFIGURE_DEPENDS *.cc 8queens/*.cc knapsack/*.cc nonogram/*.cc pathfinding/*.cc petalrose/*.cc polyomino/*.cc sonar/*.cc symbolic_regression/*.cc whichlang/*.cc)
 foreach (example_src ${EXAMPLES_SRC})
   # Gets the filename (`example`) without directory / longest extension
@@ -9,8 +7,12 @@ foreach (example_src ${EXAMPLES_SRC})
   get_filename_component(example ${example_src} NAME_WE)
 
   add_executable(${example} ${example_src})
-  target_link_libraries(${example} PRIVATE ultra Threads::Threads)
+  target_link_libraries(${example} PRIVATE ultra)
 endforeach()
 
 # Resources needed by examples
-file(COPY ${PROJECT_SOURCE_DIR}/../data/sonar.csv ${PROJECT_SOURCE_DIR}/../data/petalrose.csv DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+foreach (resource sonar.csv petalrose.csv)
+  configure_file("${PROJECT_SOURCE_DIR}/../data/${resource}"
+                 "${CMAKE_CURRENT_BINARY_DIR}/${resource}"
+                 COPYONLY)
+endforeach()

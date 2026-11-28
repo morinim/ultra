@@ -26,6 +26,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -79,33 +80,51 @@ using log_file_discovery = std::expected<fs::path, fs::path>;
   return found;
 }
 
+[[nodiscard]] fs::path resolve_html_output(
+  bool has_explicit, const fs::path &explicit_path,
+  const fs::path &default_dir, std::string_view default_name)
+{
+  if (has_explicit)
+    return explicit_path;
+
+  return (default_dir.empty() ? fs::path(default_name)
+                              : default_dir / default_name).lexically_normal();
+}
+
 struct monitor_cli
 {
   fs::path log_object{"./"};
   fs::path dynamic_file;
   fs::path layers_file;
   fs::path population_file;
-  std::optional<int> window;
+  fs::path html_output;
+  bool has_html_output{false};
+  unsigned interval{10};
+  std::optional<unsigned> window;
 };
 
 struct run_cli
 {
   fs::path test_input{"./"};
   fs::path ref_folder;
+  fs::path html_output;
+  bool has_html_output{false};
   rs::settings defaults;
   unsigned threads{0};
+  unsigned interval{10};
   std::string threshold_str;
-  bool nogui{false};
 };
 
 struct summary_cli
 {
   fs::path dir1;
   fs::path dir2;
+  fs::path html_output;
+  bool has_html_output{false};
 };
 
 std::expected<monitor::options, std::string> finish_monitor(
-  const monitor_cli &cli, bool imgui_demo)
+  const monitor_cli &cli)
 {
   using namespace ultra;
 
@@ -185,12 +204,22 @@ std::expected<monitor::options, std::string> finish_monitor(
     std::cout << "Monitoring window: " << options.window << '\n';
   }
 
-  options.imgui_demo = imgui_demo;
+  fs::path log_dir(log_folder);
+  for (const auto &path : log_paths)
+    if (!path.empty())
+    {
+      log_dir = path.parent_path();
+      break;
+    }
+
+  options.html_output = resolve_html_output(cli.has_html_output, cli.html_output,
+                                            log_dir, "monitor.html");
+  options.interval = cli.interval;
   return options;
 }
 
 std::expected<rs::summary::options, std::string> finish_summary(
-  const summary_cli &cli, bool imgui_demo)
+  const summary_cli &cli)
 {
   auto collection(
     rs::setup_collection(cli.dir1, cli.dir2, rs::exec_mode::summary));
@@ -198,14 +227,15 @@ std::expected<rs::summary::options, std::string> finish_summary(
   if (collection.empty())
     return std::unexpected("Cannot create the results collection.");
 
+  const auto output_dir(collection.front().xml_summary.parent_path());
   return rs::summary::options{
     .collection = std::move(collection),
-    .imgui_demo = imgui_demo
+    .html_output = resolve_html_output(cli.has_html_output, cli.html_output,
+                                       output_dir, "summary.html")
   };
 }
 
-std::expected<rs::run::options, std::string> finish_run(
-  const run_cli &cli, bool imgui_demo)
+std::expected<rs::run::options, std::string> finish_run(const run_cli &cli)
 {
   auto defaults(cli.defaults);
 
@@ -225,11 +255,13 @@ std::expected<rs::run::options, std::string> finish_run(
   if (collection.empty())
     return std::unexpected("Cannot create the run collection.");
 
+  const auto output_dir(collection.front().xml_summary.parent_path());
   return rs::run::options{
     .collection = std::move(collection),
     .threads = cli.threads,
-    .nogui = cli.nogui,
-    .imgui_demo = imgui_demo
+    .html_output = resolve_html_output(cli.has_html_output, cli.html_output,
+                                       output_dir, "run.html"),
+    .interval = cli.interval
   };
 }
 
@@ -256,11 +288,6 @@ Please enter your selection:)");
   app.ignore_case();
   app.require_subcommand(1);
 
-  bool imgui_demo(false);
-#if defined(ULTRA_WOPR_GUI)
-  app.add_flag("--imguidemo", imgui_demo, "Enable ImGUI demo panel");
-#endif
-
   monitor_cli mon;
   auto *mon_cmd(
     app.add_subcommand("monitor", "Observe a running test in real-time"));
@@ -275,7 +302,13 @@ Please enter your selection:)");
   mon_cmd->add_option(
     "--window", mon.window,
     "Restrict the monitoring window to the last <nr> generations (0 for full history)")
-    ->check(CLI::Range(0, std::numeric_limits<int>::max()));
+    ->check(CLI::Range(0u, std::numeric_limits<unsigned>::max()));
+  auto *mon_html(
+    mon_cmd->add_option("--html", mon.html_output,
+                        "Write HTML monitor report to <file> (defaults to monitor.html beside logs)"));
+  mon_cmd->add_option("--interval", mon.interval,
+                      "HTML refresh interval in seconds (0 to write once and exit)")
+    ->check(CLI::Range(0u, 3600u));
 
   run_cli run;
   auto *run_cmd(
@@ -300,8 +333,12 @@ Please enter your selection:)");
                       "Set the success threshold (accuracy ending in '%' or fitness value)");
   run_cmd->add_flag("--crn", run.defaults.common_random_numbers,
                     "Match dataset splitting and initial populations");
-  run_cmd->add_flag("--nogui", run.nogui,
-                    "Disable the graphical user interface (headless mode)");
+  auto *run_html(
+    run_cmd->add_option("--html", run.html_output,
+                        "Write an HTML summary report to <file> (defaults to run.html in the output directory; empty disables)"));
+  run_cmd->add_option("--interval", run.interval,
+                      "Live HTML refresh interval in seconds during the run (0 disables live updates)")
+    ->check(CLI::Range(0u, 3600u));
 
   summary_cli sum;
   auto *sum_cmd(
@@ -312,6 +349,9 @@ Please enter your selection:)");
     ->required();
   sum_cmd->add_option("dir2", sum.dir2,
                       "Optional second directory for comparison");
+  auto *sum_html(
+    sum_cmd->add_option("--html", sum.html_output,
+                        "Write an HTML summary report to <file> (defaults to summary.html in the first input directory)"));
 
   if (argc <= 1)
     return help_command{app.help()};
@@ -329,21 +369,16 @@ Please enter your selection:)");
     return std::unexpected(e.what());
   }
 
+  mon.has_html_output = mon_html->count() > 0;
+  run.has_html_output = run_html->count() > 0;
+  sum.has_html_output = sum_html->count() > 0;
+
   if (run_cmd->parsed())
-    return finish_run(run, imgui_demo);
-#if defined(ULTRA_WOPR_GUI)
-  if (mon_cmd->parsed())
-    return finish_monitor(mon, imgui_demo);
+    return finish_run(run);
   if (sum_cmd->parsed())
-    return finish_summary(sum, imgui_demo);
-#else
+    return finish_summary(sum);
   if (mon_cmd->parsed())
-    return std::unexpected(
-      "The `monitor` subcommand requires GUI support (WOPR was compiled in headless mode).");
-  if (sum_cmd->parsed())
-    return std::unexpected(
-      "The `summary` subcommand requires GUI support (WOPR was compiled in headless mode).");
-#endif
+    return finish_monitor(mon);
 
   return help_command{app.help()};
 }

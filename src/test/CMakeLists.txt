@@ -1,14 +1,12 @@
 # Creates the tests.
 
-find_package(Threads REQUIRED)
-
 enable_testing()
 
 file(GLOB TESTS_SRC CONFIGURE_DEPENDS *.cc)
 foreach (test_src ${TESTS_SRC})
   get_filename_component(test ${test_src} NAME_WE)
   add_executable(${test} ${test_src})
-  target_link_libraries(${test} PRIVATE ultra Threads::Threads)
+  target_link_libraries(${test} PRIVATE ultra)
 
   if (NOT ${test} MATCHES "^speed_")
     add_test(NAME ${test} COMMAND ${test})
@@ -16,47 +14,13 @@ foreach (test_src ${TESTS_SRC})
   endif()
 endforeach()
 
-add_executable(wopr_monitor_data
-  wopr/monitor_data.cc
-)
-target_link_libraries(wopr_monitor_data PRIVATE
-  ultra Threads::Threads
-)
-add_test(NAME wopr_monitor_data COMMAND wopr_monitor_data)
-list(APPEND registered_tests wopr_monitor_data)
-
-if (TARGET implot)
-  add_executable(wopr_monitor
-    wopr/monitor.cc
-    ../wopr/dashboard.cc
-    ../wopr/imgui_app.cc
-    ../wopr/monitor_data.cc
-  )
-  target_compile_definitions(wopr_monitor PRIVATE ULTRA_WOPR_GUI)
-  target_include_directories(wopr_monitor SYSTEM PRIVATE
-    ${PROJECT_SOURCE_DIR}/third_party/imgui
-  )
-  target_link_libraries(wopr_monitor PRIVATE
-    ultra implot SDL3::SDL3 Threads::Threads
-  )
-  add_test(NAME wopr_monitor COMMAND wopr_monitor)
-  list(APPEND registered_tests wopr_monitor)
-
-  add_executable(wopr_results
-    wopr/results.cc
-    ../wopr/dashboard.cc
-    ../wopr/imgui_app.cc
-  )
-  target_compile_definitions(wopr_results PRIVATE ULTRA_WOPR_GUI)
-  target_include_directories(wopr_results SYSTEM PRIVATE
-    ${PROJECT_SOURCE_DIR}/third_party/imgui
-  )
-  target_link_libraries(wopr_results PRIVATE
-    ultra implot SDL3::SDL3 Threads::Threads
-  )
-  add_test(NAME wopr_results COMMAND wopr_results)
-  list(APPEND registered_tests wopr_results)
-endif()
+foreach (wopr_test wopr_monitor_data wopr_monitor wopr_results)
+  string(REPLACE "wopr_" "wopr/" wopr_src "${wopr_test}.cc")
+  add_executable(${wopr_test} ${wopr_src})
+  target_link_libraries(${wopr_test} PRIVATE wopr_core)
+  add_test(NAME ${wopr_test} COMMAND ${wopr_test})
+  list(APPEND registered_tests ${wopr_test})
+endforeach()
 
 get_directory_property(compile_options COMPILE_OPTIONS)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" build_type_upper)
@@ -75,5 +39,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND all_build_flags MATCHES "-fsanitiz
   message(STATUS "libc++ and TSAN, enabling ${PROJECT_SOURCE_DIR}/utility/tsan.supp")
 endif()
 
-# Resources needed by examples
-file(COPY ${PROJECT_SOURCE_DIR}/wopr/checksum_summary.py ${PROJECT_SOURCE_DIR}/wopr/merge_summary.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# Resources needed by tests
+foreach (resource
+         wopr/checksum_summary.py
+         wopr/merge_summary.py
+         test/wopr/check_monitor.js
+         test/wopr/check_tooltips.js
+         test/wopr/test_harness.js)
+  get_filename_component(resource_name "${resource}" NAME)
+  configure_file("${PROJECT_SOURCE_DIR}/${resource}"
+                 "${CMAKE_CURRENT_BINARY_DIR}/${resource_name}"
+                 COPYONLY)
+endforeach()

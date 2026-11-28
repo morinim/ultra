@@ -14,8 +14,10 @@
 
 #include "kernel/exceptions.h"
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <random>
 #include <sstream>
 #include <utility>
 
@@ -26,12 +28,13 @@ dynamic_data::dynamic_data(const std::string &line) : new_run(line.empty())
 {
   if (!new_run)
   {
+    ultra::fitnd fit_min_val;
     std::istringstream ss(line);
     if (!(ss >> generation)
         || !(ss >> fit_best)
         || !(ss >> fit_mean)
         || !(ss >> fit_std_dev)
-        || !(ss >> fit_min)
+        || !(ss >> fit_min_val)
         || !(ss >> len_mean)
         || !(ss >> len_std_dev)
         || !(ss >> len_max)
@@ -108,14 +111,14 @@ void dynamic_sequence::push_back(const dynamic_data &dd)
 
   // Assume zero crossovers for every known type.
   for (auto &[_, history] : crossover_types)
-    history.push_back(0.0);
+    history.push_back(0);
 
   for (const auto &[type, count] : dd.crossover_types)
   {
     auto &history(crossover_types[type]);
 
     // Backfills previous generations when this type is new.
-    history.resize(xs.size(), 0.0);
+    history.resize(xs.size(), 0);
 
     // Possibly replace a zero with the value actually reported.
     history.back() = count;
@@ -155,11 +158,6 @@ bool population_sequence::empty() const noexcept
   return fit.empty();
 }
 
-std::size_t population_sequence::size() const noexcept
-{
-  return fit.size();
-}
-
 void population_sequence::update(population_line &pl)
 {
   generation = pl.generation;
@@ -178,15 +176,16 @@ void population_sequence::update(population_line &pl)
 // Offline algorithm: https://en.wikipedia.org/wiki/Online_algorithm.
 double population_sequence::calculate_entropy() const
 {
-  const auto pop_size(std::accumulate(obs.begin(), obs.end(), 0.0));
+  const auto pop_size(static_cast<double>(
+    std::accumulate(obs.begin(), obs.end(), std::size_t{0})));
   if (pop_size <= 0.0)
     return 0.0;
 
   double h(0.0);
-  for (auto x : obs)
-    if (x > 0.0)
+  for (const auto x : obs)
+    if (x > 0)
     {
-      const auto p(x / pop_size);
+      const auto p(static_cast<double>(x) / pop_size);
 
       h -= p * std::log2(p);
     }
@@ -206,7 +205,7 @@ layers_line::layers_line(const std::string &line) : new_run(line.empty())
 
   decltype(age_sup)::value_type age_sup_val;
   decltype(age_mean)::value_type age_mean_val;
-  decltype(age_std_dev)::value_type age_std_dev_val;
+  double age_std_dev_val;
   decltype(age_min)::value_type age_min_val;
   decltype(age_max)::value_type age_max_val;
   ultra::fitnd fit_mean_val;
@@ -225,7 +224,6 @@ layers_line::layers_line(const std::string &line) : new_run(line.empty())
 
     age_sup.push_back(age_sup_val);
     age_mean.push_back(age_mean_val);
-    age_std_dev.push_back(age_std_dev_val);
     age_min.push_back(age_min_val);
     age_max.push_back(age_max_val);
 
@@ -248,37 +246,92 @@ std::size_t layers_line::size() const noexcept
   return age_sup.size();
 }
 
-/// Drains available log entries, separating runs at empty lines.
-template<class Data, class Run, class Update>
-void drain_runs(ultra::ts_queue<Data> &queue, std::vector<Run> &runs,
-                Update update)
+layers_fit_matrix build_layers_fit_matrix(const layers_line &lr)
 {
-  while (auto data = queue.try_pop())
+  layers_fit_matrix out;
+  if (lr.empty())
+    return out;
+
+  const auto max_layers(lr.size());
+  const std::size_t ind_max(std::ranges::max(lr.individuals));
+  if (!ind_max)
+    return out;
+
+  const std::size_t parts(std::min<std::size_t>(ind_max, 100));
+  const double fit_max(std::ranges::max(lr.fit_max));
+  const double fit_min(std::ranges::min(lr.fit_min));
+
+  out.rows = max_layers;
+  out.cols = parts;
+  out.ind_max = ind_max;
+  out.fit_min = fit_min;
+  out.fit_max = fit_max;
+  out.values.assign(max_layers * parts, fit_min);
+
+  std::minstd_rand g;
+  g.seed(lr.generation);
+
+  for (std::size_t layer(0); layer < max_layers; ++layer)
   {
-    if (data->new_run)
+    const auto mean(lr.fit_mean[layer]);
+    const auto stddev(lr.fit_std_dev[layer]);
+    const auto min(lr.fit_min[layer]);
+    const auto max(lr.fit_max[layer]);
+    const std::size_t full(parts * lr.individuals[layer] / ind_max);
+
+    if (ultra::issmall(stddev))
     {
-      // Skip multiple empty lines.
-      if (runs.empty() || !runs.back().empty())
-        runs.push_back({});
+      const auto val(std::clamp(mean, min, max));
+      for (std::size_t p(0); p < full; ++p)
+        out.values[layer * parts + p] = val;
     }
     else
     {
-      if (runs.empty())
-        runs.push_back({});
+      std::normal_distribution dist(mean, stddev);
 
-      update(runs.back(), *data);
+      for (std::size_t p(0); p < full; ++p)
+        out.values[layer * parts + p] = std::clamp(dist(g), min, max);
     }
+  }
+
+  return out;
+}
+
+/// Appends a parsed log record, separating runs at empty lines.
+template<class Data, class Run, class Update>
+void push_run_entry(Data &&data, std::vector<Run> &runs, Update update)
+{
+  if (data.new_run)
+  {
+    // Skip multiple empty lines.
+    if (runs.empty() || !runs.back().empty())
+      runs.push_back({});
+  }
+  else
+  {
+    if (runs.empty())
+      runs.push_back({});
+
+    update(runs.back(), std::forward<Data>(data));
   }
 }
 
-void monitor_state::update()
+void monitor_state::push(const dynamic_data &data)
 {
-  drain_runs(dynamic_queue, dynamic_runs,
-             [](auto &run, const auto &data) { run.push_back(data); });
-  drain_runs(population_queue, population_runs,
-             [](auto &run, auto &data) { run.update(data); });
-  drain_runs(layers_queue, layers_runs,
-             [](auto &run, auto &data) { run = std::move(data); });
+  push_run_entry(data, dynamic_runs,
+                 [](auto &run, const auto &entry) { run.push_back(entry); });
+}
+
+void monitor_state::push(population_line data)
+{
+  push_run_entry(std::move(data), population_runs,
+                 [](auto &run, auto &&entry) { run.update(entry); });
+}
+
+void monitor_state::push(layers_line data)
+{
+  push_run_entry(std::move(data), layers_runs,
+                 [](auto &run, auto &&entry) { run = std::move(entry); });
 }
 
 }  // namespace ultra::wopr
