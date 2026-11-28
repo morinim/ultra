@@ -13,12 +13,15 @@
 #include "test/debug_datasets.h"
 
 #include "kernel/gp/src/problem.h"
+#include "kernel/distribution.h"
 #include "kernel/exceptions.h"
+#include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest/doctest.h"
 
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -26,6 +29,7 @@ namespace ultra::src::internal
 {
 bool compatible(const function::param_data_types &,
                 const std::vector<std::string> &, const columns_info &);
+double ephemeral_bound(const distribution<double> &);
 }
 
 TEST_SUITE("src::problem")
@@ -437,6 +441,222 @@ TEST_CASE("symbol_init flags and ephemerals")
     CHECK(p.sset.terminals(1) == 1);
     CHECK(p.sset.functions(0) == 0);
     CHECK(p.sset.functions(1) == 0);
+  }
+}
+
+TEST_CASE("ephemeral bounds use weighted absolute percentiles")
+{
+  using namespace ultra;
+  distribution<double> dist;
+
+  SUBCASE("empty distribution retains the default")
+  {
+    CHECK(src::internal::ephemeral_bound(dist) == doctest::Approx(100.0));
+  }
+
+  SUBCASE("frequent values outweigh an isolated extreme")
+  {
+    for (unsigned i(0); i < 19; ++i)
+      dist.add(i % 2 ? -2.5 : 2.5);
+    dist.add(-10000.0);
+    CHECK(src::internal::ephemeral_bound(dist) == doctest::Approx(2.5));
+  }
+
+  SUBCASE("nearest rank includes the maximum for fewer than twenty values")
+  {
+    for (unsigned i(0); i < 18; ++i)
+      dist.add(2.5);
+    dist.add(-10.5);
+    CHECK(src::internal::ephemeral_bound(dist) == doctest::Approx(10.5));
+  }
+
+  SUBCASE("small magnitudes retain a unit bound")
+  {
+    dist.add(0.0);
+    dist.add(-0.25);
+    CHECK(src::internal::ephemeral_bound(dist) == doctest::Approx(1.0));
+  }
+
+  SUBCASE("extreme magnitudes retain a representable interval width")
+  {
+    dist.add(1e308);
+    CHECK(src::internal::ephemeral_bound(dist)
+          == doctest::Approx(std::numeric_limits<D_DOUBLE>::max() / 2.0));
+  }
+}
+
+TEST_CASE("ephemeral bounds combine predictor column percentiles")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::ostringstream csv;
+  csv << "target,x,y\n";
+  for (unsigned i(0); i < 19; ++i)
+    csv << "1000000.5,-2.5,10.5\n";
+  csv << "1000000.5,10000.5,-10000.5\n";
+
+  std::istringstream input(csv.str());
+  src::dataframe::params params;
+  params.header();
+  src::problem p(src::dataframe(input, params), symbol_init::all);
+
+  const auto *number(dynamic_cast<const real::number *>(p.sset.decode("REAL")));
+  REQUIRE(number);
+  CHECK(number->min() == doctest::Approx(-10.5));
+  CHECK(number->sup() == doctest::Approx(10.5));
+}
+
+TEST_CASE("ephemeral bounds for integer predictors")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  SUBCASE("inclusive half-open interval for typical integer predictors")
+  {
+    std::ostringstream csv;
+    csv << "target,n\n";
+    for (unsigned i(0); i < 19; ++i)
+      csv << "1000," << (i % 2 ? -7 : 7) << '\n';
+    csv << "1000,9999\n";
+
+    std::istringstream input(csv.str());
+    src::dataframe::params params;
+    params.header();
+    src::problem p(src::dataframe(input, params), symbol_init::all);
+
+    const auto *number(dynamic_cast<const integer::number *>(
+                         p.sset.decode("INT")));
+    REQUIRE(number);
+    CHECK(number->min() == -7);
+    CHECK(number->sup() == 8);
+  }
+
+  SUBCASE("small integer values retain at least a unit bound")
+  {
+    std::istringstream input("target,n\n10.0,0\n20.0,0\n");
+    src::dataframe::params params;
+    params.header();
+    src::problem p(src::dataframe(input, params), symbol_init::all);
+
+    const auto *number(dynamic_cast<const integer::number *>(
+                         p.sset.decode("INT")));
+    REQUIRE(number);
+    CHECK(number->min() == -1);
+    CHECK(number->sup() == 2);
+  }
+
+  SUBCASE("extreme integer magnitudes avoid signed overflow")
+  {
+    constexpr auto d_int_max(std::numeric_limits<D_INT>::max());
+
+    std::ostringstream csv;
+    csv << "target,n\n10.0," << d_int_max << "\n20.0," << d_int_max << '\n';
+
+    std::istringstream input(csv.str());
+    src::dataframe::params params;
+    params.header();
+    src::problem p(src::dataframe(input, params), symbol_init::all);
+
+    const auto *number(dynamic_cast<const integer::number *>(
+                         p.sset.decode("INT")));
+    REQUIRE(number);
+    CHECK(number->min() == -d_int_max);
+    CHECK(number->sup() == d_int_max);
+  }
+}
+
+TEST_CASE("non-regression tasks retain fixed ephemeral bounds")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  std::istringstream input;
+  src::dataframe::params params;
+  params.header();
+
+  SUBCASE("classification")
+  {
+    input.str("label,x,n\nA,0.25,2\nB,0.5,3\n");
+  }
+
+  SUBCASE("unsupervised")
+  {
+    params.no_output();
+    input.str("x,n\n0.25,2\n0.5,3\n");
+  }
+
+  src::problem p(src::dataframe(input, params), symbol_init::all);
+
+  const auto *real_number(dynamic_cast<const real::number *>(
+                           p.sset.decode("REAL")));
+  REQUIRE(real_number);
+  CHECK(real_number->min() == doctest::Approx(-100.0));
+  CHECK(real_number->sup() == doctest::Approx(100.0));
+
+  const auto *int_number(dynamic_cast<const integer::number *>(
+                          p.sset.decode("INT")));
+  REQUIRE(int_number);
+  CHECK(int_number->min() == -100);
+  CHECK(int_number->sup() == 100);
+}
+
+TEST_CASE("unsupervised and void-column datasets")
+{
+  using namespace ultra;
+  log::reporting_level = log::lWARNING;
+
+  SUBCASE("no_output dataset sets up symbols and passes readiness")
+  {
+    std::istringstream ecoli(debug::ecoli);
+    src::dataframe::params params;
+    params.no_output();
+
+    src::problem p(src::dataframe(ecoli, params), symbol_init::all);
+
+    CHECK(p.is_valid());
+    CHECK(p.data[src::dataset_t::training].task() == src::task_t::unsupervised);
+    CHECK(p.categories() == 3);
+    CHECK(p.ready().has_value());
+  }
+
+  SUBCASE("void feature column is ignored during symbol setup and readiness")
+  {
+    std::istringstream input("target,x,empty_col\n1.0,2.0,\n3.0,4.0,\n");
+    src::dataframe::params params;
+    params.header();
+
+    src::problem p(src::dataframe(input, params), symbol_init::all);
+
+    CHECK(p.is_valid());
+    CHECK(p.categories() == 1);
+    CHECK(p.sset.decode("x") != nullptr);
+    CHECK(p.sset.decode("empty_col") == nullptr);
+    CHECK(p.ready().has_value());
+  }
+
+  SUBCASE("middle void feature column keeps predictor bounds and types aligned")
+  {
+    std::istringstream input("target,empty,x,y\n"
+                             "100.0,,2.5,red\n"
+                             "100.0,,4.5,blue\n");
+    src::dataframe::params params;
+    params.header();
+
+    src::problem p(src::dataframe(input, params), symbol_init::all);
+
+    CHECK(p.is_valid());
+    CHECK(p.ready().has_value());
+    CHECK(p.categories() == 2);
+    CHECK(p.sset.decode("empty") == nullptr);
+    CHECK(p.sset.decode("x") != nullptr);
+    CHECK(p.sset.decode("y") != nullptr);
+
+    const auto *number(dynamic_cast<const real::number *>(
+                         p.sset.decode("REAL")));
+    REQUIRE(number);
+    CHECK(number->min() == doctest::Approx(-4.5));
+    CHECK(number->sup() == doctest::Approx(4.5));
   }
 }
 

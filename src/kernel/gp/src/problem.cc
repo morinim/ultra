@@ -16,8 +16,14 @@
 #include "kernel/gp/primitive/integer.h"
 #include "kernel/gp/primitive/real.h"
 #include "kernel/gp/primitive/string.h"
+#include "kernel/gp/src/dataframe_summary.h"
 #include "kernel/gp/src/variable.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+#include <map>
 #include <set>
 
 namespace ultra::src
@@ -57,12 +63,13 @@ bool compatible(const function::param_data_types &instance,
   const auto sup(instance.size());
   for (std::size_t i(0); i < sup; ++i)
   {
-    const std::string p_i(pattern[i]);
-    const bool generic(from_weka(p_i) != d_void);
+    const std::string &p_i(pattern[i]);
+    const auto domain(from_weka(p_i));
+    const bool generic(domain != d_void);
 
     if (generic)  // numeric, string, integer...
     {
-      if (columns.domain_of_category(instance[i]) != from_weka(p_i))
+      if (columns.domain_of_category(instance[i]) != domain)
         return false;
     }
     else
@@ -73,6 +80,31 @@ bool compatible(const function::param_data_types &instance,
   }
 
   return true;
+}
+
+[[nodiscard]] double ephemeral_bound(const distribution<double> &dist)
+{
+  if (dist.empty())
+    return 100.0;
+
+  std::map<double, std::uintmax_t> magnitudes;
+  for (const auto &[value, count] : dist.seen())
+    magnitudes[std::abs(value)] += count;
+
+  // Nearest-rank 95th percentile of the rounded absolute values.
+  const auto rank(dist.size() - dist.size() / 20);
+  std::uintmax_t cumulative(0);
+  constexpr auto real_max(std::numeric_limits<D_DOUBLE>::max() / 2.0);
+
+  for (const auto &[magnitude, count] : magnitudes)
+  {
+    cumulative += count;
+
+    if (cumulative >= rank)
+      return std::clamp(magnitude, 1.0, real_max);
+  }
+
+  return 100.0;
 }
 
 }  // namespace internal
@@ -94,15 +126,15 @@ problem::problem(dataframe d, symbol_init init_flags)
   data[dataset_t::training] = std::move(d);
   ultraINFO("...dataset imported");
 
-  ultraINFO("Examples: {}, features: {}, classes: {}, categories: {}",
-              data[dataset_t::training].size(), variables(), classes(),
-              categories());
-
   data[dataset_t::validation].clone_schema(data[dataset_t::training]);
   data[dataset_t::test].clone_schema(data[dataset_t::training]);
 
   if (init_flags != symbol_init::disabled)
     setup_symbols(init_flags);
+
+  ultraINFO("Examples: {}, features: {}, classes: {}, categories: {}",
+              data[dataset_t::training].size(), variables(), classes(),
+              categories());
 }
 
 ///
@@ -187,8 +219,7 @@ std::expected<void, problem::readiness_error> problem::ready() const
   if (!params.is_valid(false))
     return std::unexpected(readiness_error::invalid_problem);
 
-  for (auto i : std::vector{dataset_t::training, dataset_t::validation,
-                            dataset_t::test})
+  for (auto i : {dataset_t::training, dataset_t::validation, dataset_t::test})
     if (!data[i].is_valid())
       return std::unexpected(readiness_error::invalid_problem);
 
@@ -207,7 +238,7 @@ std::expected<void, problem::readiness_error> problem::ready() const
     return std::unexpected(readiness_error::missing_functions);
 
   for (auto category : training.columns.used_categories())
-    if (!sset.terminals(category))
+    if (category != symbol::undefined_category && !sset.terminals(category))
       return std::unexpected(readiness_error::missing_category_terminals);
 
   return {};
@@ -228,7 +259,9 @@ void problem::setup_terminals(symbol_init init_flags)
 {
   ultraINFO("Setting up terminals...");
 
-  const auto &columns(data[dataset_t::training].columns);
+  const auto &ds(data[dataset_t::training]);
+  const auto &columns(ds.columns);
+
   if (columns.size() <= 1)
     throw exception::insufficient_data("Cannot generate the terminal set");
 
@@ -238,10 +271,14 @@ void problem::setup_terminals(symbol_init init_flags)
     std::map<symbol::category_t, std::string> variables;
     for (std::size_t i(1); i < columns.size(); ++i)
     {
+      const auto category(columns[i].category());
+      if (columns[i].domain() == d_void
+          || category == symbol::undefined_category)
+        continue;
+
       // Sets up the variables (features).
       const auto name(columns[i].name().empty() ? "X" + std::to_string(i)
                                                 : columns[i].name());
-      const auto category(columns[i].category());
 
       if (insert<variable>(i - 1, name, category))
         variables[category] += " `" + name + "`";
@@ -261,6 +298,9 @@ void problem::setup_terminals(symbol_init init_flags)
     for (std::size_t i(1); i < columns.size(); ++i)
     {
       const auto category(columns[i].category());
+      if (columns[i].domain() == d_void
+          || category == symbol::undefined_category)
+        continue;
 
       for (const auto &s : columns[i].states())
         if (!attributes[category].contains(s))
@@ -280,7 +320,7 @@ void problem::setup_terminals(symbol_init init_flags)
             break;
           default:
             ultraWARNING("Attribute '{}' from column `{}` not inserted",
-                           lexical_cast<std::string>(s), columns[i].name());
+                         lexical_cast<std::string>(s), columns[i].name());
           }
 
           if (ok)
@@ -304,29 +344,54 @@ void problem::setup_terminals(symbol_init init_flags)
 
   if (has_flag(init_flags, symbol_init::ephemerals))
   {
+    std::vector<double> category_bounds(columns.size(), 0.0);
+
+    if (ds.task() == task_t::regression)
+    {
+      const dataframe_summary sum(ds);
+
+      for (std::size_t i(1); i < columns.size(); ++i)
+        if (const auto *stats = std::get_if<numeric_stats>(&sum[i].stats);
+            stats && !stats->dist.empty())
+        {
+          auto &bound(category_bounds[columns[i].category()]);
+          bound = std::max(bound, internal::ephemeral_bound(stats->dist));
+        }
+    }
+
     for (auto category : columns.used_categories())
     {
-      terminal *inserted_terminal(nullptr);
       const auto domain(columns.domain_of_category(category));
+      if (!numerical_data_type(domain))
+        continue;
+
+      const auto category_bound(category_bounds[category]);
+      const auto M(category_bound > 0.0 ? category_bound : 100.0);
 
       switch (domain)
       {
       case d_double:
-        inserted_terminal = insert<real::number>(-100.0, 100.0, category);
+        if (const auto *t = insert<real::number>(-M, M, category))
+          ultraINFO("Category {} ephemeral `{}` interval [{}, {})",
+                    category, t->name(), t->min(), t->sup());
         break;
 
       case d_int:
-        inserted_terminal = insert<integer::number>(-100, 100, category);
-        break;
+      {
+        constexpr auto d_int_max(std::numeric_limits<D_INT>::max());
+        const auto bound(
+          static_cast<D_INT>(std::min(std::ceil(M), static_cast<double>(d_int_max))));
+        const auto sup(ds.task() == task_t::regression && bound < d_int_max
+                       ? bound + 1 : bound);
 
-      default:
+        if (const auto *t = insert<integer::number>(-bound, sup, category))
+          ultraINFO("Category {} ephemeral `{}` interval [{}, {})",
+                    category, t->name(), t->min(), t->sup());
         break;
       }
 
-      if (inserted_terminal)
-      {
-        ultraINFO("Category {} ephemeral `{}`", category,
-                    inserted_terminal->name());
+      default:
+        break;
       }
     }
   }
@@ -377,11 +442,17 @@ void problem::setup_symbols(symbol_init init_flags)
            data[dataset_t::training].columns.used_categories());
          auto category : used_categories)
     {
+      if (category == symbol::undefined_category)
+        continue;
+
       const auto domain(
         data[dataset_t::training].columns.domain_of_category(category));
 
       switch (domain)
       {
+      case d_void:
+        break;
+
       case d_double:
         add_symbol(insert<real::add>(category));
         add_symbol(insert<real::div>(
