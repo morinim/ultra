@@ -1,0 +1,8 @@
+<ultra>
+  <common_random_numbers>true</common_random_numbers>
+  <search>
+    <generations>100</generations>
+    <runs>200</runs>
+    <threshold>-0.01</threshold>
+  </search>
+</ultra>
